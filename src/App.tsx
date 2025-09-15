@@ -3,6 +3,8 @@ import { Header, Footer, Home, Products, Services, About, Contact, Booking, Data
 import './App.css';
 import ScrollToTop from './components/scroll-helper/ScrollToTop';
 import Partners from './components/partners/Partners';
+import { Analytics } from "@vercel/analytics/react";
+
 
 function App() {
   return (
@@ -24,6 +26,7 @@ function App() {
         </Routes>
         <Footer />
       </Router>
+      <Analytics />
     </div>
   );
 }
