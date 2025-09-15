@@ -1,0 +1,11 @@
+export { default as Header } from './header/Header';
+export { default as Footer } from './footer/Footer';
+export { default as Home } from './home/Home';
+export { default as Products } from './products/Products';
+export { default as Services } from './services/Services';
+export { default as About } from './about/About';
+export { default as Contact } from './contact/Contact';
+export { default as Booking } from './book-online/Booking';
+export { default as DataSecurity } from './data-security/DataSecurity';
+export { default as Impressum } from './data-security/Impressum';  
+export { default as AGB } from './data-security/Agb';
