@@ -22,7 +22,7 @@ function App() {
           <Route path="/kontakt" element={<Contact />} />
           <Route path="/datenschutz" element={<DataSecurity />} />
           <Route path="/impressum" element={<Impressum />} />
-          {<Route path="/agb" element={<AGB />} />}
+          <Route path="/agb" element={<AGB />} />
         </Routes>
         <Footer />
       </Router>

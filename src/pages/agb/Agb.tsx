@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import styles from './DataSecurity.module.css';
+import styles from './Agb.module.css';
 import rexaImage from '../../assets/cytonn-photography-n95VMLxqM2I-unsplash.jpg';
 import { Helmet } from 'react-helmet-async';
 

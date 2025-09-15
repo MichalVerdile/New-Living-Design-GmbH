@@ -7,5 +7,5 @@ export { default as About } from '../pages/about/About';
 export { default as Contact } from '../pages/contact/Contact';
 export { default as Booking } from '../pages/book-online/Booking';
 export { default as DataSecurity } from '../pages/data-security/DataSecurity';
-export { default as Impressum } from '../pages/data-security/Impressum';  
-export { default as AGB } from '../pages/data-security/Agb';
+export { default as Impressum } from '../pages/impressum/Impressum';  
+export { default as AGB } from '../pages/agb/Agb';
