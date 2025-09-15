@@ -101,9 +101,63 @@ const Products: React.FC = () => {
       {/* Product Categories */}
       <section className={styles['product-categories']}>
         <div className={styles['categories-container']}>
+          {/* Badmöbel */}
+          <div className={`${styles['category-section']} ${styles.light}`}>
+            <div className={styles['category-content']}>
+              <div className={styles['category-text']}>
+                <h3 className={styles['category-title']}>Badmöbel</h3>
+                <div className={styles['category-description']}>
+                  <p>
+                    Unsere Lieferanten bieten eine äusserst umfangreiche Palette von Badmöbeln und massgefertigten Möbeln aus
+                    Corian® und Korakril™ an. Diese Möbelstücke sind speziell darauf ausgelegt, den unterschiedlichen
+                    Bedürfnissen jedes Kunden gerecht zu werden.
+                  </p>
+                </div>
+              </div>
+              <div className={styles['category-image']}>
+                <img src={badmoebelImage} alt="Badmöbel" />
+              </div>
+            </div>
+          </div>
+
+          {/* Küchen */}
+          <div className={`${styles['category-section']} ${styles.dark} ${styles.reverse}`}>
+            <div className={styles['category-content']}>
+              <div className={styles['category-text']}>
+                <h3 className={styles['category-title']}>Küchen</h3>
+                <div className={styles['category-description']}>
+                  <p>
+                    Dank unserer langjährigen Partnerschaften mit führenden Küchenherstellern präsentieren wir eine
+                    breite Palette hochwertiger Küchenlösungen. Von modernen bis zu zeitlosen Klassikern.
+                  </p>
+                </div>
+              </div>
+              <div className={styles['category-image']}>
+                <img src={kuechenImage} alt="Küchen" />
+              </div>
+            </div>
+          </div>
+
+          {/* Wellness */}
+          <div className={`${styles['category-section']} ${styles.light}`}>
+            <div className={styles['category-content']}>
+              <div className={styles['category-text']}>
+                <h3 className={styles['category-title']}>Wellness</h3>
+                <div className={styles['category-description']}>
+                  <p>
+                    Dank unserer herausragenden Partnerschaften mit führenden Lieferanten im Wellness-Bereich präsentieren
+                    wir Ihnen eine umfassende Auswahl an Produkten für Ihre persönliche Entspannung.
+                  </p>
+                </div>
+              </div>
+              <div className={styles['category-image']}>
+                <img src={wellnessImage} alt="Wellness" />
+              </div>
+            </div>
+          </div>
 
           {/* Bodenbeläge */}
-          <div className={`${styles['category-section']} ${styles.light}`}>
+          <div className={`${styles['category-section']} ${styles.dark} ${styles.reverse}`}>
             <div className={styles['category-content']}>
               <div className={styles['category-text']}>
                 <h3 className={styles['category-title']}>Bodenbeläge</h3>
@@ -121,7 +175,7 @@ const Products: React.FC = () => {
           </div>
 
           {/* Wandverkleidungen */}
-          <div className={`${styles['category-section']} ${styles.dark} ${styles.reverse}`}>
+          <div className={`${styles['category-section']} ${styles.light}`}>
             <div className={styles['category-content']}>
               <div className={styles['category-text']}>
                 <h3 className={styles['category-title']}>Wandverkleidungen</h3>
@@ -134,25 +188,6 @@ const Products: React.FC = () => {
               </div>
               <div className={styles['category-image']}>
                 <img src={wandverkleidungenImage} alt="Wandverkleidungen" />
-              </div>
-            </div>
-          </div>
-
-          {/* Badmöbel */}
-          <div className={`${styles['category-section']} ${styles.light}`}>
-            <div className={styles['category-content']}>
-              <div className={styles['category-text']}>
-                <h3 className={styles['category-title']}>Badmöbel</h3>
-                <div className={styles['category-description']}>
-                  <p>
-                    Unsere Lieferanten bieten eine äusserst umfangreiche Palette von Badmöbeln und massgefertigten Möbeln aus
-                    Corian® und Korakril™ an. Diese Möbelstücke sind speziell darauf ausgelegt, den unterschiedlichen
-                    Bedürfnissen jedes Kunden gerecht zu werden.
-                  </p>
-                </div>
-              </div>
-              <div className={styles['category-image']}>
-                <img src={badmoebelImage} alt="Badmöbel" />
               </div>
             </div>
           </div>
@@ -208,42 +243,6 @@ const Products: React.FC = () => {
               </div>
               <div className={styles['category-image']}>
                 <img src={heizkoerperImage} alt="Heizkörper" />
-              </div>
-            </div>
-          </div>
-
-          {/* Wellness */}
-          <div className={`${styles['category-section']} ${styles.light}`}>
-            <div className={styles['category-content']}>
-              <div className={styles['category-text']}>
-                <h3 className={styles['category-title']}>Wellness</h3>
-                <div className={styles['category-description']}>
-                  <p>
-                    Dank unserer herausragenden Partnerschaften mit führenden Lieferanten im Wellness-Bereich präsentieren
-                    wir Ihnen eine umfassende Auswahl an Produkten für Ihre persönliche Entspannung.
-                  </p>
-                </div>
-              </div>
-              <div className={styles['category-image']}>
-                <img src={wellnessImage} alt="Wellness" />
-              </div>
-            </div>
-          </div>
-
-          {/* Küchen */}
-          <div className={`${styles['category-section']} ${styles.dark} ${styles.reverse}`}>
-            <div className={styles['category-content']}>
-              <div className={styles['category-text']}>
-                <h3 className={styles['category-title']}>Küchen</h3>
-                <div className={styles['category-description']}>
-                  <p>
-                    Dank unserer langjährigen Partnerschaften mit führenden Küchenherstellern präsentieren wir eine
-                    breite Palette hochwertiger Küchenlösungen. Von modernen bis zu zeitlosen Klassikern.
-                  </p>
-                </div>
-              </div>
-              <div className={styles['category-image']}>
-                <img src={kuechenImage} alt="Küchen" />
               </div>
             </div>
           </div>
