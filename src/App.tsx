@@ -4,6 +4,7 @@ import './App.css';
 import ScrollToTop from './components/scroll-helper/ScrollToTop';
 import Partners from './pages/partners/Partners';
 import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/next"
 
 
 function App() {
@@ -27,6 +28,7 @@ function App() {
         <Footer />
       </Router>
       <Analytics />
+      <SpeedInsights />
     </div>
   );
 }
