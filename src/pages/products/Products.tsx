@@ -12,7 +12,7 @@ import wellnessImage from '../../assets/Zen_Combi_duo_Linear_6-1030x1030.jpg';
 import kuechenImage from '../../assets/ixycxivw.avif';
 import beleuchtungenImage from '../../assets/BEAM_STICK_family_color_edited.avif';
 import accessoiresImage from '../../assets/viv-au2420bmset5_5.avif';
-import { Helmet } from 'react-helmet-async';
+import { SEOHead } from '../../components';
 
 const Products: React.FC = () => {
   const [isVisible, setIsVisible] = useState(false);
@@ -35,18 +35,14 @@ const Products: React.FC = () => {
 
   return (
     <main className={styles['products-page']}>
-      <Helmet>
-        <title>Produkte – New Living Design GmbH | Badezimmer, Küchen, Bodenbeläge</title>
-        <meta
-          name="description"
-          content="Entdecken Sie hochwertige Produkte von New Living Design: Badezimmermöbel, Küchen, Armaturen, Sanitärapparate, Bodenbeläge, Wandverkleidungen, Heizkörper, Wellness und Accessoires."
-        />
-        <meta property="og:title" content="Unsere Produkte – New Living Design GmbH" />
-        <meta property="og:description" content="Exklusive Produktvielfalt für Interior Design: Badezimmer, Küchen, Möbel, Armaturen, Wellness und mehr." />
-        <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://www.newlivingdesign.ch/produkte" />
-        <meta property="og:image" content="https://www.newlivingdesign.ch/assets/14264-rchi-mirabilia-villas-01.webp" />
-      </Helmet>
+      <SEOHead
+        title="Produkte – New Living Design GmbH | Badezimmer, Küchen, Bodenbeläge"
+        description="Entdecken Sie hochwertige Produkte von New Living Design: Badezimmermöbel, Küchen, Armaturen, Sanitärapparate, Bodenbeläge, Wandverkleidungen, Heizkörper, Wellness und Accessoires."
+        keywords="Badezimmermöbel, Küchen, Armaturen, Sanitärapparate, Bodenbeläge, Wandverkleidungen, Heizkörper, Wellness, Accessoires, Interior Design, Schweiz"
+        url="/produkte"
+        type="website"
+        image="https://www.newlivingdesign.ch/assets/14264-rchi-mirabilia-villas-01.webp"
+      />
 
       {/* Hero Section */}
       <section className={styles.hero}>
@@ -54,7 +50,7 @@ const Products: React.FC = () => {
           <div className={styles['hero-overlay']}></div>
           <img
             src={heroImage}
-            alt="Produktvielfalt"
+            alt="Hochwertige Produktvielfalt von New Living Design - Badezimmer, Küchen, Bodenbeläge und Interior Design Lösungen"
             className={styles['hero-bg-image']}
           />
         </div>

@@ -45,5 +45,9 @@ export default defineConfig({
   // Enable server-side prerendering hints
   ssr: {
     noExternal: ['react-helmet-async']
+  },
+  // Add prerendering configuration
+  define: {
+    __PRERENDER__: JSON.stringify((import.meta as any).env.MODE === 'production')
   }
 })

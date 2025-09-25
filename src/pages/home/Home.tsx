@@ -4,7 +4,9 @@ import styles from './Home.module.css';
 import rexaImage from '../../assets/Rexa_mobili_moode_gallery_7.jpg';
 import trinidadImage from '../../assets/FebalCasa_Cucina_Moderna_Origina_AntaProfiloAlluminio_Vol1_Compo8e.webp';
 import clubRoomImage from '../../assets/22-Private-House-Club-Room.jpg.webp';
-import { Helmet } from 'react-helmet-async';
+import { SEOHead } from '../../components';
+import { generateLocalBusinessStructuredData, generateFAQStructuredData } from '../../utils/structuredData';
+import type { LocalBusinessSEO } from '../../types/seo';
 
 const Home: React.FC = () => {
   const [isVisible, setIsVisible] = useState(false);
@@ -13,20 +15,62 @@ const Home: React.FC = () => {
     setIsVisible(true);
   }, []);
 
+  // Generate local business structured data
+  const businessData: LocalBusinessSEO = {
+    name: "New Living Design GmbH",
+    description: "Ihr Partner für hochwertige Interior- und Sanitärlösungen in der Schweiz. Spezialisiert auf Badezimmer, Küchen und maßgeschneiderte Wohnkonzepte.",
+    url: "https://www.newlivingdesign.ch",
+    telephone: "+41-XX-XXX-XX-XX", // Replace with actual phone number
+    address: {
+      streetAddress: "Musterstraße 123", // Replace with actual address
+      addressLocality: "Zofingen",
+      addressRegion: "Aargau",
+      postalCode: "4800",
+      addressCountry: "CH"
+    },
+    geo: {
+      latitude: 47.2828, // Replace with actual coordinates
+      longitude: 7.9442
+    },
+    openingHours: [
+      "Monday,Tuesday,Wednesday,Thursday,Friday 08:00-17:00",
+      "Saturday 09:00-16:00"
+    ],
+    priceRange: "€€€",
+    image: "https://www.newlivingdesign.ch/src/assets/Rexa_mobili_moode_gallery_7.jpg"
+  };
+
+  // FAQ structured data for better SEO
+  const faqs = [
+    {
+      question: "Welche Dienstleistungen bietet New Living Design?",
+      answer: "Wir bieten umfassende Innenarchitektur-Dienstleistungen, einschließlich Badezimmergestaltung, Küchenplanung, Bodenbeläge und komplette Hausrenovierungen."
+    },
+    {
+      question: "In welchen Gebieten sind Sie tätig?",
+      answer: "Wir sind hauptsächlich in der Schweiz tätig, mit Schwerpunkt auf der Region Aargau und Zofingen."
+    },
+    {
+      question: "Bieten Sie kostenlose Beratungen an?",
+      answer: "Ja, wir bieten kostenlose Erstberatungen für alle unsere Dienstleistungen an. Kontaktieren Sie uns für einen Termin."
+    }
+  ];
+
+  const localBusinessStructuredData = generateLocalBusinessStructuredData(businessData);
+  const faqStructuredData = generateFAQStructuredData(faqs);
+  const combinedStructuredData = [localBusinessStructuredData, faqStructuredData];
+
   return (
-    <main className={styles.home}>
-      <Helmet>
-        <title>New Living Design GmbH – Innenarchitektur & Renovierungen in Zofingen</title>
-        <meta
-          name="description"
-          content="New Living Design GmbH in Zofingen: Exklusive Badezimmer, Küchen und Wohnraumlösungen. Individuelle Beratung, maßgeschneiderte Innenarchitektur und professionelle Renovierungen."
-        />
-        <meta property="og:title" content="New Living Design GmbH – Innenarchitektur & Renovierungen" />
-        <meta property="og:description" content="Ihr Partner für hochwertige Badezimmer, Küchen und maßgeschneiderte Wohnkonzepte in der Schweiz." />
-        <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://www.newlivingdesign.ch/" />
-        <meta property="og:image" content="https://www.newlivingdesign.ch/assets/rexa.jpg" />
-      </Helmet>
+    <main id="main-content" className={styles.home}>
+      <SEOHead
+        title="New Living Design GmbH – Innenarchitektur & Renovierungen in Zofingen"
+        description="New Living Design GmbH in Zofingen: Exklusive Badezimmer, Küchen und Wohnraumlösungen. Individuelle Beratung, maßgeschneiderte Innenarchitektur und professionelle Renovierungen."
+        keywords="Innenarchitektur, Badezimmer, Küchen, Renovierung, Zofingen, Aargau, Schweiz, Interior Design, Bodenbeläge, Sanitär, New Living Design"
+        url="/"
+        type="website"
+        structuredData={combinedStructuredData}
+        image="https://www.newlivingdesign.ch/src/assets/Rexa_mobili_moode_gallery_7.jpg"
+      />
 
       {/* Hero Section */}
       <section className={styles.hero}>
@@ -34,7 +78,7 @@ const Home: React.FC = () => {
           <div className={styles['hero-overlay']}></div>
           <img
             src={rexaImage}
-            alt="Moderne Badezimmerausstattung"
+            alt="Moderne Badezimmerausstattung von New Living Design - Exklusive Badezimmermöbel und Sanitärinstallationen"
             className={styles['hero-bg-image']}
           />
         </div>

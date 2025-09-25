@@ -1,35 +1,62 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { HelmetProvider } from 'react-helmet-async';
 import { Header, Footer, Home, Products, Services, About, Contact, Booking, DataSecurity, Impressum, AGB } from './components';
 import './App.css';
 import ScrollToTop from './components/scroll-helper/ScrollToTop';
 import Partners from './pages/partners/Partners';
 import { Analytics } from "@vercel/analytics/react";
-import { SpeedInsights } from "@vercel/speed-insights/react"
+import { SpeedInsights } from "@vercel/speed-insights/react";
+import SEOHead from './components/seo/SEOHead';
+import GoogleAnalytics, { GoogleSearchConsole, GoogleTagManager } from './components/analytics/GoogleAnalytics';
+import { generateOrganizationStructuredData, generateWebsiteStructuredData } from './utils/structuredData';
+import { seoConfig } from './config/seo';
 
 
 function App() {
+  const organizationData = generateOrganizationStructuredData();
+  const websiteData = generateWebsiteStructuredData();
+  
+  const globalStructuredData = [organizationData, websiteData];
+
   return (
-    <div className="app">
-      <Router>
-        <ScrollToTop />
-        <Header />
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/produkte" element={<Products />} />
-          <Route path="/dienstleistungen" element={<Services />} />
-          <Route path="/partner" element={<Partners />} />
-          <Route path="/booking" element={<Booking />} />
-          <Route path="/ueber-uns" element={<About />} />
-          <Route path="/kontakt" element={<Contact />} />
-          <Route path="/datenschutz" element={<DataSecurity />} />
-          <Route path="/impressum" element={<Impressum />} />
-          <Route path="/agb" element={<AGB />} />
-        </Routes>
-        <Footer />
-      </Router>
-      <Analytics />
-      <SpeedInsights />
-    </div>
+    <HelmetProvider>
+      <div className="app">
+        <SEOHead structuredData={globalStructuredData} />
+        
+        {/* Analytics and Tracking */}
+        {seoConfig.googleAnalyticsId && (
+          <GoogleAnalytics trackingId={seoConfig.googleAnalyticsId} />
+        )}
+        {seoConfig.googleTagManagerId && (
+          <GoogleTagManager containerId={seoConfig.googleTagManagerId} />
+        )}
+        {seoConfig.googleSearchConsoleVerification && (
+          <GoogleSearchConsole verificationCode={seoConfig.googleSearchConsoleVerification} />
+        )}
+        
+        <Router>
+          <ScrollToTop />
+          <Header />
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/produkte" element={<Products />} />
+            <Route path="/dienstleistungen" element={<Services />} />
+            <Route path="/partner" element={<Partners />} />
+            <Route path="/booking" element={<Booking />} />
+            <Route path="/ueber-uns" element={<About />} />
+            <Route path="/kontakt" element={<Contact />} />
+            <Route path="/datenschutz" element={<DataSecurity />} />
+            <Route path="/impressum" element={<Impressum />} />
+            <Route path="/agb" element={<AGB />} />
+          </Routes>
+          <Footer />
+        </Router>
+        
+        {/* Vercel Analytics */}
+        <Analytics />
+        <SpeedInsights />
+      </div>
+    </HelmetProvider>
   );
 }
 

@@ -9,3 +9,10 @@ export { default as Booking } from '../pages/book-online/Booking';
 export { default as DataSecurity } from '../pages/data-security/DataSecurity';
 export { default as Impressum } from '../pages/impressum/Impressum';  
 export { default as AGB } from '../pages/agb/Agb';
+
+// SEO Components
+export { default as SEOHead } from './seo/SEOHead';
+export { default as Breadcrumbs } from './seo/Breadcrumbs';
+
+// Common Components
+export { default as OptimizedImage } from './common/OptimizedImage';

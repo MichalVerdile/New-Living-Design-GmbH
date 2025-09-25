@@ -1,0 +1,28 @@
+{
+  "name": "New Living Design GmbH",
+  "short_name": "New Living Design",
+  "description": "Ihr Partner für hochwertige Interior- und Sanitärlösungen in der Schweiz",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/src/assets/S__2_-removebg-preview_edited (1).avif",
+      "sizes": "192x192",
+      "type": "image/avif",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/src/assets/S__2_-removebg-preview_edited (1).avif",
+      "sizes": "512x512",
+      "type": "image/avif",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["business", "design", "lifestyle"],
+  "lang": "de-CH",
+  "scope": "/",
+  "id": "new-living-design-gmbh"
+}

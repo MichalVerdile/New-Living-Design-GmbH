@@ -1,0 +1,27 @@
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://www.newlivingdesign.ch/sitemap.xml
+
+# Important pages to crawl
+Allow: /produkte
+Allow: /dienstleistungen
+Allow: /partner
+Allow: /booking
+Allow: /ueber-uns
+Allow: /kontakt
+
+# Block unnecessary pages
+Disallow: /datenschutz
+Disallow: /impressum
+Disallow: /agb
+
+# Block assets and admin paths
+Disallow: /src/
+Disallow: /*.css$
+Disallow: /*.js$
+Disallow: /*.json$
+
+# Crawl delay for bots
+Crawl-delay: 1

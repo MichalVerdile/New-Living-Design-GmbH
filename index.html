@@ -2,77 +2,103 @@
 <html lang="de">
   <head>
     <meta charset="UTF-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0"
-    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <!-- Favicon -->
-    <link
-      rel="icon"
-      type="image/avif"
-      href="/src/assets/S__2_-removebg-preview_edited (1).avif"
-    />
+    <!-- Favicon and Icons -->
+    <link rel="icon" type="image/avif" href="/src/assets/S__2_-removebg-preview_edited (1).avif" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/src/assets/S__2_-removebg-preview_edited (1).avif" />
+    
+    <!-- Preconnect to external domains for performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://vitals.vercel-analytics.com" />
+    
+    <!-- DNS prefetch for external resources -->
+    <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
+    <link rel="dns-prefetch" href="https://www.google-analytics.com" />
 
-    <!-- Title & Meta Description -->
-    <title>New Living Design GmbH | Interior Design & Sanitäre Lösungen</title>
-    <meta
-      name="description"
-      content="New Living Design GmbH – Ihr Partner für Bodenbeläge, Badezimmermöbel, Sanitärinstallationen und Designlösungen. Modernes Interior Design aus der Schweiz."
-    />
-
-    <!-- Keywords (optional, nicht mehr stark gewichtet) -->
-    <meta
-      name="keywords"
-      content="Interior Design, Bodenbeläge, Badezimmermöbel, Sanitär, Schweiz, New Living Design"
-    />
-
-    <!-- Open Graph (Facebook, LinkedIn, WhatsApp) -->
-    <meta property="og:type" content="website" />
-    <meta property="og:title" content="New Living Design GmbH" />
-    <meta
-      property="og:description"
-      content="Ihr Partner für hochwertige Interior- und Sanitärlösungen in der Schweiz."
-    />
-    <meta property="og:image" content="/src/assets/og-image.jpg" />
-    <meta property="og:url" content="https://www.newlivingdesign.ch" />
-
-    <!-- Twitter Card -->
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="New Living Design GmbH" />
-    <meta
-      name="twitter:description"
-      content="Bodenbeläge, Badezimmermöbel und Sanitärinstallationen – modernes Interior Design aus der Schweiz."
-    />
-    <meta name="twitter:image" content="/src/assets/og-image.jpg" />
-
-    <!-- Theme Color (für Mobile Browser) -->
+    <!-- Theme Color -->
     <meta name="theme-color" content="#ffffff" />
+    <meta name="msapplication-TileColor" content="#ffffff" />
+    
+    <!-- Basic SEO (will be enhanced by react-helmet-async) -->
+    <title>New Living Design GmbH | Interior Design & Sanitäre Lösungen</title>
+    <meta name="description" content="New Living Design GmbH – Ihr Partner für Bodenbeläge, Badezimmermöbel, Sanitärinstallationen und Designlösungen. Modernes Interior Design aus der Schweiz." />
+    
+    <!-- Language and Region -->
+    <meta name="language" content="de" />
+    <meta name="geo.region" content="CH" />
+    <meta name="geo.placename" content="Schweiz" />
 
-    <!-- Manifest (für PWA, optional) -->
+    <!-- PWA Manifest -->
     <link rel="manifest" href="/manifest.json" />
-
-    <!-- Structured Data (Schema.org JSON-LD) -->
-    <script type="application/ld+json">
-      {
-        "@context": "https://schema.org",
-        "@type": "Organization",
-        "name": "New Living Design GmbH",
-        "url": "https://www.newlivingdesign.ch",
-        "logo": "https://www.newlivingdesign.ch/src/assets/logo.png",
-        "sameAs": [
-          "https://www.facebook.com/newlivingdesign",
-          "https://www.instagram.com/newlivingdesign"
-        ],
-        "address": {
-          "@type": "PostalAddress",
-          "addressLocality": "Schweiz"
-        }
-      }
-    </script>
+    
+    <!-- Critical CSS loading hint -->
+    <link rel="preload" href="/src/index.css" as="style" />
+    <link rel="preload" href="/src/App.css" as="style" />
   </head>
   <body>
-    <div id="root"></div>
+    <!-- Skip to content link for accessibility -->
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+    
+    <div id="root">
+      <!-- SEO Content - Will be replaced by React but visible to search engines -->
+      <header>
+        <h1>New Living Design GmbH</h1>
+        <nav>
+          <a href="/">Home</a>
+          <a href="/produkte">Produkte</a>
+          <a href="/dienstleistungen">Dienstleistungen</a>
+          <a href="/partner">Partner</a>
+          <a href="/ueber-uns">Über uns</a>
+          <a href="/kontakt">Kontakt</a>
+        </nav>
+      </header>
+      
+      <main id="main-content">
+        <section>
+          <h2>Ihr Partner für Interior Design in der Schweiz</h2>
+          <p>New Living Design GmbH - Hochwertige Badezimmer, Küchen, Bodenbeläge und Sanitärinstallationen. Modernes Interior Design aus Zofingen, Aargau.</p>
+          
+          <h3>Unsere Produkte</h3>
+          <ul>
+            <li>Badezimmermöbel und Sanitärapparate</li>
+            <li>Küchen und Küchenausstattung</li>
+            <li>Bodenbeläge und Wandverkleidungen</li>
+            <li>Armaturen und Heizkörper</li>
+            <li>Wellness und Spa-Lösungen</li>
+            <li>Accessoires und Beleuchtung</li>
+          </ul>
+          
+          <h3>Unsere Dienstleistungen</h3>
+          <ul>
+            <li>Individuelle Beratung und Planung</li>
+            <li>Professionelle Installation und Montage</li>
+            <li>Komplette Badezimmer-Renovierung</li>
+            <li>Maßgeschneiderte Küchen-Planung</li>
+            <li>Interior Design Service</li>
+            <li>Termin-Buchung online</li>
+          </ul>
+          
+          <h3>Warum New Living Design?</h3>
+          <p>Mit Sitz in Zofingen, Aargau, sind wir Ihr kompetenter Partner für alle Aspekte des modernen Wohnens. Von der ersten Beratung bis zur finalen Installation - wir begleiten Sie auf dem Weg zu Ihrem Traumzuhause.</p>
+          
+          <h3>Kontakt</h3>
+          <p>Vereinbaren Sie noch heute einen kostenlosen Beratungstermin. Wir freuen uns darauf, Ihre Wohnträume zu verwirklichen.</p>
+        </section>
+      </main>
+      
+      <footer>
+        <p>New Living Design GmbH - Zofingen, Aargau, Schweiz</p>
+        <p>Interior Design • Badezimmer • Küchen • Sanitär • Bodenbeläge • Innenarchitektur</p>
+      </footer>
+    </div>
+    
     <script type="module" src="/src/main.tsx"></script>
+    
+    <!-- Performance monitoring -->
+    <script>
+      // Web Vitals tracking will be handled by Vercel Speed Insights
+    </script>
   </body>
 </html>
