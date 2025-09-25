@@ -7,7 +7,7 @@ import Partners from './pages/partners/Partners';
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
 import SEOHead from './components/seo/SEOHead';
-import GoogleAnalytics, { GoogleSearchConsole, GoogleTagManager } from './components/analytics/GoogleAnalytics';
+import GoogleAnalytics, { GoogleTagManager } from './components/analytics/GoogleAnalytics';
 import { generateOrganizationStructuredData, generateWebsiteStructuredData } from './utils/structuredData';
 import { seoConfig } from './config/seo';
 
@@ -29,9 +29,6 @@ function App() {
         )}
         {seoConfig.googleTagManagerId && (
           <GoogleTagManager containerId={seoConfig.googleTagManagerId} />
-        )}
-        {seoConfig.googleSearchConsoleVerification && (
-          <GoogleSearchConsole verificationCode={seoConfig.googleSearchConsoleVerification} />
         )}
         
         <Router>

@@ -1,13 +1,10 @@
 // SEO and analytics configuration
 export const seoConfig = {
   // Google Analytics
-  googleAnalyticsId: import.meta.env.VITE_GOOGLE_ANALYTICS_ID || '',
+  googleAnalyticsId: import.meta.env.VITE_GOOGLE_ANALYTICS_ID || 'G-487156982',
   
   // Google Tag Manager
   googleTagManagerId: import.meta.env.VITE_GOOGLE_TAG_MANAGER_ID || '',
-  
-  // Google Search Console
-  googleSearchConsoleVerification: import.meta.env.VITE_GOOGLE_SEARCH_CONSOLE_VERIFICATION || '',
   
   // Facebook Pixel
   facebookPixelId: import.meta.env.VITE_FACEBOOK_PIXEL_ID || '',
