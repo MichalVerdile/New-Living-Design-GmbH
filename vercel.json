@@ -1,8 +1,13 @@
 {
-  "buildCommand": "npm run build",
+  "buildCommand": "npm run build:prerender",
   "outputDirectory": "dist",
   "installCommand": "npm install",
   "framework": "vite",
+  "functions": {
+    "app/**/*.tsx": {
+      "runtime": "nodejs18.x"
+    }
+  },
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
   ],
