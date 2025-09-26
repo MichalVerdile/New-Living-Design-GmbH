@@ -7,6 +7,7 @@ import Partners from './pages/partners/Partners';
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
 import SEOHead from './components/seo/SEOHead';
+import CookieBanner from './components/cookie/CookieBanner';
 import { generateOrganizationStructuredData, generateWebsiteStructuredData } from './utils/structuredData';
 
 
@@ -42,6 +43,9 @@ function App() {
         {/* Vercel Analytics */}
         <Analytics />
         <SpeedInsights />
+        
+        {/* Cookie Banner for GDPR Compliance */}
+        <CookieBanner />
       </div>
     </HelmetProvider>
   );

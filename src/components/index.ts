@@ -16,3 +16,7 @@ export { default as Breadcrumbs } from './seo/Breadcrumbs';
 
 // Common Components
 export { default as OptimizedImage } from './common/OptimizedImage';
+
+// Cookie Banner
+export { default as CookieBanner } from './cookie/CookieBanner';
+export { default as CookieSettings } from './cookie/CookieSettings';

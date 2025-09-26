@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import styles from './DataSecurity.module.css';
 import dataImage from '../../assets/kaffeebart-KrPulSdUetk-unsplash.jpg';
 import { Helmet } from 'react-helmet-async';
+import CookieSettings from '../../components/cookie/CookieSettings';
 
 const DataSecurity: React.FC = () => {
   const [isVisible, setIsVisible] = useState(false);
@@ -133,13 +134,18 @@ const DataSecurity: React.FC = () => {
           <article id="cookies" className={styles.card}>
             <h3>7. Cookies & Tracking</h3>
             <p>Wir verwenden Cookies und ähnliche Technologien, um die Website bereitzustellen (notwendig) und optional zu analysieren/verbessern (Statistik/Marketing – nur mit Einwilligung).
-              Sie können Ihre Präferenzen jederzeit im Browser anpassen.</p>
+              Sie können Ihre Präferenzen jederzeit anpassen.</p>
             <details className={styles.details}>
               <summary>Optionale Dienste</summary>
               <ul className={styles.list}>
                 <li><strong>Web-Analytics:</strong> <span className={styles.placeholder}>Google Analytics</span> – pseudonymisierte Nutzungsanalyse. Speicherdauer: <span className={styles.placeholder}>14 Monate</span>.</li>
               </ul>
             </details>
+          </article>
+
+          {/* Cookie Settings Management */}
+          <article id="cookie-settings" className={styles.card}>
+            <CookieSettings />
           </article>
 
           <article id="kontakt" className={styles.card}>
