@@ -1,7 +1,7 @@
 // SEO and analytics configuration
 export const seoConfig = {
   // Google Analytics
-  googleAnalyticsId: import.meta.env.VITE_GOOGLE_ANALYTICS_ID || 'G-487156982',
+  googleAnalyticsId: import.meta.env.VITE_GOOGLE_ANALYTICS_ID || 'G-KX239CT54D',
   
   // Google Tag Manager
   googleTagManagerId: import.meta.env.VITE_GOOGLE_TAG_MANAGER_ID || '',

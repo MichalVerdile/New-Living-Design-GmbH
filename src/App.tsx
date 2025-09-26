@@ -7,9 +7,7 @@ import Partners from './pages/partners/Partners';
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
 import SEOHead from './components/seo/SEOHead';
-import GoogleAnalytics, { GoogleTagManager } from './components/analytics/GoogleAnalytics';
 import { generateOrganizationStructuredData, generateWebsiteStructuredData } from './utils/structuredData';
-import { seoConfig } from './config/seo';
 
 
 function App() {
@@ -22,14 +20,6 @@ function App() {
     <HelmetProvider>
       <div className="app">
         <SEOHead structuredData={globalStructuredData} />
-        
-        {/* Analytics and Tracking */}
-        {seoConfig.googleAnalyticsId && (
-          <GoogleAnalytics trackingId={seoConfig.googleAnalyticsId} />
-        )}
-        {seoConfig.googleTagManagerId && (
-          <GoogleTagManager containerId={seoConfig.googleTagManagerId} />
-        )}
         
         <Router>
           <ScrollToTop />
