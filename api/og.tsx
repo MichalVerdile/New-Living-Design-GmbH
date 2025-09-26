@@ -1,4 +1,5 @@
 import { ImageResponse } from '@vercel/og';
+import React from 'react';
 
 export const config = {
   runtime: 'edge',
@@ -15,9 +16,10 @@ export default function handler(request: Request) {
       : 'New Living Design GmbH';
 
     return new ImageResponse(
-      (
-        <div
-          style={{
+      React.createElement(
+        'div',
+        {
+          style: {
             backgroundColor: 'white',
             backgroundSize: '150px 150px',
             height: '100%',
@@ -28,26 +30,30 @@ export default function handler(request: Request) {
             justifyContent: 'center',
             flexDirection: 'column',
             flexWrap: 'nowrap',
-          }}
-        >
-          <div
-            style={{
+          },
+        },
+        React.createElement(
+          'div',
+          {
+            style: {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               justifyItems: 'center',
-            }}
-          >
-            <img
-              alt="New Living Design Logo"
-              height={200}
-              src="data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='100' height='100' fill='%23007acc'/%3E%3Ctext x='50' y='50' font-family='Arial' font-size='20' fill='white' text-anchor='middle' dy='.3em'%3ENLD%3C/text%3E%3C/svg%3E"
-              style={{ margin: '0 30px' }}
-              width={200}
-            />
-          </div>
-          <div
-            style={{
+            },
+          },
+          React.createElement('img', {
+            alt: 'New Living Design Logo',
+            height: 200,
+            src: "data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='100' height='100' fill='%23007acc'/%3E%3Ctext x='50' y='50' font-family='Arial' font-size='20' fill='white' text-anchor='middle' dy='.3em'%3ENLD%3C/text%3E%3C/svg%3E",
+            style: { margin: '0 30px' },
+            width: 200,
+          })
+        ),
+        React.createElement(
+          'div',
+          {
+            style: {
               fontSize: 60,
               fontStyle: 'normal',
               letterSpacing: '-0.025em',
@@ -56,16 +62,15 @@ export default function handler(request: Request) {
               padding: '0 120px',
               lineHeight: 1.4,
               whiteSpace: 'pre-wrap',
-            }}
-          >
-            {title}
-          </div>
-        </div>
+            },
+          },
+          title
+        )
       ),
       {
         width: 1200,
         height: 630,
-      },
+      }
     );
   } catch (e: any) {
     console.log(`${e.message}`);

@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "lib": ["ES2022", "WebWorker"],
+    "module": "ES2022",
+    "target": "ES2022",
+    "strict": false,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "jsxImportSource": "react",
+    "types": ["@vercel/og"]
+  },
+  "include": ["**/*"],
+  "exclude": ["node_modules"]
+}
