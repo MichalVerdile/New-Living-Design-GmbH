@@ -12,6 +12,7 @@ const Header: React.FC<HeaderProps> = ({ className = '', navigationItems }) => {
     { name: 'Home', href: '/', active: true },
     { name: 'Badumbau', href: '/badumbau-zofingen' },
     { name: 'Referenzen', href: '/referenzen' },
+    { name: 'Blog', href: '/blog' },
     { name: 'Produkte', href: '/produkte' },
     { name: 'Dienstleistungen', href: '/dienstleistungen' },
     { name: 'Partner', href: '/partner' },
@@ -21,6 +22,8 @@ const Header: React.FC<HeaderProps> = ({ className = '', navigationItems }) => {
   ];
 
   const navItems = navigationItems || defaultNavigationItems;
+  const isActive = (href: string) =>
+    href === '/' ? location.pathname === '/' : location.pathname === href || location.pathname.startsWith(`${href}/`);
 
   return (
     <header className={`header ${className}`}>
@@ -43,7 +46,7 @@ const Header: React.FC<HeaderProps> = ({ className = '', navigationItems }) => {
               <Link
                 key={item.name}
                 to={item.href}
-                className={`nav-link ${location.pathname === item.href ? 'nav-link-active' : ''}`}
+                className={`nav-link ${isActive(item.href) ? 'nav-link-active' : ''}`}
               >
                 {item.name}
               </Link>
@@ -76,7 +79,7 @@ const Header: React.FC<HeaderProps> = ({ className = '', navigationItems }) => {
               <Link
                 key={item.name}
                 to={item.href}
-                className={`nav-mobile-link ${location.pathname === item.href ? 'nav-mobile-link-active' : ''}`}
+                className={`nav-mobile-link ${isActive(item.href) ? 'nav-mobile-link-active' : ''}`}
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 {item.name}
