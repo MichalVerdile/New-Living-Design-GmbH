@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
-import { Header, Footer, Home, Products, Services, About, Contact, Booking, DataSecurity, Impressum, AGB, Badumbau, Referenzen, Blog, BlogPost } from './components';
+import { Header, Footer, Home, Products, Services, About, Contact, Booking, DataSecurity, Impressum, AGB, Badumbau, Badplaner, Referenzen, Blog, BlogPost } from './components';
 import './App.css';
 import ScrollToTop from './components/scroll-helper/ScrollToTop';
 import Partners from './pages/partners/Partners';
@@ -38,6 +38,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/badumbau-zofingen" element={<Badumbau />} />
+        <Route path="/badplaner" element={<Badplaner />} />
         <Route path="/referenzen" element={<Referenzen />} />
         <Route path="/blog" element={<Blog />} />
         <Route path="/blog/:slug" element={<BlogPost />} />
