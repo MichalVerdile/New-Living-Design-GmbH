@@ -243,8 +243,7 @@ const Services: React.FC = () => {
         </div>
       </section>
 
-      <script type="application/ld+json">
-        {JSON.stringify({
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
           "@context": "https://schema.org",
           "@type": "Service",
           "provider": {
@@ -283,8 +282,7 @@ const Services: React.FC = () => {
               }
             ]
           }
-        })}
-      </script>
+        }) }} />
     </main>
   );
 };
