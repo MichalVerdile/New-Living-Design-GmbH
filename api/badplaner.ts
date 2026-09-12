@@ -15,7 +15,7 @@
  *                        Domain muss bei Resend verifiziert sein)
  *   BADPLANER_DAILY_CAP  Maximale Ideenbilder pro Tag insgesamt (Default 60)
  *   BADPLANER_MODEL      Gemini-Modell (Default gemini-3.1-flash-image)
- *   BADPLANER_CHECK_MODEL Gemini-Textmodell für die Fensterprüfung (Default gemini-2.5-flash);
+ *   BADPLANER_CHECK_MODEL Gemini-Textmodell für die Fensterprüfung (Default gemini-3.6-flash);
  *                        leer lassen = keine Prüfung
  *
  * Fotos und Ideenbilder werden NICHT gespeichert (kein Blob, kein KV): sie gehen
@@ -425,7 +425,7 @@ async function generateImage(prompt: string, photo: { mime: string; data: string
  * nicht möglich war (Modell fehlt, Timeout, unlesbare Antwort): dann gilt das Bild.
  */
 async function checkOpenings(photo: { mime: string; data: string }, gen: { mime: string; data: string }): Promise<{ extra: boolean; reason: string } | null> {
-  const model = process.env.BADPLANER_CHECK_MODEL === undefined ? 'gemini-2.5-flash' : process.env.BADPLANER_CHECK_MODEL;
+  const model = process.env.BADPLANER_CHECK_MODEL === undefined ? 'gemini-3.6-flash' : process.env.BADPLANER_CHECK_MODEL;
   if (!model) return null;
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
   const question =
