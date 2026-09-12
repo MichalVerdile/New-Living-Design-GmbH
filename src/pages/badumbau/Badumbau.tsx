@@ -181,6 +181,16 @@ const Badumbau: React.FC = () => {
             ))}
           </div>
           <p className={styles.note}>{packageNote}</p>
+
+          {/* Hinweis auf den Badplaner */}
+          <aside className={styles.plannerBox}>
+            <div>
+              <span className={styles.plannerEyebrow}>Neu</span>
+              <h3>Badplaner – Ihr Bad als Ideenbild</h3>
+              <p>Paket wählen, Foto vom Bad machen, in 30 Sekunden ein Ideenbild mit den gewählten Platten und Farben erhalten. Kostenlos und unverbindlich.</p>
+            </div>
+            <Link to="/badplaner" className={styles.ctaDark}>Badplaner starten</Link>
+          </aside>
         </div>
       </section>
 
