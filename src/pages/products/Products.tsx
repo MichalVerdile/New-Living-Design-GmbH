@@ -308,8 +308,7 @@ const Products: React.FC = () => {
           </div>
         </div>
       </section>
-      <script type="application/ld+json">
-        {JSON.stringify({
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
           "@context": "https://schema.org",
           "@type": "ItemList",
           "name": "Produktkategorien von New Living Design",
@@ -330,8 +329,7 @@ const Products: React.FC = () => {
             "name": cat,
             "url": `https://newlivingdesign.ch/produkte#${cat.toLowerCase()}`
           }))
-        })}
-      </script>
+        }) }} />
     </main>
   );
 };
