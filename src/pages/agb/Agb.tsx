@@ -26,7 +26,7 @@ const AGB: React.FC = () => {
         <meta property="og:type" content="website" />
         <meta
           property="og:url"
-          content="https://www.newlivingdesign.ch/agb"
+          content="https://newlivingdesign.ch/agb"
         />
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content="AGB | New Living Design GmbH" />
@@ -42,12 +42,12 @@ const AGB: React.FC = () => {
             "@context": "https://schema.org",
             "@type": "TermsOfService",
             "name": "Allgemeine Geschäftsbedingungen",
-            "url": "https://www.newlivingdesign.ch/agb",
+            "url": "https://newlivingdesign.ch/agb",
             "publisher": {
               "@type": "Organization",
               "name": "New Living Design GmbH",
-              "url": "https://www.newlivingdesign.ch",
-              "logo": "https://www.newlivingdesign.ch/logo.png"
+              "url": "https://newlivingdesign.ch",
+              "logo": "https://newlivingdesign.ch/logo.png"
             },
             "datePublished": "2025-09-15",
             "description":
