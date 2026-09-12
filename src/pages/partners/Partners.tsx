@@ -109,8 +109,7 @@ const Partners: React.FC = () => {
         </div>
       </section>
 
-      <script type="application/ld+json">
-        {JSON.stringify({
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
           "@context": "https://schema.org",
           "@type": "ItemList",
           "name": "Partner & Marken von New Living Design",
@@ -121,8 +120,7 @@ const Partners: React.FC = () => {
             "url": p.url,
             "logo": p.logo.startsWith("data:") ? undefined : `https://newlivingdesign.ch${p.logo}`
           }))
-        })}
-      </script>
+        }) }} />
     </main>
   );
 };
