@@ -7,6 +7,7 @@ import { SEOHead } from '../../components';
 import { business, bathPackages, localBusinessJsonLd } from '../../config/business';
 import { badumbauFaq } from '../../data/faq';
 import { homeReferencePhotos, photoUrl } from '../../data/references';
+import { posts as blogPosts, formatDate } from '../../lib/blog';
 
 const GOOGLE_RATING = { value: '5.0', count: 23 }; // Google Unternehmensprofil, Stand September 2026
 
@@ -305,6 +306,38 @@ const Home: React.FC = () => {
           </div>
         </div>
       </section>
+
+      {/* Blog */}
+      {blogPosts.length > 0 && (
+        <section className={styles.blog}>
+          <div className={styles['blog-container']}>
+            <div className={styles['section-header']}>
+              <span className={styles['section-label']}>Aus dem Blog</span>
+              <h2 className={styles['section-title']}>Wissen aus unseren Baustellen</h2>
+            </div>
+            <div className={styles['blog-grid']}>
+              {blogPosts.slice(0, 3).map((p) => (
+                <Link key={p.slug} to={p.url} className={styles['blog-card']}>
+                  <img src={p.image} alt={p.imageAlt} loading="lazy" width="800" height="533" />
+                  <div className={styles['blog-card-text']}>
+                    <span className={styles['blog-card-meta']}>{p.category} · {formatDate(p.date)}</span>
+                    <h3>{p.title}</h3>
+                    <p>{p.description}</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+            <div className={styles['references-cta-container']}>
+              <Link to="/blog" className={styles['services-cta']}>
+                <span>Alle Beiträge</span>
+                <svg className={styles['cta-arrow']} viewBox="0 0 24 24" fill="none">
+                  <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </Link>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* FAQ */}
       <section className={styles.faq}>
