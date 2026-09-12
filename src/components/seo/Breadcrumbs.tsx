@@ -14,6 +14,7 @@ const Breadcrumbs: React.FC<BreadcrumbsProps> = ({ customBreadcrumbs }) => {
   
   const pathMap: { [key: string]: string } = {
     '/': 'Home',
+    '/blog': 'Blog',
     '/produkte': 'Produkte',
     '/dienstleistungen': 'Dienstleistungen',
     '/partner': 'Partner',
