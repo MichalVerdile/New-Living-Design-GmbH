@@ -1,12 +1,11 @@
 import React from 'react';
 import { business } from '../../config/business';
-import { trackLead } from '../../utils/tracking';
 import './WhatsAppButton.css';
 
 const message = encodeURIComponent('Guten Tag, ich interessiere mich für einen Badumbau. Können Sie mich zurückrufen?');
 const href = `https://wa.me/${business.whatsapp.e164.replace('+', '')}?text=${message}`;
 
-/** Fester WhatsApp-Knopf unten rechts, auf allen Seiten. */
+/** Fester WhatsApp-Knopf unten rechts, auf allen Seiten. Klick wird über installLeadClickTracking gemeldet (lead_whatsapp). */
 const WhatsAppButton: React.FC = () => (
   <a
     href={href}
@@ -14,7 +13,7 @@ const WhatsAppButton: React.FC = () => (
     rel="noopener noreferrer"
     className="whatsapp-button"
     aria-label={`WhatsApp schreiben: ${business.whatsapp.display}`}
-    onClick={() => trackLead('whatsapp-button')}
+    data-lead="whatsapp-button"
   >
     <svg viewBox="0 0 32 32" aria-hidden="true" focusable="false">
       <path
