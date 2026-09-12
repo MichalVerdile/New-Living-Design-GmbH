@@ -92,7 +92,7 @@ export const generateServiceStructuredData = (service: ServiceSEO) => ({
   "provider": {
     "@type": "Organization",
     "name": service.provider?.name || "New Living Design GmbH",
-    "url": service.provider?.url || "https://www.newlivingdesign.ch"
+    "url": service.provider?.url || "https://newlivingdesign.ch"
   }
 });
 
@@ -103,7 +103,7 @@ export const generateBreadcrumbStructuredData = (breadcrumbs: BreadcrumbItem[]) 
     "@type": "ListItem",
     "position": index + 1,
     "name": item.name,
-    "item": item.url.startsWith('http') ? item.url : `https://www.newlivingdesign.ch${item.url}`
+    "item": item.url.startsWith('http') ? item.url : `https://newlivingdesign.ch${item.url}`
   }))
 });
 
@@ -111,14 +111,14 @@ export const generateWebsiteStructuredData = () => ({
   "@context": "https://schema.org",
   "@type": "WebSite",
   "name": "New Living Design GmbH",
-  "url": "https://www.newlivingdesign.ch",
+  "url": "https://newlivingdesign.ch",
   "description": "Badumbau, Küchen und Platten aus einer Hand in Zofingen (AG)",
   "inLanguage": "de-CH",
   "potentialAction": {
     "@type": "SearchAction",
     "target": {
       "@type": "EntryPoint",
-      "urlTemplate": "https://www.newlivingdesign.ch/search?q={search_term_string}"
+      "urlTemplate": "https://newlivingdesign.ch/search?q={search_term_string}"
     },
     "query-input": "required name=search_term_string"
   }

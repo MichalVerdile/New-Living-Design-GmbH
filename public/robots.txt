@@ -2,7 +2,7 @@ User-agent: *
 Allow: /
 
 # Sitemap
-Sitemap: https://www.newlivingdesign.ch/sitemap.xml
+Sitemap: https://newlivingdesign.ch/sitemap.xml
 
 # Important pages to crawl
 Allow: /badumbau-zofingen

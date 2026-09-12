@@ -51,8 +51,8 @@ const Partners: React.FC = () => {
         <meta property="og:title" content="Unsere Partner & Marken – New Living Design GmbH" />
         <meta property="og:description" content="Ausgewählte Premium-Marken für Innenarchitektur, Badezimmer, Küchen und Designmöbel." />
         <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://www.newlivingdesign.ch/partner" />
-        <meta property="og:image" content="https://www.newlivingdesign.ch/assets/shutterstock_2580645597.jpg" />
+        <meta property="og:url" content="https://newlivingdesign.ch/partner" />
+        <meta property="og:image" content="https://newlivingdesign.ch/assets/shutterstock_2580645597.jpg" />
       </Helmet>
 
       {/* Hero */}
@@ -119,7 +119,7 @@ const Partners: React.FC = () => {
             "position": i + 1,
             "name": p.name,
             "url": p.url,
-            "logo": `https://www.newlivingdesign.ch/assets/${p.logo}`
+            "logo": `https://newlivingdesign.ch/assets/${p.logo}`
           }))
         })}
       </script>

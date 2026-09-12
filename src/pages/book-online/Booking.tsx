@@ -39,7 +39,7 @@ const Booking: React.FC = () => {
         />
         <meta property="og:image" content={heroImage} />
         <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://www.newlivingdesign.ch/booking" />
+        <meta property="og:url" content="https://newlivingdesign.ch/booking" />
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content="Beratung & Showroom buchen | New Living Design GmbH" />
         <meta
@@ -57,8 +57,8 @@ const Booking: React.FC = () => {
             "provider": {
               "@type": "LocalBusiness",
               "name": "New Living Design GmbH",
-              "image": "https://www.newlivingdesign.ch" + heroImage,
-              "url": "https://www.newlivingdesign.ch/booking",
+              "image": "https://newlivingdesign.ch" + heroImage,
+              "url": "https://newlivingdesign.ch/booking",
               "telephone": "+41625445854",
               "address": {
                 "@type": "PostalAddress",
@@ -70,7 +70,7 @@ const Booking: React.FC = () => {
             },
             "offers": {
               "@type": "Offer",
-              "url": "https://www.newlivingdesign.ch/booking",
+              "url": "https://newlivingdesign.ch/booking",
               "price": "0",
               "priceCurrency": "CHF",
               "eligibleRegion": {

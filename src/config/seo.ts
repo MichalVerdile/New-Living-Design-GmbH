@@ -12,7 +12,7 @@ export const seoConfig = {
   facebookPixelId: import.meta.env.VITE_FACEBOOK_PIXEL_ID || business.metaPixelId,
   
   // Site information
-  siteUrl: 'https://www.newlivingdesign.ch',
+  siteUrl: 'https://newlivingdesign.ch',
   siteName: 'New Living Design GmbH',
   defaultImage: '/og-image.jpg',
   
