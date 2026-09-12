@@ -1,39 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Cookies } from 'react-cookie-consent';
 import './CookieSettings.css';
-
-// Function to enable Google Analytics
-const enableGoogleAnalytics = () => {
-  // Create and load Google Analytics script
-  const script1 = document.createElement('script');
-  script1.async = true;
-  script1.src = 'https://www.googletagmanager.com/gtag/js?id=G-KX239CT54D';
-  document.head.appendChild(script1);
-
-  // Initialize Google Analytics
-  const script2 = document.createElement('script');
-  script2.innerHTML = `
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-KX239CT54D');
-  `;
-  document.head.appendChild(script2);
-};
-
-// Function to disable Google Analytics
-const disableGoogleAnalytics = () => {
-  // Set Google Analytics opt-out
-  (window as any)['ga-disable-G-KX239CT54D'] = true;
-  
-  // Remove existing Google Analytics cookies
-  const cookies = ['_ga', '_ga_G-KX239CT54D', '_gid', '_gat_gtag_G-KX239CT54D'];
-  cookies.forEach(cookie => {
-    Cookies.remove(cookie, { path: '/' });
-    Cookies.remove(cookie, { path: '/', domain: window.location.hostname });
-    Cookies.remove(cookie, { path: '/', domain: '.' + window.location.hostname });
-  });
-};
+import { readConsent, saveConsent } from '../../utils/tracking';
+import { business } from '../../config/business';
 
 interface CookieSettingsProps {
   onSettingsChange?: (settings: CookieSettingsState) => void;
@@ -47,7 +15,7 @@ interface CookieSettingsState {
 
 const CookieSettings: React.FC<CookieSettingsProps> = ({ onSettingsChange }) => {
   const [settings, setSettings] = useState<CookieSettingsState>({
-    necessary: true, // Always true, cannot be disabled
+    necessary: true, // immer aktiv
     analytics: false,
     marketing: false
   });
@@ -55,85 +23,60 @@ const CookieSettings: React.FC<CookieSettingsProps> = ({ onSettingsChange }) => 
   const [isLoading, setIsLoading] = useState(false);
   const [savedMessage, setSavedMessage] = useState(false);
 
-  // Load current settings from cookies
+  // Gespeicherte Einwilligung laden
   useEffect(() => {
-    const consent = Cookies.get('newLivingDesignCookieConsent');
-    if (consent === 'true') {
-      setSettings(prev => ({
-        ...prev,
-        analytics: true
-      }));
+    const consent = readConsent();
+    if (consent) {
+      setSettings({ necessary: true, analytics: consent.analytics, marketing: consent.marketing });
     }
   }, []);
 
   const handleToggle = (category: keyof CookieSettingsState) => {
-    if (category === 'necessary') return; // Cannot disable necessary cookies
-    
-    setSettings(prev => ({
-      ...prev,
-      [category]: !prev[category]
-    }));
+    if (category === 'necessary') return;
+    setSettings(prev => ({ ...prev, [category]: !prev[category] }));
   };
 
-  const saveSettings = async () => {
+  const persist = async (next: CookieSettingsState) => {
     setIsLoading(true);
-    
-    // Save settings to cookies
-    if (settings.analytics) {
-      Cookies.set('newLivingDesignCookieConsent', 'true', { expires: 365 });
-      enableGoogleAnalytics();
-    } else {
-      Cookies.set('newLivingDesignCookieConsent', 'false', { expires: 365 });
-      disableGoogleAnalytics();
-    }
-
-    // Simulate loading time
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
+    saveConsent({ analytics: next.analytics, marketing: next.marketing });
+    await new Promise(resolve => setTimeout(resolve, 300));
     setIsLoading(false);
     setSavedMessage(true);
-    
-    // Hide success message after 3 seconds
     setTimeout(() => setSavedMessage(false), 3000);
-    
-    // Notify parent component
-    if (onSettingsChange) {
-      onSettingsChange(settings);
-    }
+    if (onSettingsChange) onSettingsChange(next);
   };
 
+  const saveSettings = () => persist(settings);
+
   const acceptAll = () => {
-    setSettings({
-      necessary: true,
-      analytics: true,
-      marketing: false // Not implemented yet
-    });
+    const next = { necessary: true, analytics: true, marketing: true };
+    setSettings(next);
+    void persist(next);
   };
 
   const rejectAll = () => {
-    setSettings({
-      necessary: true,
-      analytics: false,
-      marketing: false
-    });
+    const next = { necessary: true, analytics: false, marketing: false };
+    setSettings(next);
+    void persist(next);
   };
 
   return (
     <div className="cookie-settings">
       <div className="cookie-settings-header">
-        <h3>🍪 Cookie-Einstellungen verwalten</h3>
+        <h3>Cookie-Einstellungen verwalten</h3>
         <p>
-          Hier können Sie Ihre Cookie-Präferenzen anpassen. Notwendige Cookies sind immer aktiv, 
-          da sie für die Grundfunktionen der Website erforderlich sind.
+          Hier können Sie Ihre Cookie-Präferenzen anpassen. Notwendige Cookies sind immer aktiv,
+          da sie für die Grundfunktionen der Website erforderlich sind. Statistik und Marketing
+          laden wir erst nach Ihrer Zustimmung.
         </p>
       </div>
 
       <div className="cookie-categories">
-        {/* Necessary Cookies */}
+        {/* Notwendig */}
         <div className="cookie-category">
           <div className="cookie-category-header">
             <div className="cookie-category-info">
-              <h4>🔒 Notwendige Cookies</h4>
+              <h4>Notwendige Cookies</h4>
               <p>Diese Cookies sind für das Funktionieren der Website unerlässlich.</p>
             </div>
             <div className="cookie-toggle">
@@ -143,6 +86,7 @@ const CookieSettings: React.FC<CookieSettingsProps> = ({ onSettingsChange }) => 
                 checked={settings.necessary}
                 disabled={true}
                 className="cookie-checkbox"
+                readOnly
               />
               <label htmlFor="necessary" className="cookie-label disabled">
                 <span className="cookie-slider"></span>
@@ -151,17 +95,18 @@ const CookieSettings: React.FC<CookieSettingsProps> = ({ onSettingsChange }) => 
             </div>
           </div>
           <div className="cookie-details">
-            <p><strong>Zweck:</strong> Session-Management, Sicherheit, Cookie-Präferenzen</p>
-            <p><strong>Dauer:</strong> Session oder 1 Jahr</p>
+            <p><strong>Zweck:</strong> Speichern Ihrer Cookie-Wahl, Sicherheit</p>
+            <p><strong>Cookies:</strong> newLivingDesignCookieConsent, nldConsent</p>
+            <p><strong>Dauer:</strong> 1 Jahr</p>
           </div>
         </div>
 
-        {/* Analytics Cookies */}
+        {/* Statistik */}
         <div className="cookie-category">
           <div className="cookie-category-header">
             <div className="cookie-category-info">
-              <h4>📊 Analytische Cookies</h4>
-              <p>Helfen uns zu verstehen, wie Besucher mit der Website interagieren.</p>
+              <h4>Statistik</h4>
+              <p>Hilft uns zu verstehen, welche Seiten besucht werden und woher die Besucher kommen.</p>
             </div>
             <div className="cookie-toggle">
               <input
@@ -180,56 +125,67 @@ const CookieSettings: React.FC<CookieSettingsProps> = ({ onSettingsChange }) => 
             </div>
           </div>
           <div className="cookie-details">
-            <p><strong>Anbieter:</strong> Google Analytics</p>
-            <p><strong>Zweck:</strong> Website-Optimierung, Besucherstatistiken</p>
-            <p><strong>Cookies:</strong> _ga, _ga_*, _gid</p>
-            <p><strong>Dauer:</strong> 2 Jahre (_ga), 24 Stunden (_gid)</p>
+            <p><strong>Anbieter:</strong> Google Analytics 4 (Google Ireland Ltd.), Mess-ID {business.ga4MeasurementId}</p>
+            <p><strong>Zweck:</strong> Besucherstatistik, Website-Optimierung; IP-Adresse gekürzt</p>
+            <p><strong>Cookies:</strong> _ga, _ga_*</p>
+            <p><strong>Dauer:</strong> bis 2 Jahre</p>
           </div>
         </div>
 
-        {/* Marketing Cookies - Future implementation */}
-        <div className="cookie-category disabled">
+        {/* Marketing */}
+        <div className="cookie-category">
           <div className="cookie-category-header">
             <div className="cookie-category-info">
-              <h4>🎯 Marketing Cookies</h4>
-              <p>Werden für zielgerichtete Werbung verwendet. (Derzeit nicht implementiert)</p>
+              <h4>Marketing</h4>
+              <p>Meta Pixel: misst, ob unsere Anzeigen auf Facebook und Instagram zu Anfragen führen.</p>
             </div>
             <div className="cookie-toggle">
               <input
                 type="checkbox"
                 id="marketing"
                 checked={settings.marketing}
-                disabled={true}
+                onChange={() => handleToggle('marketing')}
                 className="cookie-checkbox"
               />
-              <label htmlFor="marketing" className="cookie-label disabled">
+              <label htmlFor="marketing" className="cookie-label">
                 <span className="cookie-slider"></span>
               </label>
-              <span className="cookie-status">Nicht verfügbar</span>
+              <span className="cookie-status">
+                {settings.marketing ? 'Aktiv' : 'Inaktiv'}
+              </span>
             </div>
+          </div>
+          <div className="cookie-details">
+            <p><strong>Anbieter:</strong> Meta Platforms Ireland Ltd., Pixel-ID {business.metaPixelId}</p>
+            <p><strong>Zweck:</strong> Erfolgsmessung und Optimierung unserer Facebook-/Instagram-Anzeigen</p>
+            <p><strong>Cookies:</strong> _fbp, _fbc</p>
+            <p><strong>Dauer:</strong> 3 Monate</p>
           </div>
         </div>
       </div>
 
       <div className="cookie-settings-actions">
-        <button 
+        <button
           className="cookie-btn cookie-btn-secondary"
           onClick={rejectAll}
           disabled={isLoading}
+          type="button"
         >
           Alle ablehnen
         </button>
-        <button 
+        <button
           className="cookie-btn cookie-btn-secondary"
           onClick={acceptAll}
           disabled={isLoading}
+          type="button"
         >
           Alle akzeptieren
         </button>
-        <button 
+        <button
           className="cookie-btn cookie-btn-primary"
           onClick={saveSettings}
           disabled={isLoading}
+          type="button"
         >
           {isLoading ? 'Speichern...' : 'Einstellungen speichern'}
         </button>
@@ -237,7 +193,7 @@ const CookieSettings: React.FC<CookieSettingsProps> = ({ onSettingsChange }) => 
 
       {savedMessage && (
         <div className="cookie-success-message">
-          ✅ Cookie-Einstellungen wurden erfolgreich gespeichert!
+          Ihre Cookie-Einstellungen wurden gespeichert.
         </div>
       )}
     </div>
