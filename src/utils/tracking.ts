@@ -94,8 +94,10 @@ function enableGoogleAnalytics(): void {
   gaLoaded = true;
 
   window.dataLayer = window.dataLayer || [];
-  window.gtag = function gtag(...args: unknown[]) {
-    window.dataLayer!.push(args);
+  // gtag.js erkennt nur das echte `arguments`-Objekt als Befehl, kein Array.
+  window.gtag = function gtag() {
+    // eslint-disable-next-line prefer-rest-params
+    window.dataLayer!.push(arguments);
   };
   window.gtag('js', new Date());
   window.gtag('config', GA_ID, {
