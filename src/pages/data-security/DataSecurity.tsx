@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import styles from './DataSecurity.module.css';
-import dataImage from '../../assets/kaffeebart-KrPulSdUetk-unsplash.jpg';
+import dataImage from '../../assets/kaffeebart-KrPulSdUetk-unsplash.webp';
 import { Helmet } from 'react-helmet-async';
 import CookieSettings from '../../components/cookie/CookieSettings';
 
