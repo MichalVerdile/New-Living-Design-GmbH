@@ -54,6 +54,23 @@ src/
 └── index.css       # Global styles
 ```
 
+## Static prerendering (SEO)
+
+`npm run build` runs three steps: `tsc -b`, `vite build` (the normal SPA build into `dist/`) and
+`node scripts/prerender.mjs`. The script builds `src/entry-server.tsx` with `vite.config.ssr.ts`
+(into `dist-ssr/`, ignored by git), renders every route listed in `routes.json` with
+`renderToString` and writes the result to `dist/<route>/index.html` (home: `dist/index.html`),
+including the `<head>` tags from react-helmet-async (title, meta, canonical, JSON-LD).
+Crawlers that do not execute JavaScript (Bing, ChatGPT, previews) therefore see the full page.
+
+- `routes.json` is the single list of routes: it feeds the sitemap and the prerendering.
+  New page = new `<Route>` in `src/App.tsx` + entry in `routes.json`.
+- `src/main.tsx` hydrates prerendered HTML (`data-prerendered="<path>"` on `#root`) and falls
+  back to a normal client render for the SPA fallback.
+- If the server build or a single route fails, the script logs a warning and keeps the SPA HTML
+  for that route, so the deployment never breaks because of prerendering.
+- `npm run build:spa` builds without prerendering.
+
 ## Technologies Used
 
 - **React 18** - UI library

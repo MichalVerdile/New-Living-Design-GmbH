@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import styles from './Impressum.module.css';
-import rexaImage from '../../assets/giammarco-boscaro-zeH-ljawHtg-unsplash.jpg';
+import rexaImage from '../../assets/giammarco-boscaro-zeH-ljawHtg-unsplash.webp';
 import { Helmet } from 'react-helmet-async';
 
 const Impressum: React.FC = () => {

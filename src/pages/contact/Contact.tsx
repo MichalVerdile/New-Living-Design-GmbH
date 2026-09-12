@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import styles from "./Contact.module.css";
-import heroImg from "../../assets/shutterstock_2626257257.jpg";
+import heroImg from "../../assets/shutterstock_2626257257.webp";
 import { Helmet } from "react-helmet-async";
 
 const FORMSPREE_ENDPOINT = "https://formspree.io/f/xdklvgpb";
@@ -67,7 +67,7 @@ const Contact: React.FC = () => {
           property="og:description"
           content="Adresse, Telefonnummer und Öffnungszeiten der New Living Design GmbH. Wir beraten Sie gerne persönlich oder telefonisch."
         />
-        <meta property="og:image" content={heroImg} />
+        <meta property="og:image" content={`https://newlivingdesign.ch${heroImg}`} />
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://newlivingdesign.ch/kontakt" />
         <meta name="twitter:card" content="summary_large_image" />

@@ -1,22 +1,10 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import createSitemap from 'vite-plugin-sitemap'
+import routes from './routes.json'
 
-// Define all routes for sitemap generation
-const routes = [
-  '/',
-  '/badumbau-zofingen',
-  '/referenzen',
-  '/produkte',
-  '/dienstleistungen',
-  '/partner',
-  '/booking',
-  '/ueber-uns',
-  '/kontakt',
-  '/datenschutz',
-  '/impressum',
-  '/agb'
-]
+// Alle Routen der Website: routes.json ist die einzige Liste
+// (Sitemap hier, statisches Prerendering in scripts/prerender.mjs).
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -24,9 +12,10 @@ export default defineConfig({
     react(),
     createSitemap({
       hostname: 'https://newlivingdesign.ch',
-      exclude: ['/404'],
+      exclude: ['/404', '/google3c30d00da3c2bb3b'],
       readable: true,
-      dynamicRoutes: routes
+      // "/" fügt das Plugin selbst hinzu
+      dynamicRoutes: routes.filter((r) => r !== '/')
     })
   ],
   build: {

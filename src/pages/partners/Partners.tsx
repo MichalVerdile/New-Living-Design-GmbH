@@ -1,6 +1,6 @@
 import React from "react";
 import styles from "./Partners.module.css";
-import heroImg from "../../assets/shutterstock_2580645597.jpg";
+import heroImg from "../../assets/shutterstock_2580645597.webp";
 
 import scarabeoLogo from "../../assets/LogoScarabeo_Bianco.png";
 import fimaLogo from "../../assets/logo.svg";
@@ -52,7 +52,7 @@ const Partners: React.FC = () => {
         <meta property="og:description" content="Ausgewählte Premium-Marken für Innenarchitektur, Badezimmer, Küchen und Designmöbel." />
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://newlivingdesign.ch/partner" />
-        <meta property="og:image" content="https://newlivingdesign.ch/assets/shutterstock_2580645597.jpg" />
+        <meta property="og:image" content={`https://newlivingdesign.ch${heroImg}`} />
       </Helmet>
 
       {/* Hero */}
@@ -109,8 +109,7 @@ const Partners: React.FC = () => {
         </div>
       </section>
 
-      <script type="application/ld+json">
-        {JSON.stringify({
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
           "@context": "https://schema.org",
           "@type": "ItemList",
           "name": "Partner & Marken von New Living Design",
@@ -119,10 +118,9 @@ const Partners: React.FC = () => {
             "position": i + 1,
             "name": p.name,
             "url": p.url,
-            "logo": `https://newlivingdesign.ch/assets/${p.logo}`
+            "logo": p.logo.startsWith("data:") ? undefined : `https://newlivingdesign.ch${p.logo}`
           }))
-        })}
-      </script>
+        }) }} />
     </main>
   );
 };
