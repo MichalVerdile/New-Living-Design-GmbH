@@ -24,7 +24,7 @@ const Impressum: React.FC = () => {
         />
         <meta property="og:image" content={rexaImage} />
         <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://www.newlivingdesign.ch/impressum" />
+        <meta property="og:url" content="https://newlivingdesign.ch/impressum" />
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content="Impressum | New Living Design GmbH" />
         <meta
@@ -39,8 +39,8 @@ const Impressum: React.FC = () => {
             "@context": "https://schema.org",
             "@type": "LegalService",
             "name": "New Living Design GmbH",
-            "url": "https://www.newlivingdesign.ch/impressum",
-            "image": "https://www.newlivingdesign.ch/logo.png",
+            "url": "https://newlivingdesign.ch/impressum",
+            "image": "https://newlivingdesign.ch/logo.png",
             "address": {
               "@type": "PostalAddress",
               "streetAddress": "Im Römerquartier 4A",
@@ -100,7 +100,7 @@ const Impressum: React.FC = () => {
               <span className={styles.placeholder}>4800 Zofingen, Schweiz</span><br />
               E-Mail: <span className={styles.placeholder}>emanuel.verdile@newlivingdesign.ch</span><br />
               Telefon: <span className={styles.placeholder}>062 544 58 54</span><br />
-              Website: <span className={styles.placeholder}>https://www.newlivingdesign.ch</span>
+              Website: <span className={styles.placeholder}>https://newlivingdesign.ch</span>
             </p>
           </article>
 
