@@ -37,8 +37,8 @@ const Services: React.FC = () => {
         <meta property="og:title" content="Dienstleistungen – New Living Design GmbH" />
         <meta property="og:description" content="Kostenlose Beratung, 3D-Visualisierung und professionelle Lieferung & Montage. Ihr Partner für hochwertige Bau- und Designprojekte." />
         <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://www.newlivingdesign.ch/dienstleistungen" />
-        <meta property="og:image" content="https://www.newlivingdesign.ch/assets/shutterstock_2583534585.jpg" />
+        <meta property="og:url" content="https://newlivingdesign.ch/dienstleistungen" />
+        <meta property="og:image" content="https://newlivingdesign.ch/assets/shutterstock_2583534585.jpg" />
       </Helmet>
 
       {/* Hero Section */}
@@ -250,7 +250,7 @@ const Services: React.FC = () => {
           "provider": {
             "@type": "Organization",
             "name": "New Living Design GmbH",
-            "url": "https://www.newlivingdesign.ch"
+            "url": "https://newlivingdesign.ch"
           },
           "serviceType": "Innenausbau & Design Services",
           "hasOfferCatalog": {
