@@ -29,6 +29,7 @@ const Footer: React.FC<FooterProps> = ({ className = '' }) => {
               <nav className="footer-quicklinks" aria-label="Wichtige Seiten">
                 <Link to="/badumbau-zofingen" className="footer-quicklink">Badumbau Zofingen</Link>
                 <Link to="/referenzen" className="footer-quicklink">Referenzen</Link>
+                <Link to="/blog" className="footer-quicklink">Blog</Link>
                 <Link to="/kontakt" className="footer-quicklink">Kontakt</Link>
               </nav>
               <div className="footer-social-links">
