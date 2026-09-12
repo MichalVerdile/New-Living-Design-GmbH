@@ -55,6 +55,7 @@ interface RenderBody {
   furniture: string;
   finish: string;
   sanitary: string;
+  wall?: string; // Wandhöhe der Platten (fehlt bei alten Clients → Standard)
   shower: string;
   basin: string;
   mirror: string;
@@ -124,10 +125,11 @@ async function handleRender(req: any, res: any, body: RenderBody) {
   const furniture = opts.furniture.find((f) => f.id === body.furniture);
   const finish = opts.finishes.find((f) => f.id === body.finish);
   const sanitary = opts.sanitary.find((s) => s.id === body.sanitary);
+  const wall = opts.walls.find((w) => w.id === (body.wall || opts.walls[0].id));
   const shower = opts.showers.find((s) => s.id === body.shower);
   const basin = opts.basins.find((b) => b.id === body.basin);
   const mirror = opts.mirrors.find((m) => m.id === body.mirror);
-  if (!tile || !furniture || !finish || !sanitary || !shower || !basin || !mirror) {
+  if (!tile || !furniture || !finish || !sanitary || !wall || !shower || !basin || !mirror) {
     return bad(res, 'Die Ausstattung passt nicht zum gewählten Paket. Bitte Auswahl prüfen.');
   }
   const name = text(body.name, 120);
@@ -186,6 +188,7 @@ async function handleRender(req: any, res: any, body: RenderBody) {
     packageId: pkg.id,
     format: tile.format.replace('x', '×'),
     tilePrompt: tile.prompt,
+    wallPrompt: wall.prompt,
     showerPrompt: shower.prompt,
     sanitaryPrompt: sanitary.prompt,
     basinPrompt: basin.prompt,
@@ -212,6 +215,7 @@ async function handleRender(req: any, res: any, body: RenderBody) {
     ['Möbelfarbe', `${furniture.label} (${furniture.supplier})`],
     ['Armatur', `${finish.label}, ${opts.tapSeries}`],
     ['Sanitärkeramik', `${sanitary.label} (${sanitary.supplier})`],
+    ['Wandplatten', wall.label],
     ['Dusche / Wanne', shower.label],
     ['Waschtisch', basin.label],
     ['Spiegel', mirror.label],
@@ -282,6 +286,7 @@ function buildPrompt(v: {
   packageId: PackageId;
   format: string;
   tilePrompt: string;
+  wallPrompt: string;
   showerPrompt: string;
   sanitaryPrompt: string;
   basinPrompt: string;
@@ -295,11 +300,10 @@ function buildPrompt(v: {
     ? `Photo editing task. Image 1 is the customer's existing bathroom. Image 2 is ONLY a close-up material sample (tile texture and colour); ignore everything else about image 2, it contains no layout information.`
     : `Photo editing task. Image 1 is the customer's existing bathroom.`;
   const asSample = v.withSwatch ? ' as in image 2' : '';
-  const essenza = v.packageId === 'essenza' ? ', walls tiled to about 1.2 m height and painted white above, full height in the shower' : '';
   return [
     intro,
     `Produce a photorealistic "after renovation" photo of image 1 with these hard constraints: identical camera position, angle and lens; identical walls, ceiling, floor plan and room size; every window, door and roof window stays exactly where it is with the same size; do NOT add any window, door, niche or opening that is not visible in image 1; the toilet stays exactly where it is, same orientation (the drain cannot be moved); the washbasin stays on the same wall in the same place; radiators stay; the bathtub or shower stays in the same place.`,
-    `Changes (package "${v.packageName}"): all walls and the floor tiled with ${v.format} cm ${v.tilePrompt} tiles${asSample}${essenza}; ${v.showerPrompt} where the bathtub/shower is now; wall-hung rimless toilet in ${v.sanitaryPrompt} at the existing position; ${v.basinPrompt} on a wall-hung vanity in ${v.furniturePrompt}; ${v.mirrorPrompt} above the basin; ${v.finishPrompt} fittings (${v.tapSeries}). Remove clutter, towels, bottles, shower curtain and rugs. Natural daylight, no people, no text.`,
+    `Changes (package "${v.packageName}"): the floor tiled with ${v.format} cm ${v.tilePrompt} tiles${asSample}; ${v.wallPrompt}; ${v.showerPrompt} where the bathtub/shower is now; wall-hung rimless toilet in ${v.sanitaryPrompt} at the existing position; ${v.basinPrompt} on a wall-hung vanity in ${v.furniturePrompt}; ${v.mirrorPrompt} above the basin; ${v.finishPrompt} fittings (${v.tapSeries}). Remove clutter, towels, bottles, shower curtain and rugs. Natural daylight, no people, no text.`,
   ].join('\n');
 }
 
