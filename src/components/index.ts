@@ -9,6 +9,8 @@ export { default as Booking } from '../pages/book-online/Booking';
 export { default as DataSecurity } from '../pages/data-security/DataSecurity';
 export { default as Impressum } from '../pages/impressum/Impressum';  
 export { default as AGB } from '../pages/agb/Agb';
+export { default as Badumbau } from '../pages/badumbau/Badumbau';
+export { default as Referenzen } from '../pages/referenzen/Referenzen';
 
 // SEO Components
 export { default as SEOHead } from './seo/SEOHead';
