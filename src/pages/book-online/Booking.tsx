@@ -2,8 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import styles from './Booking.module.css';
 
-import beratungImage from '../../assets/shutterstock_2286698317.jpg';
-import heroImage from '../../assets/shutterstock_2336703843.jpg';
+import beratungImage from '../../assets/shutterstock_2286698317.webp';
+import heroImage from '../../assets/shutterstock_2336703843.webp';
 import gallery1Image from '../../assets/2025-09-10.webp';
 import gallery2Image from '../../assets/2025-09-10 (4).webp';
 import gallery3Image from '../../assets/2025-09-10 (2).jpg';
@@ -37,7 +37,7 @@ const Booking: React.FC = () => {
           property="og:description"
           content="Individuelle Beratung bei Ihnen zu Hause oder im Showroom. Jetzt Termin sichern – kostenloser Ersttermin."
         />
-        <meta property="og:image" content={heroImage} />
+        <meta property="og:image" content={`https://newlivingdesign.ch${heroImage}`} />
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://newlivingdesign.ch/booking" />
         <meta name="twitter:card" content="summary_large_image" />
