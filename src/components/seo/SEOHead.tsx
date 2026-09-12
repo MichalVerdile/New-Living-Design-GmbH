@@ -10,7 +10,7 @@ const SEOHead: React.FC<SEOHeadProps> = ({
   title = 'New Living Design GmbH | Interior Design & Sanitäre Lösungen',
   description = 'New Living Design GmbH – Ihr Partner für Bodenbeläge, Badezimmermöbel, Sanitärinstallationen und Designlösungen. Modernes Interior Design aus der Schweiz.',
   keywords = 'Interior Design, Bodenbeläge, Badezimmermöbel, Sanitär, Schweiz, New Living Design, Badezimmer, Fliesen, Keramik, Luxus Badezimmer, Sanitärinstallation, Innenarchitektur',
-  image = 'https://www.newlivingdesign.ch/src/assets/og-image.jpg',
+  image = 'https://www.newlivingdesign.ch/og-image.jpg',
   url = 'https://www.newlivingdesign.ch',
   type = 'website',
   structuredData,
