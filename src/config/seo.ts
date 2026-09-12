@@ -1,35 +1,37 @@
+import { business } from './business';
+
 // SEO and analytics configuration
 export const seoConfig = {
   // Google Analytics
-  googleAnalyticsId: import.meta.env.VITE_GOOGLE_ANALYTICS_ID || 'G-KX239CT54D',
+  googleAnalyticsId: import.meta.env.VITE_GOOGLE_ANALYTICS_ID || business.ga4MeasurementId,
   
   // Google Tag Manager
   googleTagManagerId: import.meta.env.VITE_GOOGLE_TAG_MANAGER_ID || '',
   
   // Facebook Pixel
-  facebookPixelId: import.meta.env.VITE_FACEBOOK_PIXEL_ID || '',
+  facebookPixelId: import.meta.env.VITE_FACEBOOK_PIXEL_ID || business.metaPixelId,
   
   // Site information
   siteUrl: 'https://www.newlivingdesign.ch',
   siteName: 'New Living Design GmbH',
-  defaultImage: '/src/assets/og-image-default.jpg',
+  defaultImage: '/og-image.jpg',
   
   // Company information
   company: {
     name: 'New Living Design GmbH',
     address: {
-      street: 'Musterstraße 123', // Replace with actual address
-      city: 'Zofingen',
-      state: 'Aargau',
-      zip: '4800',
-      country: 'CH'
+      street: business.address.street,
+      city: business.address.city,
+      state: business.address.regionName,
+      zip: business.address.zip,
+      country: business.address.country
     },
-    phone: '+41-XX-XXX-XX-XX', // Replace with actual phone
-    email: 'info@newlivingdesign.ch',
+    phone: business.phone.e164,
+    email: business.email,
     socialMedia: {
-      facebook: 'https://www.facebook.com/newlivingdesign',
-      instagram: 'https://www.instagram.com/newlivingdesign',
-      linkedin: ''
+      facebook: business.social.facebook,
+      instagram: business.social.instagram,
+      linkedin: business.social.linkedin
     }
   },
   
