@@ -23,7 +23,7 @@ export default defineConfig({
   plugins: [
     react(),
     createSitemap({
-      hostname: 'https://www.newlivingdesign.ch',
+      hostname: 'https://newlivingdesign.ch',
       exclude: ['/404'],
       readable: true,
       dynamicRoutes: routes
