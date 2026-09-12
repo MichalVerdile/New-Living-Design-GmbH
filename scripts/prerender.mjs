@@ -2,7 +2,7 @@
  * Statisches Prerendering nach `vite build`.
  *
  * 1. Baut src/entry-server.tsx mit vite.config.ssr.ts nach dist-ssr/.
- * 2. Rendert jede Route aus routes.json mit React (renderToString).
+ * 2. Rendert jede Route aus scripts/routes.mjs (routes.json + Blogartikel) mit React.
  * 3. Schreibt das HTML in dist/<route>/index.html (Home: dist/index.html),
  *    mit den Head-Tags von react-helmet-async (Titel, Meta, Canonical, JSON-LD).
  *
@@ -13,13 +13,14 @@ import { execFileSync } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
+import { getRoutes } from './routes.mjs'
 
 process.env.NODE_ENV ||= 'production'
 
 const root = process.cwd()
 const dist = path.join(root, 'dist')
 const templatePath = path.join(dist, 'index.html')
-const routes = JSON.parse(fs.readFileSync(path.join(root, 'routes.json'), 'utf8'))
+const routes = getRoutes()
 
 if (!fs.existsSync(templatePath)) {
   console.warn('[prerender] dist/index.html fehlt, nichts zu tun.')
