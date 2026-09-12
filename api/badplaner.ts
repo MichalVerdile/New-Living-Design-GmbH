@@ -15,6 +15,8 @@
  *                        Domain muss bei Resend verifiziert sein)
  *   BADPLANER_DAILY_CAP  Maximale Ideenbilder pro Tag insgesamt (Default 60)
  *   BADPLANER_MODEL      Gemini-Modell (Default gemini-3.1-flash-image)
+ *   BADPLANER_CHECK_MODEL Gemini-Textmodell für die Fensterprüfung (Default gemini-2.5-flash);
+ *                        leer lassen = keine Prüfung
  *
  * Fotos und Ideenbilder werden NICHT gespeichert (kein Blob, kein KV): sie gehen
  * nur an Google zur Bilderzeugung und per E-Mail an uns. Siehe /datenschutz#badplaner.
@@ -27,7 +29,7 @@ import { business, bathPackages } from '../src/config/business.js';
 declare const process: any;
 declare const Buffer: any;
 
-export const config = { maxDuration: 60 };
+export const config = { maxDuration: 120 };
 
 /* ---------- Grenzen ---------- */
 
@@ -36,6 +38,7 @@ const MAX_FILE_BASE64 = 4 * 1024 * 1024;      // Grundriss (base64-Zeichen)
 const PER_DEVICE_PER_DAY = 3;                 // Cookie nldbp
 const PER_IP_PER_DAY = 6;                     // In-Memory
 const GEMINI_TIMEOUT_MS = 50000;
+const CHECK_TIMEOUT_MS = 20000;
 const COOKIE_NAME = 'nldbp';
 
 /*
@@ -56,6 +59,7 @@ interface RenderBody {
   finish: string;
   sanitary: string;
   wall?: string; // Wandhöhe der Platten (fehlt bei alten Clients → Standard)
+  windows?: string; // Fenster auf dem Foto: '0' | '1' | '2' | '3' (3 = drei oder mehr), fehlt bei alten Clients
   shower: string;
   basin: string;
   mirror: string;
@@ -132,6 +136,7 @@ async function handleRender(req: any, res: any, body: RenderBody) {
   if (!tile || !furniture || !finish || !sanitary || !wall || !shower || !basin || !mirror) {
     return bad(res, 'Die Ausstattung passt nicht zum gewählten Paket. Bitte Auswahl prüfen.');
   }
+  const windows = typeof body.windows === 'string' && /^[0-3]$/.test(body.windows) ? body.windows : '';
   const name = text(body.name, 120);
   const phone = text(body.phone, 60);
   const email = text(body.email, 120);
@@ -197,11 +202,28 @@ async function handleRender(req: any, res: any, body: RenderBody) {
     finishPrompt: finish.prompt,
     tapSeries: opts.tapSeries,
     withSwatch: !!swatch,
+    windows,
   });
 
-  // 5. Bild erzeugen
-  const gen = await generateImage(prompt, photo, swatch);
+  // 5. Bild erzeugen, dann prüfen, ob das Modell Fenster/Türen dazuerfunden hat.
+  //    Wenn ja: ein zweiter Versuch mit dem Hinweis auf den Fehler.
+  let gen = await generateImage(prompt, photo, swatch);
   if (gen.ok === false) return res.status(502).json({ ok: false, error: gen.error });
+  let checkNote = 'nicht geprüft';
+  const check = await checkOpenings(photo, gen);
+  if (check) {
+    checkNote = check.extra ? `1. Versuch verworfen (${check.reason})` : 'ok';
+    if (check.extra) {
+      const retryPrompt = `${prompt}\nIMPORTANT: a previous attempt was rejected because it added an opening that does not exist in image 1 (${check.reason}). Keep every wall exactly as in image 1: no new window, roof window, door or glass opening.`;
+      const second = await generateImage(retryPrompt, photo, swatch);
+      if (second.ok !== false) {
+        gen = second;
+        const check2 = await checkOpenings(photo, second);
+        checkNote += check2 ? (check2.extra ? `, 2. Versuch ebenfalls auffällig (${check2.reason})` : ', 2. Versuch ok') : ', 2. Versuch nicht geprüft';
+      }
+    }
+  }
+  console.log('[badplaner] Fensterprüfung:', checkNote);
 
   // 6. Lead per E-Mail (Resend mit Anhängen, sonst Formspree ohne Bilder)
   const leadId = newId();
@@ -216,6 +238,8 @@ async function handleRender(req: any, res: any, body: RenderBody) {
     ['Armatur', `${finish.label}, ${opts.tapSeries}`],
     ['Sanitärkeramik', `${sanitary.label} (${sanitary.supplier})`],
     ['Wandplatten', wall.label],
+    ['Fenster laut Kunde', windows === '' ? 'keine Angabe' : windows === '0' ? 'keine' : windows === '3' ? '3 oder mehr' : windows],
+    ['Fensterprüfung', checkNote],
     ['Dusche / Wanne', shower.label],
     ['Waschtisch', basin.label],
     ['Spiegel', mirror.label],
@@ -295,14 +319,21 @@ function buildPrompt(v: {
   finishPrompt: string;
   tapSeries: string;
   withSwatch: boolean;
+  windows: string;
 }): string {
   const intro = v.withSwatch
     ? `Photo editing task. Image 1 is the customer's existing bathroom. Image 2 is ONLY a close-up material sample (tile texture and colour); ignore everything else about image 2, it contains no layout information.`
     : `Photo editing task. Image 1 is the customer's existing bathroom.`;
   const asSample = v.withSwatch ? ' as in image 2' : '';
+  const windowRule =
+    v.windows === '0'
+      ? 'Image 1 shows NO window and no roof window: the result must not contain any window or glass opening at all, every wall stays a solid wall.'
+      : v.windows
+        ? `Image 1 shows exactly ${v.windows === '3' ? 'three or more' : v.windows} window(s) including roof windows: the result must show exactly the same window(s) at the same place and size and no additional window, roof window, glass opening or door anywhere; walls that are solid in image 1 stay solid.`
+        : 'The number of windows, roof windows and doors must be identical to image 1: never add an opening that is not visible in image 1; walls that are solid in image 1 stay solid.';
   return [
     intro,
-    `Produce a photorealistic "after renovation" photo of image 1 with these hard constraints: identical camera position, angle and lens; identical walls, ceiling, floor plan and room size; every window, door and roof window stays exactly where it is with the same size; do NOT add any window, door, niche or opening that is not visible in image 1; the toilet stays exactly where it is, same orientation (the drain cannot be moved); the washbasin stays on the same wall in the same place; radiators stay; the bathtub or shower stays in the same place.`,
+    `Produce a photorealistic "after renovation" photo of image 1 with these hard constraints: identical camera position, angle and lens; identical walls, ceiling, floor plan and room size; every window, door and roof window stays exactly where it is with the same size; do NOT add any window, door, niche or opening that is not visible in image 1; ${windowRule} The toilet stays exactly where it is, same orientation (the drain cannot be moved); the washbasin stays on the same wall in the same place; radiators stay; the bathtub or shower stays in the same place.`,
     `Changes (package "${v.packageName}"): the floor tiled with ${v.format} cm ${v.tilePrompt} tiles${asSample}; ${v.wallPrompt}; ${v.showerPrompt} where the bathtub/shower is now; wall-hung rimless toilet in ${v.sanitaryPrompt} at the existing position; ${v.basinPrompt} on a wall-hung vanity in ${v.furniturePrompt}; ${v.mirrorPrompt} above the basin; ${v.finishPrompt} fittings (${v.tapSeries}). Remove clutter, towels, bottles, shower curtain and rugs. Natural daylight, no people, no text.`,
   ].join('\n');
 }
@@ -381,6 +412,62 @@ async function generateImage(prompt: string, photo: { mime: string; data: string
         ? 'Das hat zu lange gedauert. Bitte noch einmal versuchen.'
         : 'Der Bilddienst ist im Moment nicht erreichbar. Bitte später noch einmal versuchen.',
     };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/* ---------- Prüfung: dazuerfundene Fenster/Türen ---------- */
+
+/**
+ * Fragt ein Gemini-Textmodell, ob das Ideenbild eine Öffnung (Fenster, Dachfenster,
+ * Tür, Glasfläche) enthält, die im Foto nicht da ist. Liefert null, wenn die Prüfung
+ * nicht möglich war (Modell fehlt, Timeout, unlesbare Antwort): dann gilt das Bild.
+ */
+async function checkOpenings(photo: { mime: string; data: string }, gen: { mime: string; data: string }): Promise<{ extra: boolean; reason: string } | null> {
+  const model = process.env.BADPLANER_CHECK_MODEL === undefined ? 'gemini-2.5-flash' : process.env.BADPLANER_CHECK_MODEL;
+  if (!model) return null;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+  const question =
+    'Image 1 is a photo of a bathroom. Image 2 is an edited "after renovation" version of the same photo, same camera position. ' +
+    'Compare the openings in the walls and ceiling: windows, roof windows (skylights), doors, glass openings to the outside. ' +
+    'Does image 2 contain any such opening that does not exist at roughly the same place in image 1? A glass shower screen or a mirror is NOT an opening. ' +
+    'Answer with JSON only, no markdown: {"extra_openings": true or false, "reason": "short English reason, max 20 words"}';
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), CHECK_TIMEOUT_MS);
+  try {
+    const r = await fetch(url, {
+      method: 'POST',
+      signal: controller.signal,
+      headers: { 'x-goog-api-key': process.env.GEMINI_API_KEY, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        contents: [
+          {
+            role: 'user',
+            parts: [
+              { text: question },
+              { inlineData: { mimeType: photo.mime, data: photo.data } },
+              { inlineData: { mimeType: gen.mime, data: gen.data } },
+            ],
+          },
+        ],
+        generationConfig: { temperature: 0, responseMimeType: 'application/json' },
+      }),
+    });
+    const json: any = await r.json().catch(() => null);
+    if (!r.ok) {
+      console.error('[badplaner] Fensterprüfung fehlgeschlagen', r.status, json?.error?.message || '');
+      return null;
+    }
+    const textOut: string = json?.candidates?.[0]?.content?.parts?.map((p: any) => p.text || '').join('') || '';
+    const m = textOut.match(/\{[\s\S]*\}/);
+    if (!m) return null;
+    const parsed = JSON.parse(m[0]);
+    if (typeof parsed.extra_openings !== 'boolean') return null;
+    return { extra: parsed.extra_openings, reason: String(parsed.reason || '').slice(0, 160) };
+  } catch (err: any) {
+    console.error('[badplaner] Fensterprüfung nicht möglich', err && err.name === 'AbortError' ? 'Timeout' : err);
+    return null;
   } finally {
     clearTimeout(timer);
   }
