@@ -737,6 +737,26 @@
 .package-claim { color: #4b5563; line-height: 1.5; margin-top: 0.35rem; }
 .package-link { margin-top: 1rem; font-weight: 600; color: #111; }
 
+/* Hinweis auf den Badplaner (nach den Paketen) */
+.planner-box {
+  max-width: 860px; margin: 2.5rem auto 0;
+  display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; flex-wrap: wrap;
+  background: #fff; border: 2px solid #111; border-radius: 1.25rem; padding: 1.5rem 1.75rem;
+}
+.planner-box h3 { margin: 0.35rem 0 0.4rem; font-size: 1.25rem; color: #111827; }
+.planner-box p { margin: 0; color: #374151; line-height: 1.55; max-width: 560px; }
+.planner-eyebrow {
+  display: inline-block; background: #111; color: #fff; font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase;
+  font-weight: 700; padding: 0.3rem 0.8rem; border-radius: 50px;
+}
+.planner-cta {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 0.85rem 1.8rem; border-radius: 50px; font-weight: 600; text-decoration: none; white-space: nowrap;
+  background: linear-gradient(135deg, #0a0a0a 0%, #111 100%); color: #fff; box-shadow: 0 8px 25px rgba(0, 0, 0, 0.25);
+  transition: transform 0.25s ease, background 0.25s ease;
+}
+.planner-cta:hover { transform: translateY(-2px); background: linear-gradient(135deg, #1a1a1a 0%, #222 100%); color: #e5e7eb; }
+
 /* Bewertungen (dunkel) */
 .reviews {
   padding: 4rem 0;

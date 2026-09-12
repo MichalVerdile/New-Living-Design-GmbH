@@ -92,6 +92,16 @@ const Home: React.FC = () => {
               </Link>
             ))}
           </div>
+
+          {/* Hinweis auf den Badplaner */}
+          <aside className={styles['planner-box']}>
+            <div>
+              <span className={styles['planner-eyebrow']}>Neu</span>
+              <h3>Badplaner – Ihr Bad als Ideenbild</h3>
+              <p>Paket wählen, Foto vom Bad machen, in 30 Sekunden ein Ideenbild erhalten. Kostenlos und unverbindlich.</p>
+            </div>
+            <Link to="/badplaner" className={styles['planner-cta']}>Badplaner starten</Link>
+          </aside>
         </div>
       </section>
 
