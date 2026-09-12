@@ -10,7 +10,7 @@
 export const business = {
   legalName: 'New Living Design GmbH',
   name: 'New Living Design',
-  siteUrl: 'https://www.newlivingdesign.ch',
+  siteUrl: 'https://newlivingdesign.ch',
 
   address: {
     street: 'Im Römerquartier 4A',
