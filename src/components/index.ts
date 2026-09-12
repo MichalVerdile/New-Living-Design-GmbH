@@ -11,6 +11,8 @@ export { default as Impressum } from '../pages/impressum/Impressum';
 export { default as AGB } from '../pages/agb/Agb';
 export { default as Badumbau } from '../pages/badumbau/Badumbau';
 export { default as Referenzen } from '../pages/referenzen/Referenzen';
+export { default as Blog } from '../pages/blog/Blog';
+export { default as BlogPost } from '../pages/blog/BlogPost';
 
 // SEO Components
 export { default as SEOHead } from './seo/SEOHead';
