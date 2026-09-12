@@ -87,7 +87,7 @@ const Badumbau: React.FC = () => {
       if (res.ok) {
         setStatus('ok');
         form.reset();
-        trackLead('badumbau-formular');
+        trackLead('form', 'badumbau-formular');
       } else {
         setStatus('error');
       }
@@ -130,7 +130,7 @@ const Badumbau: React.FC = () => {
             Drei Badpakete mit Fixpreis ab CHF {bathPackages[0].priceLabel}. Farbe kostet bei uns nichts extra.
           </p>
           <div className={styles.heroActions}>
-            <a href={`tel:${business.phone.e164}`} className={styles.ctaPrimary}>
+            <a href={`tel:${business.phone.e164}`} data-lead="badumbau-hero" className={styles.ctaPrimary}>
               {business.phone.display} anrufen
             </a>
             <a href="#anfrage" className={styles.ctaSecondary}>
@@ -273,8 +273,8 @@ const Badumbau: React.FC = () => {
             <h2 className={styles.sectionTitle}>Sagen Sie uns, wann Sie starten möchten</h2>
             <p className={styles.sectionIntroLight}>
               Wir rufen Sie innerhalb eines Arbeitstages zurück und vereinbaren den Termin in der Ausstellung oder bei Ihnen zu Hause.
-              Oder direkt: <a href={`tel:${business.phone.e164}`}>{business.phone.display}</a>, WhatsApp{' '}
-              <a href={`https://wa.me/${business.whatsapp.e164.replace('+', '')}`} target="_blank" rel="noopener noreferrer">{business.whatsapp.display}</a>.
+              Oder direkt: <a href={`tel:${business.phone.e164}`} data-lead="badumbau-formtext">{business.phone.display}</a>, WhatsApp{' '}
+              <a href={`https://wa.me/${business.whatsapp.e164.replace('+', '')}`} data-lead="badumbau-formtext" target="_blank" rel="noopener noreferrer">{business.whatsapp.display}</a>.
             </p>
           </div>
 
@@ -331,7 +331,7 @@ const Badumbau: React.FC = () => {
               {status === 'ok' && <p className={styles.success}>Danke, wir melden uns innerhalb eines Arbeitstages.</p>}
               {status === 'error' && (
                 <p className={styles.error}>
-                  Das hat nicht geklappt. Rufen Sie uns an: <a href={`tel:${business.phone.e164}`}>{business.phone.display}</a>
+                  Das hat nicht geklappt. Rufen Sie uns an: <a href={`tel:${business.phone.e164}`} data-lead="badumbau-fehler">{business.phone.display}</a>
                 </p>
               )}
             </div>

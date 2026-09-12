@@ -11,7 +11,7 @@ import CookieBanner from './components/cookie/CookieBanner';
 import WhatsAppButton from './components/whatsapp/WhatsAppButton';
 import { generateOrganizationStructuredData, generateWebsiteStructuredData } from './utils/structuredData';
 import RouteTracker from './components/analytics/RouteTracker';
-import { initTrackingFromConsent } from './utils/tracking';
+import { initTrackingFromConsent, installLeadClickTracking } from './utils/tracking';
 
 /**
  * Die App ohne Router und ohne HelmetProvider: beides setzt der Einstieg,
@@ -20,6 +20,7 @@ import { initTrackingFromConsent } from './utils/tracking';
 function App() {
   useEffect(() => {
     initTrackingFromConsent();
+    installLeadClickTracking();
   }, []);
 
   const organizationData = generateOrganizationStructuredData();

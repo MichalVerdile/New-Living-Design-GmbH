@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import styles from "./Contact.module.css";
 import heroImg from "../../assets/shutterstock_2626257257.webp";
 import { Helmet } from "react-helmet-async";
+import { trackLead } from "../../utils/tracking";
 
 const FORMSPREE_ENDPOINT = "https://formspree.io/f/xdklvgpb";
 
@@ -39,6 +40,7 @@ const Contact: React.FC = () => {
       if (res.ok) {
         setStatus("success");
         form.reset();
+        trackLead("form", "kontaktformular");
       } else {
         const data = await res.json().catch(() => ({} as any));
         setStatus("error");
@@ -262,7 +264,7 @@ const Contact: React.FC = () => {
               </p>
 
               <div className={styles["contact-list"]}>
-                <a href="tel:+41625445854" className={styles["contact-item"]}>
+                <a href="tel:+41625445854" data-lead="kontakt-festnetz" className={styles["contact-item"]}>
                   <div className={styles["contact-icon"]}>
                     <svg viewBox="0 0 24 24" fill="none">
                       <path
@@ -275,7 +277,7 @@ const Contact: React.FC = () => {
                   <span>T 062 544 58 54</span>
                 </a>
 
-                <a href="tel:+41625445853" className={styles["contact-item"]}>
+                <a href="tel:+41625445853" data-lead="kontakt-festnetz-2" className={styles["contact-item"]}>
                   <div className={styles["contact-icon"]}>
                     <svg viewBox="0 0 24 24" fill="none">
                       <path
@@ -288,7 +290,7 @@ const Contact: React.FC = () => {
                   <span>T 062 544 58 53</span>
                 </a>
 
-                <a href="tel:+41766051307" className={styles["contact-item"]}>
+                <a href="tel:+41766051307" data-lead="kontakt-mobile-emanuel" className={styles["contact-item"]}>
                   <div className={styles["contact-icon"]}>
                     <svg viewBox="0 0 24 24" fill="none">
                       <path
@@ -301,7 +303,7 @@ const Contact: React.FC = () => {
                   <span>M +41 76 605 13 07 (Emanuel Verdile)</span>
                 </a>
 
-                <a href="tel:+41767438430" className={styles["contact-item"]}>
+                <a href="tel:+41767438430" data-lead="kontakt-whatsapp-nummer" className={styles["contact-item"]}>
                   <div className={styles["contact-icon"]}>
                     <svg viewBox="0 0 24 24" fill="none">
                       <path

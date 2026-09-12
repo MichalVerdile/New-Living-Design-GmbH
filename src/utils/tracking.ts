@@ -156,14 +156,62 @@ function disableMetaPixel(): void {
   ['_fbp', '_fbc'].forEach(removeCookieEverywhere);
 }
 
-/** Meldet ein Ereignis an GA4 und Meta Pixel, nur wenn die Dienste geladen sind. */
-export function trackLead(source: string): void {
+/* ---------- Lead-Ereignisse ---------- */
+
+export type LeadChannel = 'whatsapp' | 'phone' | 'email' | 'form';
+
+/**
+ * Meldet einen Lead-Kontakt, nur wenn die Dienste geladen sind (Einwilligung).
+ *
+ * GA4: ein Ereignis pro Kanal (lead_whatsapp, lead_phone, lead_email, lead_form),
+ *      Parameter lead_source = Stelle auf der Seite, page_path = Pfad.
+ *      Die vier Namen sind in GA4 als Schlüsselereignisse hinterlegt und werden
+ *      als Conversions in Google Ads importiert.
+ * Meta Pixel: Standardereignis "Lead" für Formulare, "Contact" für Telefon/WhatsApp/E-Mail.
+ */
+export function trackLead(channel: LeadChannel, place: string): void {
   if (window.gtag && gaLoaded) {
-    window.gtag('event', 'generate_lead', { source });
+    window.gtag('event', `lead_${channel}`, {
+      lead_source: place,
+      page_path: window.location.pathname,
+    });
   }
   if (window.fbq && pixelLoaded) {
-    window.fbq('track', 'Lead', { content_name: source });
+    window.fbq('track', channel === 'form' ? 'Lead' : 'Contact', {
+      content_name: place,
+      content_category: channel,
+    });
   }
+}
+
+let clickTrackingInstalled = false;
+
+/**
+ * Einmal beim Start aufrufen: erfasst auf allen Seiten Klicks auf tel:-, mailto:-
+ * und WhatsApp-Links, ohne jeden Link einzeln anfassen zu müssen.
+ * Ein Link kann mit data-lead="…" eine sprechende Stelle angeben; sonst wird
+ * Pfad + Linktext gemeldet.
+ */
+export function installLeadClickTracking(): void {
+  if (clickTrackingInstalled || typeof document === 'undefined') return;
+  clickTrackingInstalled = true;
+  document.addEventListener(
+    'click',
+    (ev) => {
+      const target = ev.target as Element | null;
+      const link = target?.closest?.('a[href]') as HTMLAnchorElement | null;
+      if (!link) return;
+      const href = link.getAttribute('href') || '';
+      const place =
+        link.dataset.lead || `${window.location.pathname}:${(link.textContent || '').trim().slice(0, 40)}`;
+      if (href.startsWith('tel:')) trackLead('phone', place);
+      else if (href.startsWith('mailto:')) trackLead('email', place);
+      else if (href.startsWith('whatsapp:') || /(^|\/\/)(wa\.me|api\.whatsapp\.com|web\.whatsapp\.com)\//i.test(href)) {
+        trackLead('whatsapp', place);
+      }
+    },
+    { capture: true },
+  );
 }
 
 /**
