@@ -26,6 +26,7 @@ interface Selection {
   furniture: string;
   finish: string;
   sanitary: string;
+  wall: string;
   shower: string;
   basin: string;
   mirror: string;
@@ -39,6 +40,7 @@ function defaultSelection(pkg: PackageId): Selection {
     furniture: o.furniture[0].id,
     finish: o.finishes[0].id,
     sanitary: o.sanitary[0].id,
+    wall: o.walls[0].id,
     shower: o.showers[0].id,
     basin: o.basins[0].id,
     mirror: o.mirrors[0].id,
@@ -261,6 +263,7 @@ const Badplaner: React.FC = () => {
         furniture: options.furniture.find((f) => f.id === sel.furniture),
         finish: options.finishes.find((f) => f.id === sel.finish),
         sanitary: options.sanitary.find((s) => s.id === sel.sanitary),
+        wall: options.walls.find((w) => w.id === sel.wall),
         shower: options.showers.find((s) => s.id === sel.shower),
         basin: options.basins.find((b) => b.id === sel.basin),
         mirror: options.mirrors.find((m) => m.id === sel.mirror),
@@ -408,6 +411,19 @@ const Badplaner: React.FC = () => {
                       ))}
                     </div>
                     <p className={styles.hint}>Nur eine kleine Auswahl. Alle Serien und Farben sehen Sie in unserer Ausstellung in Zofingen.</p>
+                  </fieldset>
+
+                  <fieldset className={styles.group}>
+                    <legend>Wandplatten <span className={styles.groupMeta}>· wie hoch?</span></legend>
+                    <div className={styles.choices}>
+                      {options.walls.map((o) => (
+                        <label key={o.id} className={`${styles.option} ${styles.choice} ${sel.wall === o.id ? styles.optionSelected : ''}`}>
+                          <input type="radio" name="wall" value={o.id} checked={sel.wall === o.id} onChange={() => choose('wall', o.id)} />
+                          <span className={styles.optionLabel}>{o.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                    <p className={styles.hint}>Meist reichen die Platten bis ca. 120 cm, nur in Dusche und Badewanne bis zur Decke. Das spart Material und wirkt ruhiger.</p>
                   </fieldset>
 
                   <fieldset className={styles.group}>
@@ -603,6 +619,7 @@ const Badplaner: React.FC = () => {
               <ul className={styles.summary}>
                 <li><span>Paket</span><span>{pkgInfo.name}, ab CHF {pkgInfo.priceLabel}</span></li>
                 <li><span>Platte</span><span>{chosen.tile?.supplier} {chosen.tile?.series} {chosen.tile?.color}, {chosen.tile?.format.replace('x', '×')} cm</span></li>
+                <li><span>Wandplatten</span><span>{chosen.wall?.label}</span></li>
                 <li><span>Möbelfarbe</span><span>{chosen.furniture?.label}</span></li>
                 <li><span>Armaturen</span><span>{chosen.finish?.label}, {options?.tapSeries}</span></li>
                 <li><span>Keramik</span><span>{chosen.sanitary?.label}</span></li>
