@@ -48,7 +48,7 @@ const DataSecurity: React.FC = () => {
               "logo": "https://newlivingdesign.ch/logo.png"
             },
             "datePublished": "2025-09-15",
-            "dateModified": "2026-09-11",
+            "dateModified": "2026-09-12",
             "description":
               "Informationen zur Verarbeitung personenbezogener Daten bei Nutzung der Website, Kontaktaufnahme und Terminvereinbarung durch die New Living Design GmbH."
           })}
@@ -76,7 +76,7 @@ const DataSecurity: React.FC = () => {
                 Information zur Verarbeitung personenbezogener Daten bei Nutzung unserer Website, Kontaktaufnahme
                 und Terminvereinbarung.
               </p>
-              <span className={styles.badge}>Stand: 15.09.2025</span>
+              <span className={styles.badge}>Stand: 12.09.2026</span>
             </div>
           </div>
           <div className={styles['hero-scroll-indicator']}>
@@ -165,25 +165,45 @@ const DataSecurity: React.FC = () => {
             <p>Rechtsgrundlage: Vertragliche Anbahnung/Erfüllung bzw. berechtigtes Interesse an effizienter Kommunikation; bei Einwilligung (z.&nbsp;B. Marketing) basiert die Verarbeitung auf Ihrer Einwilligung.</p>
           </article>
 
+          <article id="badplaner" className={styles.card}>
+            <h3>9. Badplaner (Ideenbild mit KI)</h3>
+            <p>Mit dem Badplaner auf <Link to="/badplaner">/badplaner</Link> können Sie aus einem Foto Ihres Bads ein Ideenbild mit den gewählten Materialien erstellen lassen.</p>
+            <ul className={styles.list}>
+              <li><strong>Welche Daten:</strong> Foto des Bads, Name, Telefonnummer, optional E-Mail-Adresse und Wohnort, die gewählte Ausstattung (Paket, Platten, Farben, Armaturen),
+                optional ein Grundriss und die Bad-Grösse in m².</li>
+              <li><strong>Zweck:</strong> Erstellung des Ideenbilds und Kontaktaufnahme für eine Beratung (Telefon, WhatsApp, Termin in der Ausstellung).</li>
+              <li><strong>Bildgenerierung:</strong> Das Foto und die Materialangaben werden an <strong>Google LLC</strong> (Gemini API, USA) übermittelt, um das Ideenbild zu erzeugen.
+                Google verwendet Daten aus der bezahlten API gemäss seinen Nutzungsbedingungen nicht zum Training seiner Modelle. Übermittlung in die USA auf Basis
+                des Data Privacy Framework bzw. von Standardvertragsklauseln.</li>
+              <li><strong>Keine Speicherung auf unseren Servern:</strong> Foto und Ideenbild werden nicht auf unseren Servern gespeichert. Sie werden uns zusammen mit Ihren Angaben
+                per E-Mail zugestellt; als Versanddienst nutzen wir <strong>Resend Inc.</strong> (USA). Fällt dieser aus, gehen die Angaben ohne Bilder über <strong>Formspree Inc.</strong> (USA) an uns.</li>
+              <li><strong>Löschung:</strong> Fotos und Ideenbilder löschen wir spätestens 30 Tage nach Abschluss der Anfrage, sofern kein Auftrag zustande kommt.</li>
+              <li><strong>Rechtsgrundlage:</strong> Ihre Einwilligung (Checkbox vor dem Erstellen des Ideenbilds). Sie können die Einwilligung jederzeit mit Wirkung für die Zukunft
+                per E-Mail an die oben genannte Adresse widerrufen; wir löschen die Daten dann umgehend.</li>
+              <li><strong>Cookie:</strong> Das technisch notwendige Cookie <span className={styles.placeholder}>nldbp</span> zählt die Ideenbilder pro Gerät und Tag (Tageslimit) und wird nach einem Tag gelöscht.
+                Es enthält keine persönlichen Daten.</li>
+            </ul>
+          </article>
+
           <article id="weitergabe" className={styles.card}>
-            <h3>9. Weitergabe & Drittländer</h3>
+            <h3>10. Weitergabe & Drittländer</h3>
             <p>Eine Weitergabe erfolgt nur, sofern erforderlich (z.&nbsp;B. an Dienstleister, Montagepartner) oder rechtlich vorgeschrieben. Übermittlungen in Länder ohne angemessenes Datenschutzniveau erfolgen
               nur unter Anwendung geeigneter Garantien (z.&nbsp;B. Standardvertragsklauseln) oder Ihrer ausdrücklichen Einwilligung.</p>
           </article>
 
           <article id="dauer" className={styles.card}>
-            <h3>10. Speicherdauer</h3>
+            <h3>11. Speicherdauer</h3>
             <p>Wir verarbeiten und speichern personenbezogene Daten nur so lange, wie es für die jeweiligen Zwecke erforderlich ist oder eine gesetzliche Pflicht besteht (z.&nbsp;B. handels-/steuerrechtliche Aufbewahrungspflichten).
               Danach löschen oder anonymisieren wir die Daten.</p>
           </article>
 
           <article id="sicherheit" className={styles.card}>
-            <h3>11. Datensicherheit</h3>
+            <h3>12. Datensicherheit</h3>
             <p>Wir treffen angemessene technische und organisatorische Massnahmen (TOM), um Ihre Daten gegen Verlust, Missbrauch und unbefugten Zugriff zu schützen (z.&nbsp;B. Zugriffskontrollen, Verschlüsselung, Backups).</p>
           </article>
 
           <article id="rechte" className={styles.card}>
-            <h3>12. Ihre Rechte</h3>
+            <h3>13. Ihre Rechte</h3>
             <ul className={styles.list}>
               <li>Auskunft und Herausgabe Ihrer Daten,</li>
               <li>Berichtigung, Löschung, Einschränkung der Verarbeitung,</li>
@@ -196,7 +216,7 @@ const DataSecurity: React.FC = () => {
           </article>
 
           <article id="aenderungen" className={styles.card}>
-            <h3>13. Änderungen dieser Erklärung</h3>
+            <h3>14. Änderungen dieser Erklärung</h3>
             <p>Wir können diese Datenschutzerklärung anpassen, wenn sich Technologien, Prozesse oder Rechtsgrundlagen ändern. Es gilt die jeweils auf dieser Seite veröffentlichte Version.</p>
           </article>
 

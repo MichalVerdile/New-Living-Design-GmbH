@@ -12,7 +12,7 @@ const blogPosts = getBlogPosts()
 // Sitemap: Artikel mit ihrem Veröffentlichungs-/Änderungsdatum, alles andere mit dem Build-Datum
 const lastmod: Record<string, Date> = { '*': new Date() }
 const changefreq: Record<string, string> = { '*': 'monthly', '/': 'weekly', '/blog': 'weekly' }
-const priority: Record<string, number> = { '*': 0.6, '/': 1, '/badumbau-zofingen': 0.9, '/referenzen': 0.8, '/blog': 0.7 }
+const priority: Record<string, number> = { '*': 0.6, '/': 1, '/badumbau-zofingen': 0.9, '/badplaner': 0.8, '/referenzen': 0.8, '/blog': 0.7 }
 for (const p of blogPosts) {
   if (p.updated) lastmod[p.route] = new Date(p.updated)
   priority[p.route] = 0.7

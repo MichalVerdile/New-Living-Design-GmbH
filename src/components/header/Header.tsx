@@ -11,6 +11,7 @@ const Header: React.FC<HeaderProps> = ({ className = '', navigationItems }) => {
   const defaultNavigationItems: NavigationItem[] = [
     { name: 'Home', href: '/', active: true },
     { name: 'Badumbau', href: '/badumbau-zofingen' },
+    { name: 'Badplaner', href: '/badplaner' },
     { name: 'Referenzen', href: '/referenzen' },
     { name: 'Blog', href: '/blog' },
     { name: 'Produkte', href: '/produkte' },
