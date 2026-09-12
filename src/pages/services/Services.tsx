@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import styles from './Services.module.css';
-import heroImage from '../../assets/shutterstock_2583534585.jpg';
-import beratungImage from '../../assets/shutterstock_2479065515.jpg';
-import visualisierungImage from '../../assets/shutterstock_2600181185.jpg';
-import lieferungImage from '../../assets/shutterstock_236748076.jpg';
+import heroImage from '../../assets/shutterstock_2583534585.webp';
+import beratungImage from '../../assets/shutterstock_2479065515.webp';
+import visualisierungImage from '../../assets/shutterstock_2600181185.webp';
+import lieferungImage from '../../assets/shutterstock_236748076.webp';
 import { Helmet } from 'react-helmet-async';
 
 const Services: React.FC = () => {
@@ -38,7 +38,7 @@ const Services: React.FC = () => {
         <meta property="og:description" content="Kostenlose Beratung, 3D-Visualisierung und professionelle Lieferung & Montage. Ihr Partner für hochwertige Bau- und Designprojekte." />
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://newlivingdesign.ch/dienstleistungen" />
-        <meta property="og:image" content="https://newlivingdesign.ch/assets/shutterstock_2583534585.jpg" />
+        <meta property="og:image" content={`https://newlivingdesign.ch${heroImage}`} />
       </Helmet>
 
       {/* Hero Section */}
