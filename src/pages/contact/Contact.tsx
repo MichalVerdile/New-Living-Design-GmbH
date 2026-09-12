@@ -86,8 +86,8 @@ const Contact: React.FC = () => {
             "name": "New Living Design GmbH",
             "image": "https://www.newlivingdesign.ch" + heroImg,
             "url": "https://www.newlivingdesign.ch/kontakt",
-            "telephone": "+41625445853",
-            "email": "info@newlivingdesign.ch",
+            "telephone": "+41625445854",
+            "email": "diego.verdile@newlivingdesign.ch",
             "address": {
               "@type": "PostalAddress",
               "streetAddress": "Im Römerquartier 4A",
@@ -99,20 +99,20 @@ const Contact: React.FC = () => {
               {
                 "@type": "OpeningHoursSpecification",
                 "dayOfWeek": ["Monday","Tuesday","Wednesday","Thursday","Friday"],
-                "opens": "08:00",
-                "closes": "18:00"
+                "opens": "07:00",
+                "closes": "19:00"
               },
               {
                 "@type": "OpeningHoursSpecification",
                 "dayOfWeek": "Saturday",
                 "opens": "09:00",
-                "closes": "12:00"
+                "closes": "13:00"
               }
             ],
             "geo": {
               "@type": "GeoCoordinates",
-              "latitude": 47.2872,
-              "longitude": 7.9455
+              "latitude": 47.2842067,
+              "longitude": 7.9477531
             }
           })}
         </script>
@@ -262,6 +262,19 @@ const Contact: React.FC = () => {
               </p>
 
               <div className={styles["contact-list"]}>
+                <a href="tel:+41625445854" className={styles["contact-item"]}>
+                  <div className={styles["contact-icon"]}>
+                    <svg viewBox="0 0 24 24" fill="none">
+                      <path
+                        d="M22 16.92v3a2 2 0 0 1-2.18 2A19.73 19.73 0 0 1 3.11 5.18 2 2 0 0 1 5.1 3h3a1 1 0 0 1 1 .75l1 3a1 1 0 0 1-.27 1L8.91 9.09a16 16 0 0 0 6 6l1.34-1.94a1 1 0 0 1 1-.27l3 1a1 1 0 0 1 .75 1z"
+                        stroke="currentColor"
+                        strokeWidth="1"
+                      />
+                    </svg>
+                  </div>
+                  <span>T 062 544 58 54</span>
+                </a>
+
                 <a href="tel:+41625445853" className={styles["contact-item"]}>
                   <div className={styles["contact-icon"]}>
                     <svg viewBox="0 0 24 24" fill="none">
@@ -272,7 +285,20 @@ const Contact: React.FC = () => {
                       />
                     </svg>
                   </div>
-                  <span>T +41 62 544 58 53</span>
+                  <span>T 062 544 58 53</span>
+                </a>
+
+                <a href="tel:+41766051307" className={styles["contact-item"]}>
+                  <div className={styles["contact-icon"]}>
+                    <svg viewBox="0 0 24 24" fill="none">
+                      <path
+                        d="M22 16.92v3a2 2 0 0 1-2.18 2A19.73 19.73 0 0 1 3.11 5.18 2 2 0 0 1 5.1 3h3a1 1 0 0 1 1 .75l1 3a1 1 0 0 1-.27 1L8.91 9.09a16 16 0 0 0 6 6l1.34-1.94a1 1 0 0 1 1-.27l3 1a1 1 0 0 1 .75 1z"
+                        stroke="currentColor"
+                        strokeWidth="1"
+                      />
+                    </svg>
+                  </div>
+                  <span>M +41 76 605 13 07 (Emanuel Verdile)</span>
                 </a>
 
                 <a href="tel:+41767438430" className={styles["contact-item"]}>
@@ -285,7 +311,7 @@ const Contact: React.FC = () => {
                       />
                     </svg>
                   </div>
-                  <span>M +41 76 743 84 30</span>
+                  <span>WhatsApp +41 76 743 84 30</span>
                 </a>
 
                 <a href="mailto:diego.verdile@newlivingdesign.ch" className={styles["contact-item"]}>
@@ -313,9 +339,8 @@ const Contact: React.FC = () => {
             <div className={styles.card}>
               <h3>Öffnungszeiten</h3>
               <ul className={styles.hours}>
-                <li><span>Montag–Freitag</span><span>08:00–12:00</span></li>
-                <li><span></span><span>14:00–18:00</span></li>
-                <li><span>Samstag</span><span>09:00–12:00</span></li>
+                <li><span>Montag–Freitag</span><span>07:00–19:00</span></li>
+                <li><span>Samstag</span><span>09:00–13:00</span></li>
                 <li><span>Sonntag</span><span>Geschlossen</span></li>
               </ul>
             </div>
