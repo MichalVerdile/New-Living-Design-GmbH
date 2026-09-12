@@ -1,6 +1,6 @@
 import React from "react";
 import styles from "./About.module.css";
-import heroImg from "../../assets/shutterstock_2600582595.jpg";
+import heroImg from "../../assets/shutterstock_2600582595.webp";
 import { Helmet } from "react-helmet-async";
 
 const cx = (...classes: Array<string | false | undefined>) =>
@@ -20,7 +20,7 @@ const About: React.FC = () => {
           property="og:description"
           content="Familiengeführt, qualitätsverliebt und mit klarer Vision: Erfahren Sie mehr über die Geschichte und Werte der New Living Design GmbH."
         />
-        <meta property="og:image" content={heroImg} />
+        <meta property="og:image" content={`https://newlivingdesign.ch${heroImg}`} />
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://newlivingdesign.ch/ueber-uns" />
         <meta name="twitter:card" content="summary_large_image" />
