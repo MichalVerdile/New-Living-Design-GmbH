@@ -138,9 +138,7 @@ const Footer: React.FC<FooterProps> = ({ className = '' }) => {
         </div>
       </div>
 
-      <script type="application/ld+json">
-        {JSON.stringify(localBusinessJsonLd)}
-      </script>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessJsonLd) }} />
     </footer>
   );
 };
