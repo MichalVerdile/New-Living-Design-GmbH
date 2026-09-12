@@ -25,7 +25,7 @@ const DataSecurity: React.FC = () => {
         />
         <meta property="og:image" content={dataImage} />
         <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://www.newlivingdesign.ch/datenschutz" />
+        <meta property="og:url" content="https://newlivingdesign.ch/datenschutz" />
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content="Datenschutzerklärung | New Living Design GmbH" />
         <meta
@@ -40,12 +40,12 @@ const DataSecurity: React.FC = () => {
             "@context": "https://schema.org",
             "@type": "PrivacyPolicy",
             "name": "Datenschutzerklärung",
-            "url": "https://www.newlivingdesign.ch/datenschutz",
+            "url": "https://newlivingdesign.ch/datenschutz",
             "publisher": {
               "@type": "Organization",
               "name": "New Living Design GmbH",
-              "url": "https://www.newlivingdesign.ch",
-              "logo": "https://www.newlivingdesign.ch/logo.png"
+              "url": "https://newlivingdesign.ch",
+              "logo": "https://newlivingdesign.ch/logo.png"
             },
             "datePublished": "2025-09-15",
             "dateModified": "2026-09-11",
