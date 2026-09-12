@@ -1,25 +1,30 @@
 import type { LocalBusinessSEO, ProductSEO, ServiceSEO, BreadcrumbItem } from '../types/seo';
+import { business } from '../config/business';
 
 export const generateOrganizationStructuredData = () => ({
   "@context": "https://schema.org",
   "@type": "Organization",
-  "name": "New Living Design GmbH",
-  "url": "https://www.newlivingdesign.ch",
-  "logo": "https://www.newlivingdesign.ch/src/assets/logo.png",
-  "description": "New Living Design GmbH – Ihr Partner für hochwertige Interior- und Sanitärlösungen in der Schweiz. Spezialisiert auf Bodenbeläge, Badezimmermöbel und Sanitärinstallationen.",
-  "sameAs": [
-    "https://www.facebook.com/newlivingdesign",
-    "https://www.instagram.com/newlivingdesign"
-  ],
+  "@id": `${business.siteUrl}/#organization`,
+  "name": business.legalName,
+  "url": business.siteUrl,
+  "logo": `${business.siteUrl}/logo.png`,
+  "description": "New Living Design GmbH: Badumbau, Küchen und Platten aus einer Hand, mit Ausstellung in Zofingen (AG). Beratung, 3D-Planung, Sanitär, Plattenarbeiten und Montage durch die eigene Equipe.",
+  "telephone": business.phone.e164,
+  "email": business.email,
+  "sameAs": [business.social.facebook, business.social.instagram, business.social.linkedin],
   "address": {
     "@type": "PostalAddress",
-    "addressCountry": "CH",
-    "addressLocality": "Schweiz"
+    "streetAddress": business.address.street,
+    "postalCode": business.address.zip,
+    "addressLocality": business.address.city,
+    "addressRegion": business.address.region,
+    "addressCountry": business.address.country
   },
   "contactPoint": {
     "@type": "ContactPoint",
+    "telephone": business.phone.e164,
     "contactType": "customer service",
-    "availableLanguage": ["de", "en"]
+    "availableLanguage": ["de", "it", "en"]
   }
 });
 
@@ -107,7 +112,7 @@ export const generateWebsiteStructuredData = () => ({
   "@type": "WebSite",
   "name": "New Living Design GmbH",
   "url": "https://www.newlivingdesign.ch",
-  "description": "Ihr Partner für hochwertige Interior- und Sanitärlösungen in der Schweiz",
+  "description": "Badumbau, Küchen und Platten aus einer Hand in Zofingen (AG)",
   "inLanguage": "de-CH",
   "potentialAction": {
     "@type": "SearchAction",

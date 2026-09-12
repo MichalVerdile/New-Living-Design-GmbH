@@ -393,3 +393,8 @@
     text-align: left;
   }
 }
+
+/* Quicklinks (September 2026) */
+.footer-quicklinks { display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; margin: 1rem 0 1.25rem; }
+.footer-quicklink { color: #d1d5db; text-decoration: none; font-size: 0.9rem; font-weight: 500; border-bottom: 1px solid transparent; transition: color .2s ease, border-color .2s ease; }
+.footer-quicklink:hover { color: #fff; border-bottom-color: #fff; }

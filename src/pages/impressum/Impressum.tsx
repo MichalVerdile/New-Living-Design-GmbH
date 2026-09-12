@@ -48,7 +48,7 @@ const Impressum: React.FC = () => {
               "addressLocality": "Zofingen",
               "addressCountry": "CH"
             },
-            "telephone": "+41 76 605 13 07",
+            "telephone": "+41625445854",
             "email": "emanuel.verdile@newlivingdesign.ch",
             "founder": "Emanuel Diego Verdile",
             "foundingDate": "2024",
@@ -99,8 +99,8 @@ const Impressum: React.FC = () => {
               <span className={styles.placeholder}>Im Römerquartier 4A</span><br />
               <span className={styles.placeholder}>4800 Zofingen, Schweiz</span><br />
               E-Mail: <span className={styles.placeholder}>emanuel.verdile@newlivingdesign.ch</span><br />
-              Telefon: <span className={styles.placeholder}>+41 76 605 13 07</span><br />
-              Website: <span className={styles.placeholder}>[https://www.newlivingdesign.ch]</span>
+              Telefon: <span className={styles.placeholder}>062 544 58 54</span><br />
+              Website: <span className={styles.placeholder}>https://www.newlivingdesign.ch</span>
             </p>
           </article>
 

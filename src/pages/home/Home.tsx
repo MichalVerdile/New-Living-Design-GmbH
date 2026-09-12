@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import styles from './Home.module.css';
-import rexaImage from '../../assets/Rexa_mobili_moode_gallery_7.jpg';
 import trinidadImage from '../../assets/FebalCasa_Cucina_Moderna_Origina_AntaProfiloAlluminio_Vol1_Compo8e.webp';
 import clubRoomImage from '../../assets/22-Private-House-Club-Room.jpg.webp';
 import { SEOHead } from '../../components';
-import { generateLocalBusinessStructuredData, generateFAQStructuredData } from '../../utils/structuredData';
-import type { LocalBusinessSEO } from '../../types/seo';
+import { business, bathPackages, localBusinessJsonLd } from '../../config/business';
+import { badumbauFaq } from '../../data/faq';
+import { homeReferencePhotos, photoUrl } from '../../data/references';
+
+const GOOGLE_RATING = { value: '5.0', count: 23 }; // Google Unternehmensprofil, Stand September 2026
 
 const Home: React.FC = () => {
   const [isVisible, setIsVisible] = useState(false);
@@ -15,61 +17,19 @@ const Home: React.FC = () => {
     setIsVisible(true);
   }, []);
 
-  // Generate local business structured data
-  const businessData: LocalBusinessSEO = {
-    name: "New Living Design GmbH",
-    description: "Ihr Partner für hochwertige Interior- und Sanitärlösungen in der Schweiz. Spezialisiert auf Badezimmer, Küchen und maßgeschneiderte Wohnkonzepte.",
-    url: "https://www.newlivingdesign.ch",
-    telephone: "+41-XX-XXX-XX-XX", // Replace with actual phone number
-    address: {
-      streetAddress: "Musterstraße 123", // Replace with actual address
-      addressLocality: "Zofingen",
-      addressRegion: "Aargau",
-      postalCode: "4800",
-      addressCountry: "CH"
-    },
-    geo: {
-      latitude: 47.2828, // Replace with actual coordinates
-      longitude: 7.9442
-    },
-    openingHours: [
-      "Monday,Tuesday,Wednesday,Thursday,Friday 08:00-17:00",
-      "Saturday 09:00-16:00"
-    ],
-    priceRange: "€€€",
-    image: "https://www.newlivingdesign.ch/src/assets/Rexa_mobili_moode_gallery_7.jpg"
-  };
-
-  // FAQ structured data for better SEO
-  const faqs = [
-    {
-      question: "Welche Dienstleistungen bietet New Living Design?",
-      answer: "Wir bieten umfassende Innenarchitektur-Dienstleistungen, einschließlich Badezimmergestaltung, Küchenplanung, Bodenbeläge und komplette Hausrenovierungen."
-    },
-    {
-      question: "In welchen Gebieten sind Sie tätig?",
-      answer: "Wir sind hauptsächlich in der Schweiz tätig, mit Schwerpunkt auf der Region Aargau und Zofingen."
-    },
-    {
-      question: "Bieten Sie kostenlose Beratungen an?",
-      answer: "Ja, wir bieten kostenlose Erstberatungen für alle unsere Dienstleistungen an. Kontaktieren Sie uns für einen Termin."
-    }
-  ];
-
-  const localBusinessStructuredData = generateLocalBusinessStructuredData(businessData);
-  const faqStructuredData = generateFAQStructuredData(faqs);
-  const combinedStructuredData = [localBusinessStructuredData, faqStructuredData];
+  const homeFaq = badumbauFaq.slice(0, 4);
+  const heroImage = photoUrl('bad-marmor-grau-01.webp');
 
   return (
     <main id="main-content" className={styles.home}>
       <SEOHead
-        title="New Living Design GmbH – Innenarchitektur & Renovierungen in Zofingen"
-        description="New Living Design GmbH in Zofingen: Exklusive Badezimmer, Küchen und Wohnraumlösungen. Individuelle Beratung, maßgeschneiderte Innenarchitektur und professionelle Renovierungen."
-        keywords="Innenarchitektur, Badezimmer, Küchen, Renovierung, Zofingen, Aargau, Schweiz, Interior Design, Bodenbeläge, Sanitär, New Living Design"
+        title="Badumbau & Küchen in Zofingen | New Living Design"
+        description={`Badumbau, Küchen und Platten aus einer Hand in Zofingen (AG): Ausstellung, 3D-Planung, eigene Equipe. Drei Badpakete mit Fixpreis ab CHF ${bathPackages[0].priceLabel}. Wir arbeiten in Aarau, Olten, Sursee, Langenthal und Umgebung.`}
+        keywords="Badumbau Zofingen, Badezimmer Zofingen, Küchen Zofingen, Badsanierung Aargau, Bäderstudio Zofingen, Plattenleger Zofingen, Badplanung 3D, New Living Design"
         url="/"
         type="website"
-        structuredData={combinedStructuredData}
-        image="https://www.newlivingdesign.ch/src/assets/Rexa_mobili_moode_gallery_7.jpg"
+        structuredData={localBusinessJsonLd}
+        image={`${business.siteUrl}${heroImage}`}
       />
 
       {/* Hero Section */}
@@ -77,26 +37,81 @@ const Home: React.FC = () => {
         <div className={styles['hero-background']}>
           <div className={styles['hero-overlay']}></div>
           <img
-            src={rexaImage}
-            alt="Moderne Badezimmerausstattung von New Living Design - Exklusive Badezimmermöbel und Sanitärinstallationen"
+            src={heroImage}
+            alt="Badumbau von New Living Design Zofingen: Bad in grauer Marmoroptik mit schwarzen Armaturen"
             className={styles['hero-bg-image']}
+            fetchPriority="high"
           />
         </div>
         <div className={styles['hero-container']}>
           <div className={`${styles['hero-content']} ${isVisible ? styles.visible : ''}`}>
             <h1 className={styles['hero-title']}>
-              <span className={styles['title-line']}>Willkommen bei</span>
+              <span className={styles['title-line']}>Badumbau und Küchen in Zofingen</span>
               <span className={styles['title-highlight']}>New Living Design</span>
             </h1>
             <div className={styles['hero-description']}>
               <p>
-                Ihr Partner für Hausrenovierung und moderne Innenausstattung.
+                Ausstellung, 3D-Planung und Umbau aus einer Hand. Drei Badpakete mit Fixpreis ab CHF {bathPackages[0].priceLabel},
+                Farbe ohne Aufpreis. Für Zofingen, Aarau, Olten, Sursee, Langenthal und Umgebung.
               </p>
             </div>
+            <div className={styles['hero-actions']}>
+              <Link to="/badumbau-zofingen" className={styles['hero-cta']}>Badumbau und Preise</Link>
+              <a href={`tel:${business.phone.e164}`} className={styles['hero-cta-secondary']}>{business.phone.display}</a>
+            </div>
+            <p className={styles['hero-meta']}>
+              Ausstellung {business.address.street}, {business.address.zip} {business.address.city} · Mo–Fr {business.openingHours[0].opens}–{business.openingHours[0].closes}, Sa {business.openingHours[1].opens}–{business.openingHours[1].closes}
+            </p>
           </div>
           <div className={styles['hero-scroll-indicator']}>
             <div className={styles['scroll-dot']}></div>
             <span>Scrollen Sie nach unten</span>
+          </div>
+        </div>
+      </section>
+
+      {/* Badpakete */}
+      <section className={styles.packages}>
+        <div className={styles['packages-container']}>
+          <div className={styles['section-header']}>
+            <span className={styles['section-label']}>Was kostet ein Badumbau?</span>
+            <h2 className={styles['section-title']}>Drei Badpakete, ein Fixpreis</h2>
+            <p className={styles['section-intro']}>
+              Richtpreise inkl. Material, Montage und MwSt. für ein Bad von 6 bis 8 m². Innerhalb der Serie wählen Sie
+              Platten, Farben und Armaturen frei.
+            </p>
+          </div>
+          <div className={styles['packages-grid']}>
+            {bathPackages.map((p) => (
+              <Link key={p.id} to={`/badumbau-zofingen#paket-${p.id}`} className={`${styles['package-card']} ${p.highlight ? styles['package-card-highlight'] : ''}`}>
+                <span className={styles['package-name']}>{p.name}</span>
+                <span className={styles['package-price']}>ab CHF {p.priceLabel}</span>
+                <span className={styles['package-claim']}>{p.claim}</span>
+                <span className={styles['package-link']}>Details und Inhalt →</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Bewertungen */}
+      <section className={styles.reviews}>
+        <div className={styles['reviews-container']}>
+          <div className={styles['reviews-rating']}>
+            <span className={styles['reviews-stars']} aria-hidden="true">★★★★★</span>
+            <span className={styles['reviews-value']}>{GOOGLE_RATING.value}</span>
+          </div>
+          <p className={styles['reviews-text']}>
+            <strong>{GOOGLE_RATING.count} Bewertungen bei Google</strong>, Durchschnitt {GOOGLE_RATING.value} von 5. Unsere Kunden aus der Region
+            schreiben über Beratung, Ausführung und das fertige Bad.
+          </p>
+          <div className={styles['reviews-actions']}>
+            <a href="https://www.google.com/maps/search/?api=1&query=New+Living+Design+Zofingen" target="_blank" rel="noopener noreferrer" className={styles['reviews-link']}>
+              Bewertungen lesen
+            </a>
+            <a href={business.reviewLink} target="_blank" rel="noopener noreferrer" className={styles['reviews-link-secondary']}>
+              Bewertung schreiben
+            </a>
           </div>
         </div>
       </section>
@@ -265,33 +280,52 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      <script type="application/ld+json">
-        {JSON.stringify({
-          "@context": "https://schema.org",
-          "@type": "Organization",
-          "name": "New Living Design GmbH",
-          "url": "https://www.newlivingdesign.ch",
-          "logo": "https://www.newlivingdesign.ch/logo.png",
-          "sameAs": [
-            "https://www.facebook.com/NewLDGMBH/",
-            "https://www.instagram.com/new_living_design/",
-            "https://www.linkedin.com/in/diego-verdile-56727064/"
-          ],
-          "address": {
-            "@type": "PostalAddress",
-            "streetAddress": "Im Römerquartier 4A",
-            "postalCode": "4800",
-            "addressLocality": "Zofingen",
-            "addressCountry": "CH"
-          },
-          "contactPoint": {
-            "@type": "ContactPoint",
-            "telephone": "+41 76 605 13 07",
-            "contactType": "customer service",
-            "availableLanguage": ["German", "English", "Italian"]
-          }
-        })}
-      </script>
+      {/* Referenzen */}
+      <section className={styles.references}>
+        <div className={styles['references-container']}>
+          <div className={styles['section-header']}>
+            <span className={styles['section-label']}>Referenzen</span>
+            <h2 className={styles['section-title']}>Bäder und Küchen, die wir gebaut haben</h2>
+          </div>
+          <div className={styles['references-grid']}>
+            {homeReferencePhotos.map(({ reference, photo }) => (
+              <Link key={reference.id} to={`/referenzen#${reference.id}`} className={styles['reference-card']}>
+                <img src={photoUrl(photo.file, true)} alt={photo.alt} loading="lazy" width="640" height="853" />
+                <span className={styles['reference-caption']}>{reference.title}</span>
+              </Link>
+            ))}
+          </div>
+          <div className={styles['references-cta-container']}>
+            <Link to="/referenzen" className={styles['services-cta']}>
+              <span>Alle Referenzen</span>
+              <svg className={styles['cta-arrow']} viewBox="0 0 24 24" fill="none">
+                <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section className={styles.faq}>
+        <div className={styles['faq-container']}>
+          <div className={styles['section-header']}>
+            <span className={styles['section-label']}>Häufige Fragen</span>
+            <h2 className={styles['section-title']}>Kosten, Dauer, Ablauf</h2>
+          </div>
+          <div className={styles['faq-list']}>
+            {homeFaq.map((item) => (
+              <details key={item.question} className={styles['faq-item']}>
+                <summary>{item.question}</summary>
+                <p>{item.answer}</p>
+              </details>
+            ))}
+          </div>
+          <div className={styles['faq-cta-container']}>
+            <Link to="/badumbau-zofingen#faq" className={styles['faq-link']}>Alle Fragen zum Badumbau</Link>
+          </div>
+        </div>
+      </section>
     </main>
   );
 };

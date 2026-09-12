@@ -1,47 +1,15 @@
 import React from 'react';
-import CookieConsent, { Cookies } from 'react-cookie-consent';
+import CookieConsent from 'react-cookie-consent';
+import { BANNER_COOKIE, saveConsent } from '../../utils/tracking';
 import './CookieBanner.css';
-
-// Function to enable Google Analytics
-const enableGoogleAnalytics = () => {
-    // Create and load Google Analytics script
-    const script1 = document.createElement('script');
-    script1.async = true;
-    script1.src = 'https://www.googletagmanager.com/gtag/js?id=G-KX239CT54D';
-    document.head.appendChild(script1);
-
-    // Initialize Google Analytics
-    const script2 = document.createElement('script');
-    script2.innerHTML = `
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-KX239CT54D');
-  `;
-    document.head.appendChild(script2);
-};
-
-// Function to disable Google Analytics
-const disableGoogleAnalytics = () => {
-    // Set Google Analytics opt-out
-    (window as any)['ga-disable-G-KX239CT54D'] = true;
-
-    // Remove existing Google Analytics cookies
-    const cookies = ['_ga', '_ga_G-KX239CT54D', '_gid', '_gat_gtag_G-KX239CT54D'];
-    cookies.forEach(cookie => {
-        Cookies.remove(cookie, { path: '/' });
-        Cookies.remove(cookie, { path: '/', domain: window.location.hostname });
-        Cookies.remove(cookie, { path: '/', domain: '.' + window.location.hostname });
-    });
-};
 
 const CookieBanner: React.FC = () => {
     const handleAccept = () => {
-        enableGoogleAnalytics();
+        saveConsent({ analytics: true, marketing: true });
     };
 
     const handleDecline = () => {
-        disableGoogleAnalytics();
+        saveConsent({ analytics: false, marketing: false });
     };
 
     const handleSettings = () => {
@@ -57,7 +25,7 @@ const CookieBanner: React.FC = () => {
             enableDeclineButton
             onAccept={handleAccept}
             onDecline={handleDecline}
-            cookieName="newLivingDesignCookieConsent"
+            cookieName={BANNER_COOKIE}
             style={{
                 background: "linear-gradient(135deg, rgba(10, 10, 10, 0.95) 0%, rgba(17, 17, 17, 0.98) 100%)",
                 color: "#e5e7eb",
@@ -104,21 +72,17 @@ const CookieBanner: React.FC = () => {
             declineButtonClasses="cookie-banner-decline"
         >
             <div className="cookie-banner-content">
-                <div className="cookie-banner-icon">
-                    🍪
-                </div>
                 <div className="cookie-banner-text">
-                    <h4>Cookie-Einstellungen</h4>
+                    <h4>Cookies und Datenschutz</h4>
                     <p>
-                        Wir verwenden Cookies, um Ihnen die beste Erfahrung auf unserer Website zu bieten.
-                        Analytische Cookies helfen uns, unsere Website zu verbessern. Sie können Ihre
-                        Einstellungen jederzeit in der <a href="/datenschutz" style={{ color: "#ffffff", textDecoration: "underline" }}>Datenschutzerklärung</a> ändern.
+                        Wir verwenden Cookies, damit die Website funktioniert und um zu verstehen, wie sie genutzt wird.
+                        Statistik (Google Analytics) und Marketing (Meta Pixel) laden wir nur mit Ihrer Zustimmung.
+                        Sie können Ihre Wahl jederzeit in der <a href="/datenschutz#cookie-settings" style={{ color: "#ffffff", textDecoration: "underline" }}>Datenschutzerklärung</a> ändern.
                     </p>
                     <p style={{ fontSize: "12px", color: "#9ca3af", marginTop: "10px" }}>
-                        🔒 <strong style={{ color: "#ffffff" }}>Notwendige Cookies:</strong> Immer aktiv ·
-                    </p>
-                    <p>
-                        📊 <strong style={{ color: "#ffffff" }}>Analytische Cookies:</strong> Google Analytics für Website-Optimierung
+                        <strong style={{ color: "#ffffff" }}>Notwendig:</strong> immer aktiv ·{' '}
+                        <strong style={{ color: "#ffffff" }}>Statistik:</strong> Google Analytics ·{' '}
+                        <strong style={{ color: "#ffffff" }}>Marketing:</strong> Meta Pixel
                     </p>
                     <div className="cookie-banner-buttons">
                         <button
@@ -126,7 +90,7 @@ const CookieBanner: React.FC = () => {
                             className="cookie-banner-settings-btn"
                             type="button"
                         >
-                            ⚙️ Einstellungen
+                            Einstellungen
                         </button>
                     </div>
                 </div>

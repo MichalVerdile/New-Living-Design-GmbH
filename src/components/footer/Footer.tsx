@@ -1,5 +1,7 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import type { FooterProps } from '../../types';
+import { business, localBusinessJsonLd } from '../../config/business';
 import './Footer.css';
 import logo from '../../assets/S__2_-removebg-preview_edited.avif';
 
@@ -21,9 +23,14 @@ const Footer: React.FC<FooterProps> = ({ className = '' }) => {
                 <h3 className="footer-brand-name">New Living Design</h3>
               </div>
               <p className="footer-tagline">
-                Ihr vertrauensvoller Partner für exklusive Innenausstattung und
-                professionelle Hausrenovierung.
+                Badumbau, Küchen und Platten aus einer Hand. Ausstellung in Zofingen,
+                Umbau durch die eigene Equipe im Umkreis von 40 km.
               </p>
+              <nav className="footer-quicklinks" aria-label="Wichtige Seiten">
+                <Link to="/badumbau-zofingen" className="footer-quicklink">Badumbau Zofingen</Link>
+                <Link to="/referenzen" className="footer-quicklink">Referenzen</Link>
+                <Link to="/kontakt" className="footer-quicklink">Kontakt</Link>
+              </nav>
               <div className="footer-social-links">
                 <a href="https://www.facebook.com/NewLDGMBH/" className="footer-social-link" aria-label="Facebook">
                   <svg viewBox="0 0 24 24" fill="currentColor">
@@ -69,8 +76,8 @@ const Footer: React.FC<FooterProps> = ({ className = '' }) => {
                     </svg>
                   </div>
                   <div className="footer-contact-content">
-                    <a href="tel:+41766051307" className="footer-contact-link">
-                      +41 76 605 13 07
+                    <a href={`tel:${business.phone.e164}`} className="footer-contact-link">
+                      {business.phone.display}
                     </a>
                   </div>
                 </div>
@@ -97,11 +104,11 @@ const Footer: React.FC<FooterProps> = ({ className = '' }) => {
               <div className="footer-hours">
                 <div className="footer-hours-item">
                   <span className="footer-hours-days">Mo - Fr</span>
-                  <span className="footer-hours-time">8:00 - 12:00<br />14:00 - 18:00</span>
+                  <span className="footer-hours-time">{business.openingHours[0].opens} - {business.openingHours[0].closes}</span>
                 </div>
                 <div className="footer-hours-item">
                   <span className="footer-hours-days">Samstag</span>
-                  <span className="footer-hours-time">9:00 - 12:00</span>
+                  <span className="footer-hours-time">{business.openingHours[1].opens} - {business.openingHours[1].closes}</span>
                 </div>
                 <div className="footer-hours-item">
                   <span className="footer-hours-days">Sonntag</span>
@@ -132,27 +139,7 @@ const Footer: React.FC<FooterProps> = ({ className = '' }) => {
       </div>
 
       <script type="application/ld+json">
-        {JSON.stringify({
-          "@context": "https://schema.org",
-          "@type": "LocalBusiness",
-          "name": "New Living Design GmbH",
-          "image": "https://www.newlivingdesign.ch/assets/logo.avif",
-          "address": {
-            "@type": "PostalAddress",
-            "streetAddress": "Im Römerquartier 4A",
-            "addressLocality": "Zofingen",
-            "postalCode": "4800",
-            "addressCountry": "CH"
-          },
-          "telephone": "+41 76 605 13 07",
-          "email": "emanuel.verdile@newlivingdesign.ch",
-          "openingHours": [
-            "Mo-Fr 08:00-12:00",
-            "Mo-Fr 14:00-18:00",
-            "Sa 09:00-12:00"
-          ],
-          "url": "https://www.newlivingdesign.ch"
-        })}
+        {JSON.stringify(localBusinessJsonLd)}
       </script>
     </footer>
   );

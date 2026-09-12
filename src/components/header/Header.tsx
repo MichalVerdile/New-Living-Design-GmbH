@@ -10,9 +10,11 @@ const Header: React.FC<HeaderProps> = ({ className = '', navigationItems }) => {
 
   const defaultNavigationItems: NavigationItem[] = [
     { name: 'Home', href: '/', active: true },
+    { name: 'Badumbau', href: '/badumbau-zofingen' },
+    { name: 'Referenzen', href: '/referenzen' },
     { name: 'Produkte', href: '/produkte' },
     { name: 'Dienstleistungen', href: '/dienstleistungen' },
-    { name: 'Unsere Partner', href: '/partner' },
+    { name: 'Partner', href: '/partner' },
     { name: 'Online Buchen', href: '/booking' },
     { name: 'Über uns', href: '/ueber-uns' },
     { name: 'Kontakt', href: '/kontakt' }

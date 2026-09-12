@@ -5,6 +5,8 @@ import createSitemap from 'vite-plugin-sitemap'
 // Define all routes for sitemap generation
 const routes = [
   '/',
+  '/badumbau-zofingen',
+  '/referenzen',
   '/produkte',
   '/dienstleistungen',
   '/partner',

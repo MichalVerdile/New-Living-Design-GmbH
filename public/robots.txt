@@ -5,6 +5,8 @@ Allow: /
 Sitemap: https://www.newlivingdesign.ch/sitemap.xml
 
 # Important pages to crawl
+Allow: /badumbau-zofingen
+Allow: /referenzen
 Allow: /produkte
 Allow: /dienstleistungen
 Allow: /partner

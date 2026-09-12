@@ -1,6 +1,7 @@
+import { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
-import { Header, Footer, Home, Products, Services, About, Contact, Booking, DataSecurity, Impressum, AGB } from './components';
+import { Header, Footer, Home, Products, Services, About, Contact, Booking, DataSecurity, Impressum, AGB, Badumbau, Referenzen } from './components';
 import './App.css';
 import ScrollToTop from './components/scroll-helper/ScrollToTop';
 import Partners from './pages/partners/Partners';
@@ -8,10 +9,17 @@ import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
 import SEOHead from './components/seo/SEOHead';
 import CookieBanner from './components/cookie/CookieBanner';
+import WhatsAppButton from './components/whatsapp/WhatsAppButton';
 import { generateOrganizationStructuredData, generateWebsiteStructuredData } from './utils/structuredData';
+import RouteTracker from './components/analytics/RouteTracker';
+import { initTrackingFromConsent } from './utils/tracking';
 
 
 function App() {
+  useEffect(() => {
+    initTrackingFromConsent();
+  }, []);
+
   const organizationData = generateOrganizationStructuredData();
   const websiteData = generateWebsiteStructuredData();
   
@@ -24,9 +32,12 @@ function App() {
         
         <Router>
           <ScrollToTop />
+          <RouteTracker />
           <Header />
           <Routes>
             <Route path="/" element={<Home />} />
+            <Route path="/badumbau-zofingen" element={<Badumbau />} />
+            <Route path="/referenzen" element={<Referenzen />} />
             <Route path="/produkte" element={<Products />} />
             <Route path="/dienstleistungen" element={<Services />} />
             <Route path="/partner" element={<Partners />} />
@@ -46,6 +57,7 @@ function App() {
         
         {/* Cookie Banner for GDPR Compliance */}
         <CookieBanner />
+        <WhatsAppButton />
       </div>
     </HelmetProvider>
   );

@@ -39,8 +39,8 @@ const About: React.FC = () => {
             "name": "New Living Design GmbH",
             "image": "https://www.newlivingdesign.ch" + heroImg,
             "url": "https://www.newlivingdesign.ch/ueber-uns",
-            "telephone": "+41766051307",
-            "email": "emanuel.verdile@newlivingdesign.ch",
+            "telephone": "+41625445854",
+            "email": "diego.verdile@newlivingdesign.ch",
             "address": {
               "@type": "PostalAddress",
               "streetAddress": "Im Römerquartier 4A",
@@ -58,14 +58,14 @@ const About: React.FC = () => {
                   "Thursday",
                   "Friday"
                 ],
-                "opens": "08:00",
-                "closes": "18:00"
+                "opens": "07:00",
+                "closes": "19:00"
               },
               {
                 "@type": "OpeningHoursSpecification",
                 "dayOfWeek": "Saturday",
                 "opens": "09:00",
-                "closes": "12:00"
+                "closes": "13:00"
               }
             ]
           })}
@@ -229,7 +229,7 @@ const About: React.FC = () => {
                 New Living Design GmbH<br />
                 Im Römerquartier 4A<br />
                 4800 Zofingen<br />
-                <a href="tel:+41766051307">+41 76 605 13 07</a><br />
+                <a href="tel:+41625445854">062 544 58 54</a><br />
                 <a href="mailto:emanuel.verdile@newlivingdesign.ch">emanuel.verdile@newlivingdesign.ch</a>
               </p>
             </div>
@@ -237,8 +237,8 @@ const About: React.FC = () => {
             <div className={styles["hours-block"]}>
               <h3>Öffnungszeiten</h3>
               <ul>
-                <li><span>Mo–Fr</span><span>08:00–12:00 / 14:00–18:00</span></li>
-                <li><span>Samstag</span><span>09:00–12:00</span></li>
+                <li><span>Mo–Fr</span><span>07:00–19:00</span></li>
+                <li><span>Samstag</span><span>09:00–13:00</span></li>
                 <li><span>Sonntag</span><span>Geschlossen</span></li>
               </ul>
             </div>

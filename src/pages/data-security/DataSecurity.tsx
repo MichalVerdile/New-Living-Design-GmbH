@@ -48,6 +48,7 @@ const DataSecurity: React.FC = () => {
               "logo": "https://www.newlivingdesign.ch/logo.png"
             },
             "datePublished": "2025-09-15",
+            "dateModified": "2026-09-11",
             "description":
               "Informationen zur Verarbeitung personenbezogener Daten bei Nutzung der Website, Kontaktaufnahme und Terminvereinbarung durch die New Living Design GmbH."
           })}
@@ -93,7 +94,7 @@ const DataSecurity: React.FC = () => {
             <h3>1. Verantwortlich</h3>
             <p><strong>New Living Design GmbH</strong><br />
               <span className={styles.placeholder}>Im Römerquartier 4A, 4800 Zofingen</span><br />
-              E-Mail: <span className={styles.placeholder}>emanuel.verdile@newlivingdesign.ch</span> · Tel: <span className={styles.placeholder}>+41 76 605 13 07</span>
+              E-Mail: <span className={styles.placeholder}>emanuel.verdile@newlivingdesign.ch</span> · Tel: <span className={styles.placeholder}>062 544 58 54</span>
             </p>
             <p>Bei Fragen zum Datenschutz kontaktieren Sie uns bitte über die oben genannten Angaben oder über unsere <Link to="/kontakt">Kontaktseite</Link>.</p>
           </article>
@@ -121,8 +122,10 @@ const DataSecurity: React.FC = () => {
 
           <article id="hosting" className={styles.card}>
             <h3>5. Hosting & Auftragsverarbeiter</h3>
-            <p>Unsere Website wird bei <span className={styles.placeholder}>Hostpoint, Schweiz</span> betrieben. Mit Dienstleistern, die in unserem Auftrag Daten verarbeiten
-              (z.&nbsp;B. Hosting, Wartung, Termin-/Kontakt-Tools), bestehen Auftragsverarbeitungsverträge.</p>
+            <p>Unsere Website wird bei <strong>Vercel Inc.</strong> (USA, Server in der EU/weltweit über ein Content Delivery Network) betrieben.
+              Die Kontakt- und Anfrageformulare werden über <strong>Formspree Inc.</strong> (USA) übermittelt; die Angaben gehen per E-Mail an uns.
+              Mit Dienstleistern, die in unserem Auftrag Daten verarbeiten (Hosting, Formulare, Wartung), bestehen Auftragsverarbeitungsverträge
+              bzw. gelten deren Datenschutzbedingungen mit Standardvertragsklauseln.</p>
           </article>
 
           <article id="serverlogs" className={styles.card}>
@@ -133,12 +136,19 @@ const DataSecurity: React.FC = () => {
 
           <article id="cookies" className={styles.card}>
             <h3>7. Cookies & Tracking</h3>
-            <p>Wir verwenden Cookies und ähnliche Technologien, um die Website bereitzustellen (notwendig) und optional zu analysieren/verbessern (Statistik/Marketing – nur mit Einwilligung).
-              Sie können Ihre Präferenzen jederzeit anpassen.</p>
+            <p>Wir verwenden Cookies und ähnliche Technologien, um die Website bereitzustellen (notwendig) und, nur mit Ihrer Einwilligung, um die Nutzung
+              zu messen (Statistik) und den Erfolg unserer Werbung zu messen (Marketing). Ohne Einwilligung wird keiner der optionalen Dienste geladen.
+              Sie können Ihre Wahl jederzeit unten auf dieser Seite ändern.</p>
             <details className={styles.details}>
               <summary>Optionale Dienste</summary>
               <ul className={styles.list}>
-                <li><strong>Web-Analytics:</strong> <span className={styles.placeholder}>Google Analytics</span> – pseudonymisierte Nutzungsanalyse. Speicherdauer: <span className={styles.placeholder}>14 Monate</span>.</li>
+                <li><strong>Google Analytics 4</strong> (Google Ireland Ltd., Dublin; Mess-ID G-S2MFTL82PC): pseudonymisierte Nutzungsstatistik, IP-Adresse gekürzt.
+                  Cookies _ga, _ga_* (bis 2 Jahre). Speicherdauer der Ereignisdaten bei Google: 14 Monate. Datenübermittlung in die USA möglich
+                  (EU-U.S. Data Privacy Framework / Standardvertragsklauseln).</li>
+                <li><strong>Meta Pixel</strong> (Meta Platforms Ireland Ltd., Dublin; Pixel-ID 783872098922670): misst, ob Besucher über unsere Anzeigen auf Facebook
+                  und Instagram zu uns kommen und eine Anfrage stellen. Cookies _fbp, _fbc (3 Monate). Datenübermittlung in die USA möglich.
+                  Widerspruch auch über die Werbeeinstellungen Ihres Meta-Kontos.</li>
+                <li><strong>Vercel Analytics / Speed Insights</strong> (Vercel Inc.): cookielose, aggregierte Messung von Aufrufen und Ladezeiten, ohne Identifizierung einzelner Besucher.</li>
               </ul>
             </details>
           </article>
