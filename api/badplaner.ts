@@ -427,11 +427,24 @@ async function sendLeadMail(mail: LeadMail): Promise<void> {
     console.warn('[badplaner] RESEND_API_KEY fehlt, Lead geht an Formspree (ohne Bilder)');
   }
 
-  // Fallback: Formspree ohne Anhänge
+  // Fallback: Formspree ohne Anhänge. Das Formular xdklvgpb verlangt firstName,
+  // lastName und message (sonst 422 "Validation errors"), also füllen wir sie.
   try {
-    const fields: Record<string, string> = { _subject: mail.subject, quelle: 'Badplaner', hinweis: 'Bilder konnten nicht angehängt werden' };
+    const fullName = (mail.details.find(([k]) => k === 'Name') || ['', ''])[1].trim();
+    const [firstName, ...rest] = fullName.split(/\s+/);
+    const fields: Record<string, string> = {
+      _subject: mail.subject,
+      firstName: firstName || 'Badplaner',
+      lastName: rest.join(' ') || '–',
+      message: leadText(mail),
+      quelle: 'Badplaner',
+      hinweis: 'Bilder konnten nicht angehängt werden',
+    };
     for (const [label, value] of mail.details) fields[label] = value;
-    if (mail.replyTo) fields._replyto = mail.replyTo;
+    if (mail.replyTo) {
+      fields._replyto = mail.replyTo;
+      fields.email = mail.replyTo;
+    }
     const r = await fetch(business.formspreeEndpoint, {
       method: 'POST',
       headers: { 'content-type': 'application/json', Accept: 'application/json' },
