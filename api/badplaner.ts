@@ -20,8 +20,8 @@
  * nur an Google zur Bilderzeugung und per E-Mail an uns. Siehe /datenschutz#badplaner.
  */
 /* eslint-disable @typescript-eslint/no-explicit-any -- keine @vercel/node-Typen im Projekt, req/res sind deshalb any */
-import { optionsForPackage, type PackageId } from '../src/data/badplaner';
-import { business, bathPackages } from '../src/config/business';
+import { optionsForPackage, type PackageId } from '../src/data/badplaner.js';
+import { business, bathPackages } from '../src/config/business.js';
 
 // Node-Globals ohne @types/node (api/tsconfig.json ist auf Edge ausgelegt)
 declare const process: any;
