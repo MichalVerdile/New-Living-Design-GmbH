@@ -6,7 +6,6 @@ import { business, bathPackages, localBusinessJsonLd } from '../../config/busine
 import { getPost, posts, formatDate, BLOG_NAME, BLOG_URL } from '../../lib/blog';
 import Markdown from '../../lib/markdown';
 import { generateBreadcrumbStructuredData } from '../../utils/structuredData';
-import { trackLead } from '../../utils/tracking';
 
 const whatsappHref = (title: string) =>
   `https://wa.me/${business.whatsapp.e164.replace('+', '')}?text=${encodeURIComponent(
@@ -123,7 +122,7 @@ const BlogPost: React.FC = () => {
             </p>
           </div>
           <div className={styles.contactActions}>
-            <a href={`tel:${business.phone.e164}`} className={styles.ctaPrimary} onClick={() => trackLead('blog-phone')}>
+            <a href={`tel:${business.phone.e164}`} className={styles.ctaPrimary} data-lead="blog-phone">
               {business.phone.display}
             </a>
             <a
@@ -131,7 +130,7 @@ const BlogPost: React.FC = () => {
               className={styles.ctaSecondary}
               target="_blank"
               rel="noopener noreferrer"
-              onClick={() => trackLead('blog-whatsapp')}
+              data-lead="blog-whatsapp"
             >
               WhatsApp {business.whatsapp.display}
             </a>
