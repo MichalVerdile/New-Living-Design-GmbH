@@ -1,6 +1,5 @@
 import { useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { HelmetProvider } from 'react-helmet-async';
+import { Routes, Route } from 'react-router-dom';
 import { Header, Footer, Home, Products, Services, About, Contact, Booking, DataSecurity, Impressum, AGB, Badumbau, Referenzen } from './components';
 import './App.css';
 import ScrollToTop from './components/scroll-helper/ScrollToTop';
@@ -14,7 +13,10 @@ import { generateOrganizationStructuredData, generateWebsiteStructuredData } fro
 import RouteTracker from './components/analytics/RouteTracker';
 import { initTrackingFromConsent } from './utils/tracking';
 
-
+/**
+ * Die App ohne Router und ohne HelmetProvider: beides setzt der Einstieg,
+ * main.tsx (Browser) bzw. entry-server.tsx (statisches Prerendering).
+ */
 function App() {
   useEffect(() => {
     initTrackingFromConsent();
@@ -22,44 +24,40 @@ function App() {
 
   const organizationData = generateOrganizationStructuredData();
   const websiteData = generateWebsiteStructuredData();
-  
+
   const globalStructuredData = [organizationData, websiteData];
 
   return (
-    <HelmetProvider>
-      <div className="app">
-        <SEOHead structuredData={globalStructuredData} />
-        
-        <Router>
-          <ScrollToTop />
-          <RouteTracker />
-          <Header />
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/badumbau-zofingen" element={<Badumbau />} />
-            <Route path="/referenzen" element={<Referenzen />} />
-            <Route path="/produkte" element={<Products />} />
-            <Route path="/dienstleistungen" element={<Services />} />
-            <Route path="/partner" element={<Partners />} />
-            <Route path="/booking" element={<Booking />} />
-            <Route path="/ueber-uns" element={<About />} />
-            <Route path="/kontakt" element={<Contact />} />
-            <Route path="/datenschutz" element={<DataSecurity />} />
-            <Route path="/impressum" element={<Impressum />} />
-            <Route path="/agb" element={<AGB />} />
-          </Routes>
-          <Footer />
-        </Router>
-        
-        {/* Vercel Analytics */}
-        <Analytics />
-        <SpeedInsights />
-        
-        {/* Cookie Banner for GDPR Compliance */}
-        <CookieBanner />
-        <WhatsAppButton />
-      </div>
-    </HelmetProvider>
+    <div className="app">
+      <SEOHead structuredData={globalStructuredData} />
+
+      <ScrollToTop />
+      <RouteTracker />
+      <Header />
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/badumbau-zofingen" element={<Badumbau />} />
+        <Route path="/referenzen" element={<Referenzen />} />
+        <Route path="/produkte" element={<Products />} />
+        <Route path="/dienstleistungen" element={<Services />} />
+        <Route path="/partner" element={<Partners />} />
+        <Route path="/booking" element={<Booking />} />
+        <Route path="/ueber-uns" element={<About />} />
+        <Route path="/kontakt" element={<Contact />} />
+        <Route path="/datenschutz" element={<DataSecurity />} />
+        <Route path="/impressum" element={<Impressum />} />
+        <Route path="/agb" element={<AGB />} />
+      </Routes>
+      <Footer />
+
+      {/* Vercel Analytics */}
+      <Analytics />
+      <SpeedInsights />
+
+      {/* Cookie Banner for GDPR Compliance */}
+      <CookieBanner />
+      <WhatsAppButton />
+    </div>
   );
 }
 
