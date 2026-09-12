@@ -4,6 +4,7 @@ import styles from './Badplaner.module.css';
 import { SEOHead } from '../../components';
 import { business, bathPackages } from '../../config/business';
 import { badplanerFaq, optionsForPackage, type PackageId } from '../../data/badplaner';
+import { photoUrl } from '../../data/references';
 import { generateFAQStructuredData, generateBreadcrumbStructuredData } from '../../utils/structuredData';
 import { trackLead } from '../../utils/tracking';
 import { resizeImageFile, fileToBase64, type ResizedImage } from './resizeImage';
@@ -57,11 +58,6 @@ const howSteps = [
   { n: '1', title: 'Paket und Ausstattung wählen', text: 'Essenza, Colore oder Atelier. Dann Platte, Möbelfarbe, Armatur und Keramik: eine kleine Auswahl aus unserer Ausstellung.' },
   { n: '2', title: 'Foto vom Bad machen', text: 'Am Handy öffnet sich die Kamera. Von der Tür aus, das ganze Bad im Bild, Licht an. Das Foto wird vor dem Senden verkleinert.' },
   { n: '3', title: 'Ideenbild erhalten und besprechen', text: 'Nach etwa 20 Sekunden sehen Sie Ihr Bad mit den gewählten Materialien. Wir melden uns und laden Sie in die Ausstellung ein.' },
-];
-
-const examples = [
-  { id: 1, pkg: 'Colore', before: '/badplaner/beispiele/beispiel-1-vorher.jpg', after: '/badplaner/beispiele/beispiel-1-nachher.jpg' },
-  { id: 2, pkg: 'Essenza', before: '/badplaner/beispiele/beispiel-2-vorher.jpg', after: '/badplaner/beispiele/beispiel-2-nachher.jpg' },
 ];
 
 /** Swatch-Bild; fehlt es (noch nicht geladen), zeigt es eine farbige Fläche. */
@@ -325,14 +321,14 @@ const Badplaner: React.FC = () => {
         url="/badplaner"
         type="website"
         structuredData={structuredData}
-        image={`${business.siteUrl}/badplaner/beispiele/beispiel-1-nachher.jpg`}
+        image={`${business.siteUrl}${photoUrl('bad-travertin-gold-01.webp')}`}
       />
 
       {/* Hero */}
       <section className={styles.hero}>
         <div className={styles.heroBackground}>
           <div className={styles.heroOverlay} />
-          <img src="/badplaner/beispiele/beispiel-1-nachher.jpg" alt="Ideenbild aus dem Badplaner: Bad mit Platten in Steinoptik und farbiger Keramik" className={styles.heroImage} fetchPriority="high" />
+          <img src={photoUrl('bad-travertin-gold-01.webp')} alt="Bad von New Living Design mit Platten in Travertin-Optik" className={styles.heroImage} fetchPriority="high" />
         </div>
         <div className={`${styles.heroContent} ${isVisible ? styles.visible : ''}`}>
           <p className={styles.eyebrow}>Neu · Badplaner</p>
@@ -340,7 +336,7 @@ const Badplaner: React.FC = () => {
           <p className={styles.heroText}>Paket wählen, Foto vom Bad machen, Ideenbild erhalten. Kostenlos, unverbindlich, aus Zofingen.</p>
           <div className={styles.heroActions}>
             <a href="#planer" className={styles.ctaPrimary}>Jetzt starten</a>
-            <a href="#beispiele" className={styles.ctaSecondary}>Beispiele ansehen</a>
+            <a href="#ablauf" className={styles.ctaSecondary}>So funktioniert's</a>
           </div>
           <p className={styles.heroNote}>
             Ideenbild, kein Plan: Das Bild zeigt eine Stimmung mit den gewählten Materialien. Masse, Leitungen und Details klären wir vor Ort.
@@ -672,34 +668,6 @@ const Badplaner: React.FC = () => {
           </div>
         </section>
       )}
-
-      {/* Beispiele */}
-      <section id="beispiele" className={`${styles.section} ${styles.light}`}>
-        <div className={styles.container}>
-          <div className={styles.sectionHeader}>
-            <span className={styles.sectionLabel}>Beispiele</span>
-            <h2 className={styles.sectionTitle}>Vorher und nachher</h2>
-            <p className={styles.sectionIntro}>Zwei Kundenfotos und die Ideenbilder, die der Badplaner daraus gemacht hat.</p>
-          </div>
-          <div className={styles.examples}>
-            {examples.map((ex) => (
-              <figure key={ex.id} className={styles.example}>
-                <div className={styles.examplePair}>
-                  <div>
-                    <img src={ex.before} alt={`Beispiel ${ex.id}: Kundenfoto des bestehenden Bads`} loading="lazy" width="600" height="750" />
-                    <span className={styles.exampleTag}>Vorher</span>
-                  </div>
-                  <div>
-                    <img src={ex.after} alt={`Beispiel ${ex.id}: Ideenbild im Paket ${ex.pkg}`} loading="lazy" width="600" height="750" />
-                    <span className={styles.exampleTag}>Ideenbild</span>
-                  </div>
-                </div>
-                <figcaption>Kundenfoto · Ideenbild Paket {ex.pkg}</figcaption>
-              </figure>
-            ))}
-          </div>
-        </div>
-      </section>
 
       {/* So funktioniert's */}
       <section id="ablauf" className={`${styles.section} ${styles.dark}`}>
