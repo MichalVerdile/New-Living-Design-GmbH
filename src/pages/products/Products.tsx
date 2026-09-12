@@ -41,7 +41,7 @@ const Products: React.FC = () => {
         keywords="Badezimmermöbel, Küchen, Armaturen, Sanitärapparate, Bodenbeläge, Wandverkleidungen, Heizkörper, Wellness, Accessoires, Interior Design, Schweiz"
         url="/produkte"
         type="website"
-        image="https://www.newlivingdesign.ch/assets/14264-rchi-mirabilia-villas-01.webp"
+        image="https://newlivingdesign.ch/assets/14264-rchi-mirabilia-villas-01.webp"
       />
 
       {/* Hero Section */}
@@ -328,7 +328,7 @@ const Products: React.FC = () => {
             "@type": "ListItem",
             "position": i + 1,
             "name": cat,
-            "url": `https://www.newlivingdesign.ch/produkte#${cat.toLowerCase()}`
+            "url": `https://newlivingdesign.ch/produkte#${cat.toLowerCase()}`
           }))
         })}
       </script>
