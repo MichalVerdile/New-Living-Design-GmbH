@@ -22,7 +22,7 @@ const About: React.FC = () => {
         />
         <meta property="og:image" content={heroImg} />
         <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://www.newlivingdesign.ch/ueber-uns" />
+        <meta property="og:url" content="https://newlivingdesign.ch/ueber-uns" />
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content="Über uns | New Living Design GmbH" />
         <meta
@@ -37,8 +37,8 @@ const About: React.FC = () => {
             "@context": "https://schema.org",
             "@type": "LocalBusiness",
             "name": "New Living Design GmbH",
-            "image": "https://www.newlivingdesign.ch" + heroImg,
-            "url": "https://www.newlivingdesign.ch/ueber-uns",
+            "image": "https://newlivingdesign.ch" + heroImg,
+            "url": "https://newlivingdesign.ch/ueber-uns",
             "telephone": "+41625445854",
             "email": "diego.verdile@newlivingdesign.ch",
             "address": {
