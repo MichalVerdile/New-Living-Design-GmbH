@@ -177,7 +177,22 @@ export const tapSeries: Record<PackageId, string> = {
   atelier: 'Treemme Aurelia',
 };
 
-/* ---------- Dusche / Badewanne, Waschtisch, Spiegel ---------- */
+/* ---------- Wandplatten, Dusche / Badewanne, Waschtisch, Spiegel ---------- */
+
+/** Wandhöhe der Platten: Standard bei NLD ist ca. 115–120 cm, nur in Dusche/Wanne bis zur Decke. */
+export const wallOptions: ChoiceOption[] = [
+  {
+    id: 'halbhoch',
+    label: 'Bis ca. 120 cm, in Dusche und Badewanne raumhoch',
+    prompt:
+      'the walls tiled with the same tiles only up to about 120 cm height with a clean straight top edge, the wall above painted plain matte white; only in the shower or bathtub area the tiles go all the way up to the ceiling',
+  },
+  {
+    id: 'raumhoch',
+    label: 'Raumhoch, alle Wände bis zur Decke',
+    prompt: 'all walls tiled with the same tiles from floor to ceiling',
+  },
+];
 
 export const showerOptions: ChoiceOption[] = [
   { id: 'duschwanne', label: 'Dusche mit Duschwanne', prompt: 'shower with a low shower tray, fixed glass panel' },
@@ -209,6 +224,7 @@ export function optionsForPackage(pkg: PackageId) {
     furniture: forPackage(furnitureColors, pkg),
     finishes: forPackage(tapFinishes, pkg),
     sanitary: forPackage(sanitaryColors, pkg),
+    walls: forPackage(wallOptions, pkg),
     showers: forPackage(showerOptions, pkg),
     basins: forPackage(basinOptions, pkg),
     mirrors: forPackage(mirrorOptions, pkg),
