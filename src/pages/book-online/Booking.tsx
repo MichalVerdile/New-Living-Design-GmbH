@@ -59,7 +59,7 @@ const Booking: React.FC = () => {
               "name": "New Living Design GmbH",
               "image": "https://www.newlivingdesign.ch" + heroImage,
               "url": "https://www.newlivingdesign.ch/booking",
-              "telephone": "+41766051307",
+              "telephone": "+41625445854",
               "address": {
                 "@type": "PostalAddress",
                 "streetAddress": "Im Römerquartier 4A",
