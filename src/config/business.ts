@@ -96,7 +96,7 @@ export const bathPackages: BathPackage[] = [
       'Zubehör, Kleinmaterial, Schalter',
       'Demontage, Sanitär, Elektro, Gips, Plattenarbeiten, Maler, Entsorgung durch NLD',
     ],
-    duration: 'ca. 3 Wochen',
+    duration: '2 bis 3 Wochen',
     extraPerSqm: 200,
   },
   {
@@ -118,7 +118,7 @@ export const bathPackages: BathPackage[] = [
       '3D-Rendering in Ihrer Farbwahl vor der Unterschrift',
       'Demontage bis Übergabe durch NLD, Entsorgung inklusive',
     ],
-    duration: '3 bis 4 Wochen',
+    duration: '2 bis 3 Wochen',
     extraPerSqm: 240,
     highlight: true,
   },
@@ -141,7 +141,7 @@ export const bathPackages: BathPackage[] = [
       '3D-Rendering und Bemusterung in der Ausstellung',
       'Demontage bis Übergabe durch NLD, ein Ansprechpartner',
     ],
-    duration: '4 bis 5 Wochen',
+    duration: 'ca. 3 Wochen',
     extraPerSqm: 290,
   },
 ];
