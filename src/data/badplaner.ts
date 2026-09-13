@@ -98,13 +98,13 @@ export interface BaseOption {
   prompt: string;
 }
 
-/** Integriertes Waschbecken oder Aufsatzbecken (Atelier). */
+/** Waschbeckenart: Aufsatz-, Einbau- oder integriertes Becken. */
 export interface BasinTypeOption {
   id: string;
   label: string;
   supplier: string;
   example: string;       // Modell auf dem Foto
-  packages: PackageId[];
+  packages?: PackageId[]; // fehlt = in allen Paketen
   image: string;
   src?: string | null;
   url: string;
@@ -535,12 +535,12 @@ export const bases: BaseOption[] = [
   { id: 'edone-essenza-eucalipto', label: 'Eucalipto (Eukalyptus)', supplier: 'Edonè', collection: 'Essenze', family: 'Essenza', packages: ['colore'], image: '/badplaner/swatches/edone-eucalipto.jpg', url: 'https://www.edonedesign.it/it/universo-edone/finiture-e-materiali', prompt: 'wood veneer vanity unit (Eucalipto)' },
   { id: 'edone-essenza-castagno-tinto-anice', label: 'Castagno Tinto Anice (Kastanie Anis)', supplier: 'Edonè', collection: 'Essenze', family: 'Essenza', packages: ['colore'], image: '/badplaner/swatches/edone-castagno-tinto-anice.jpg', url: 'https://www.edonedesign.it/it/universo-edone/finiture-e-materiali', prompt: 'wood veneer vanity unit (Castagno Tinto Anice)' },
   { id: 'edone-essenza-castagno-tinto-fuliggine', label: 'Castagno Tinto Fuliggine (Kastanie Russ)', supplier: 'Edonè', collection: 'Essenze', family: 'Essenza', packages: ['colore'], image: '/badplaner/swatches/edone-castagno-tinto-fuliggine.jpg', url: 'https://www.edonedesign.it/it/universo-edone/finiture-e-materiali', prompt: 'wood veneer vanity unit (Castagno Tinto Fuliggine)' },
-  { id: 'edone-texture-veneziana-wr01', label: 'Texture Veneziana WR01', supplier: 'Edonè', collection: 'Texture Veneziana', family: 'Texture Veneziana', packages: ['colore'], image: '/badplaner/swatches/edone-wr01.jpg', url: 'https://www.edonedesign.it/it/universo-edone/finiture-e-materiali', prompt: 'vanity unit in troweled venetian plaster texture (WR01)' },
-  { id: 'edone-texture-veneziana-wr02', label: 'Texture Veneziana WR02', supplier: 'Edonè', collection: 'Texture Veneziana', family: 'Texture Veneziana', packages: ['colore'], image: '/badplaner/swatches/edone-wr02.jpg', url: 'https://www.edonedesign.it/it/universo-edone/finiture-e-materiali', prompt: 'vanity unit in troweled venetian plaster texture (WR02)' },
-  { id: 'edone-texture-veneziana-wr03', label: 'Texture Veneziana WR03', supplier: 'Edonè', collection: 'Texture Veneziana', family: 'Texture Veneziana', packages: ['colore'], image: '/badplaner/swatches/edone-wr03.jpg', url: 'https://www.edonedesign.it/it/universo-edone/finiture-e-materiali', prompt: 'vanity unit in troweled venetian plaster texture (WR03)' },
-  { id: 'edone-texture-veneziana-wr04', label: 'Texture Veneziana WR04', supplier: 'Edonè', collection: 'Texture Veneziana', family: 'Texture Veneziana', packages: ['colore'], image: '/badplaner/swatches/edone-wr04.jpg', url: 'https://www.edonedesign.it/it/universo-edone/finiture-e-materiali', prompt: 'vanity unit in troweled venetian plaster texture (WR04)' },
-  { id: 'edone-texture-veneziana-wr06', label: 'Texture Veneziana WR06', supplier: 'Edonè', collection: 'Texture Veneziana', family: 'Texture Veneziana', packages: ['colore'], image: '/badplaner/swatches/edone-wr06.jpg', url: 'https://www.edonedesign.it/it/universo-edone/finiture-e-materiali', prompt: 'vanity unit in troweled venetian plaster texture (WR06)' },
-  { id: 'edone-texture-veneziana-wr08', label: 'Texture Veneziana WR08', supplier: 'Edonè', collection: 'Texture Veneziana', family: 'Texture Veneziana', packages: ['colore'], image: '/badplaner/swatches/edone-wr08.jpg', url: 'https://www.edonedesign.it/it/universo-edone/finiture-e-materiali', prompt: 'vanity unit in troweled venetian plaster texture (WR08)' },
+  { id: 'edone-warm-by-kerakoll-wr01', label: 'Warm by Kerakoll WR01', supplier: 'Edonè', collection: 'Warm by Kerakoll', family: 'Warm by Kerakoll', packages: ['colore'], image: '/badplaner/swatches/edone-wr01.jpg', url: 'https://www.edonedesign.it/it/universo-edone/finiture-e-materiali', prompt: 'vanity unit in seamless troweled micro-cement finish (WR01)' },
+  { id: 'edone-warm-by-kerakoll-wr02', label: 'Warm by Kerakoll WR02', supplier: 'Edonè', collection: 'Warm by Kerakoll', family: 'Warm by Kerakoll', packages: ['colore'], image: '/badplaner/swatches/edone-wr02.jpg', url: 'https://www.edonedesign.it/it/universo-edone/finiture-e-materiali', prompt: 'vanity unit in seamless troweled micro-cement finish (WR02)' },
+  { id: 'edone-warm-by-kerakoll-wr03', label: 'Warm by Kerakoll WR03', supplier: 'Edonè', collection: 'Warm by Kerakoll', family: 'Warm by Kerakoll', packages: ['colore'], image: '/badplaner/swatches/edone-wr03.jpg', url: 'https://www.edonedesign.it/it/universo-edone/finiture-e-materiali', prompt: 'vanity unit in seamless troweled micro-cement finish (WR03)' },
+  { id: 'edone-warm-by-kerakoll-wr04', label: 'Warm by Kerakoll WR04', supplier: 'Edonè', collection: 'Warm by Kerakoll', family: 'Warm by Kerakoll', packages: ['colore'], image: '/badplaner/swatches/edone-wr04.jpg', url: 'https://www.edonedesign.it/it/universo-edone/finiture-e-materiali', prompt: 'vanity unit in seamless troweled micro-cement finish (WR04)' },
+  { id: 'edone-warm-by-kerakoll-wr06', label: 'Warm by Kerakoll WR06', supplier: 'Edonè', collection: 'Warm by Kerakoll', family: 'Warm by Kerakoll', packages: ['colore'], image: '/badplaner/swatches/edone-wr06.jpg', url: 'https://www.edonedesign.it/it/universo-edone/finiture-e-materiali', prompt: 'vanity unit in seamless troweled micro-cement finish (WR06)' },
+  { id: 'edone-warm-by-kerakoll-wr08', label: 'Warm by Kerakoll WR08', supplier: 'Edonè', collection: 'Warm by Kerakoll', family: 'Warm by Kerakoll', packages: ['colore'], image: '/badplaner/swatches/edone-wr08.jpg', url: 'https://www.edonedesign.it/it/universo-edone/finiture-e-materiali', prompt: 'vanity unit in seamless troweled micro-cement finish (WR08)' },
   { id: 'rexa-legno-smooth-rovere-light', label: 'Smooth Rovere Light', supplier: 'Rexa Design', collection: 'Legni', family: 'Legno Smooth', packages: ['atelier'], image: '/badplaner/swatches/rexa-legno-smooth-rovere-light.jpg', src: 'https://rexadesign.it/wp-content/uploads/2025/11/legno_rovere_light.jpg', url: 'https://rexadesign.it/finiture/', prompt: 'wood veneer vanity unit with a smooth flat front (Smooth Rovere Light)' },
   { id: 'rexa-legno-smooth-rovere', label: 'Smooth Rovere', supplier: 'Rexa Design', collection: 'Legni', family: 'Legno Smooth', packages: ['atelier'], image: '/badplaner/swatches/rexa-legno-smooth-rovere.jpg', src: 'https://rexadesign.it/wp-content/uploads/2025/11/legno_rovere.jpg', url: 'https://rexadesign.it/finiture/', prompt: 'wood veneer vanity unit with a smooth flat front (Smooth Rovere)' },
   { id: 'rexa-legno-smooth-rovere-tobacco', label: 'Smooth Rovere Tobacco', supplier: 'Rexa Design', collection: 'Legni', family: 'Legno Smooth', packages: ['atelier'], image: '/badplaner/swatches/rexa-legno-smooth-rovere-tobacco.jpg', src: 'https://rexadesign.it/wp-content/uploads/2025/11/legno_rovere_tobacco.jpg', url: 'https://rexadesign.it/finiture/', prompt: 'wood veneer vanity unit with a smooth flat front (Smooth Rovere Tobacco)' },
@@ -708,8 +708,9 @@ export const tops: TopOption[] = [
 /* ---------- Waschbeckenart (Atelier) ---------- */
 
 export const basinTypes: BasinTypeOption[] = [
-  { id: 'integriert', label: 'Integriertes Waschbecken', supplier: 'Rexa Design', example: 'Unico wall hung washbasin', packages: ['atelier'], image: '/badplaner/swatches/rexa-becken-integriert.jpg', src: 'https://rexadesign.it/wp-content/uploads/2022/11/Rexa_lavabi_sospesi_Unico_generale-2.jpg', url: 'https://rexadesign.it/en/products/unico-4/', prompt: 'washbasin moulded into the top itself, monolithic, no separate bowl' },
-  { id: 'aufsatz', label: 'Aufsatzbecken', supplier: 'Rexa Design', example: 'Moode over counter washbasin', packages: ['atelier'], image: '/badplaner/swatches/rexa-becken-aufsatz.jpg', src: 'https://rexadesign.it/wp-content/uploads/2022/11/rexa_lavabi_Moode_generale.jpg', url: 'https://rexadesign.it/en/products/moode-over-counter-washbasin/', prompt: 'separate counter-top washbasin bowl standing on the top' },
+  { id: 'aufsatz', label: 'Aufsatzbecken', supplier: '', example: 'Becken steht auf der Platte', image: '/badplaner/swatches/becken-aufsatz.png', src: '', url: '', prompt: 'separate counter-top washbasin bowl standing on the top' },
+  { id: 'einbau', label: 'Einbaubecken', supplier: '', example: 'Becken in die Platte eingelassen', image: '/badplaner/swatches/becken-einbau.png', src: '', url: '', prompt: 'washbasin set into the top, rim flush with the surface' },
+  { id: 'integriert', label: 'Integriertes Waschbecken', supplier: '', example: 'Platte und Becken aus einem Stück', packages: ['atelier'], image: '/badplaner/swatches/becken-integriert.png', src: '', url: '', prompt: 'washbasin moulded into the top itself, monolithic, no separate bowl' },
 ];
 
 /* ---------- Armaturenserie mit Foto (Colore) ---------- */

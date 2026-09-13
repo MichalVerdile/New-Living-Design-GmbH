@@ -88,4 +88,51 @@ try {
   console.warn('[swatches] unerwarteter Fehler:', err && err.message ? err.message : err)
 }
 console.log(`[swatches] ${ok} geladen, ${failed} fehlgeschlagen.`)
+
+/**
+ * Schlusskontrolle: Jede Datei aus der Liste muss da sein UND wirklich ein Bild
+ * sein. Fehlt eine, liefert Vercel für ihren Pfad die index.html mit Status 200
+ * aus – im Badplaner sieht das wie ein graues Feld aus, und genau das darf nicht
+ * online gehen. Darum bricht der Build hier ab; die Lösung ist, das fehlende
+ * Bild in public/badplaner/swatches/ mit ins Repo zu legen.
+ */
+const magic = {
+  jpg: [0xff, 0xd8, 0xff],
+  png: [0x89, 0x50, 0x4e, 0x47],
+}
+function istBild(file) {
+  const head = Buffer.alloc(12)
+  const fd = fs.openSync(file, 'r')
+  try {
+    fs.readSync(fd, head, 0, 12, 0)
+  } finally {
+    fs.closeSync(fd)
+  }
+  if (magic.jpg.every((b, i) => head[i] === b)) return true
+  if (magic.png.every((b, i) => head[i] === b)) return true
+  if (head.slice(0, 4).toString('latin1') === 'RIFF' && head.slice(8, 12).toString('latin1') === 'WEBP') return true
+  return false
+}
+
+const kaputt = []
+for (const item of list) {
+  if (!item.file) continue
+  const target = path.join(outDir, item.file)
+  if (!fs.existsSync(target)) {
+    kaputt.push(`${item.file} (fehlt)`)
+    continue
+  }
+  if (fs.statSync(target).size < 400 || !istBild(target)) kaputt.push(`${item.file} (kein Bild)`)
+}
+if (kaputt.length > 0) {
+  console.error(`[swatches] ${kaputt.length} Muster fehlen oder sind kein Bild:`)
+  kaputt.slice(0, 40).forEach((f) => console.error(`[swatches]   ${f}`))
+  if (process.env.VERCEL) {
+    console.error('[swatches] Build abgebrochen: keine Option ohne echtes Bild.')
+    process.exit(1)
+  }
+  console.warn('[swatches] lokaler Build: ohne Netz zu den Lieferanten wird nur gewarnt.')
+}
+
+else console.log(`[swatches] alle ${list.length} Muster geprüft, alle sind echte Bilder.`)
 process.exit(0)

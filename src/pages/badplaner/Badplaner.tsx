@@ -22,9 +22,9 @@ import { resizeImageFile, fileToBase64, type ResizedImage } from './resizeImage'
  * api/badplaner.ts. Beim Prerendering (ohne Browser) wird nur der Startzustand
  * gerendert; alles mit Datei, Kamera oder Fenster passiert in Handlern.
  *
- * Schritt 2 hat zwei Ebenen: "Basis" (immer offen, vier Auswahlen) und
- * "Details verfeinern (optional)" (zugeklappt, alles vorbelegt). Keine Auswahl
- * in den Details ist Pflicht.
+ * Schritt 2 zeigt alle Auswahlen offen untereinander: zuerst "Basis"
+ * (Platten bzw. Look, Unterbau, Dusche/Badewanne, Wandhöhe), danach "Details"
+ * (alles Weitere). Alles ist vorbelegt, keine Auswahl ist Pflicht.
  */
 
 const PAGE_URL = `${business.siteUrl}/badplaner`;
@@ -123,18 +123,20 @@ function groupBy<T>(items: T[], key: (item: T) => string): { key: string; items:
 }
 
 const howSteps = [
-  { n: '1', title: 'Paket und Ausstattung wählen', text: 'Essenza, Colore, Atelier oder eine individuelle Lösung. Dann Platte, Möbelfarbe, Armatur und Keramik: eine kleine Auswahl aus unserer Ausstellung.' },
-  { n: '2', title: 'Foto vom Bad machen', text: 'Am Handy öffnet sich die Kamera. Von der Tür aus, das ganze Bad im Bild, Licht an. Das Foto wird vor dem Senden verkleinert.' },
+  { n: '1', title: 'Paket und Ausstattung wählen', text: 'Essenza, Colore, Atelier oder eine individuelle Lösung. Dann Platte, Möbelfarbe und, je nach Paket, Armatur und Keramik: eine kleine Auswahl aus unserer Ausstellung.' },
+  { n: '2', title: 'Foto vom Bad machen', text: 'Am Handy neu aufnehmen oder ein Foto aus der Galerie wählen. Von der Tür aus, das ganze Bad im Bild, Licht an. Das Foto wird vor dem Senden verkleinert.' },
   { n: '3', title: 'Ideenbild erhalten und besprechen', text: 'Nach etwa 30 Sekunden sehen Sie Ihr Bad mit den gewählten Materialien. Wir melden uns und laden Sie in die Ausstellung ein.' },
 ];
 
 /** Musterbild; fehlt es (noch nicht geladen), zeigt es eine farbige Fläche. */
-const Swatch: React.FC<{ image?: string | null; hex?: string; label: string; cover?: boolean }> = ({ image, hex, label, cover }) => {
+const Swatch: React.FC<{ image?: string | null; hex?: string; label: string; cover?: boolean; diagram?: boolean }> = ({ image, hex, label, cover, diagram }) => {
   const [broken, setBroken] = useState(false);
+  // diagram: Strichzeichnung auf hellem Grund – ganz zeigen statt quadratisch beschneiden
+  const coverClass = diagram ? `${styles.cardImg} ${styles.cardImgDiagram}` : styles.cardImg;
   if (!image || broken) {
     return (
       <span
-        className={cover ? `${styles.cardImg} ${styles.coverFallback}` : styles.swatchFallback}
+        className={cover ? `${coverClass} ${styles.coverFallback}` : styles.swatchFallback}
         style={hex ? { background: hex } : undefined}
         aria-hidden="true"
       >
@@ -147,9 +149,9 @@ const Swatch: React.FC<{ image?: string | null; hex?: string; label: string; cov
       src={image}
       alt=""
       loading="lazy"
-      className={cover ? styles.cardImg : styles.swatchImg}
-      width={cover ? 480 : 72}
-      height={cover ? 320 : 72}
+      className={cover ? coverClass : styles.swatchImg}
+      width={cover ? (diagram ? 520 : 480) : 72}
+      height={cover ? (diagram ? 390 : 320) : 72}
       onError={() => setBroken(true)}
     />
   );
@@ -209,12 +211,12 @@ const ChoicePicker: React.FC<{ name: string; items: PickItem[]; value: string; o
 );
 
 /** Karten mit Foto (Looks, Armaturenserien, Waschbeckenart). */
-const CardPicker: React.FC<{ name: string; items: PickItem[]; value: string; onChange: (id: string) => void; large?: boolean }> = ({ name, items, value, onChange, large }) => (
+const CardPicker: React.FC<{ name: string; items: PickItem[]; value: string; onChange: (id: string) => void; large?: boolean; diagram?: boolean }> = ({ name, items, value, onChange, large, diagram }) => (
   <div className={large ? styles.lookCards : styles.photoCards}>
     {items.map((o) => (
       <label key={o.id} className={`${styles.card} ${value === o.id ? styles.cardSelected : ''}`}>
         <input type="radio" name={name} value={o.id} checked={value === o.id} onChange={() => onChange(o.id)} />
-        <Swatch image={o.image} label={o.label} cover />
+        <Swatch image={o.image} label={o.label} cover diagram={diagram} />
         <span className={styles.cardText}>
           <span className={styles.cardLabel}>{o.label}</span>
           {o.meta && <span className={styles.cardMeta}>{o.meta}</span>}
@@ -231,7 +233,6 @@ const Badplaner: React.FC = () => {
   const [pkg, setPkg] = useState<PackageId | null>(null);
   const [individuell, setIndividuell] = useState(false);
   const [sel, setSel] = useState<Selection | null>(null);
-  const [detailsOpen, setDetailsOpen] = useState(false);
 
   const [photo, setPhoto] = useState<ResizedImage | null>(null);
   const [photoBusy, setPhotoBusy] = useState(false);
@@ -362,7 +363,7 @@ const Badplaner: React.FC = () => {
           akzent: kombination ? sel.accent : '',
           top: sel.top,
           unterbau: sel.base,
-          becken: isAtelier ? sel.basinType : '',
+          becken: sel.basinType,
           armaturenserie: pkg === 'colore' ? sel.tapSeries : '',
           finish: isAtelier ? sel.finish : '',
           keramik: sel.sanitary,
@@ -517,7 +518,9 @@ const Badplaner: React.FC = () => {
     if (chosen.shower) summaryRows.push({ label: 'Dusche / Wanne', value: chosen.shower.label });
     if (chosen.base) summaryRows.push({ label: 'Unterbau', value: `${chosen.base.supplier} ${chosen.base.label}` });
     if (chosen.top) summaryRows.push({ label: 'Waschtischplatte', value: `${chosen.top.supplier} ${chosen.top.label}` });
-    if (isAtelier && chosen.basinType) summaryRows.push({ label: 'Waschbecken', value: chosen.basinType.label });
+    if (chosen.basinType && options.basinTypes.length > 1) {
+      summaryRows.push({ label: 'Waschbeckenart', value: chosen.basinType.label });
+    }
     if (pkg === 'colore' && chosen.tapSeries) {
       summaryRows.push({ label: 'Armaturen', value: `${chosen.tapSeries.label}, Chrom` });
     } else if (isAtelier && chosen.finish) {
@@ -710,7 +713,7 @@ const Badplaner: React.FC = () => {
                               name="platte"
                               value={sel.tile}
                               onChange={(id) => choose('tile', id)}
-                              items={g.items.map((t) => ({ id: t.id, label: t.color, image: t.image, meta: isAtelier ? 'Grossformat' : t.format.replace('x', '×') + ' cm' }))}
+                              items={g.items.map((t) => ({ id: t.id, label: t.color, image: t.image, meta: 'Grossformat' }))}
                             />
                             {g.items.find((t) => t.note) && <p className={styles.hint}>{g.items.find((t) => t.note)?.note}</p>}
                           </div>
@@ -720,15 +723,17 @@ const Badplaner: React.FC = () => {
                     </>
                   ) : (
                     <>
-                      <fieldset className={styles.group}>
-                        <legend>Plattenformat</legend>
-                        <ChipPicker
-                          name="format"
-                          value={sel.format}
-                          onChange={(id) => choose('format', id)}
-                          items={options.formats.map((f) => ({ id: f, label: `${f.replace('x', '×')} cm` }))}
-                        />
-                      </fieldset>
+                      {options.formats.length > 1 && (
+                        <fieldset className={styles.group}>
+                          <legend>Plattenformat</legend>
+                          <ChipPicker
+                            name="format"
+                            value={sel.format}
+                            onChange={(id) => choose('format', id)}
+                            items={options.formats.map((f) => ({ id: f, label: `${f.replace('x', '×')} cm` }))}
+                          />
+                        </fieldset>
+                      )}
                       <fieldset className={styles.group}>
                         <legend>Platten <span className={styles.groupMeta}>· Serie und Farbe</span></legend>
                         {tileGroups.map((g) => (
@@ -748,218 +753,227 @@ const Badplaner: React.FC = () => {
                     </>
                   )}
 
-                  <fieldset className={styles.group}>
-                    <legend>Unterbau <span className={styles.groupMeta}>· {options.bases[0]?.supplier}</span></legend>
-                    {baseGroups.map((g) => (
-                      <div key={g.key} className={styles.subGroup}>
-                        <p className={styles.groupSub}>{g.key}</p>
-                        <SwatchPicker
-                          name="unterbau"
-                          value={sel.base}
-                          onChange={(id) => choose('base', id)}
-                          items={g.items.map((b) => ({ id: b.id, label: b.label, image: b.image, hex: b.hex }))}
+                  {baseGroups.length > 0 && (
+                    <fieldset className={styles.group}>
+                      <legend>Unterbau <span className={styles.groupMeta}>· {options.bases[0]?.supplier}</span></legend>
+                      {baseGroups.map((g) => (
+                        <div key={g.key} className={styles.subGroup}>
+                          <p className={styles.groupSub}>{g.key}</p>
+                          <SwatchPicker
+                            name="unterbau"
+                            value={sel.base}
+                            onChange={(id) => choose('base', id)}
+                            items={g.items.map((b) => ({ id: b.id, label: b.label, image: b.image, hex: b.hex }))}
+                          />
+                        </div>
+                      ))}
+                    </fieldset>
+                  )}
+
+                  {options.showers.length > 1 ? (
+                    <fieldset className={styles.group}>
+                      <legend>Dusche oder Badewanne</legend>
+                      <ChoicePicker
+                        name="dusche"
+                        value={sel.shower}
+                        onChange={(id) => choose('shower', id)}
+                        items={options.showers.map((o) => ({ id: o.id, label: o.label }))}
+                      />
+                    </fieldset>
+                  ) : (
+                    chosen.shower && <p className={styles.hint}>Dusche: {chosen.shower.label}. In diesem Paket ohne weitere Auswahl.</p>
+                  )}
+
+                  {options.walls.length > 1 && (
+                    <fieldset className={styles.group}>
+                      <legend>Wandhöhe <span className={styles.groupMeta}>· wie hoch werden die Platten?</span></legend>
+                      <ChoicePicker
+                        name="wall"
+                        value={sel.wall}
+                        onChange={(id) => choose('wall', id)}
+                        items={options.walls.map((o) => ({ id: o.id, label: o.label }))}
+                      />
+                    </fieldset>
+                  )}
+
+                  {/* Zweite Ebene: alles Weitere. Alles ist vorbelegt, nichts ist Pflicht. */}
+                  <h3 className={`${styles.blockTitle} ${styles.blockTitleDetails}`}>Details</h3>
+                  <p className={styles.blockHint}>Alles ist sinnvoll vorbelegt. Wer mag, verfeinert hier.</p>
+
+                  {isAtelier && (
+                    <>
+                      <fieldset className={styles.group}>
+                        <legend>Materialbild <span className={styles.groupMeta}>· einheitlich oder mit Akzent</span></legend>
+                        <ChoicePicker
+                          name="kombination"
+                          value={sel.accentMode}
+                          onChange={(id) => choose('accentMode', id)}
+                          items={options.accentModes.map((a) => ({
+                            id: a.id,
+                            label: a.label,
+                            meta: a.id === 'einheitlich' ? 'Ein Material im ganzen Raum' : 'Eine Akzentfläche in einem zweiten Material',
+                          }))}
                         />
-                      </div>
-                    ))}
-                  </fieldset>
-
-                  <fieldset className={styles.group}>
-                    <legend>Dusche oder Badewanne</legend>
-                    <ChoicePicker
-                      name="dusche"
-                      value={sel.shower}
-                      onChange={(id) => choose('shower', id)}
-                      items={options.showers.map((o) => ({ id: o.id, label: o.label }))}
-                    />
-                  </fieldset>
-
-                  <fieldset className={styles.group}>
-                    <legend>Wandhöhe <span className={styles.groupMeta}>· wie hoch werden die Platten?</span></legend>
-                    <ChoicePicker
-                      name="wall"
-                      value={sel.wall}
-                      onChange={(id) => choose('wall', id)}
-                      items={options.walls.map((o) => ({ id: o.id, label: o.label }))}
-                    />
-                  </fieldset>
-
-                  {/* Zweite Ebene: alles Weitere, vorbelegt und freiwillig */}
-                  <div className={styles.detailsBlock}>
-                    <button
-                      type="button"
-                      className={styles.detailsToggle}
-                      aria-expanded={detailsOpen}
-                      aria-controls="details-ausstattung"
-                      onClick={() => setDetailsOpen((v) => !v)}
-                    >
-                      <span>Details verfeinern (optional)</span>
-                      <span className={styles.detailsChevron} aria-hidden="true">⌄</span>
-                    </button>
-                    {detailsOpen && (
-                      <div id="details-ausstattung" className={styles.detailsBody}>
-                        <p className={styles.hint}>Alles ist bereits sinnvoll vorbelegt. Sie können hier verfeinern, müssen aber nichts wählen.</p>
-
-                        {isAtelier && (
-                          <>
-                            <fieldset className={styles.group}>
-                              <legend>Materialbild <span className={styles.groupMeta}>· einheitlich oder mit Akzent</span></legend>
-                              <ChoicePicker
-                                name="kombination"
-                                value={sel.accentMode}
-                                onChange={(id) => choose('accentMode', id)}
-                                items={options.accentModes.map((a) => ({
-                                  id: a.id,
-                                  label: a.label,
-                                  meta: a.id === 'einheitlich' ? 'Ein Material im ganzen Raum' : 'Eine Akzentfläche in einem zweiten Material',
-                                }))}
-                              />
-                            </fieldset>
-                            {sel.accentMode === 'kombination' && (
-                              <>
-                                <fieldset className={styles.group}>
-                                  <legend>Akzentfläche</legend>
-                                  <ChoicePicker
-                                    name="akzentflaeche"
-                                    value={sel.accentPlacement}
-                                    onChange={(id) => choosePlacement(id as AccentPlacementId)}
-                                    items={options.accentPlacements.map((a) => ({ id: a.id, label: a.label }))}
-                                  />
-                                </fieldset>
-                                <fieldset className={styles.group}>
-                                  <legend>Akzentmaterial</legend>
-                                  {accentGroups.map((g) => (
-                                    <div key={g.key} className={styles.subGroup}>
-                                      <p className={styles.groupSub}>{g.key}</p>
-                                      <SwatchPicker
-                                        name="akzent"
-                                        value={sel.accent}
-                                        onChange={(id) => choose('accent', id)}
-                                        items={g.items.map((a) => ({ id: a.id, label: a.label, image: a.image }))}
-                                      />
-                                      {g.items.find((a) => a.note) && <p className={styles.hint}>{g.items.find((a) => a.note)?.note}</p>}
-                                    </div>
-                                  ))}
-                                </fieldset>
-                              </>
-                            )}
-                          </>
-                        )}
-
-                        <fieldset className={styles.group}>
-                          <legend>Waschtischplatte <span className={styles.groupMeta}>· {options.tops[0]?.supplier}</span></legend>
-                          {topGroups.map((g) => (
-                            <div key={g.key} className={styles.subGroup}>
-                              <p className={styles.groupSub}>{g.key}</p>
-                              <SwatchPicker
-                                name="top"
-                                value={sel.top}
-                                onChange={(id) => choose('top', id)}
-                                items={g.items.map((t) => ({ id: t.id, label: t.color, image: t.image }))}
-                              />
-                            </div>
-                          ))}
-                        </fieldset>
-
-                        {isAtelier && options.basinTypes.length > 0 && (
+                      </fieldset>
+                      {sel.accentMode === 'kombination' && (
+                        <>
                           <fieldset className={styles.group}>
-                            <legend>Waschbecken</legend>
-                            <CardPicker
-                              name="becken"
-                              value={sel.basinType}
-                              onChange={(id) => choose('basinType', id)}
-                              items={options.basinTypes.map((b) => ({ id: b.id, label: b.label, image: b.image, meta: `${b.supplier} · ${b.example}` }))}
+                            <legend>Akzentfläche</legend>
+                            <ChoicePicker
+                              name="akzentflaeche"
+                              value={sel.accentPlacement}
+                              onChange={(id) => choosePlacement(id as AccentPlacementId)}
+                              items={options.accentPlacements.map((a) => ({ id: a.id, label: a.label }))}
                             />
                           </fieldset>
-                        )}
-
-                        <fieldset className={styles.group}>
-                          <legend>Boden</legend>
-                          <label className={styles.checkbox} htmlFor="boden-anders">
-                            <input
-                              type="checkbox"
-                              id="boden-anders"
-                              checked={sel.floorDifferent}
-                              onChange={(e) => choose('floorDifferent', e.target.checked)}
-                            />
-                            <span>Boden anders wählen</span>
-                          </label>
-                          <p className={styles.hint}>Standard: Boden und Wand mit derselben Platte.</p>
-                          {sel.floorDifferent && (
-                            <div className={styles.subGroup}>
-                              {tileGroups.map((g) => (
+                          {accentGroups.length > 0 && (
+                            <fieldset className={styles.group}>
+                              <legend>Akzentmaterial</legend>
+                              {accentGroups.map((g) => (
                                 <div key={g.key} className={styles.subGroup}>
-                                  <p className={styles.groupSub}>{g.key} <span className={styles.groupSubMeta}>{g.items[0].supplier}</span></p>
+                                  <p className={styles.groupSub}>{g.key}</p>
                                   <SwatchPicker
-                                    name="boden"
-                                    value={sel.floor}
-                                    onChange={(id) => choose('floor', id)}
-                                    items={g.items.map((t) => ({ id: t.id, label: t.color, image: t.image }))}
+                                    name="akzent"
+                                    value={sel.accent}
+                                    onChange={(id) => choose('accent', id)}
+                                    items={g.items.map((a) => ({ id: a.id, label: a.label, image: a.image }))}
                                   />
+                                  {g.items.find((a) => a.note) && <p className={styles.hint}>{g.items.find((a) => a.note)?.note}</p>}
                                 </div>
                               ))}
-                            </div>
+                            </fieldset>
                           )}
-                        </fieldset>
+                        </>
+                      )}
+                    </>
+                  )}
 
-                        {pkg === 'colore' && (
-                          <fieldset className={styles.group}>
-                            <legend>Armaturenserie <span className={styles.groupMeta}>· Chrom</span></legend>
-                            <CardPicker
-                              name="armaturenserie"
-                              value={sel.tapSeries}
-                              onChange={(id) => choose('tapSeries', id)}
-                              items={options.tapSeriesOptions.map((t) => ({ id: t.id, label: t.label, image: t.image, meta: t.shape }))}
-                            />
-                            {options.tapSeriesOptions[0]?.note && <p className={styles.hint}>{options.tapSeriesOptions[0].note}</p>}
-                          </fieldset>
-                        )}
-                        {isAtelier && (
-                          <fieldset className={styles.group}>
-                            <legend>Armaturen-Oberfläche <span className={styles.groupMeta}>· {options.tapSeries}</span></legend>
-                            <ChipPicker
-                              name="finish"
-                              value={sel.finish}
-                              onChange={(id) => choose('finish', id)}
-                              items={options.finishes.map((f) => ({ id: f.id, label: f.label, image: f.image }))}
-                            />
-                          </fieldset>
-                        )}
-                        {pkg === 'essenza' && <p className={styles.hint}>Armaturen: {options.tapSeries}. Im Paket enthalten, keine Auswahl nötig.</p>}
-
-                        <fieldset className={styles.group}>
-                          <legend>Keramikfarbe <span className={styles.groupMeta}>· WC und Waschtisch</span></legend>
-                          <ChipPicker
-                            name="keramik"
-                            value={sel.sanitary}
-                            onChange={(id) => choose('sanitary', id)}
-                            items={options.sanitary.map((s) => ({ id: s.id, label: s.label, image: s.image, hex: s.hex }))}
+                  {topGroups.length > 0 && (
+                    <fieldset className={styles.group}>
+                      <legend>Waschtischplatte <span className={styles.groupMeta}>· {options.tops[0]?.supplier}</span></legend>
+                      {topGroups.map((g) => (
+                        <div key={g.key} className={styles.subGroup}>
+                          <p className={styles.groupSub}>{g.key}</p>
+                          <SwatchPicker
+                            name="top"
+                            value={sel.top}
+                            onChange={(id) => choose('top', id)}
+                            items={g.items.map((t) => ({ id: t.id, label: t.color, image: t.image }))}
                           />
-                        </fieldset>
+                        </div>
+                      ))}
+                    </fieldset>
+                  )}
 
-                        {options.basins.length > 1 && (
-                          <fieldset className={styles.group}>
-                            <legend>Waschtisch</legend>
-                            <ChoicePicker
-                              name="waschtisch"
-                              value={sel.basin}
-                              onChange={(id) => choose('basin', id)}
-                              items={options.basins.map((o) => ({ id: o.id, label: o.label }))}
+                  {options.basinTypes.length > 1 && (
+                    <fieldset className={styles.group}>
+                      <legend>Waschbeckenart <span className={styles.groupMeta}>· wie sitzt das Becken auf der Platte?</span></legend>
+                      <CardPicker
+                        name="becken"
+                        diagram
+                        value={sel.basinType}
+                        onChange={(id) => choose('basinType', id)}
+                        items={options.basinTypes.map((b) => ({
+                          id: b.id,
+                          label: b.label,
+                          image: b.image,
+                          meta: [b.supplier, b.example].filter(Boolean).join(' · '),
+                        }))}
+                      />
+                    </fieldset>
+                  )}
+
+                  <fieldset className={styles.group}>
+                    <legend>Boden</legend>
+                    <label className={styles.checkbox} htmlFor="boden-anders">
+                      <input
+                        type="checkbox"
+                        id="boden-anders"
+                        checked={sel.floorDifferent}
+                        onChange={(e) => choose('floorDifferent', e.target.checked)}
+                      />
+                      <span>Boden anders wählen</span>
+                    </label>
+                    <p className={styles.hint}>Standard: Boden und Wand mit derselben Platte.</p>
+                    {sel.floorDifferent && (
+                      <div className={styles.subGroup}>
+                        {tileGroups.map((g) => (
+                          <div key={g.key} className={styles.subGroup}>
+                            <p className={styles.groupSub}>{g.key} <span className={styles.groupSubMeta}>{g.items[0].supplier}</span></p>
+                            <SwatchPicker
+                              name="boden"
+                              value={sel.floor}
+                              onChange={(id) => choose('floor', id)}
+                              items={g.items.map((t) => ({ id: t.id, label: t.color, image: t.image }))}
                             />
-                          </fieldset>
-                        )}
-
-                        <fieldset className={styles.group}>
-                          <legend>Spiegel</legend>
-                          <ChoicePicker
-                            name="spiegel"
-                            value={sel.mirror}
-                            onChange={(id) => choose('mirror', id)}
-                            items={options.mirrors.map((o) => ({ id: o.id, label: o.label }))}
-                          />
-                        </fieldset>
+                          </div>
+                        ))}
                       </div>
                     )}
-                  </div>
+                  </fieldset>
+
+                  {pkg === 'colore' && options.tapSeriesOptions.length > 1 && (
+                    <fieldset className={styles.group}>
+                      <legend>Armaturenserie <span className={styles.groupMeta}>· Chrom</span></legend>
+                      <CardPicker
+                        name="armaturenserie"
+                        value={sel.tapSeries}
+                        onChange={(id) => choose('tapSeries', id)}
+                        items={options.tapSeriesOptions.map((t) => ({ id: t.id, label: t.label, image: t.image, meta: t.shape }))}
+                      />
+                      {options.tapSeriesOptions[0]?.note && <p className={styles.hint}>{options.tapSeriesOptions[0].note}</p>}
+                    </fieldset>
+                  )}
+                  {isAtelier && options.finishes.length > 1 && (
+                    <fieldset className={styles.group}>
+                      <legend>Armaturen-Oberfläche <span className={styles.groupMeta}>· {options.tapSeries}</span></legend>
+                      <ChipPicker
+                        name="finish"
+                        value={sel.finish}
+                        onChange={(id) => choose('finish', id)}
+                        items={options.finishes.map((f) => ({ id: f.id, label: f.label, image: f.image }))}
+                      />
+                    </fieldset>
+                  )}
+                  {pkg === 'essenza' && <p className={styles.hint}>Armaturen: {options.tapSeries}. Im Paket enthalten, keine Auswahl nötig.</p>}
+
+                  {options.sanitary.length > 1 ? (
+                    <fieldset className={styles.group}>
+                      <legend>Keramikfarbe <span className={styles.groupMeta}>· WC und Waschtisch</span></legend>
+                      <ChipPicker
+                        name="keramik"
+                        value={sel.sanitary}
+                        onChange={(id) => choose('sanitary', id)}
+                        items={options.sanitary.map((s) => ({ id: s.id, label: s.label, image: s.image, hex: s.hex }))}
+                      />
+                    </fieldset>
+                  ) : (
+                    chosen.sanitary && <p className={styles.hint}>Keramik: {chosen.sanitary.label}. In diesem Paket ohne weitere Auswahl.</p>
+                  )}
+
+                  {options.basins.length > 1 && (
+                    <fieldset className={styles.group}>
+                      <legend>Waschtisch <span className={styles.groupMeta}>· einzeln oder doppelt</span></legend>
+                      <ChoicePicker
+                        name="waschtisch"
+                        value={sel.basin}
+                        onChange={(id) => choose('basin', id)}
+                        items={options.basins.map((o) => ({ id: o.id, label: o.label }))}
+                      />
+                    </fieldset>
+                  )}
+
+                  {options.mirrors.length > 1 && (
+                    <fieldset className={styles.group}>
+                      <legend>Spiegel</legend>
+                      <ChoicePicker
+                        name="spiegel"
+                        value={sel.mirror}
+                        onChange={(id) => choose('mirror', id)}
+                        items={options.mirrors.map((o) => ({ id: o.id, label: o.label }))}
+                      />
+                    </fieldset>
+                  )}
 
                   <div className={styles.stepActions}>
                     <button type="button" className={styles.ctaDark} onClick={() => goTo(3)}>Weiter zum Foto</button>
@@ -970,17 +984,45 @@ const Badplaner: React.FC = () => {
 
             {/* Schritt 3: Foto */}
             <article id="schritt-3" className={stepClass(3)} ref={(el) => { stepRefs.current[3] = el; }}>
-              {renderStepHead(3, 'Foto vom Bad', photo ? 'Foto bereit' : 'Kamera oder Bild auswählen')}
+              {renderStepHead(3, 'Foto vom Bad', photo ? 'Foto bereit' : 'Aufnehmen oder aus der Galerie wählen')}
               {step === 3 && (
                 <div id="schritt-3-inhalt" className={styles.stepBody}>
                   {photo ? (
                     <img src={photo.dataUrl} alt="Ihr Foto" className={styles.preview} />
                   ) : (
-                    <label className={styles.upload}>
-                      <input type="file" accept="image/*" capture="environment" onChange={onPhoto} disabled={photoBusy} />
-                      <span className={styles.ctaDark}>{photoBusy ? 'Foto wird vorbereitet…' : 'Foto aufnehmen oder wählen'}</span>
-                      <span className={styles.hint}>Am besten von der Tür aus, das ganze Bad im Bild, Licht an.</span>
-                    </label>
+                    <div className={styles.upload}>
+                      <p className={styles.uploadTitle}>
+                        {photoBusy ? 'Foto wird vorbereitet…' : 'Foto aufnehmen oder aus der Galerie wählen'}
+                      </p>
+                      <div className={styles.uploadActions}>
+                        <span className={styles.uploadAction}>
+                          <input
+                            type="file"
+                            id="bp-foto-kamera"
+                            className={styles.fileInput}
+                            accept="image/*"
+                            capture="environment"
+                            onChange={onPhoto}
+                            disabled={photoBusy}
+                          />
+                          <label className={styles.ctaDark} htmlFor="bp-foto-kamera">Foto aufnehmen</label>
+                        </span>
+                        <span className={styles.uploadAction}>
+                          <input
+                            type="file"
+                            id="bp-foto-galerie"
+                            className={styles.fileInput}
+                            accept="image/*"
+                            onChange={onPhoto}
+                            disabled={photoBusy}
+                          />
+                          <label className={styles.ctaLight} htmlFor="bp-foto-galerie">Aus der Galerie wählen</label>
+                        </span>
+                      </div>
+                      <span className={styles.hint}>
+                        Jetzt neu aufnehmen oder ein Foto nehmen, das Sie schon haben. Am besten von der Tür aus, das ganze Bad im Bild, Licht an.
+                      </span>
+                    </div>
                   )}
                   {photoError && <p className={styles.error}>{photoError}</p>}
                   {photo && (
@@ -994,11 +1036,33 @@ const Badplaner: React.FC = () => {
                       <div className={styles.stepActions}>
                         <button type="button" className={styles.ctaDark} onClick={() => goTo(4)} disabled={!windows}>Weiter zu Kontakt</button>
                         {!windows && <span className={styles.hint}>Bitte die Fenster angeben.</span>}
-                        <label className={styles.ctaLight}>
-                          <input type="file" accept="image/*" capture="environment" onChange={onPhoto} style={{ display: 'none' }} />
-                          Anderes Foto
-                        </label>
                       </div>
+                      <div className={`${styles.uploadActions} ${styles.changePhoto}`}>
+                        <span className={styles.uploadAction}>
+                          <input
+                            type="file"
+                            id="bp-foto-kamera-neu"
+                            className={styles.fileInput}
+                            accept="image/*"
+                            capture="environment"
+                            onChange={onPhoto}
+                            disabled={photoBusy}
+                          />
+                          <label className={styles.ctaLight} htmlFor="bp-foto-kamera-neu">Neues Foto aufnehmen</label>
+                        </span>
+                        <span className={styles.uploadAction}>
+                          <input
+                            type="file"
+                            id="bp-foto-galerie-neu"
+                            className={styles.fileInput}
+                            accept="image/*"
+                            onChange={onPhoto}
+                            disabled={photoBusy}
+                          />
+                          <label className={styles.ctaLight} htmlFor="bp-foto-galerie-neu">Anderes Foto aus der Galerie</label>
+                        </span>
+                      </div>
+                      {photoBusy && <p className={styles.hint}>Foto wird vorbereitet…</p>}
                     </>
                   )}
                 </div>
