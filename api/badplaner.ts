@@ -306,7 +306,7 @@ async function handleRender(req: any, res: any, body: RenderBody) {
     showerPrompt: shower.prompt,
     sanitaryPrompt: sanitary.prompt,
     basinPrompt: basin.prompt,
-    basinTypePrompt: isAtelier ? basinType?.prompt : undefined,
+    basinTypePrompt: basinType?.prompt,
     topPrompt: top.prompt,
     basePrompt: base.prompt,
     mirrorPrompt: mirror.prompt,
