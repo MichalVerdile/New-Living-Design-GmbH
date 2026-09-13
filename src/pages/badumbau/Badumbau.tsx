@@ -14,7 +14,7 @@ const steps = [
   { n: '1', title: 'Beratung in der Ausstellung', text: 'Sie sehen Platten, Möbel, Armaturen und die drei Pakete in echt. Eine Stunde, kostenlos, mit Termin.' },
   { n: '2', title: 'Besichtigung vor Ort', text: 'Wir messen Ihr Bad aus, prüfen Leitungen und Anschlüsse und klären, was möglich ist.' },
   { n: '3', title: 'Planung mit 3D-Rendering und Fixpreis', text: 'Sie erhalten Ihr Bad als 3D-Bild in der gewählten Farbe und eine Offerte mit Fixpreis, 30 Tage gültig.' },
-  { n: '4', title: 'Umbau in 3 bis 5 Wochen', text: 'Unsere eigene Equipe baut um: Demontage, Sanitär, Elektro, Gips, Platten, Maler, Montage. Ein Ansprechpartner.' },
+  { n: '4', title: 'Umbau in 2 bis 3 Wochen', text: 'Unsere eigene Equipe baut um: Demontage, Sanitär, Elektro, Gips, Platten, Maler, Montage. Ein Ansprechpartner.' },
   { n: '5', title: 'Übergabe', text: 'Wir übergeben Ihnen das fertige Bad, erklären die Technik und bleiben erreichbar.' },
 ];
 
