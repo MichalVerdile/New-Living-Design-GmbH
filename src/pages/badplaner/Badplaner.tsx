@@ -17,6 +17,12 @@ import { resizeImageFile, fileToBase64, type ResizedImage } from './resizeImage'
  */
 
 const PAGE_URL = `${business.siteUrl}/badplaner`;
+const WINDOW_OPTIONS = [
+  { id: '0', label: 'Keins' },
+  { id: '1', label: '1 Fenster' },
+  { id: '2', label: '2 Fenster' },
+  { id: '3', label: '3 oder mehr' },
+];
 const API_URL = '/api/badplaner';
 const MAX_PLAN_FILE = 4 * 1024 * 1024; // Grundriss: 4 MB
 
@@ -57,7 +63,7 @@ interface Result {
 const howSteps = [
   { n: '1', title: 'Paket und Ausstattung wählen', text: 'Essenza, Colore oder Atelier. Dann Platte, Möbelfarbe, Armatur und Keramik: eine kleine Auswahl aus unserer Ausstellung.' },
   { n: '2', title: 'Foto vom Bad machen', text: 'Am Handy öffnet sich die Kamera. Von der Tür aus, das ganze Bad im Bild, Licht an. Das Foto wird vor dem Senden verkleinert.' },
-  { n: '3', title: 'Ideenbild erhalten und besprechen', text: 'Nach etwa 20 Sekunden sehen Sie Ihr Bad mit den gewählten Materialien. Wir melden uns und laden Sie in die Ausstellung ein.' },
+  { n: '3', title: 'Ideenbild erhalten und besprechen', text: 'Nach etwa 30 Sekunden sehen Sie Ihr Bad mit den gewählten Materialien. Wir melden uns und laden Sie in die Ausstellung ein.' },
 ];
 
 /** Swatch-Bild; fehlt es (noch nicht geladen), zeigt es eine farbige Fläche. */
@@ -82,6 +88,7 @@ const Badplaner: React.FC = () => {
   const [photo, setPhoto] = useState<ResizedImage | null>(null);
   const [photoBusy, setPhotoBusy] = useState(false);
   const [photoError, setPhotoError] = useState('');
+  const [windows, setWindows] = useState(''); // Fenster auf dem Foto: '0' | '1' | '2' | '3'
 
   const [contact, setContact] = useState({ name: '', phone: '', email: '', place: '', consent: false });
   const [status, setStatus] = useState<'idle' | 'sending' | 'error'>('idle');
@@ -131,6 +138,7 @@ const Badplaner: React.FC = () => {
     try {
       const resized = await resizeImageFile(file, 1280, 0.82);
       setPhoto(resized);
+      setWindows(''); // neues Foto, Fenster neu angeben
     } catch {
       setPhoto(null);
       setPhotoError('Das Bild konnte nicht gelesen werden. Bitte ein Foto im JPEG-Format wählen.');
@@ -160,6 +168,7 @@ const Badplaner: React.FC = () => {
           kind: 'render',
           package: pkg,
           ...sel,
+          windows,
           name: contact.name.trim(),
           phone: contact.phone.trim(),
           email: contact.email.trim() || undefined,
@@ -522,8 +531,21 @@ const Badplaner: React.FC = () => {
                   {photo && (
                     <>
                       <p className={styles.hint}>Am besten von der Tür aus, das ganze Bad im Bild, Licht an. Das Foto wurde auf {photo.width}×{photo.height} Pixel verkleinert.</p>
+                      <fieldset className={styles.group}>
+                        <legend>Wie viele Fenster sind auf dem Foto? <span className={styles.groupMeta}>· Dachfenster zählen mit</span></legend>
+                        <div className={styles.chips}>
+                          {WINDOW_OPTIONS.map((o) => (
+                            <label key={o.id} className={`${styles.option} ${styles.chip} ${windows === o.id ? styles.optionSelected : ''}`}>
+                              <input type="radio" name="windows" value={o.id} checked={windows === o.id} onChange={() => setWindows(o.id)} />
+                              <span className={styles.optionLabel}>{o.label}</span>
+                            </label>
+                          ))}
+                        </div>
+                        <p className={styles.hint}>Damit das Ideenbild kein Fenster dazuerfindet: Fenster, Türen und Wände bleiben, wie sie sind.</p>
+                      </fieldset>
                       <div className={styles.stepActions}>
-                        <button type="button" className={styles.ctaDark} onClick={() => goTo(4)}>Weiter zu Kontakt</button>
+                        <button type="button" className={styles.ctaDark} onClick={() => goTo(4)} disabled={!windows}>Weiter zu Kontakt</button>
+                        {!windows && <span className={styles.hint}>Bitte die Fenster angeben.</span>}
                         <label className={styles.ctaLight}>
                           <input type="file" accept="image/*" capture="environment" onChange={onPhoto} style={{ display: 'none' }} />
                           Anderes Foto
@@ -576,7 +598,7 @@ const Badplaner: React.FC = () => {
                   {status === 'sending' && (
                     <div className={styles.progress} role="status" aria-live="polite">
                       <div className={styles.progressBar}><span /></div>
-                      <p className={styles.progressText}>Wir gestalten Ihr Bad … das dauert etwa 20 Sekunden. Bitte die Seite offen lassen.</p>
+                      <p className={styles.progressText}>Wir gestalten Ihr Bad und prüfen das Bild … das dauert 30 bis 60 Sekunden. Bitte die Seite offen lassen.</p>
                     </div>
                   )}
                   {status === 'error' && (
