@@ -87,7 +87,7 @@ export const bathPackages: BathPackage[] = [
     description:
       'Alles, was ein neues Bad braucht, mit Markenprodukten aus unserer Ausstellung. Farbe der Platten, des Möbels und der Armaturen wählen Sie frei innerhalb der Serie.',
     includes: [
-      'Platten 30×60 cm, Farbe frei wählbar innerhalb der Serie (ca. 21 m²)',
+      'Platten 30×60 oder 60×60 cm, Farbe frei wählbar innerhalb der Serie (ca. 21 m²)',
       'Wand-WC weiss mit Sanitärmodul Oli QR',
       'Badmöbel 80 cm, lackiert in einer Farbe nach Wahl, mit Waschtisch',
       'Spiegelschrank Pirovano 60 cm',
@@ -104,16 +104,16 @@ export const bathPackages: BathPackage[] = [
     name: 'Colore',
     price: 27700,
     priceLabel: "27'700",
-    claim: 'Grossformat, farbige Keramik und Armaturen',
+    claim: 'Grossformat, farbige Keramik, Armaturen verchromt',
     description:
-      'Unser meistgewähltes Bad: Platten 60×120, WC und Duschwanne in Farbe, Armaturen in Schwarz, Gold oder gebürstet, Möbel matt lackiert. Farbe kostet bei uns nichts extra.',
+      'Unser meistgewähltes Bad: Platten 60×120 oder 120×120, WC und Duschwanne in Farbe, verchromte Armaturen in zwei Serien, Möbel matt lackiert. Farbe kostet bei uns nichts extra.',
     includes: [
-      'Platten 60×120 cm rektifiziert, Farbe und Struktur frei wählbar (ca. 21 m²)',
+      'Platten 60×120 oder 120×120 cm rektifiziert, Farbe und Struktur frei wählbar (ca. 21 m²)',
       'Farbiges Wand-WC der Serie mit Oli QR und Betätigungsplatte nach Wahl',
       'Badmöbel 100 cm, matt lackiert in Wunschfarbe',
       'Spiegelschrank Pirovano 90 cm, zwei Türen',
       'Farbige Duschwanne, Walk-in-Glas und Duschrinne',
-      'Unterputz-Armaturen in farbiger Oberfläche',
+      'Armaturen verchromt, Serie Up+ (rund) oder Ran (eckig) nach Wahl',
       'Abgestimmtes Zubehör, Kleinmaterial, Schalter',
       '3D-Rendering in Ihrer Farbwahl vor der Unterschrift',
       'Demontage bis Übergabe durch NLD, Entsorgung inklusive',
@@ -125,8 +125,8 @@ export const bathPackages: BathPackage[] = [
   {
     id: 'atelier',
     name: 'Atelier',
-    price: 39800,
-    priceLabel: "39'800",
+    price: 36800,
+    priceLabel: "36'800",
     claim: 'Das Bad nach Mass: freistehend, edle Materialien, auf Zeichnung',
     description:
       'Für grössere Bäder und besondere Wünsche: Grossformate oder Steinoptik, freistehende Badewanne, Möbel nach Mass, Designarmaturen und Lichtkonzept. Bemusterung in der Ausstellung.',
@@ -136,7 +136,7 @@ export const bathPackages: BathPackage[] = [
       'Freistehende Badewanne oder bodenebene Dusche',
       'Möbel nach Mass, Abdeckung in Stein oder Keramik',
       'Spiegel mit integriertem Licht',
-      'Designarmaturen mit PVD-Oberfläche',
+      'Unterputz-Designarmaturen, Oberfläche nach Wahl (PVD)',
       'Beleuchtung, Nischen, Designradiator, Zubehör',
       '3D-Rendering und Bemusterung in der Ausstellung',
       'Demontage bis Übergabe durch NLD, ein Ansprechpartner',
@@ -145,6 +145,19 @@ export const bathPackages: BathPackage[] = [
     extraPerSqm: 290,
   },
 ];
+
+/**
+ * Vierte Karte im Badplaner: Bäder ausserhalb der Pakete. Ohne Preis; wer sie
+ * wählt, gibt danach das nächstgelegene Paket als Grundlage an. Bewusst nicht
+ * Teil von `bathPackages`, damit Startseite, Badumbau und Blog weiterhin die
+ * drei Pakete mit Fixpreis zeigen.
+ */
+export const individualPackage = {
+  id: 'individuell',
+  name: 'Individuelle Lösung',
+  claim: 'Bäder ausserhalb der Pakete, nach Budget.',
+  question: 'Welchem Paket kommt Ihre Idee am nächsten?',
+} as const;
 
 export const packageNote =
   'Richtpreise inkl. Material, Montage und 8.1 % MwSt. für ein Bad von ca. 6 m² mit ca. 21 m² Plattenfläche (Dusche, Wand-WC, Waschtisch mit Möbel). Grössere Bäder: Zuschlag pro zusätzlichem Quadratmeter Platten, siehe Paket. Der Fixpreis gilt nach der Besichtigung vor Ort und ist 30 Tage gültig.';
