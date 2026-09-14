@@ -104,7 +104,7 @@ export const bathPackages: BathPackage[] = [
     name: 'Colore',
     price: 27700,
     priceLabel: "27'700",
-    claim: 'Grossformat, farbige Keramik, Armaturen verchromt',
+    claim: 'Grossformat, farbige Keramik und Armaturen in Ihrer Wunschoberfläche',
     description:
       'Unser meistgewähltes Bad: Platten 60×120 oder 120×120, WC und Duschwanne in Farbe, verchromte Armaturen in zwei Serien, Möbel matt lackiert. Farbe kostet bei uns nichts extra.',
     includes: [
@@ -113,7 +113,7 @@ export const bathPackages: BathPackage[] = [
       'Badmöbel 100 cm, matt lackiert in Wunschfarbe',
       'Spiegelschrank Pirovano 90 cm, zwei Türen',
       'Farbige Duschwanne, Walk-in-Glas und Duschrinne',
-      'Armaturen verchromt, Serie Up+ (rund) oder Ran (eckig) nach Wahl',
+      'Armaturen: Serie Up+ (rund) oder Ran (eckig) und Oberfläche nach Wahl',
       'Abgestimmtes Zubehör, Kleinmaterial, Schalter',
       '3D-Rendering in Ihrer Farbwahl vor der Unterschrift',
       'Demontage bis Übergabe durch NLD, Entsorgung inklusive',

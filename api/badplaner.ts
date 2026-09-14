@@ -11,8 +11,8 @@
  *      Bekannte Legacy-Feldnamen bleiben gültig; widersprüchliche Auswahl-IDs nicht.
  *   2. Grenzen prüfen: Cookie 3 Ideenbilder pro Gerät und Tag, 6 pro IP, Tagesdeckel.
  *   3. Musterbild der Wandplatte laden, Prompt bauen, Ideenbild bei Gemini erzeugen.
- *   4. Fensterprüfung zwingend. Ein verworfenes oder ungeprüftes Bild wird nie ausgeliefert.
- *      Ein zweiter Versuch nur, wenn das volle Zeitbudget inkl. Zustellung übrig ist.
+ *   4. Fensterprüfung: abgelehnte Bilder werden verworfen. Ist der Prüfdienst auch
+ *      nach einem kurzen Retry nicht erreichbar, wird das Bild mit Warnhinweis zugestellt.
  *   5. Lead-Mail an NLD; bei eindeutigem HTTP-Fehler Formspree ohne Bilder.
  *      Ohne bestätigte Provider-Annahme kein Erfolg. Unklare Zustellung nicht blind wiederholen.
  *   6. Kundenmail/Newsletter mit separatem Zustellstatus, kein falsches Versandversprechen.
@@ -33,7 +33,7 @@
  *   BADPLANER_DAILY_CAP  Maximale Ideenbilder pro Tag insgesamt (Default 60)
  *   BADPLANER_MODEL      Gemini-Modell (Default gemini-3.1-flash-image)
  *   BADPLANER_CHECK_MODEL Gemini-Textmodell für die Fensterprüfung (Default gemini-3.6-flash);
- *                        leer lassen = Dienst nicht verfügbar (fail-closed)
+ *                        leer lassen = Prüfung bewusst deaktiviert
  *
  * Fotos und Ideenbilder werden NICHT gespeichert (kein Blob, kein KV): sie gehen
  * nur an Google zur Bilderzeugung und per E-Mail an uns und an den Kunden.
@@ -66,6 +66,7 @@ const PER_DEVICE_PER_DAY = 3;                 // Cookie nldbp
 const PER_IP_PER_DAY = 6;                     // In-Memory
 const GEMINI_TIMEOUT_MS = 50000;
 const CHECK_TIMEOUT_MS = 20000;
+const CHECK_RETRY_DELAY_MS = 750;
 const COOKIE_NAME = 'nldbp';
 
 /* ---------- Typen ---------- */
@@ -157,13 +158,14 @@ export interface BadplanerDependencies {
   fetch: typeof fetch;
   env: Record<string, string | undefined>;
   clock: Clock;
+  sleep: (milliseconds: number) => Promise<void>;
   newId: () => string;
 }
 
 type DeliveryStatus = 'accepted' | 'failed' | 'unknown' | 'skipped';
 interface MailResult { status: DeliveryStatus; provider?: 'resend' | 'formspree'; attachments?: boolean }
 interface RequestContext { budget: Budget }
-type CheckResult = { status: 'approved' } | { status: 'rejected'; reason: string } | { status: 'unavailable' };
+type CheckResult = { status: 'approved' } | { status: 'rejected'; reason: string } | { status: 'unavailable' } | { status: 'disabled' };
 
 /** Each factory owns its best-effort counters. Tests inject HTTP, clock and IDs. */
 export function createHandler(overrides: Partial<BadplanerDependencies> = {}) {
@@ -171,6 +173,7 @@ export function createHandler(overrides: Partial<BadplanerDependencies> = {}) {
     fetch: globalThis.fetch.bind(globalThis),
     env: process.env,
     clock: { now: () => Date.now(), setTimeout: (fn, ms) => setTimeout(fn, ms), clearTimeout: (timer) => clearTimeout(timer) },
+    sleep: (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds)),
     newId: () => `bp-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
     ...overrides,
   };
@@ -270,6 +273,7 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   if (!name || !phone) return bad(res, 'Bitte Name und Telefonnummer angeben.');
   if (!email) return bad(res, 'Bitte E-Mail-Adresse angeben: wir schicken Ihnen das Ideenbild auch per Mail.');
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return bad(res, 'Die E-Mail-Adresse sieht nicht richtig aus.');
+  if (!place) return bad(res, 'Bitte PLZ und Ort angeben.');
   if (body.consent !== true) return bad(res, 'Bitte bestätigen Sie die Datenschutzerklärung.');
 
   // 4. Foto: neu als data-URL im Feld `foto`, alt als { mime, data } im Feld `photo`
@@ -279,8 +283,8 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
     photo.data = normalizeBase64(photo.data, MAX_PHOTO_BASE64);
     validateImageBytes(Buffer.from(photo.data, 'base64'), photo.mime);
   } catch { return bad(res, 'Das Foto ist ungültig oder zu gross. Bitte JPEG, PNG oder WebP wählen.'); }
-  if (!env.GEMINI_API_KEY || (env.BADPLANER_CHECK_MODEL !== undefined && !env.BADPLANER_CHECK_MODEL.trim())) {
-    console.error('[badplaner] Bilddienst oder Prüfung nicht konfiguriert');
+  if (!env.GEMINI_API_KEY) {
+    console.error('[badplaner] Bilddienst nicht konfiguriert');
     return res.status(503).json({ ok: false, code: 'SERVICE_UNAVAILABLE', error: 'Der Badplaner ist im Moment nicht verfügbar. Rufen Sie uns an: ' + business.phone.display });
   }
 
@@ -312,10 +316,13 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   globalCounter.count++;
   if (ipCounter.size > 5000) ipCounter.clear(); // Speicher der Instanz schonen
 
+  let delivered = false;
+  try {
+
   // 6. Swatch (Materialprobe der Wandplatte) laden: zuerst unsere Kopie, sonst Lieferant, sonst ohne
   const swatch = await loadSwatch(tile.image, tile.src || '', ctx);
 
-  // 7. Armaturen: Essenza Aufputz verchromt, Colore verchromt in der gewählten Serie,
+  // 7. Armaturen: Essenza Aufputz verchromt, Colore in der gewählten Serie und Oberfläche,
   //    Atelier Unterputz in der gewählten Oberfläche.
   const taps = tapDescription(pkg.id as PackageId, finish, tapSeriesOption, opts.tapSeries);
 
@@ -352,20 +359,31 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   if (gen.ok === false) return res.status(502).json({ ok: false, error: gen.error });
   let checkNote = 'ok';
   const wantedFixtures = { room, shower: shower ? shower.id !== 'keine' : false, bathtub: bathtub ? bathtub.id !== 'keine' : false };
-  let check = await checkOpenings(photo, gen, wantedFixtures, ctx);
+  const checkWithUnavailableRetry = async (image: { mime: string; data: string }): Promise<CheckResult> => {
+    let result = await checkOpenings(photo, image, wantedFixtures, ctx);
+    if (result.status === 'unavailable'
+      && ctx.budget.remaining() >= CHECK_RETRY_DELAY_MS + CHECK_TIMEOUT_MS + DELIVERY_RESERVE_MS) {
+      await dependencies.sleep(CHECK_RETRY_DELAY_MS);
+      result = await checkOpenings(photo, image, wantedFixtures, ctx);
+    }
+    return result;
+  };
+  let check = await checkWithUnavailableRetry(gen);
   if (check.status === 'rejected' && ctx.budget.remaining() >= GEMINI_TIMEOUT_MS + CHECK_TIMEOUT_MS + DELIVERY_RESERVE_MS) {
     // The rejected image never becomes a fallback if the retry/check fails.
     const retryPrompt = `${prompt}\nIMPORTANT: a previous attempt failed the structural and fixture check: ${check.reason}. Correct that exact issue. Keep the original layout, every opening and toilet position, and show exactly the requested shower and bathtub state.`;
     const second = await generateImage(retryPrompt, photo, swatch, ctx);
     if (second.ok === false) return res.status(502).json({ ok: false, code: 'RENDER_FAILED', error: second.error });
-    check = await checkOpenings(photo, second, wantedFixtures, ctx);
+    check = await checkWithUnavailableRetry(second);
     gen = second;
-    checkNote = '1. Versuch verworfen, 2. Versuch ok';
+    if (check.status === 'approved') checkNote = '1. Versuch verworfen, 2. Versuch ok';
   }
-  if (check.status !== 'approved') return res.status(502).json({
-    ok: false, code: check.status === 'rejected' ? 'RENDER_REJECTED' : 'CHECK_UNAVAILABLE',
+  if (check.status === 'rejected') return res.status(502).json({
+    ok: false, code: 'RENDER_REJECTED',
     error: 'Das Ideenbild konnte nicht sicher bestätigt werden und wird nicht angezeigt. Bitte später erneut versuchen oder uns direkt kontaktieren.',
   });
+  if (check.status === 'unavailable') checkNote = 'nicht möglich (Prüfdienst nicht erreichbar)';
+  if (check.status === 'disabled') checkNote = 'deaktiviert';
   console.log('[badplaner] Fensterprüfung:', checkNote);
 
   // 10. Auswahl in Klartext: dieselben Zeilen für das Lead-Mail und die Kundenmail
@@ -394,7 +412,6 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   row('Waschtischplatte', `${top.label} (${top.supplier})`);
   if (basinType) row('Waschbecken', basinType.label);
   row('Armatur', taps.label);
-  if (tapSeriesOption) row('Armaturenserie', `${tapSeriesOption.label} (${tapSeriesOption.supplier})`);
   row('Sanitärkeramik', `${sanitary.label} (${sanitary.supplier})`);
   row('Waschtisch', basin.label);
   row('Spiegel', mirror.label);
@@ -445,10 +462,21 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
 
   // 14. Antwort mit Tageszähler-Cookie
   res.setHeader('Set-Cookie', counterCookie(cookie + 1, today));
+  delivered = true;
   return res.status(200).json({ ok: true, leadId, image: { mime: gen.mime, data: gen.data }, delivery: {
     lead: leadDelivery.status, leadProvider: leadDelivery.provider, leadAttachments: leadDelivery.attachments,
     customer: customerDelivery.status, newsletter: newsletterDelivery.status,
   } });
+  } finally {
+    if (!delivered) {
+      const current = ipCounter.get(ip);
+      if (current?.date === today) {
+        if (current.count <= 1) ipCounter.delete(ip);
+        else ipCounter.set(ip, { date: today, count: current.count - 1 });
+      }
+      if (globalCounter.date === today) globalCounter.count = Math.max(0, globalCounter.count - 1);
+    }
+  }
 }
 
 /* ---------- kind: beratung ---------- */
@@ -593,7 +621,7 @@ function readPhoto(body: RenderBody): Photo | null {
 }
 
 /**
- * Armaturen je Paket: Essenza Aufputz verchromt (keine Auswahl), Colore verchromt
+ * Armaturen je Paket: Essenza Aufputz verchromt (keine Auswahl), Colore mit gewählter Oberfläche
  * in der gewählten Serie, Atelier Unterputz in der gewählten Oberfläche.
  */
 function tapDescription(
@@ -611,9 +639,9 @@ function tapDescription(
   if (pkg === 'colore') {
     return {
       prompt: series
-        ? `${series.prompt}, all fittings for the requested fixtures from the same series in polished chrome`
-        : 'fittings for the requested fixtures in polished chrome',
-      label: series ? `${series.label}, Chrom` : seriesText,
+        ? `${series.prompt.replace('in polished chrome', `in ${finish.prompt}`)}, all fittings for the requested fixtures from the same series and in the same ${finish.prompt} finish`
+        : `fittings for the requested fixtures in ${finish.prompt}`,
+      label: series ? `${series.label}, ${finish.label}` : `${seriesText}, ${finish.label}`,
     };
   }
   return {
@@ -764,7 +792,7 @@ async function generateImage(prompt: string, photo: Photo, swatch: Photo | null,
 /**
  * Fragt ein Gemini-Textmodell, ob das Ideenbild eine Öffnung (Fenster, Dachfenster,
  * Tür, Glasfläche) enthält, die im Foto nicht da ist. Nicht verfügbare oder
- * unlesbare Prüfungen sind ein Fehler und erlauben niemals die Bildauslieferung.
+ * unlesbare Prüfungen werden vom Aufrufer separat behandelt.
  * Dies ist noch kein vollständiger Geometrie-/Ausstattungschecker.
  */
 async function checkOpenings(
@@ -774,7 +802,7 @@ async function checkOpenings(
   ctx: RequestContext,
 ): Promise<CheckResult> {
   const model = env.BADPLANER_CHECK_MODEL === undefined ? 'gemini-3.6-flash' : env.BADPLANER_CHECK_MODEL;
-  if (!model?.trim()) return { status: 'unavailable' };
+  if (!model?.trim()) return { status: 'disabled' };
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
   const question =
     'Image 1 is the original room. Image 2 is an edited renovation result. Compare them strictly. ' +

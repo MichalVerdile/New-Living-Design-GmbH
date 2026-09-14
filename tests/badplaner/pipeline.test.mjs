@@ -19,7 +19,7 @@ function payload(changes = {}) {
     becken: options.basinTypes[0].id, finish: '', keramik: options.sanitary[0].id,
     wall: options.walls[0].id, dusche: options.showers[0].id, badewanne: options.bathtubs[0].id, waschtisch: options.basins[0].id,
     spiegel: options.mirrors[0].id, windows: '0', foto: `data:image/png;base64,${PNG}`,
-    name: 'Fixture Person', email: 'fixture@example.invalid', telefon: '+41 00 000 00 00', consent: true,
+    name: 'Fixture Person', email: 'fixture@example.invalid', telefon: '+41 00 000 00 00', place: '4800 Zofingen', consent: true,
     ...changes,
   };
 }
@@ -84,7 +84,7 @@ function harness(settings = {}) {
     }
     throw new Error(`Unexpected mock URL: ${url}`);
   };
-  const handler = createHandler({ fetch, clock, env: { GEMINI_API_KEY: 'fake-not-a-key', RESEND_API_KEY: 'fake-not-a-key', ...settings.env }, newId: () => `bp-fixture-${++ids}` });
+  const handler = createHandler({ fetch, clock, sleep: async (milliseconds) => { clock.advance(milliseconds); }, env: { GEMINI_API_KEY: 'fake-not-a-key', RESEND_API_KEY: 'fake-not-a-key', ...settings.env }, newId: () => `bp-fixture-${++ids}` });
   async function invoke(body = payload(), request = {}) {
     const res = { headers: {}, statusCode: 200, body: null,
       setHeader(name, value) { this.headers[name] = value; },
@@ -107,6 +107,24 @@ test('approved rendering reaches company and customer, reporting provider accept
   assert.match(res.headers['Set-Cookie'], /HttpOnly; Secure; SameSite=Lax/);
   assert.equal(res.headers['Cache-Control'], 'no-store');
   assert.equal('lead_saved' in res.body, false);
+});
+
+test('Colore uses the selected tap series and finish in prompt and lead mail', async () => {
+  const options = optionsForPackage('colore');
+  const h = harness();
+  const res = await h.invoke(payload({
+    paket: 'colore', format: options.formats[0], platte: options.tiles[0].id,
+    unterbau: options.bases[0].id, top: options.tops[0].id, becken: options.basinTypes[0].id,
+    armaturenserie: 'treemme-ran', finish: 'treemme-nero-opaco', keramik: options.sanitary[0].id,
+    wall: options.walls[0].id, dusche: options.showers[0].id, badewanne: options.bathtubs[0].id,
+    waschtisch: options.basins[0].id, spiegel: options.mirrors[0].id,
+  }));
+  assert.equal(res.statusCode, 200);
+  const generation = h.calls.find((call) => call.body?.generationConfig?.responseModalities);
+  assert.match(generation.body.contents[0].parts[0].text, /Treemme Ran tap in matte black/);
+  const lead = JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails')?.body);
+  assert.match(lead, /Treemme Ran, Nero Opaco/);
+  assert.doesNotMatch(lead, /Armaturenserie/);
 });
 
 test('Gäste-WC prompt and checker require no shower or bathtub', async () => {
@@ -155,7 +173,7 @@ test('consultation image request requires a room photo before provider calls', a
 for (const [name, change] of Object.entries({
   'missing option': { top: undefined }, 'unknown option': { platte: 'unknown' },
   'missing windows': { windows: '' }, 'missing consent': { consent: false },
-  'missing name': { name: '' }, 'invalid email': { email: 'not-an-email' },
+  'missing name': { name: '' }, 'missing place': { place: '' }, 'invalid email': { email: 'not-an-email' },
   'invalid base64': { foto: 'data:image/png;base64,AAAA===A' },
   'false MIME': { foto: `data:image/jpeg;base64,${PNG}` },
 })) test(`${name} returns 400 before any provider call`, async () => {
@@ -190,40 +208,44 @@ test('second approved result replaces first rejected result', async () => {
   assert.match(retry.body.contents[0].parts[0].text, /failed the structural and fixture check/);
 });
 
-for (const [name, second] of [
-  ['second generation fails', { generations: [() => generated(), () => response({}, 500)] }],
-  ['second checker unavailable', { checks: [() => checked(true), () => response({}, 503)] }],
-  ['second checker malformed', { checks: [() => checked(true), () => checked(false, '{"extra_openings":"false"}')] }],
-]) test(`${name}: no fallback to either unapproved rendering`, async () => {
-  const h = harness({ checks: [() => checked(true)], ...second }); const res = await h.invoke();
+test('second generation failure after rejection still fails closed', async () => {
+  const h = harness({ checks: [() => checked(true)], generations: [() => generated(), () => response({}, 500)] });
+  const res = await h.invoke();
   assert.equal(res.statusCode, 502); assert.equal(res.body.image, undefined); assert.equal(h.counts().mail, 0);
 });
 
 for (const answer of ['not json', '```json\n{"extra_openings":false,"reason":"x"}\n```', '{"extra_openings":"false","reason":"x"}', '{"extra_openings":false}', '{"extra_openings":false,"reason":""}', '{"extra_openings":false,"reason":"x","uncertain":true}', 'null', '[]']) {
-  test(`checker fails closed for ${answer.slice(0, 28)}`, async () => {
-    const h = harness({ checks: [() => checked(false, answer)] }); const res = await h.invoke();
-    assert.equal(res.body.code, 'CHECK_UNAVAILABLE'); assert.equal(res.body.image, undefined); assert.equal(h.counts().mail, 0);
+  test(`checker retries and delivers malformed result for ${answer.slice(0, 28)}`, async () => {
+    const h = harness({ checks: [() => checked(false, answer), () => checked(false, answer)] }); const res = await h.invoke();
+    assert.equal(res.statusCode, 200); assert.equal(res.body.image.data, PNG); assert.equal(h.counts().mail, 2);
   });
 }
 
-test('checker result without a completed STOP response is unverified', async () => {
+test('checker result without a completed STOP response is retried and delivered with warning', async () => {
   for (const finishReason of [undefined, 'MAX_TOKENS', 'SAFETY']) {
-    const h = harness({ checks: [() => response({ candidates: [{ finishReason, content: { parts: [{ text: '{"extra_openings":false,"reason":"fixture"}' }] } }] })] });
-    const res = await h.invoke(); assert.equal(res.body.code, 'CHECK_UNAVAILABLE'); assert.equal(h.counts().mail, 0);
+    const unavailable = () => response({ candidates: [{ finishReason, content: { parts: [{ text: '{"extra_openings":false,"reason":"fixture"}' }] } }] });
+    const h = harness({ checks: [unavailable, unavailable] });
+    const res = await h.invoke(); assert.equal(res.statusCode, 200); assert.equal(h.counts().mail, 2);
   }
 });
 
-test('disabled checker or absent generation config fails before rendering', async () => {
-  for (const env of [{ BADPLANER_CHECK_MODEL: '' }, { BADPLANER_CHECK_MODEL: '  ' }, { GEMINI_API_KEY: '' }]) {
-    const h = harness({ env }); assert.equal((await h.invoke()).statusCode, 503); assert.equal(h.calls.length, 0);
+test('disabled checker delivers and reports it in the lead mail', async () => {
+  for (const value of ['', '  ']) {
+    const h = harness({ env: { BADPLANER_CHECK_MODEL: value } }); const res = await h.invoke();
+    assert.equal(res.statusCode, 200); assert.deepEqual(h.counts(), { generation: 1, checks: 0, mail: 2 });
+    assert.match(JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails')?.body), /Fensterprüfung.*deaktiviert/);
   }
 });
 
-test('checker HTTP failure and timeout never authorize delivery', async () => {
-  for (const settings of [{ checks: [() => response({}, 500)] }, { checkDelays: [20001] }]) {
-    const h = harness(settings); const res = await h.invoke();
-    assert.equal(res.body.code, 'CHECK_UNAVAILABLE'); assert.equal(h.counts().mail, 0);
-  }
+test('missing generation key still fails before rendering', async () => {
+  const h = harness({ env: { GEMINI_API_KEY: '' } }); assert.equal((await h.invoke()).statusCode, 503); assert.equal(h.calls.length, 0);
+});
+
+test('unavailable checker retries once, delivers the lead and marks the mail', async () => {
+  const h = harness({ checks: [() => response({}, 503), () => response({}, 503)] }); const res = await h.invoke();
+  assert.equal(res.statusCode, 200); assert.equal(res.body.image.data, PNG);
+  assert.deepEqual(h.counts(), { generation: 1, checks: 2, mail: 2 });
+  assert.match(JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails')?.body), /Fensterprüfung.*nicht möglich \(Prüfdienst nicht erreichbar\)/);
 });
 
 test('generation timeout and invalid generated image fail without checker/mail', async () => {
@@ -231,6 +253,13 @@ test('generation timeout and invalid generated image fail without checker/mail',
     const h = harness(settings); const res = await h.invoke();
     assert.equal(res.statusCode, 502); assert.deepEqual(h.counts(), { generation: 1, checks: 0, mail: 0 });
   }
+});
+
+test('failed render attempts do not consume the IP counter', async () => {
+  const failures = Array.from({ length: 6 }, () => () => response({}, 500));
+  const h = harness({ generations: failures });
+  for (let index = 0; index < failures.length; index += 1) assert.equal((await h.invoke()).statusCode, 502);
+  assert.equal((await h.invoke()).statusCode, 200);
 });
 
 test('retry is skipped when full render, check and delivery reserve cannot fit', async () => {
