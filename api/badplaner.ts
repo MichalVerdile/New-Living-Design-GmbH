@@ -73,6 +73,8 @@ const COOKIE_NAME = 'nldbp';
 /** Feldnamen nach Kapitel 10 der Spezifikation, dazu die alten Namen als Fallback. */
 interface RenderBody {
   kind: 'render';
+  raum?: string;
+  room?: string;
   paket?: string;
   package?: string;             // alt
   individuell?: boolean;
@@ -95,6 +97,8 @@ interface RenderBody {
   wall?: string;
   dusche?: string;
   shower?: string;              // alt
+  badewanne?: string;
+  bathtub?: string;
   waschtisch?: string;
   basin?: string;               // alt
   spiegel?: string;
@@ -110,6 +114,24 @@ interface RenderBody {
   newsletter?: boolean;
   consent?: boolean;
   website?: string;             // Honeypot, muss leer sein
+}
+
+interface BeratungBody {
+  kind: 'beratung';
+  raum?: string;
+  priorities?: string;
+  measurements?: string;
+  style?: string;
+  budget?: string;
+  imageWanted?: boolean;
+  file?: { name: string; mime: string; data: string };
+  name?: string;
+  email?: string;
+  telefon?: string;
+  phone?: string;
+  newsletter?: boolean;
+  consent?: boolean;
+  website?: string;
 }
 
 interface GrundrissBody {
@@ -219,6 +241,7 @@ async function handler(req: any, res: any) {
 
   try {
     if (body.kind === 'render') return await handleRender(req, res, body as RenderBody, ctx);
+    if (body.kind === 'beratung') return await handleBeratung(req, res, body as BeratungBody, ctx);
     if (body.kind === 'grundriss') return await handleGrundriss(req, res, body as GrundrissBody, ctx);
     return res.status(400).json({ ok: false, error: 'Unbekannte Anfrage.' });
   } catch (err: any) {
@@ -232,9 +255,9 @@ async function handler(req: any, res: any) {
 /* ---------- kind: render ---------- */
 
 async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestContext) {
-  const { pkg, opts, isAtelier, individuell, tile, floorTile, base, top, basinType,
-    tapSeriesOption, finish, sanitary, wall, shower, basin, mirror, look, format,
-    floorFormat, accentMode, placement, accent } = normalizeSelection(body as unknown as Record<string, unknown>);
+  const { room, isGuestWc, pkg, opts, isAtelier, individuell, tile, floorTile, base, top, basinType,
+    tapSeriesOption, finish, sanitary, wall, shower, bathtub, basin, mirror, look, format,
+    floorFormat, accentMode, placement, accent, requiresQuote } = normalizeSelection(body as unknown as Record<string, unknown>);
 
   // 3. Fenster und Kontakt (Pflichtfelder)
   const windows = text(body.windows, 4);
@@ -299,6 +322,7 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   // 8. Prompt (englisch; Vorlage aus dem Test, mit eingesetzten Wahlwerten)
   const prompt = buildPrompt({
     packageName: pkg.name,
+    room,
     lookPrompt: isAtelier ? look?.prompt : undefined,
     format: format.replace('x', '×'),
     tilePrompt: tile.prompt,
@@ -307,14 +331,17 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
     accentPlacementPrompt: accent ? placement?.prompt : undefined,
     accentPrompt: accent ? accent.prompt : undefined,
     wallPrompt: wall.prompt,
-    showerPrompt: shower.prompt,
+    showerPrompt: shower?.prompt,
+    bathtubPrompt: bathtub?.prompt,
+    wantsShower: shower ? shower.id !== 'keine' : false,
+    wantsBathtub: bathtub ? bathtub.id !== 'keine' : false,
     sanitaryPrompt: sanitary.prompt,
     basinPrompt: basin.prompt,
     basinTypePrompt: basinType?.prompt,
     topPrompt: top.prompt,
     basePrompt: base.prompt,
     mirrorPrompt: mirror.prompt,
-    tapPrompt: taps.prompt,
+    tapPrompt: isGuestWc ? `washbasin tap in ${finish.prompt}; no shower mixer, bath filler or shower controls` : taps.prompt,
     withSwatch: !!swatch,
     windows,
   });
@@ -324,13 +351,14 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   let gen = await generateImage(prompt, photo, swatch, ctx);
   if (gen.ok === false) return res.status(502).json({ ok: false, error: gen.error });
   let checkNote = 'ok';
-  let check = await checkOpenings(photo, gen, ctx);
+  const wantedFixtures = { room, shower: shower ? shower.id !== 'keine' : false, bathtub: bathtub ? bathtub.id !== 'keine' : false };
+  let check = await checkOpenings(photo, gen, wantedFixtures, ctx);
   if (check.status === 'rejected' && ctx.budget.remaining() >= GEMINI_TIMEOUT_MS + CHECK_TIMEOUT_MS + DELIVERY_RESERVE_MS) {
     // The rejected image never becomes a fallback if the retry/check fails.
-    const retryPrompt = `${prompt}\nIMPORTANT: a previous attempt was rejected because it added an opening that does not exist in image 1. Keep every wall exactly as in image 1: no new window, roof window, door or glass opening.`;
+    const retryPrompt = `${prompt}\nIMPORTANT: a previous attempt failed the structural and fixture check: ${check.reason}. Correct that exact issue. Keep the original layout, every opening and toilet position, and show exactly the requested shower and bathtub state.`;
     const second = await generateImage(retryPrompt, photo, swatch, ctx);
     if (second.ok === false) return res.status(502).json({ ok: false, code: 'RENDER_FAILED', error: second.error });
-    check = await checkOpenings(photo, second, ctx);
+    check = await checkOpenings(photo, second, wantedFixtures, ctx);
     gen = second;
     checkNote = '1. Versuch verworfen, 2. Versuch ok';
   }
@@ -341,12 +369,13 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   console.log('[badplaner] Fensterprüfung:', checkNote);
 
   // 10. Auswahl in Klartext: dieselben Zeilen für das Lead-Mail und die Kundenmail
-  const packageLabel = individuell
-    ? `${individualPackage.name} (Grundlage: ${pkg.name})`
+  const packageLabel = requiresQuote
+    ? `${pkg.name} – Individuelle Offerte`
     : `${pkg.name} (ab CHF ${pkg.priceLabel})`;
   const auswahl: [string, string][] = [];
   const row = (label: string, value: string) => auswahl.push([label, value]);
-  row('Paket', packageLabel);
+  row('Raum', isGuestWc ? 'Gäste-WC' : 'Badezimmer');
+  row(isGuestWc ? 'Stilrichtung' : 'Paket', packageLabel);
   if (look) row('Look', look.label);
   row('Format', `${format.replace('x', '×')} cm`);
   row(floorTile ? 'Platten Wand' : 'Platten', tileName(tile));
@@ -356,8 +385,11 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
     row('Akzentfläche', placement.label);
     row('Akzentmaterial', `${accent.supplier} ${accent.label}`);
   }
-  row('Wandplatten', wall.label);
-  row('Dusche / Wanne', shower.label);
+  row('Wandplatten', isGuestWc && wall.id === 'halbhoch'
+    ? 'Wände bis ca. 120 cm, oberhalb weiss gestrichen'
+    : wall.label);
+  if (shower) row('Dusche', shower.label);
+  if (bathtub) row('Badewanne', bathtub.label);
   row('Unterbau', `${base.label} (${base.supplier})`);
   row('Waschtischplatte', `${top.label} (${top.supplier})`);
   if (basinType) row('Waschbecken', basinType.label);
@@ -384,7 +416,7 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
     ['Lead-ID', leadId],
   ];
   const leadDelivery = await sendLeadMail({
-    subject: `Badplaner-Lead: ${name} – Paket ${individuell ? individualPackage.name : pkg.name}`,
+    subject: `Badplaner-Lead: ${name} – ${isGuestWc ? 'Gäste-WC' : pkg.name}`,
     replyTo: email,
     intro: 'Neuer Lead aus dem Badplaner. Foto und Ideenbild im Anhang.',
     details,
@@ -417,6 +449,75 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
     lead: leadDelivery.status, leadProvider: leadDelivery.provider, leadAttachments: leadDelivery.attachments,
     customer: customerDelivery.status, newsletter: newsletterDelivery.status,
   } });
+}
+
+/* ---------- kind: beratung ---------- */
+
+async function handleBeratung(req: any, res: any, body: BeratungBody, ctx: RequestContext) {
+  const room = text(body.raum, 20);
+  if (room !== 'badezimmer' && room !== 'gaeste-wc') return bad(res, 'Bitte Badezimmer oder Gäste-WC wählen.');
+  const priorities = text(body.priorities, 3000);
+  const measurements = text(body.measurements, 1000);
+  const style = text(body.style, 120);
+  const budget = text(body.budget, 120);
+  const name = text(body.name, 120);
+  const phone = text(body.telefon ?? body.phone, 60);
+  const email = text(body.email, 120);
+  const imageWanted = body.imageWanted === true;
+  const newsletter = body.newsletter === true;
+  if (!priorities) return bad(res, 'Bitte beschreiben Sie kurz, was Sie verändern möchten und was Ihnen wichtig ist.');
+  if (!name || !phone || !email) return bad(res, 'Bitte Name, Telefonnummer und E-Mail-Adresse angeben.');
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return bad(res, 'Die E-Mail-Adresse sieht nicht richtig aus.');
+  if (body.consent !== true) return bad(res, 'Bitte bestätigen Sie die Datenschutzerklärung.');
+
+  const attachments: { filename: string; content: string }[] = [];
+  let fileLabel = 'keine Datei';
+  if (body.file) {
+    const f = body.file;
+    if (typeof f.data !== 'string' || f.data.length > MAX_FILE_BASE64) return bad(res, 'Die Datei ist zu gross (übertragen max. 3 MB).');
+    if (!/^(image\/(jpeg|png|webp)|application\/pdf)$/.test(f.mime || '')) return bad(res, 'Bitte ein Bild (JPEG, PNG, WebP) oder ein PDF hochladen.');
+    try {
+      f.data = normalizeBase64(f.data, MAX_FILE_BASE64);
+      const bytes = Buffer.from(f.data, 'base64');
+      if (f.mime === 'application/pdf') {
+        if (bytes.length < 8 || bytes.subarray(0, 5).toString('ascii') !== '%PDF-') throw new Error('Invalid PDF');
+      } else validateImageBytes(bytes, f.mime);
+    } catch { return bad(res, 'Die Datei ist ungültig oder zu gross.'); }
+    if (imageWanted && !f.mime.startsWith('image/')) return bad(res, 'Für ein Ideenbild benötigen wir ein Foto des Raums.');
+    const ext = f.mime === 'application/pdf' ? 'pdf' : f.mime === 'image/png' ? 'png' : f.mime === 'image/webp' ? 'webp' : 'jpg';
+    fileLabel = `beratung.${ext}`;
+    attachments.push({ filename: fileLabel, content: f.data });
+  }
+  if (imageWanted && attachments.length === 0) return bad(res, 'Für ein Ideenbild benötigen wir ein Foto des Raums.');
+
+  const leadId = newId();
+  const details: [string, string][] = [
+    ['Name', name],
+    ['Telefon / WhatsApp', phone],
+    ['E-Mail', email],
+    ['Raum', room === 'gaeste-wc' ? 'Gäste-WC' : 'Badezimmer'],
+    ['Wünsche und Prioritäten', priorities],
+    ['Masse oder Angaben zum Raum', measurements || 'nicht angegeben'],
+    ['Stilpräferenz', style || 'offen'],
+    ['Budgetrahmen', budget || 'nicht angegeben'],
+    ['Foto, Masse oder Plan', fileLabel],
+    ['Ideenbild gewünscht', imageWanted ? 'ja, nach persönlicher Prüfung' : 'nein'],
+    ['Newsletter', newsletter ? 'ja' : 'nein'],
+    ['Zeitpunkt', swissTime()],
+    ['Seite', req.headers?.referer || req.headers?.referrer || '/badplaner'],
+    ['Lead-ID', leadId],
+  ];
+  const delivery = await sendLeadMail({
+    subject: `Individuelle Beratung: ${name} – ${room === 'gaeste-wc' ? 'Gäste-WC' : 'Badezimmer'}`,
+    replyTo: email,
+    intro: 'Neue Anfrage für eine individuelle Beratung oder Besichtigung. Bitte zuerst anhand der Angaben, der Datei oder telefonisch beurteilen und danach bei Bedarf einen Besichtigungstermin vereinbaren.',
+    details,
+    attachments,
+  }, ctx);
+  if (delivery.status !== 'accepted') return res.status(502).json({ ok: false, code: 'LEAD_DELIVERY_FAILED', error: 'Ihre Anfrage konnte nicht bestätigt werden. Bitte kontaktieren Sie uns telefonisch.' });
+  if (attachments.length && !delivery.attachments) return res.status(502).json({ ok: false, code: 'ATTACHMENT_NOT_DELIVERED', error: 'Die Angaben wurden weitergeleitet, aber der Anhang konnte nicht zugestellt werden. Bitte senden Sie die Datei per WhatsApp.' });
+  const newsletterDelivery = newsletter ? await subscribeNewsletter(email, name, ctx) : { status: 'skipped' as const };
+  return res.status(200).json({ ok: true, leadId, delivery: { lead: delivery.status, newsletter: newsletterDelivery.status } });
 }
 
 /* ---------- kind: grundriss ---------- */
@@ -510,13 +611,13 @@ function tapDescription(
   if (pkg === 'colore') {
     return {
       prompt: series
-        ? `${series.prompt}, the shower mixer and all controls from the same series and in the same polished chrome`
-        : 'taps, shower mixer and controls in polished chrome',
+        ? `${series.prompt}, all fittings for the requested fixtures from the same series in polished chrome`
+        : 'fittings for the requested fixtures in polished chrome',
       label: series ? `${series.label}, Chrom` : seriesText,
     };
   }
   return {
-    prompt: 'exposed surface-mounted (Aufputz) Treemme Up+ fittings in polished chrome, thermostatic shower mixer visible on the wall',
+    prompt: 'exposed surface-mounted (Aufputz) Treemme Up+ fittings in polished chrome for the requested fixtures only',
     label: seriesText,
   };
 }
@@ -525,6 +626,7 @@ function tapDescription(
 
 function buildPrompt(v: {
   packageName: string;
+  room: 'badezimmer' | 'gaeste-wc';
   lookPrompt?: string;
   format: string;
   tilePrompt: string;
@@ -533,7 +635,10 @@ function buildPrompt(v: {
   accentPlacementPrompt?: string;
   accentPrompt?: string;
   wallPrompt: string;
-  showerPrompt: string;
+  showerPrompt?: string;
+  bathtubPrompt?: string;
+  wantsShower: boolean;
+  wantsBathtub: boolean;
   sanitaryPrompt: string;
   basinPrompt: string;
   basinTypePrompt?: string;
@@ -566,11 +671,17 @@ function buildPrompt(v: {
       ? ` Exactly ONE accent area in a second material: ${v.accentPlacementPrompt}, covered with ${v.accentPrompt}. Every other tiled surface, including the floor and all other walls, keeps the main material; no second accent area anywhere.`
       : '';
   const vanity = `if a washbasin is visible in image 1, ${v.basinPrompt} at its existing place on a wall-hung vanity: front and body in ${v.basePrompt}, countertop in ${v.topPrompt}${v.basinTypePrompt ? `, ${v.basinTypePrompt}` : ''}, with ${v.mirrorPrompt} above it`;
+  const fixtures = v.room === 'gaeste-wc'
+    ? 'This is a guest WC: the result must contain NO shower, shower tray, shower enclosure, shower controls, bathtub or bath filler. Do not convert any visible area into a shower or bathtub.'
+    : [
+        v.wantsShower ? `${v.showerPrompt} inside the original wet-area footprint` : 'NO shower, shower tray, shower enclosure or shower controls',
+        v.wantsBathtub ? `${v.bathtubPrompt} inside the original wet-area footprint` : 'NO bathtub and no bath filler',
+      ].join('; ');
 
   return [
     intro,
-    `Produce a photorealistic "after renovation" photo of image 1 with these hard constraints: identical camera position, angle and lens; identical walls, ceiling, floor plan and room size; every window, door and roof window stays exactly where it is with the same size; do NOT add any window, door, niche or opening that is not visible in image 1; ${windowRule} The toilet stays exactly where it is, same orientation (the drain cannot be moved); the washbasin stays on the same wall in the same place; radiators stay; the bathtub or shower stays in the same place. Only replace what is visible in image 1: do NOT add a toilet, washbasin, bidet, bathtub or shower that is not visible in image 1, and do not remove one that is.`,
-    `Changes (package "${v.packageName}"):${look} ${surfaces}; ${v.showerPrompt} where the bathtub/shower is now; if a toilet is visible in image 1, a wall-hung rimless toilet in ${v.sanitaryPrompt} at exactly its existing position; ${vanity}; ${v.tapPrompt}.${accent} Remove clutter, towels, bottles, shower curtain and rugs. Natural daylight, no people, no text.`,
+    `Produce a photorealistic "after renovation" photo of image 1 with these hard constraints: identical camera position, angle and lens; identical walls, ceiling, floor plan and room size; every window, door and roof window stays exactly where it is with the same size; do NOT add, remove, resize or move any window, door, niche or opening; ${windowRule} The toilet stays exactly where it is with the same orientation because its drain cannot be moved. The washbasin stays on the same wall in the same place. Radiators stay. Never create extra floor area. A bathtub-to-shower transformation must use only the original bathtub footprint.`,
+    `Requested result for this ${v.room === 'gaeste-wc' ? 'guest WC' : 'bathroom'} (style "${v.packageName}"):${look} ${surfaces}; ${fixtures}; if a toilet is visible in image 1, a wall-hung rimless toilet in ${v.sanitaryPrompt} at exactly its existing position; ${vanity}; ${v.tapPrompt}.${accent} Remove clutter, towels, bottles, shower curtain and rugs. Natural daylight, no people, no text.`,
   ].join('\n');
 }
 
@@ -656,15 +767,22 @@ async function generateImage(prompt: string, photo: Photo, swatch: Photo | null,
  * unlesbare Prüfungen sind ein Fehler und erlauben niemals die Bildauslieferung.
  * Dies ist noch kein vollständiger Geometrie-/Ausstattungschecker.
  */
-async function checkOpenings(photo: Photo, gen: { mime: string; data: string }, ctx: RequestContext): Promise<CheckResult> {
+async function checkOpenings(
+  photo: Photo,
+  gen: { mime: string; data: string },
+  wanted: { room: 'badezimmer' | 'gaeste-wc'; shower: boolean; bathtub: boolean },
+  ctx: RequestContext,
+): Promise<CheckResult> {
   const model = env.BADPLANER_CHECK_MODEL === undefined ? 'gemini-3.6-flash' : env.BADPLANER_CHECK_MODEL;
   if (!model?.trim()) return { status: 'unavailable' };
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
   const question =
-    'Image 1 is a photo of a bathroom. Image 2 is an edited "after renovation" version of the same photo, same camera position. ' +
-    'Compare the openings in the walls and ceiling: windows, roof windows (skylights), doors, glass openings to the outside. ' +
-    'Does image 2 contain any such opening that does not exist at roughly the same place in image 1? A glass shower screen or a mirror is NOT an opening. ' +
-    'Answer with JSON only, no markdown: {"extra_openings": true or false, "reason": "short English reason, max 20 words"}';
+    'Image 1 is the original room. Image 2 is an edited renovation result. Compare them strictly. ' +
+    'Set extra_openings true if any window, roof window, door, niche or outside opening was added, removed, resized or moved. ' +
+    'Set toilet_moved true if the toilet position or orientation changed. Set layout_changed true if walls, room size, floor area or fixed fixture footprint moved. ' +
+    `The requested result is a ${wanted.room === 'gaeste-wc' ? 'guest WC' : 'bathroom'} with shower_present=${wanted.shower} and bathtub_present=${wanted.bathtub}. ` +
+    'Report whether image 2 visibly contains a shower (including tray/enclosure) and a bathtub. A mirror or glass shower screen is not an opening. ' +
+    'Answer with JSON only, no markdown and exactly these keys: {"extra_openings":false,"toilet_moved":false,"layout_changed":false,"shower_present":false,"bathtub_present":false,"reason":"short English reason, max 30 words"}';
   try {
     const r = await request(ctx, url, {
       method: 'POST',
@@ -691,10 +809,13 @@ async function checkOpenings(photo: Photo, gen: { mime: string; data: string }, 
     const textOut: string = json?.candidates?.[0]?.content?.parts?.map((p: any) => p.text || '').join('') || '';
     if (json?.candidates?.[0]?.finishReason !== 'STOP') return { status: 'unavailable' };
     const parsed = JSON.parse(textOut);
-    if (!parsed || Array.isArray(parsed) || typeof parsed.extra_openings !== 'boolean' || typeof parsed.reason !== 'string'
-      || !parsed.reason.trim() || parsed.reason.length > 160
-      || Object.keys(parsed).some((key) => key !== 'extra_openings' && key !== 'reason')) return { status: 'unavailable' };
-    return parsed.extra_openings ? { status: 'rejected', reason: parsed.reason.slice(0, 160) } : { status: 'approved' };
+    const keys = ['extra_openings', 'toilet_moved', 'layout_changed', 'shower_present', 'bathtub_present'];
+    if (!parsed || Array.isArray(parsed) || keys.some((key) => typeof parsed[key] !== 'boolean') || typeof parsed.reason !== 'string'
+      || !parsed.reason.trim() || parsed.reason.length > 200
+      || Object.keys(parsed).some((key) => ![...keys, 'reason'].includes(key))) return { status: 'unavailable' };
+    const rejected = parsed.extra_openings || parsed.toilet_moved || parsed.layout_changed
+      || parsed.shower_present !== wanted.shower || parsed.bathtub_present !== wanted.bathtub;
+    return rejected ? { status: 'rejected', reason: parsed.reason.slice(0, 200) } : { status: 'approved' };
   } catch {
     console.error('[badplaner] Fensterprüfung nicht möglich');
     return { status: 'unavailable' };

@@ -8,7 +8,7 @@ export const generateOrganizationStructuredData = () => ({
   "name": business.legalName,
   "url": business.siteUrl,
   "logo": `${business.siteUrl}/logo.png`,
-  "description": "Bad, Platten und Wellness: Produkte entdecken und persönlich beraten lassen in unserer Ausstellung in Zofingen.",
+  "description": "Bad, Küchen, Platten und Wellness: Produkte entdecken, Projekte planen und persönlich beraten lassen in unserer Ausstellung in Zofingen.",
   "telephone": business.phone.e164,
   "email": business.email,
   "sameAs": [business.social.facebook, business.social.instagram, business.social.linkedin],
@@ -112,7 +112,7 @@ export const generateWebsiteStructuredData = () => ({
   "@type": "WebSite",
   "name": "New Living Design GmbH",
   "url": "https://newlivingdesign.ch",
-  "description": "Bad, Platten und Wellness: Produkte entdecken und persönlich beraten lassen in unserer Ausstellung in Zofingen.",
+  "description": "Bad, Küchen, Platten und Wellness: Produkte entdecken, Projekte planen und persönlich beraten lassen in unserer Ausstellung in Zofingen.",
   "inLanguage": "de-CH",
   "potentialAction": {
     "@type": "SearchAction",

@@ -21,6 +21,7 @@
  */
 
 export type PackageId = 'essenza' | 'colore' | 'atelier';
+export type RoomType = 'badezimmer' | 'gaeste-wc';
 
 /** Fläche, auf der ein zweites Material als Akzent liegt (nur Atelier). */
 export type AccentPlacementId = 'waschtischwand' | 'duschnische';
@@ -784,10 +785,15 @@ export const wallOptions: ChoiceOption[] = [
 ];
 
 export const showerOptions: ChoiceOption[] = [
-  { id: 'duschwanne', label: 'Dusche mit Duschwanne', prompt: 'shower with a low shower tray, fixed glass panel' },
-  { id: 'gefaelle', label: 'Bodenebene Dusche, gefliest (Gefälledusche)', prompt: 'floor-level walk-in shower tiled with the same tiles, linear drain, fixed glass panel', packages: ['essenza', 'atelier'] },
-  { id: 'badewanne', label: 'Badewanne', prompt: 'built-in bathtub in the same place as the existing bathtub or shower, with a glass screen', packages: ['essenza', 'atelier'] },
-  { id: 'freistehend', label: 'Freistehende Badewanne', prompt: 'freestanding bathtub (only if there is room, otherwise a floor-level walk-in shower)', packages: ['atelier'] },
+  { id: 'keine', label: 'Keine Dusche', prompt: 'no shower, shower tray, shower enclosure or shower controls' },
+  { id: 'duschwanne', label: 'Dusche mit Duschwanne', prompt: 'shower with a low shower tray and a fixed glass panel' },
+  { id: 'walk-in', label: 'Walk-in, bodeneben und gefliest', prompt: 'floor-level walk-in shower tiled with the same tiles, linear drain and a fixed glass panel', packages: ['essenza', 'atelier'] },
+];
+
+export const bathtubOptions: ChoiceOption[] = [
+  { id: 'keine', label: 'Keine Badewanne', prompt: 'no bathtub and no bath filler' },
+  { id: 'einbau', label: 'Einbaubadewanne', prompt: 'built-in bathtub within the original wet-area footprint' },
+  { id: 'freistehend', label: 'Freistehende Badewanne', prompt: 'freestanding bathtub only within the original wet-area footprint and only when the photographed room has enough space', packages: ['atelier'] },
 ];
 
 export const basinOptions: ChoiceOption[] = [
@@ -824,6 +830,7 @@ export function optionsForPackage(pkg: PackageId) {
     sanitary: forPackage(sanitaryColors, pkg),
     walls: forPackage(wallOptions, pkg),
     showers: forPackage(showerOptions, pkg),
+    bathtubs: forPackage(bathtubOptions, pkg),
     basins: forPackage(basinOptions, pkg),
     mirrors: forPackage(mirrorOptions, pkg),
     tapSeries: tapSeries[pkg],

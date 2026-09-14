@@ -29,10 +29,10 @@ const Services: React.FC = () => {
   return (
     <main className={styles['services-page']}>
       <Helmet>
-        <title>Dienstleistungen – New Living Design GmbH | Beratung, 3D-Visualisierung, Lieferung</title>
+        <title>Dienstleistungen für Bad und Küchen | New Living Design Zofingen</title>
         <meta
           name="description"
-          content="Unsere Dienstleistungen: kostenlose Beratung, detaillierte Offerten mit 3D-Visualisierung sowie Lieferung und Montage. Perfekte Lösungen für Ihr Bau- und Designprojekt."
+          content="Beratung und 3D-Visualisierung für Bad und Küchen sowie Lieferung, Montage und Renovation aus einer Hand in Zofingen."
         />
         <meta property="og:title" content="Dienstleistungen – New Living Design GmbH" />
         <meta property="og:description" content="Kostenlose Beratung, 3D-Visualisierung und professionelle Lieferung & Montage. Ihr Partner für hochwertige Bau- und Designprojekte." />
@@ -85,8 +85,8 @@ const Services: React.FC = () => {
               massgeschneiderte Empfehlungen, die genau auf Sie zugeschnitten sind.
             </p>
             <p>
-              Von der kostenlosen Beratung über detaillierte 3D-Visualisierungen bis hin zur professionellen
-              Lieferung und Montage – wir begleiten Sie durch jeden Schritt Ihres Projekts.
+              Von der Beratung und 3D-Visualisierung für Bad und Küchen bis zur professionellen Lieferung,
+              Montage und Renovation begleiten wir Sie durch jeden Schritt Ihres Projekts.
             </p>
           </div>
         </div>
@@ -131,7 +131,7 @@ const Services: React.FC = () => {
                 <h3 className={styles['service-title']}>Offerte und 3D-Visualisierung</h3>
                 <div className={styles['service-description']}>
                   <p>
-                    Sie erhalten bei uns nicht nur ein schnelles und sauberes Angebot, sondern auch die Möglichkeit,
+                    Für Bäder und Küchen erhalten Sie eine sorgfältig ausgearbeitete Offerte und die Möglichkeit,
                     eine 3D-Visualisierung Ihres Projekts anzufordern. So können Sie sich ein genaues Bild von Ihrer
                     Auswahl machen und sehen, wie Ihre Ideen in die Realität umgesetzt werden.
                   </p>
@@ -164,9 +164,9 @@ const Services: React.FC = () => {
                     informiert, sodass Sie stets auf dem neuesten Stand sind.
                   </p>
                   <p>
-                    Darüber hinaus bieten wir Ihnen die Möglichkeit, das Material, einschliesslich Fliesen, von
-                    unseren vertrauenswürdigen Partnern montieren zu lassen. Wichtig zu wissen: Diese zusätzliche
-                    Dienstleistung wird die Kosten von ihrer Seite nicht erhöhen.
+                    Darüber hinaus koordinieren wir die Montage von Platten, Badprodukten und Küchen durch
+                    unsere vertrauenswürdigen Partner. Bei Renovationen stimmen wir die nötigen Arbeiten nach der
+                    persönlichen Beurteilung auf den bestehenden Raum ab.
                   </p>
                   <div className={styles['service-highlight']}>
                     <strong>Qualitätsgarantie:</strong> Unsere Partner arbeiten Hand in Hand mit uns, um sicherzustellen,

@@ -1,5 +1,5 @@
 import { bathPackages } from '../../src/config/business.js';
-import { optionsForPackage, type AccentPlacementId } from '../../src/data/badplaner.js';
+import { optionsForPackage, type AccentPlacementId, type RoomType } from '../../src/data/badplaner.js';
 
 /** A client selection error; the HTTP handler maps it to a field-specific 400. */
 export class ValidationError extends Error {
@@ -60,6 +60,12 @@ function requireEmpty(id: string, field: string): undefined {
  * This is pure validation: no requests, counters, price changes or prompt edits.
  */
 export function normalizeSelection(body: Record<string, unknown>) {
+  const roomId = aliasedField(body, 'raum', 'room', true);
+  if (roomId !== 'badezimmer' && roomId !== 'gaeste-wc') {
+    throw new ValidationError('raum', 'Bitte Badezimmer oder Gäste-WC wählen.');
+  }
+  const room = roomId as RoomType;
+  const isGuestWc = room === 'gaeste-wc';
   const packageId = aliasedField(body, 'paket', 'package', true);
   const pkg = requireOption(bathPackages, packageId, 'paket');
   const opts = optionsForPackage(pkg.id);
@@ -90,8 +96,18 @@ export function normalizeSelection(body: Record<string, unknown>) {
   const finish = requireOption(opts.finishes, isAtelier ? finishId : 'treemme-cromo', 'finish');
   const sanitary = requireOption(opts.sanitary, aliasedField(body, 'keramik', 'sanitary'), 'keramik');
   const wall = requireOption(opts.walls, stringField(body, 'wall'), 'wall');
-  const shower = requireOption(opts.showers, aliasedField(body, 'dusche', 'shower'), 'dusche');
+  const showerId = aliasedField(body, 'dusche', 'shower');
+  const bathtubId = aliasedField(body, 'badewanne', 'bathtub');
+  const shower = isGuestWc
+    ? requireEmpty(showerId, 'dusche')
+    : requireOption(opts.showers, showerId === 'gefaelle' ? 'walk-in' : showerId, 'dusche');
+  const bathtub = isGuestWc
+    ? requireEmpty(bathtubId, 'badewanne')
+    : requireOption(opts.bathtubs, bathtubId, 'badewanne');
   const basin = requireOption(opts.basins, aliasedField(body, 'waschtisch', 'basin'), 'waschtisch');
+  if (isGuestWc && basin.id !== 'einzel') {
+    throw new ValidationError('waschtisch', 'Im Gäste-WC ist nur ein Einzelwaschtisch verfügbar.');
+  }
   const mirror = requireOption(opts.mirrors, aliasedField(body, 'spiegel', 'mirror'), 'spiegel');
 
   const lookId = stringField(body, 'look');
@@ -126,6 +142,9 @@ export function normalizeSelection(body: Record<string, unknown>) {
       ? PLACEMENT_ALIAS[rawPlacement]
       : undefined;
     if (!placementId) throw new ValidationError('akzentFlaeche', 'Bitte eine gültige Akzentfläche wählen.');
+    if (isGuestWc && placementId === 'duschnische') {
+      throw new ValidationError('akzentFlaeche', 'Im Gäste-WC ist keine Duschnische verfügbar.');
+    }
     placement = requireOption(opts.accentPlacements, placementId, 'akzentFlaeche');
     const allowedAccents = opts.accents.filter((entry) => entry.placement.includes(placementId));
     accent = requireOption(allowedAccents, accentId, 'akzent');
@@ -134,9 +153,12 @@ export function normalizeSelection(body: Record<string, unknown>) {
     requireEmpty(accentId, 'akzent');
   }
 
+  const requiresQuote = isGuestWc || (!!shower && !!bathtub && (shower.id === 'keine') === (bathtub.id === 'keine'));
+
   return {
-    pkg, opts, isAtelier, individuell, tile, floorTile, base, top, basinType,
-    tapSeriesOption, finish, sanitary, wall, shower, basin, mirror, look, format,
+    room, isGuestWc, pkg, opts, isAtelier, individuell, tile, floorTile, base, top, basinType,
+    tapSeriesOption, finish, sanitary, wall, shower, bathtub, basin, mirror, look, format,
     floorFormat, accentMode, isKombi, placement, accent,
+    requiresQuote,
   };
 }

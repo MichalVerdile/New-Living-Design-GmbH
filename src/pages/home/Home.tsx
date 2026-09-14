@@ -10,6 +10,7 @@ import styles from './Home.module.css';
 
 const categories = [
   { title: 'Bad', label: 'Ihr persönlicher Rückzugsort', text: 'Badmöbel, Armaturen und Keramik. Finden Sie die Formen und Oberflächen, die zu Ihnen passen.', href: '/produkte#bad', image: bathroomImage, alt: 'Badmöbel und Waschtisch aus dem Produktsortiment' },
+  { title: 'Küchen', label: 'Planung und Umsetzung', text: '3D-Planung, Lieferung, Montage und Renovation. Wir begleiten Ihre Küche von der Idee bis zum Einbau.', href: '/produkte#kuechen', image: photoUrl('kueche-insel-messing-01.webp', true), alt: 'Realisierte Küche mit Insel, Messingdetails und Einbaugeräten' },
   { title: 'Platten', label: 'Materialien mit Ausdruck', text: 'Für Wand und Boden. Entdecken Sie Farben, Strukturen und Formate für ein stimmiges Ganzes.', href: '/produkte#platten', image: tilesImage, alt: 'Badezimmer mit grossformatigen Wandplatten in blauer und weisser Onyxoptik' },
   { title: 'Wellness', label: 'Raum zum Abschalten', text: 'Entdecken Sie unser Wellness-Sortiment. Wir beraten Sie zu den Möglichkeiten für Ihre Räume.', href: '/produkte#wellness', image: wellnessImage, alt: 'Wellness-Kabine aus dem Produktsortiment' },
 ];
@@ -20,15 +21,15 @@ const Home: React.FC = () => {
   const showroomImage = photoUrl('ausstellung-zofingen-01.webp');
   return (
     <main id="main-content" className={styles.home}>
-      <SEOHead title="Bad, Platten & Wellness in Zofingen | New Living Design"
-        description="Bad, Platten und Wellness: Entdecken Sie unser Sortiment und finden Sie Ihre Materialien mit persönlicher Beratung in unserer Ausstellung in Zofingen."
-        keywords="Bad Zofingen, Badmöbel, Platten, Keramikplatten, Wellness, Ausstellung Zofingen, New Living Design"
+      <SEOHead title="Bad, Küchen, Platten & Wellness in Zofingen | New Living Design"
+        description="Bad, Küchen, Platten und Wellness: Entdecken Sie Produkte, Planung und persönliche Beratung in unserer Ausstellung in Zofingen."
+        keywords="Bad Zofingen, Küchen Zofingen, Küchenplanung, Badmöbel, Platten, Keramikplatten, Wellness, Ausstellung Zofingen, New Living Design"
         url="/" type="website" structuredData={localBusinessJsonLd} image={`${business.siteUrl}${showroomImage}`} />
 
       <section className={styles.hero} aria-labelledby="home-title">
         <div className={styles.heroCopy}>
           <p className={styles.eyebrow}><span className={styles.dot} /> Ausstellung in Zofingen</p>
-          <h1 id="home-title" className={styles.heroTitle}>Bad, Platten<br />&amp; <em>Wellness.</em></h1>
+          <h1 id="home-title" className={styles.heroTitle}>Bad, Küchen,<br />Platten &amp; <em>Wellness.</em></h1>
           <p className={styles.heroLead}>Für Räume mit Charakter.</p>
           <p className={styles.heroText}>Materialien entdecken, Oberflächen fühlen, Lieblingsstücke finden. Wir unterstützen Sie bei der Auswahl – persönlich in unserer Ausstellung.</p>
           <div className={styles.actions}>
@@ -45,7 +46,7 @@ const Home: React.FC = () => {
 
       <section id="sortiment" className={`${styles.section} ${styles.assortment}`} aria-labelledby="sortiment-title">
         <div className={styles.container}>
-          <div className={styles.sectionHead}><div><p className={styles.eyebrow}>Drei Welten. Ihr Stil.</p><h2 id="sortiment-title">Was passt zu Ihnen?</h2></div><Link to="/produkte" className={styles.textLink}>Das ganze Sortiment <Arrow /></Link></div>
+          <div className={styles.sectionHead}><div><p className={styles.eyebrow}>Vier Bereiche. Ihr Stil.</p><h2 id="sortiment-title">Was passt zu Ihnen?</h2></div><Link to="/produkte" className={styles.textLink}>Das ganze Sortiment <Arrow /></Link></div>
           <div className={styles.categoryGrid}>
             {categories.map((category, index) => (
               <Link key={category.title} to={category.href} className={styles.categoryCard}>
@@ -55,7 +56,7 @@ const Home: React.FC = () => {
               </Link>
             ))}
           </div>
-          <p className={styles.imageNote}>Sortimentsbilder unserer Lieferanten. Auswahl und Verfügbarkeit besprechen wir persönlich.</p>
+          <p className={styles.imageNote}>Die Küche zeigt eine ausgeführte Referenz; weitere Bilder zeigen das Sortiment unserer Lieferanten. Auswahl und Verfügbarkeit besprechen wir persönlich.</p>
         </div>
       </section>
 
@@ -106,7 +107,7 @@ const Home: React.FC = () => {
 
       <section className={styles.contact} aria-labelledby="contact-title">
         <div className={`${styles.container} ${styles.contactInner}`}>
-          <div><p className={styles.eyebrow}>Wir hören zu.</p><h2 id="contact-title">Erzählen Sie uns<br />von Ihren Ideen.</h2><p>Bad, Platten oder Wellness – beginnen wir mit Ihrer Auswahl.</p></div>
+          <div><p className={styles.eyebrow}>Wir hören zu.</p><h2 id="contact-title">Erzählen Sie uns<br />von Ihren Ideen.</h2><p>Bad, Küchen, Platten oder Wellness – beginnen wir mit Ihrer Auswahl.</p></div>
           <div className={styles.contactActions}><Link to="/kontakt" className={styles.button}>Beratung anfragen <Arrow /></Link><a href={`tel:${business.phone.e164}`} className={styles.textLink}>Oder anrufen: {business.phone.display}</a></div>
         </div>
       </section>
