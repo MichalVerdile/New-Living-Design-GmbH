@@ -15,6 +15,7 @@ import { photoUrl } from '../../data/references';
 import { generateFAQStructuredData, generateBreadcrumbStructuredData } from '../../utils/structuredData';
 import { trackLead } from '../../utils/tracking';
 import { resizeImageFile, fileToBase64, type ResizedImage } from './resizeImage';
+import { MAX_PLAN_BASE64, MAX_SOURCE_IMAGE_BYTES } from './imageValidation';
 
 /*
  * Badplaner: Paket wählen, Ausstattung wählen, Foto machen, Kontakt angeben,
@@ -22,9 +23,9 @@ import { resizeImageFile, fileToBase64, type ResizedImage } from './resizeImage'
  * api/badplaner.ts. Beim Prerendering (ohne Browser) wird nur der Startzustand
  * gerendert; alles mit Datei, Kamera oder Fenster passiert in Handlern.
  *
- * Schritt 2 zeigt alle Auswahlen offen untereinander: zuerst "Basis"
- * (Platten bzw. Look, Unterbau, Dusche/Badewanne, Wandhöhe), danach "Details"
- * (alles Weitere). Alles ist vorbelegt, keine Auswahl ist Pflicht.
+ * Schritt 2 zeigt zuerst die wichtigsten Auswahlen. Umfangreiche Materialfamilien
+ * und die optionalen Details sind einklappbar; alle Werte bleiben vorbelegt und
+ * jede bisherige Option bleibt erreichbar.
  */
 
 const PAGE_URL = `${business.siteUrl}/badplaner`;
@@ -35,7 +36,8 @@ const WINDOW_OPTIONS = [
   { id: '3', label: '3 oder mehr' },
 ];
 const API_URL = '/api/badplaner';
-const MAX_PLAN_FILE = 4 * 1024 * 1024; // Grundriss: 4 MB
+const MAX_PLAN_PDF_BYTES = 3_000_000; // Base64 + JSON remains below the API request cap.
+const RENDER_TIMEOUT_MS = 115_000;
 const TILE_HINT = 'Nur eine kleine Auswahl. Alle Serien und Farben sehen Sie in unserer Ausstellung in Zofingen.';
 const NEWSLETTER_TEXT =
   'Ja, ich möchte gelegentlich Ideen und Neuigkeiten von New Living Design per E-Mail erhalten (jederzeit abbestellbar).';
@@ -73,6 +75,11 @@ interface Result {
   leadId: string;
   dataUrl: string;
   mime: string;
+  delivery: {
+    lead: 'accepted';
+    customer: 'accepted' | 'failed' | 'unknown' | 'skipped';
+    newsletter?: 'accepted' | 'failed' | 'unknown' | 'skipped';
+  };
 }
 
 const firstId = (list: { id: string }[]): string => (list.length > 0 ? list[0].id : '');
@@ -125,7 +132,7 @@ function groupBy<T>(items: T[], key: (item: T) => string): { key: string; items:
 const howSteps = [
   { n: '1', title: 'Paket und Ausstattung wählen', text: 'Essenza, Colore, Atelier oder eine individuelle Lösung. Dann Platte, Möbelfarbe und, je nach Paket, Armatur und Keramik: eine kleine Auswahl aus unserer Ausstellung.' },
   { n: '2', title: 'Foto vom Bad machen', text: 'Am Handy neu aufnehmen oder ein Foto aus der Galerie wählen. Von der Tür aus, das ganze Bad im Bild, Licht an. Das Foto wird vor dem Senden verkleinert.' },
-  { n: '3', title: 'Ideenbild erhalten und besprechen', text: 'Nach etwa 30 Sekunden sehen Sie Ihr Bad mit den gewählten Materialien. Wir melden uns und laden Sie in die Ausstellung ein.' },
+  { n: '3', title: 'Ideenbild erhalten und besprechen', text: 'Nach der automatischen Erstellung und Prüfung sehen Sie Ihr Bad mit den gewählten Materialien. Wir melden uns und laden Sie in die Ausstellung ein.' },
 ];
 
 /** Musterbild; fehlt es (noch nicht geladen), zeigt es eine farbige Fläche. */
@@ -181,6 +188,38 @@ const SwatchPicker: React.FC<{ name: string; items: PickItem[]; value: string; o
     ))}
   </div>
 );
+
+/** Eine Materialfamilie: nur die bereits gewählte Familie ist anfangs geöffnet. */
+const SwatchGroup: React.FC<{
+  name: string;
+  title: string;
+  meta?: string;
+  items: PickItem[];
+  value: string;
+  onChange: (id: string) => void;
+  note?: string;
+}> = ({ name, title, meta, items, value, onChange, note }) => {
+  const selected = items.find((item) => item.id === value);
+  const [open, setOpen] = useState(Boolean(selected));
+
+  return (
+    <details className={styles.swatchGroup} open={open} onToggle={(event) => setOpen(event.currentTarget.open)}>
+      <summary className={styles.swatchGroupSummary}>
+        <span className={styles.swatchGroupHeading}>
+          <span className={styles.swatchGroupTitle}>{title}</span>
+          {meta && <span className={styles.swatchGroupMeta}>{meta}</span>}
+        </span>
+        <span className={styles.swatchGroupStatus}>
+          {selected ? `${selected.label} · ` : ''}{items.length} {items.length === 1 ? 'Option' : 'Optionen'}
+        </span>
+      </summary>
+      <div className={styles.swatchGroupBody}>
+        <SwatchPicker name={name} items={items} value={value} onChange={onChange} />
+        {note && <p className={styles.hint}>{note}</p>}
+      </div>
+    </details>
+  );
+};
 
 /** Kleine runde Auswahl (Keramikfarbe, Oberfläche, Format, Fenster). */
 const ChipPicker: React.FC<{ name: string; items: PickItem[]; value: string; onChange: (id: string) => void }> = ({ name, items, value, onChange }) => (
@@ -251,6 +290,8 @@ const Badplaner: React.FC = () => {
 
   const resultRef = useRef<HTMLDivElement>(null);
   const stepRefs = useRef<Record<number, HTMLElement | null>>({});
+  const renderSubmittingRef = useRef(false);
+  const planSubmittingRef = useRef(false);
 
   useEffect(() => {
     setIsVisible(true);
@@ -264,6 +305,7 @@ const Badplaner: React.FC = () => {
   const options = pkg ? optionsForPackage(pkg) : null;
   const pkgInfo = pkg ? bathPackages.find((p) => p.id === pkg) : undefined;
   const isAtelier = pkg === 'atelier';
+  const canOpenStep4 = !!pkg && !!sel && !!photo && /^[0-3]$/.test(windows) && !photoBusy;
 
   // Platten des gewählten Looks (Atelier) bzw. des Pakets
   const tileList = useMemo(() => {
@@ -278,6 +320,8 @@ const Badplaner: React.FC = () => {
   const accentGroups = useMemo(() => groupBy(accentList, (a) => a.supplier), [accentList]);
 
   const goTo = (next: Step) => {
+    if (renderSubmittingRef.current) return;
+    if (next === 4 && !canOpenStep4) return;
     setStep(next);
     // kurz warten, bis der Schritt aufgeklappt ist, dann hinscrollen
     setTimeout(() => stepRefs.current[next]?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
@@ -323,9 +367,9 @@ const Badplaner: React.FC = () => {
       const resized = await resizeImageFile(file, 1280, 0.82);
       setPhoto(resized);
       setWindows(''); // neues Foto, Fenster neu angeben
-    } catch {
+    } catch (error) {
       setPhoto(null);
-      setPhotoError('Das Bild konnte nicht gelesen werden. Bitte ein Foto im JPEG-Format wählen.');
+      setPhotoError(error instanceof Error ? error.message : 'Das Bild konnte nicht gelesen werden. Bitte JPEG, PNG oder WebP wählen.');
     } finally {
       setPhotoBusy(false);
     }
@@ -333,7 +377,12 @@ const Badplaner: React.FC = () => {
 
   const submitRender = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!pkg || !sel || !photo) return;
+    if (renderSubmittingRef.current) return;
+    if (!pkg || !sel || !photo || !canOpenStep4) {
+      setStatus('error');
+      setErrorMsg('Bitte wählen Sie ein Paket, ein Foto und die Anzahl sichtbarer Fenster.');
+      return;
+    }
     const form = new FormData(e.currentTarget);
     const gotcha = (form.get('_gotcha') || '').toString();
     if (gotcha.trim() !== '') return; // Honeypot
@@ -342,12 +391,16 @@ const Badplaner: React.FC = () => {
       setErrorMsg('Bitte eine gültige Telefonnummer angeben.');
       return;
     }
+    renderSubmittingRef.current = true;
     setStatus('sending');
     setErrorMsg('');
     const kombination = isAtelier && sel.accentMode === 'kombination';
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), RENDER_TIMEOUT_MS);
     try {
       const res = await fetch(API_URL, {
         method: 'POST',
+        signal: controller.signal,
         headers: { 'content-type': 'application/json', Accept: 'application/json' },
         // Feldnamen nach Kapitel 10 der Spezifikation (Vertrag mit api/badplaner.ts)
         body: JSON.stringify({
@@ -382,31 +435,56 @@ const Badplaner: React.FC = () => {
         }),
       });
       const json = await res.json().catch(() => null);
-      if (res.ok && json?.ok && json.image?.data) {
+      if (res.ok && json?.ok && json.image?.data && json.delivery?.lead === 'accepted') {
         const mime = json.image.mime || 'image/png';
-        setResult({ leadId: json.leadId || '', mime, dataUrl: `data:${mime};base64,${json.image.data}` });
+        const customerDelivery = ['accepted', 'failed', 'unknown', 'skipped'].includes(json.delivery?.customer)
+          ? json.delivery.customer
+          : 'unknown';
+        const newsletterDelivery = ['accepted', 'failed', 'unknown', 'skipped'].includes(json.delivery?.newsletter)
+          ? json.delivery.newsletter
+          : undefined;
+        setResult({
+          leadId: json.leadId || '',
+          mime,
+          dataUrl: `data:${mime};base64,${json.image.data}`,
+          delivery: {
+            lead: 'accepted',
+            customer: customerDelivery,
+            newsletter: newsletterDelivery,
+          },
+        });
         setStatus('idle');
         trackLead('form', 'badplaner');
       } else {
         setStatus('error');
         setErrorMsg(json?.error || friendlyHttpError(res.status));
       }
-    } catch {
+    } catch (error) {
       setStatus('error');
-      setErrorMsg('Keine Verbindung. Bitte prüfen Sie Ihr Netz und versuchen Sie es noch einmal.');
+      setErrorMsg(
+        error instanceof DOMException && error.name === 'AbortError'
+          ? 'Die Erstellung hat zu lange gedauert und wurde abgebrochen. Bitte versuchen Sie es noch einmal.'
+          : 'Keine Verbindung. Bitte prüfen Sie Ihr Netz und versuchen Sie es noch einmal.',
+      );
+    } finally {
+      window.clearTimeout(timeout);
+      renderSubmittingRef.current = false;
     }
   };
 
   const submitPlan = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!result) return;
+    if (!result || planSubmittingRef.current) return;
     setPlanError('');
     if (!planFile && !plan.sqm && !plan.note.trim()) {
       setPlanStatus('error');
       setPlanError('Bitte einen Grundriss, die Grösse oder eine Bemerkung angeben.');
       return;
     }
+    planSubmittingRef.current = true;
     setPlanStatus('sending');
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), RENDER_TIMEOUT_MS);
     try {
       let file: { name: string; mime: string; data: string } | undefined;
       if (planFile) {
@@ -414,12 +492,13 @@ const Badplaner: React.FC = () => {
           file = { name: planFile.name, mime: 'application/pdf', data: await fileToBase64(planFile) };
         } else {
           // Bilder werden wie das Foto verkleinert (Grundriss darf etwas grösser sein)
-          const img = await resizeImageFile(planFile, 1800, 0.85);
+          const img = await resizeImageFile(planFile, 1800, 0.85, MAX_PLAN_BASE64 - 64 * 1024);
           file = { name: planFile.name, mime: img.mime, data: img.base64 };
         }
       }
       const res = await fetch(API_URL, {
         method: 'POST',
+        signal: controller.signal,
         headers: { 'content-type': 'application/json', Accept: 'application/json' },
         body: JSON.stringify({
           kind: 'grundriss',
@@ -440,17 +519,21 @@ const Badplaner: React.FC = () => {
       }
     } catch {
       setPlanStatus('error');
-      setPlanError('Das hat nicht geklappt. Bitte noch einmal versuchen oder per WhatsApp schicken.');
+      setPlanError('Die Zustellung konnte nicht bestätigt werden. Bitte senden Sie die Datei per WhatsApp oder kontaktieren Sie uns direkt.');
+    } finally {
+      window.clearTimeout(timeout);
+      planSubmittingRef.current = false;
     }
   };
 
   const onPlanFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null;
     setPlanError('');
-    if (file && file.size > MAX_PLAN_FILE) {
+    const isPdf = file?.type === 'application/pdf';
+    if (file && file.size > (isPdf ? MAX_PLAN_PDF_BYTES : MAX_SOURCE_IMAGE_BYTES)) {
       setPlanFile(null);
       e.target.value = '';
-      setPlanError('Die Datei ist zu gross (max. 4 MB).');
+      setPlanError(isPdf ? 'Das PDF ist zu gross (max. 3 MB).' : 'Das Bild ist zu gross (max. 20 MB).');
       return;
     }
     setPlanFile(file);
@@ -557,7 +640,7 @@ const Badplaner: React.FC = () => {
   ];
 
   const stepDone = (n: Step) => (n === 1 ? !!pkg : n === 2 ? !!pkg : n === 3 ? !!photo : !!result);
-  const stepEnabled = (n: Step) => (n === 1 ? true : n === 4 ? !!pkg && !!photo : !!pkg);
+  const stepEnabled = (n: Step) => (n === 1 ? true : n === 4 ? canOpenStep4 : !!pkg);
 
   const renderStepHead = (n: Step, title: string, summary?: string) => (
     <button
@@ -610,7 +693,7 @@ const Badplaner: React.FC = () => {
   return (
     <main className={styles.page}>
       <SEOHead
-        title="Badplaner: Ihr Bad als Ideenbild in 30 Sekunden | New Living Design"
+        title="Badplaner: Ihr Bad als persönliches Ideenbild | New Living Design"
         description="Paket wählen, Foto vom Bad machen, Ideenbild erhalten. Der Badplaner von New Living Design zeigt Ihr Bad mit neuen Platten, Farben und Armaturen. Kostenlos, unverbindlich, aus Zofingen."
         keywords="Badplaner, Bad planen online, Badumbau Ideen, Badezimmer Visualisierung, Bad Ideenbild, Badumbau Zofingen, Badplaner kostenlos"
         url="/badplaner"
@@ -627,7 +710,7 @@ const Badplaner: React.FC = () => {
         </div>
         <div className={`${styles.heroContent} ${isVisible ? styles.visible : ''}`}>
           <p className={styles.eyebrow}>Neu · Badplaner</p>
-          <h1 className={styles.heroTitle}>Ihr Bad als Ideenbild – in 30 Sekunden</h1>
+          <h1 className={styles.heroTitle}>Ihr Bad als persönliches Ideenbild</h1>
           <p className={styles.heroText}>Paket wählen, Foto vom Bad machen, Ideenbild erhalten. Kostenlos, unverbindlich, aus Zofingen.</p>
           <div className={styles.heroActions}>
             <a href="#planer" className={styles.ctaPrimary}>Jetzt starten</a>
@@ -707,16 +790,16 @@ const Badplaner: React.FC = () => {
                           Material <span className={styles.groupMeta}>· im Look {chosen.look?.label ?? ''}</span>
                         </legend>
                         {tileGroups.map((g) => (
-                          <div key={g.key} className={styles.subGroup}>
-                            <p className={styles.groupSub}>{g.key} <span className={styles.groupSubMeta}>{g.items[0].supplier}</span></p>
-                            <SwatchPicker
-                              name="platte"
-                              value={sel.tile}
-                              onChange={(id) => choose('tile', id)}
-                              items={g.items.map((t) => ({ id: t.id, label: t.color, image: t.image, meta: 'Grossformat' }))}
-                            />
-                            {g.items.find((t) => t.note) && <p className={styles.hint}>{g.items.find((t) => t.note)?.note}</p>}
-                          </div>
+                          <SwatchGroup
+                            key={`${sel.look}:${g.key}`}
+                            name="platte"
+                            title={g.key}
+                            meta={g.items[0].supplier}
+                            value={sel.tile}
+                            onChange={(id) => choose('tile', id)}
+                            items={g.items.map((t) => ({ id: t.id, label: t.color, image: t.image, meta: 'Grossformat' }))}
+                            note={g.items.find((t) => t.note)?.note}
+                          />
                         ))}
                         <p className={styles.hint}>{TILE_HINT}</p>
                       </fieldset>
@@ -737,16 +820,16 @@ const Badplaner: React.FC = () => {
                       <fieldset className={styles.group}>
                         <legend>Platten <span className={styles.groupMeta}>· Serie und Farbe</span></legend>
                         {tileGroups.map((g) => (
-                          <div key={g.key} className={styles.subGroup}>
-                            <p className={styles.groupSub}>{g.key} <span className={styles.groupSubMeta}>{g.items[0].supplier}</span></p>
-                            <SwatchPicker
-                              name="platte"
-                              value={sel.tile}
-                              onChange={(id) => choose('tile', id)}
-                              items={g.items.map((t) => ({ id: t.id, label: t.color, image: t.image }))}
-                            />
-                            {g.items.find((t) => t.note) && <p className={styles.hint}>{g.items.find((t) => t.note)?.note}</p>}
-                          </div>
+                          <SwatchGroup
+                            key={g.key}
+                            name="platte"
+                            title={g.key}
+                            meta={g.items[0].supplier}
+                            value={sel.tile}
+                            onChange={(id) => choose('tile', id)}
+                            items={g.items.map((t) => ({ id: t.id, label: t.color, image: t.image }))}
+                            note={g.items.find((t) => t.note)?.note}
+                          />
                         ))}
                         <p className={styles.hint}>{TILE_HINT}</p>
                       </fieldset>
@@ -757,15 +840,14 @@ const Badplaner: React.FC = () => {
                     <fieldset className={styles.group}>
                       <legend>Unterbau <span className={styles.groupMeta}>· {options.bases[0]?.supplier}</span></legend>
                       {baseGroups.map((g) => (
-                        <div key={g.key} className={styles.subGroup}>
-                          <p className={styles.groupSub}>{g.key}</p>
-                          <SwatchPicker
-                            name="unterbau"
-                            value={sel.base}
-                            onChange={(id) => choose('base', id)}
-                            items={g.items.map((b) => ({ id: b.id, label: b.label, image: b.image, hex: b.hex }))}
-                          />
-                        </div>
+                        <SwatchGroup
+                          key={g.key}
+                          name="unterbau"
+                          title={g.key}
+                          value={sel.base}
+                          onChange={(id) => choose('base', id)}
+                          items={g.items.map((b) => ({ id: b.id, label: b.label, image: b.image, hex: b.hex }))}
+                        />
                       ))}
                     </fieldset>
                   )}
@@ -797,9 +879,15 @@ const Badplaner: React.FC = () => {
                   )}
 
                   {/* Zweite Ebene: alles Weitere. Alles ist vorbelegt, nichts ist Pflicht. */}
-                  <h3 className={`${styles.blockTitle} ${styles.blockTitleDetails}`}>Details</h3>
-                  <p className={styles.blockHint}>Alles ist sinnvoll vorbelegt. Wer mag, verfeinert hier.</p>
-
+                  <details className={styles.detailsDisclosure}>
+                    <summary className={styles.detailsSummary}>
+                      <span>
+                        <span className={styles.detailsTitle}>Details verfeinern</span>
+                        <span className={styles.detailsHint}>Optional · alles ist sinnvoll vorbelegt</span>
+                      </span>
+                      <span className={styles.detailsAction} aria-hidden="true" />
+                    </summary>
+                    <div className={styles.detailsBody}>
                   {isAtelier && (
                     <>
                       <fieldset className={styles.group}>
@@ -830,16 +918,15 @@ const Badplaner: React.FC = () => {
                             <fieldset className={styles.group}>
                               <legend>Akzentmaterial</legend>
                               {accentGroups.map((g) => (
-                                <div key={g.key} className={styles.subGroup}>
-                                  <p className={styles.groupSub}>{g.key}</p>
-                                  <SwatchPicker
-                                    name="akzent"
-                                    value={sel.accent}
-                                    onChange={(id) => choose('accent', id)}
-                                    items={g.items.map((a) => ({ id: a.id, label: a.label, image: a.image }))}
-                                  />
-                                  {g.items.find((a) => a.note) && <p className={styles.hint}>{g.items.find((a) => a.note)?.note}</p>}
-                                </div>
+                                <SwatchGroup
+                                  key={g.key}
+                                  name="akzent"
+                                  title={g.key}
+                                  value={sel.accent}
+                                  onChange={(id) => choose('accent', id)}
+                                  items={g.items.map((a) => ({ id: a.id, label: a.label, image: a.image }))}
+                                  note={g.items.find((a) => a.note)?.note}
+                                />
                               ))}
                             </fieldset>
                           )}
@@ -852,15 +939,14 @@ const Badplaner: React.FC = () => {
                     <fieldset className={styles.group}>
                       <legend>Waschtischplatte <span className={styles.groupMeta}>· {options.tops[0]?.supplier}</span></legend>
                       {topGroups.map((g) => (
-                        <div key={g.key} className={styles.subGroup}>
-                          <p className={styles.groupSub}>{g.key}</p>
-                          <SwatchPicker
-                            name="top"
-                            value={sel.top}
-                            onChange={(id) => choose('top', id)}
-                            items={g.items.map((t) => ({ id: t.id, label: t.color, image: t.image }))}
-                          />
-                        </div>
+                        <SwatchGroup
+                          key={g.key}
+                          name="top"
+                          title={g.key}
+                          value={sel.top}
+                          onChange={(id) => choose('top', id)}
+                          items={g.items.map((t) => ({ id: t.id, label: t.color, image: t.image }))}
+                        />
                       ))}
                     </fieldset>
                   )}
@@ -898,15 +984,15 @@ const Badplaner: React.FC = () => {
                     {sel.floorDifferent && (
                       <div className={styles.subGroup}>
                         {tileGroups.map((g) => (
-                          <div key={g.key} className={styles.subGroup}>
-                            <p className={styles.groupSub}>{g.key} <span className={styles.groupSubMeta}>{g.items[0].supplier}</span></p>
-                            <SwatchPicker
-                              name="boden"
-                              value={sel.floor}
-                              onChange={(id) => choose('floor', id)}
-                              items={g.items.map((t) => ({ id: t.id, label: t.color, image: t.image }))}
-                            />
-                          </div>
+                          <SwatchGroup
+                            key={g.key}
+                            name="boden"
+                            title={g.key}
+                            meta={g.items[0].supplier}
+                            value={sel.floor}
+                            onChange={(id) => choose('floor', id)}
+                            items={g.items.map((t) => ({ id: t.id, label: t.color, image: t.image }))}
+                          />
                         ))}
                       </div>
                     )}
@@ -974,6 +1060,8 @@ const Badplaner: React.FC = () => {
                       />
                     </fieldset>
                   )}
+                    </div>
+                  </details>
 
                   <div className={styles.stepActions}>
                     <button type="button" className={styles.ctaDark} onClick={() => goTo(3)}>Weiter zum Foto</button>
@@ -1114,14 +1202,14 @@ const Badplaner: React.FC = () => {
                     <span>{NEWSLETTER_TEXT}</span>
                   </label>
                   <div className={styles.stepActions}>
-                    <button type="submit" className={styles.ctaDark} disabled={status === 'sending' || !photo}>
+                    <button type="submit" className={styles.ctaDark} disabled={status === 'sending' || !canOpenStep4}>
                       {status === 'sending' ? 'Wird erstellt…' : 'Ideenbild erstellen'}
                     </button>
                   </div>
                   {status === 'sending' && (
                     <div className={styles.progress} role="status" aria-live="polite">
                       <div className={styles.progressBar}><span /></div>
-                      <p className={styles.progressText}>Wir gestalten Ihr Bad und prüfen das Bild … das dauert 30 bis 60 Sekunden. Bitte die Seite offen lassen.</p>
+                      <p className={styles.progressText}>Wir gestalten Ihr Bad und prüfen das Bild. Das kann einen Moment dauern; bitte lassen Sie die Seite offen.</p>
                     </div>
                   )}
                   {status === 'error' && (
@@ -1147,6 +1235,11 @@ const Badplaner: React.FC = () => {
               </div>
               <img src={result.dataUrl} alt={`Ideenbild Ihres Bads im Paket ${pkgInfo.name}`} className={styles.resultImage} />
               <span className={styles.badge}>Ideenbild, kein Plan</span>
+              {result.delivery.customer !== 'accepted' && (
+                <p className={styles.resultNote} role="status">
+                  <strong>Hinweis:</strong> Ihre Anfrage wurde an uns weitergeleitet, aber Ihre E-Mail-Kopie konnte nicht bestätigt werden. Bitte speichern Sie das Ideenbild jetzt mit „Bild speichern“.
+                </p>
+              )}
               <div className={styles.compare}>
                 <figure>
                   <img src={photo?.dataUrl} alt="Ihr Foto (vorher)" />
@@ -1168,7 +1261,7 @@ const Badplaner: React.FC = () => {
                 <Link to="/kontakt" className={styles.ctaSecondary}>Termin in der Ausstellung</Link>
               </div>
               <p className={styles.resultNote}>
-                Wir haben Ihre Angaben erhalten und melden uns innerhalb eines Arbeitstages. Das Ideenbild zeigt eine Stimmung mit den gewählten Materialien;
+                Ihre Angaben wurden an uns weitergeleitet. Wir melden uns innerhalb eines Arbeitstages. Das Ideenbild zeigt eine Stimmung mit den gewählten Materialien;
                 Masse, Leitungen und Details klären wir vor Ort.{' '}
                 <button type="button" onClick={startOver}>Andere Farben oder ein anderes Paket probieren</button> (bis zu drei Ideenbilder pro Tag).
               </p>
@@ -1184,8 +1277,8 @@ const Badplaner: React.FC = () => {
                 <>
                   <div className={styles.formRow}>
                     <label className={styles.field} htmlFor="bp-plan-file">
-                      <span>Grundriss (Bild oder PDF, max. 4 MB)</span>
-                      <input type="file" id="bp-plan-file" accept="image/*,application/pdf" onChange={onPlanFile} />
+                      <span>Grundriss (JPEG, PNG, WebP bis 20 MB; PDF bis 3 MB)</span>
+                      <input type="file" id="bp-plan-file" accept="image/jpeg,image/png,image/webp,application/pdf" onChange={onPlanFile} />
                     </label>
                     <label className={styles.field} htmlFor="bp-plan-sqm">
                       <span>Bad-Grösse in m²</span>

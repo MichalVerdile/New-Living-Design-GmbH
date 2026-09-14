@@ -42,7 +42,7 @@ const Contact: React.FC = () => {
         form.reset();
         trackLead("form", "kontaktformular");
       } else {
-        const data = await res.json().catch(() => ({} as any));
+        const data = await res.json().catch(() => ({}));
         setStatus("error");
         setErrorMsg(
           data?.errors?.[0]?.message ??

@@ -7,23 +7,22 @@
  *   kind: 'grundriss'  Grundriss/m²/Bemerkung zu einem bestehenden Lead per E-Mail
  *
  * Ablauf bei kind: 'render'
- *   1. Felder prüfen (Feldnamen nach Kapitel 10 der Spezifikation). Pflicht sind nur
- *      paket, foto, windows, name, email, telefon und consent. Jede fehlende oder
- *      unbekannte Detailwahl fällt auf die erste Option der jeweiligen Liste zurück,
- *      nie auf einen Fehler. Die alten Feldnamen (package, tile, furniture, phone,
- *      photo{mime,data} …) werden weiterhin akzeptiert.
+ *   1. Pflichtfelder, alle aktiven Ausstattungs-IDs und Bildheader streng prüfen.
+ *      Bekannte Legacy-Feldnamen bleiben gültig; widersprüchliche Auswahl-IDs nicht.
  *   2. Grenzen prüfen: Cookie 3 Ideenbilder pro Gerät und Tag, 6 pro IP, Tagesdeckel.
  *   3. Musterbild der Wandplatte laden, Prompt bauen, Ideenbild bei Gemini erzeugen.
- *   4. Fensterprüfung; wenn das Modell eine Öffnung dazuerfunden hat, ein zweiter Versuch.
- *   5. Lead-Mail an NLD (Foto und Ideenbild im Anhang), sonst Formspree ohne Bilder.
- *   6. Kundenmail mit dem Ideenbild (customerMail()). Fehler dort blockieren nie die Antwort.
- *   7. Newsletter-Eintrag bei Resend, wenn die Checkbox angehakt war.
+ *   4. Fensterprüfung zwingend. Ein verworfenes oder ungeprüftes Bild wird nie ausgeliefert.
+ *      Ein zweiter Versuch nur, wenn das volle Zeitbudget inkl. Zustellung übrig ist.
+ *   5. Lead-Mail an NLD; bei eindeutigem HTTP-Fehler Formspree ohne Bilder.
+ *      Ohne bestätigte Provider-Annahme kein Erfolg. Unklare Zustellung nicht blind wiederholen.
+ *   6. Kundenmail/Newsletter mit separatem Zustellstatus, kein falsches Versandversprechen.
+ *   Alle Netzwerkaufrufe einschliesslich Body-Lesen unter einer 105-Sekunden-Deadline.
  *
  * Umgebungsvariablen (Vercel > Settings > Environment Variables):
  *   GEMINI_API_KEY       Pflicht. API-Schlüssel von Google AI Studio (Bildmodell).
  *   RESEND_API_KEY       E-Mail-Versand mit Anhängen über Resend. Fehlt er oder
- *                        schlägt der Versand fehl, geht der Lead ohne Bilder an
- *                        Formspree; die Kundenmail entfällt dann ersatzlos.
+ *                        wird der Versand eindeutig abgelehnt, geht der Lead ohne Bilder
+ *                        an Formspree. Fehlende Kundenmail wird im Ergebnis ausgewiesen.
  *   RESEND_AUDIENCE_ID   Audience bei Resend für den Newsletter. Ohne diese Variable
  *                        wird die Einwilligung nur im Lead-Mail vermerkt.
  *   BADPLANER_TO         Empfänger (Default diego.verdile@newlivingdesign.ch)
@@ -34,15 +33,20 @@
  *   BADPLANER_DAILY_CAP  Maximale Ideenbilder pro Tag insgesamt (Default 60)
  *   BADPLANER_MODEL      Gemini-Modell (Default gemini-3.1-flash-image)
  *   BADPLANER_CHECK_MODEL Gemini-Textmodell für die Fensterprüfung (Default gemini-3.6-flash);
- *                        leer lassen = keine Prüfung
+ *                        leer lassen = Dienst nicht verfügbar (fail-closed)
  *
  * Fotos und Ideenbilder werden NICHT gespeichert (kein Blob, kein KV): sie gehen
  * nur an Google zur Bilderzeugung und per E-Mail an uns und an den Kunden.
+ * Diese synchrone Zwischenlösung bietet KEINE durable Speicherung oder Idempotenz.
+ * Provider-Annahme ist kein Nachweis der Postfachzustellung. Siehe docs/BADPLANER_PR1.md.
  * Siehe /datenschutz#badplaner.
  */
 /* eslint-disable @typescript-eslint/no-explicit-any -- keine @vercel/node-Typen im Projekt, req/res sind deshalb any */
-import { optionsForPackage, type AccentPlacementId, type PackageId } from '../src/data/badplaner.js';
-import { business, bathPackages, individualPackage, packageNote, type BathPackage } from '../src/config/business.js';
+import { type PackageId } from '../src/data/badplaner.js';
+import { business, individualPackage, packageNote, type BathPackage } from '../src/config/business.js';
+import { Budget, TimeoutError, type Clock } from '../server/badplaner/budget.js';
+import { normalizeSelection, ValidationError } from '../server/badplaner/validation.js';
+import { normalizeBase64, validateImageBytes, MAX_PHOTO_BASE64, MAX_PLAN_BASE64 } from '../src/pages/badplaner/imageValidation.js';
 
 // Node-Globals ohne @types/node (api/tsconfig.json ist auf Edge ausgelegt)
 declare const process: any;
@@ -52,33 +56,17 @@ export const config = { maxDuration: 120 };
 
 /* ---------- Grenzen ---------- */
 
-const MAX_PHOTO_BASE64 = 2.5 * 1024 * 1024;   // Foto (base64-Zeichen)
-const MAX_FILE_BASE64 = 4 * 1024 * 1024;      // Grundriss (base64-Zeichen)
+const MAX_FILE_BASE64 = MAX_PLAN_BASE64;
+const MAX_REQUEST_BYTES = 4 * 1024 * 1024;
+const MAX_RESPONSE_BASE64 = 3.5 * 1024 * 1024;
+const MAX_SWATCH_BYTES = 5 * 1024 * 1024; // current catalog originals include files >4 MiB
+const TOTAL_TIMEOUT_MS = 105000; // 15 seconds below the platform limit
+const DELIVERY_RESERVE_MS = 25000;
 const PER_DEVICE_PER_DAY = 3;                 // Cookie nldbp
 const PER_IP_PER_DAY = 6;                     // In-Memory
 const GEMINI_TIMEOUT_MS = 50000;
 const CHECK_TIMEOUT_MS = 20000;
 const COOKIE_NAME = 'nldbp';
-
-/*
- * Zähler pro IP und global liegen nur im Speicher der laufenden Funktionsinstanz.
- * Vercel startet Instanzen jederzeit neu, daher ist das nur "best effort" gegen
- * Missbrauch. Die harte Grenze ist die Ausgabenobergrenze (Budget) im Google-Konto.
- */
-const ipCounter = new Map<string, { date: string; count: number }>();
-const globalCounter = { date: '', count: 0 };
-
-/**
- * Die Seite schickt für die Akzentfläche die kurzen Werte 'waschtisch' und 'dusche'
- * (Kapitel 10), die Katalog-Ids heissen 'waschtischwand' und 'duschnische'.
- * Beide Schreibweisen sind gültig; alles andere wird protokolliert.
- */
-const PLACEMENT_ALIAS: Record<string, AccentPlacementId> = {
-  waschtisch: 'waschtischwand',
-  waschtischwand: 'waschtischwand',
-  dusche: 'duschnische',
-  duschnische: 'duschnische',
-};
 
 /* ---------- Typen ---------- */
 
@@ -143,7 +131,66 @@ interface Photo {
 
 /* ---------- Handler ---------- */
 
-export default async function handler(req: any, res: any) {
+export interface BadplanerDependencies {
+  fetch: typeof fetch;
+  env: Record<string, string | undefined>;
+  clock: Clock;
+  newId: () => string;
+}
+
+type DeliveryStatus = 'accepted' | 'failed' | 'unknown' | 'skipped';
+interface MailResult { status: DeliveryStatus; provider?: 'resend' | 'formspree'; attachments?: boolean }
+interface RequestContext { budget: Budget }
+type CheckResult = { status: 'approved' } | { status: 'rejected'; reason: string } | { status: 'unavailable' };
+
+/** Each factory owns its best-effort counters. Tests inject HTTP, clock and IDs. */
+export function createHandler(overrides: Partial<BadplanerDependencies> = {}) {
+  const dependencies: BadplanerDependencies = {
+    fetch: globalThis.fetch.bind(globalThis),
+    env: process.env,
+    clock: { now: () => Date.now(), setTimeout: (fn, ms) => setTimeout(fn, ms), clearTimeout: (timer) => clearTimeout(timer) },
+    newId: () => `bp-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+    ...overrides,
+  };
+  const env = dependencies.env;
+  const ipCounter = new Map<string, { date: string; count: number }>();
+  const globalCounter = { date: '', count: 0 };
+
+async function request(ctx: RequestContext, url: string, init: RequestInit = {}, timeout = 8000, bytes = false) {
+  return ctx.budget.run(timeout, async (signal) => {
+    const response = await dependencies.fetch(url, { ...init, signal, redirect: 'error' });
+    // Keep the timeout active while consuming the response body, not only headers.
+    if (signal.aborted) { void response.body?.cancel(); throw new TimeoutError(); }
+    const limit = bytes ? MAX_SWATCH_BYTES : 6 * 1024 * 1024;
+    const length = Number(response.headers.get('content-length'));
+    if (length > limit) { void response.body?.cancel(); throw new Error('Provider response too large'); }
+    const chunks: Uint8Array[] = [];
+    let total = 0;
+    const reader = response.body?.getReader();
+    if (reader) {
+      const cancel = () => { void reader.cancel().catch(() => undefined); };
+      signal.addEventListener('abort', cancel, { once: true });
+      try {
+        while (true) {
+          const part = await reader.read();
+          if (part.done) break;
+          total += part.value.byteLength;
+          if (total > limit) { await reader.cancel(); throw new Error('Provider response too large'); }
+          chunks.push(part.value);
+        }
+      } finally { signal.removeEventListener('abort', cancel); reader.releaseLock(); }
+    }
+    const body = new Uint8Array(total);
+    let offset = 0;
+    for (const chunk of chunks) { body.set(chunk, offset); offset += chunk.length; }
+    let json: any = null;
+    if (!bytes) { try { json = JSON.parse(new TextDecoder().decode(body)); } catch { /* malformed provider response */ } }
+    return { ok: response.ok, status: response.status, headers: response.headers, bytes: body, json };
+  });
+}
+
+async function handler(req: any, res: any) {
+  const ctx: RequestContext = { budget: new Budget(dependencies.clock, TOTAL_TIMEOUT_MS) };
   res.setHeader('Cache-Control', 'no-store');
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
@@ -151,6 +198,10 @@ export default async function handler(req: any, res: any) {
   }
 
   let body: any = req.body;
+  let rawSize: number;
+  try { rawSize = typeof body === 'string' ? Buffer.byteLength(body, 'utf8') : Buffer.byteLength(JSON.stringify(body ?? null), 'utf8'); }
+  catch { return res.status(400).json({ ok: false, error: 'Ungültige Anfrage.' }); }
+  if (rawSize > MAX_REQUEST_BYTES) return res.status(413).json({ ok: false, code: 'INPUT_TOO_LARGE', error: 'Die Anfrage ist zu gross. Bitte eine kleinere Datei wählen.' });
   if (typeof body === 'string') {
     try {
       body = JSON.parse(body);
@@ -158,7 +209,7 @@ export default async function handler(req: any, res: any) {
       body = null;
     }
   }
-  if (!body || typeof body !== 'object') {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
     return res.status(400).json({ ok: false, error: 'Ungültige Anfrage.' });
   }
   // Honeypot: Bots füllen das versteckte Feld aus. Wir antworten freundlich, tun aber nichts.
@@ -167,71 +218,23 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    if (body.kind === 'render') return await handleRender(req, res, body as RenderBody);
-    if (body.kind === 'grundriss') return await handleGrundriss(req, res, body as GrundrissBody);
+    if (body.kind === 'render') return await handleRender(req, res, body as RenderBody, ctx);
+    if (body.kind === 'grundriss') return await handleGrundriss(req, res, body as GrundrissBody, ctx);
     return res.status(400).json({ ok: false, error: 'Unbekannte Anfrage.' });
   } catch (err: any) {
-    console.error('[badplaner] unerwarteter Fehler', err);
+    if (err instanceof ValidationError) return res.status(400).json({ ok: false, code: 'INVALID_SELECTION', field: err.field, error: err.message });
+    if (err instanceof TimeoutError) return res.status(504).json({ ok: false, code: 'TIMEOUT', error: 'Das hat zu lange gedauert. Bitte versuchen Sie es später noch einmal.' });
+    console.error('[badplaner] unerwarteter Fehler', err?.name || 'Error');
     return res.status(500).json({ ok: false, error: 'Das hat nicht geklappt. Bitte versuchen Sie es später noch einmal.' });
   }
 }
 
 /* ---------- kind: render ---------- */
 
-async function handleRender(req: any, res: any, body: RenderBody) {
-  // 1. Paket (Pflicht) und daraus die zulässigen Listen
-  const pkg = bathPackages.find((p) => p.id === text(body.paket ?? body.package, 40).toLowerCase());
-  if (!pkg) return bad(res, 'Bitte wählen Sie ein Paket.');
-  const opts = optionsForPackage(pkg.id as PackageId);
-  const isAtelier = pkg.id === 'atelier';
-  const individuell = body.individuell === true;
-
-  // 2. Ausstattung: leere oder unbekannte Werte nehmen die erste Option der Liste
-  const tile = pickOption(opts.tiles, body.platte ?? body.tile);
-  const floorTile = findOption(opts.tiles, body.boden);
-  const base = pickOption(opts.bases, body.unterbau ?? body.furniture);
-  const top = pickOption(opts.tops, body.top);
-  const basinType = pickOption(opts.basinTypes, body.becken);            // nur Atelier
-  const tapSeriesOption = pickOption(opts.tapSeriesOptions, body.armaturenserie); // nur Colore
-  const finish = pickOption(opts.finishes, body.finish);
-  const sanitary = pickOption(opts.sanitary, body.keramik ?? body.sanitary);
-  const wall = pickOption(opts.walls, body.wall);
-  const shower = pickOption(opts.showers, body.dusche ?? body.shower);
-  const basin = pickOption(opts.basins, body.waschtisch ?? body.basin);
-  const mirror = pickOption(opts.mirrors, body.spiegel ?? body.mirror);
-  if (!tile || !base || !top || !finish || !sanitary || !wall || !shower || !basin || !mirror) {
-    // Kann nur passieren, wenn der Katalog für dieses Paket unvollständig ist.
-    console.error('[badplaner] Katalog unvollständig für Paket', pkg.id);
-    return bad(res, 'Die Ausstattung passt nicht zum gewählten Paket. Bitte Auswahl prüfen.');
-  }
-
-  // Look: die gewählte Platte bestimmt ihn, sonst der gesendete Wert (nur Atelier)
-  const look =
-    (tile.look ? opts.looks.find((l) => l.id === tile.look) : undefined) ||
-    (isAtelier ? pickOption(opts.looks, body.look) : undefined);
-
-  // Format: nur ein im Paket bzw. für die Platte zulässiges Format, sonst das Standardformat
-  const wantedFormat = text(body.format, 20);
-  const format =
-    wantedFormat && (opts.formats.includes(wantedFormat) || (tile.formats || []).includes(wantedFormat))
-      ? wantedFormat
-      : opts.formats[0] || tile.format;
-
-  // Boden abweichend: wenn möglich im gewählten Format, sonst im Standardformat der Platte
-  const floorFormat = floorTile ? ((floorTile.formats || []).includes(format) ? format : floorTile.format) : '';
-
-  // Kombination und Akzentfläche (nur Atelier)
-  const accentMode = pickOption(opts.accentModes, body.kombination);
-  const isKombi = isAtelier && accentMode?.id === 'kombination';
-  const rawPlacement = text(body.akzentFlaeche, 40).toLowerCase();
-  if (isKombi && rawPlacement && !PLACEMENT_ALIAS[rawPlacement]) {
-    console.warn('[badplaner] unbekannte Akzentfläche, nehme die erste Option:', rawPlacement);
-  }
-  const placementId: AccentPlacementId = PLACEMENT_ALIAS[rawPlacement] || 'waschtischwand';
-  const placement = opts.accentPlacements.find((p) => p.id === placementId) || opts.accentPlacements[0];
-  // Nur Materialien, die auf dieser Fläche zulässig sind (Nassbereich der Dusche!)
-  const allowedAccents = opts.accents.filter((a) => a.placement.includes(placementId));
-  const accent = isKombi ? pickOption(allowedAccents, body.akzent) : undefined;
+async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestContext) {
+  const { pkg, opts, isAtelier, individuell, tile, floorTile, base, top, basinType,
+    tapSeriesOption, finish, sanitary, wall, shower, basin, mirror, look, format,
+    floorFormat, accentMode, placement, accent } = normalizeSelection(body as unknown as Record<string, unknown>);
 
   // 3. Fenster und Kontakt (Pflichtfelder)
   const windows = text(body.windows, 4);
@@ -249,16 +252,17 @@ async function handleRender(req: any, res: any, body: RenderBody) {
   // 4. Foto: neu als data-URL im Feld `foto`, alt als { mime, data } im Feld `photo`
   const photo = readPhoto(body);
   if (!photo) return bad(res, 'Bitte ein Foto Ihres Bads (JPEG, PNG oder WebP) hochladen.');
-  if (photo.data.length < 1000) return bad(res, 'Das Foto ist leer oder beschädigt.');
-  if (photo.data.length > MAX_PHOTO_BASE64) return bad(res, 'Das Foto ist zu gross. Bitte ein kleineres Bild wählen.');
-  if (!/^[A-Za-z0-9+/=\r\n]+$/.test(photo.data)) return bad(res, 'Das Foto konnte nicht gelesen werden.');
-  if (!process.env.GEMINI_API_KEY) {
-    console.error('[badplaner] GEMINI_API_KEY fehlt');
-    return res.status(503).json({ ok: false, error: 'Der Badplaner ist im Moment nicht verfügbar. Rufen Sie uns an: ' + business.phone.display });
+  try {
+    photo.data = normalizeBase64(photo.data, MAX_PHOTO_BASE64);
+    validateImageBytes(Buffer.from(photo.data, 'base64'), photo.mime);
+  } catch { return bad(res, 'Das Foto ist ungültig oder zu gross. Bitte JPEG, PNG oder WebP wählen.'); }
+  if (!env.GEMINI_API_KEY || (env.BADPLANER_CHECK_MODEL !== undefined && !env.BADPLANER_CHECK_MODEL.trim())) {
+    console.error('[badplaner] Bilddienst oder Prüfung nicht konfiguriert');
+    return res.status(503).json({ ok: false, code: 'SERVICE_UNAVAILABLE', error: 'Der Badplaner ist im Moment nicht verfügbar. Rufen Sie uns an: ' + business.phone.display });
   }
 
   // 5. Limits
-  const today = new Date().toISOString().slice(0, 10);
+  const today = new Date(dependencies.clock.now()).toISOString().slice(0, 10);
   const cookie = readCounterCookie(req.headers?.cookie, today);
   if (cookie >= PER_DEVICE_PER_DAY) {
     return res.status(429).json({
@@ -272,7 +276,7 @@ async function handleRender(req: any, res: any, body: RenderBody) {
   if (ipCount >= PER_IP_PER_DAY) {
     return res.status(429).json({ ok: false, error: 'Tageslimit erreicht. Rufen Sie uns an oder kommen Sie in die Ausstellung.' });
   }
-  const dailyCap = Number(process.env.BADPLANER_DAILY_CAP) > 0 ? Number(process.env.BADPLANER_DAILY_CAP) : 60;
+  const dailyCap = Number(env.BADPLANER_DAILY_CAP) > 0 ? Number(env.BADPLANER_DAILY_CAP) : 60;
   if (globalCounter.date !== today) {
     globalCounter.date = today;
     globalCounter.count = 0;
@@ -286,7 +290,7 @@ async function handleRender(req: any, res: any, body: RenderBody) {
   if (ipCounter.size > 5000) ipCounter.clear(); // Speicher der Instanz schonen
 
   // 6. Swatch (Materialprobe der Wandplatte) laden: zuerst unsere Kopie, sonst Lieferant, sonst ohne
-  const swatch = await loadSwatch(req, tile.image, tile.src || '');
+  const swatch = await loadSwatch(tile.image, tile.src || '', ctx);
 
   // 7. Armaturen: Essenza Aufputz verchromt, Colore verchromt in der gewählten Serie,
   //    Atelier Unterputz in der gewählten Oberfläche.
@@ -315,24 +319,25 @@ async function handleRender(req: any, res: any, body: RenderBody) {
     windows,
   });
 
-  // 9. Bild erzeugen, dann prüfen, ob das Modell Fenster/Türen dazuerfunden hat.
-  //    Wenn ja: ein zweiter Versuch mit dem Hinweis auf den Fehler.
-  let gen = await generateImage(prompt, photo, swatch);
+  // A full retry needs 50s generation + 20s check + 25s delivery. With a 105s
+  // deadline it is intentionally possible only after a first pass under 10s.
+  let gen = await generateImage(prompt, photo, swatch, ctx);
   if (gen.ok === false) return res.status(502).json({ ok: false, error: gen.error });
-  let checkNote = 'nicht geprüft';
-  const check = await checkOpenings(photo, gen);
-  if (check) {
-    checkNote = check.extra ? `1. Versuch verworfen (${check.reason})` : 'ok';
-    if (check.extra) {
-      const retryPrompt = `${prompt}\nIMPORTANT: a previous attempt was rejected because it added an opening that does not exist in image 1 (${check.reason}). Keep every wall exactly as in image 1: no new window, roof window, door or glass opening.`;
-      const second = await generateImage(retryPrompt, photo, swatch);
-      if (second.ok !== false) {
-        gen = second;
-        const check2 = await checkOpenings(photo, second);
-        checkNote += check2 ? (check2.extra ? `, 2. Versuch ebenfalls auffällig (${check2.reason})` : ', 2. Versuch ok') : ', 2. Versuch nicht geprüft';
-      }
-    }
+  let checkNote = 'ok';
+  let check = await checkOpenings(photo, gen, ctx);
+  if (check.status === 'rejected' && ctx.budget.remaining() >= GEMINI_TIMEOUT_MS + CHECK_TIMEOUT_MS + DELIVERY_RESERVE_MS) {
+    // The rejected image never becomes a fallback if the retry/check fails.
+    const retryPrompt = `${prompt}\nIMPORTANT: a previous attempt was rejected because it added an opening that does not exist in image 1. Keep every wall exactly as in image 1: no new window, roof window, door or glass opening.`;
+    const second = await generateImage(retryPrompt, photo, swatch, ctx);
+    if (second.ok === false) return res.status(502).json({ ok: false, code: 'RENDER_FAILED', error: second.error });
+    check = await checkOpenings(photo, second, ctx);
+    gen = second;
+    checkNote = '1. Versuch verworfen, 2. Versuch ok';
   }
+  if (check.status !== 'approved') return res.status(502).json({
+    ok: false, code: check.status === 'rejected' ? 'RENDER_REJECTED' : 'CHECK_UNAVAILABLE',
+    error: 'Das Ideenbild konnte nicht sicher bestätigt werden und wird nicht angezeigt. Bitte später erneut versuchen oder uns direkt kontaktieren.',
+  });
   console.log('[badplaner] Fensterprüfung:', checkNote);
 
   // 10. Auswahl in Klartext: dieselben Zeilen für das Lead-Mail und die Kundenmail
@@ -378,7 +383,7 @@ async function handleRender(req: any, res: any, body: RenderBody) {
     ['Seite', req.headers?.referer || req.headers?.referrer || '/badplaner'],
     ['Lead-ID', leadId],
   ];
-  await sendLeadMail({
+  const leadDelivery = await sendLeadMail({
     subject: `Badplaner-Lead: ${name} – Paket ${individuell ? individualPackage.name : pkg.name}`,
     replyTo: email,
     intro: 'Neuer Lead aus dem Badplaner. Foto und Ideenbild im Anhang.',
@@ -387,29 +392,36 @@ async function handleRender(req: any, res: any, body: RenderBody) {
       { filename: 'foto.jpg', content: photo.data },
       { filename: imageName, content: gen.data },
     ],
+  }, ctx);
+  if (leadDelivery.status !== 'accepted') return res.status(502).json({
+    ok: false, code: 'LEAD_DELIVERY_FAILED', delivery: { lead: leadDelivery.status },
+    error: 'Ihre Anfrage konnte nicht bestätigt werden. Bitte kontaktieren Sie uns telefonisch; die Zustellung ist möglicherweise unklar.',
   });
 
-  // 12. Kundenmail mit dem Ideenbild. Ein Fehler darf die Antwort nie verhindern.
-  await sendCustomerMail({
+  // Customer mail failure preserves the approved image, with an explicit warning.
+  const customerDelivery = await sendCustomerMail({
     to: email,
     name,
     pkg,
     individuell,
     auswahl,
     image: { mime: gen.mime, data: gen.data, filename: imageName },
-  });
+  }, ctx);
 
   // 13. Newsletter (nur wenn angehakt und RESEND_AUDIENCE_ID gesetzt ist)
-  if (newsletter) await subscribeNewsletter(email, name);
+  const newsletterDelivery = newsletter ? await subscribeNewsletter(email, name, ctx) : { status: 'skipped' as const };
 
   // 14. Antwort mit Tageszähler-Cookie
   res.setHeader('Set-Cookie', counterCookie(cookie + 1, today));
-  return res.status(200).json({ ok: true, leadId, image: { mime: gen.mime, data: gen.data } });
+  return res.status(200).json({ ok: true, leadId, image: { mime: gen.mime, data: gen.data }, delivery: {
+    lead: leadDelivery.status, leadProvider: leadDelivery.provider, leadAttachments: leadDelivery.attachments,
+    customer: customerDelivery.status, newsletter: newsletterDelivery.status,
+  } });
 }
 
 /* ---------- kind: grundriss ---------- */
 
-async function handleGrundriss(req: any, res: any, body: GrundrissBody) {
+async function handleGrundriss(req: any, res: any, body: GrundrissBody, ctx: RequestContext) {
   const name = text(body.name, 120);
   const phone = text(body.telefon ?? body.phone, 60);
   const leadId = text(body.leadId, 40);
@@ -421,9 +433,15 @@ async function handleGrundriss(req: any, res: any, body: GrundrissBody) {
   const attachments: { filename: string; content: string }[] = [];
   if (body.file) {
     const f = body.file;
-    if (typeof f.data !== 'string' || f.data.length > MAX_FILE_BASE64) return bad(res, 'Die Datei ist zu gross (max. 4 MB).');
+    if (typeof f.data !== 'string' || f.data.length > MAX_FILE_BASE64) return bad(res, 'Die Datei ist zu gross (übertragen max. 3 MB).');
     if (!/^(image\/(jpeg|png|webp)|application\/pdf)$/.test(f.mime || '')) return bad(res, 'Bitte ein Bild (JPEG, PNG, WebP) oder ein PDF hochladen.');
-    if (!/^[A-Za-z0-9+/=\r\n]+$/.test(f.data)) return bad(res, 'Die Datei konnte nicht gelesen werden.');
+    try {
+      f.data = normalizeBase64(f.data, MAX_FILE_BASE64);
+      const bytes = Buffer.from(f.data, 'base64');
+      if (f.mime === 'application/pdf') {
+        if (bytes.length < 8 || bytes.subarray(0, 5).toString('ascii') !== '%PDF-') throw new Error('Invalid PDF');
+      } else validateImageBytes(bytes, f.mime);
+    } catch { return bad(res, 'Die Datei ist ungültig oder zu gross.'); }
     const ext = f.mime === 'application/pdf' ? 'pdf' : f.mime === 'image/png' ? 'png' : f.mime === 'image/webp' ? 'webp' : 'jpg';
     attachments.push({ filename: `grundriss.${ext}`, content: f.data });
   }
@@ -437,38 +455,25 @@ async function handleGrundriss(req: any, res: any, body: GrundrissBody) {
     ['Zeitpunkt', swissTime()],
     ['Lead-ID', leadId || '–'],
   ];
-  await sendLeadMail({
+  const delivery = await sendLeadMail({
     subject: `Badplaner-Grundriss: ${name}`,
     intro: 'Ergänzung zu einem Badplaner-Lead (Grundriss / Grösse / Bemerkung).',
     details,
     attachments,
+  }, ctx);
+  if (delivery.status !== 'accepted') return res.status(502).json({ ok: false, code: 'LEAD_DELIVERY_FAILED', error: 'Die Ergänzung konnte nicht bestätigt werden. Bitte kontaktieren Sie uns direkt.' });
+  if (attachments.length && !delivery.attachments) return res.status(502).json({
+    ok: false, code: 'ATTACHMENT_NOT_DELIVERED', delivery: { lead: delivery.status, leadAttachments: false },
+    error: 'Die Angaben wurden weitergeleitet, aber der Anhang konnte nicht zugestellt werden. Bitte senden Sie die Datei per WhatsApp oder kontaktieren Sie uns direkt.',
   });
-  return res.status(200).json({ ok: true });
+  return res.status(200).json({ ok: true, delivery: { lead: delivery.status, leadAttachments: delivery.attachments } });
 }
 
 /* ---------- Auswahl auflösen ---------- */
 
-/**
- * Erste Option der Liste, wenn die Id fehlt oder unbekannt ist (Kapitel 10 der
- * Spezifikation: keine harten Fehler wegen einer fehlenden Detailwahl).
- * Leere Liste (z. B. Waschbeckenart ausserhalb von Atelier) ergibt undefined.
- */
-function pickOption<T extends { id: string }>(list: T[] | undefined, id: unknown): T | undefined {
-  if (!list || list.length === 0) return undefined;
-  const wanted = typeof id === 'string' ? id.trim() : '';
-  return list.find((o) => o.id === wanted) || list[0];
-}
-
 /** Lieferant, Serie und Farbe, ohne Doppelung wenn die Serie so heisst wie die Farbe. */
 function tileName(t: { supplier: string; series: string; color: string }): string {
   return t.series === t.color ? `${t.supplier} ${t.series}` : `${t.supplier} ${t.series} ${t.color}`;
-}
-
-/** Wie pickOption, aber ohne Rückfall: leer bedeutet "nicht gewählt" (z. B. eigener Boden). */
-function findOption<T extends { id: string }>(list: T[] | undefined, id: unknown): T | undefined {
-  const wanted = typeof id === 'string' ? id.trim() : '';
-  if (!list || !wanted) return undefined;
-  return list.find((o) => o.id === wanted);
 }
 
 /** Foto aus dem neuen Feld `foto` (data-URL) oder aus dem alten Feld `photo`. */
@@ -571,26 +576,24 @@ function buildPrompt(v: {
 
 /* ---------- Swatch laden ---------- */
 
-async function loadSwatch(req: any, image: string, src: string): Promise<Photo | null> {
-  const host = (req.headers?.['x-forwarded-host'] || req.headers?.host || '').toString().split(',')[0].trim();
-  const candidates = [];
-  if (host && image) candidates.push(`https://${host}${image}`);
-  if (src) candidates.push(src);
+async function loadSwatch(image: string, src: string, ctx: RequestContext): Promise<Photo | null> {
+  // Never derive a server-side URL from request Host / x-forwarded-host.
+  const candidates = image.startsWith('/badplaner/swatches/') ? [new URL(image, business.siteUrl).href] : [];
+  if (src.startsWith('https://')) candidates.push(src); // source comes only from the server-owned catalog
+  const started = dependencies.clock.now();
   for (const url of candidates) {
     try {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 8000);
-      const r = await fetch(url, { signal: controller.signal, headers: { 'User-Agent': 'NewLivingDesign-Badplaner/1.0' } });
-      clearTimeout(timer);
+      const remaining = 8000 - (dependencies.clock.now() - started);
+      if (remaining <= 0) break;
+      const r = await request(ctx, url, { headers: { 'User-Agent': 'NewLivingDesign-Badplaner/1.0' } }, remaining, true);
       if (!r.ok) continue;
       const type = (r.headers.get('content-type') || '').split(';')[0].trim();
       if (!type.startsWith('image/')) continue;
-      const bytes = await r.arrayBuffer();
-      if (bytes.byteLength < 200) continue;
-      const mime = type === 'image/png' || type === 'image/webp' ? type : 'image/jpeg';
-      return { mime, data: Buffer.from(bytes).toString('base64') };
-    } catch (err: any) {
-      console.warn('[badplaner] Swatch nicht geladen:', url, err && err.message);
+      const bytes = r.bytes;
+      const metadata = validateImageBytes(bytes, type, { maxBytes: MAX_SWATCH_BYTES, maxPixels: 50000000, maxSide: 12000 });
+      return { mime: metadata.mime, data: Buffer.from(bytes).toString('base64') };
+    } catch {
+      console.warn('[badplaner] Swatch nicht geladen');
     }
   }
   return null;
@@ -600,28 +603,24 @@ async function loadSwatch(req: any, image: string, src: string): Promise<Photo |
 
 type GenResult = { ok: true; mime: string; data: string } | { ok: false; error: string };
 
-async function generateImage(prompt: string, photo: Photo, swatch: Photo | null): Promise<GenResult> {
-  const model = process.env.BADPLANER_MODEL || 'gemini-3.1-flash-image';
+async function generateImage(prompt: string, photo: Photo, swatch: Photo | null, ctx: RequestContext): Promise<GenResult> {
+  const model = env.BADPLANER_MODEL || 'gemini-3.1-flash-image';
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
   const parts: any[] = [{ text: prompt }, { inlineData: { mimeType: photo.mime, data: photo.data } }];
   if (swatch) parts.push({ inlineData: { mimeType: swatch.mime, data: swatch.data } });
 
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), GEMINI_TIMEOUT_MS);
   try {
-    const r = await fetch(url, {
+    const r = await request(ctx, url, {
       method: 'POST',
-      signal: controller.signal,
-      headers: { 'x-goog-api-key': process.env.GEMINI_API_KEY, 'content-type': 'application/json' },
+      headers: { 'x-goog-api-key': env.GEMINI_API_KEY || '', 'content-type': 'application/json' },
       body: JSON.stringify({
         contents: [{ role: 'user', parts }],
         generationConfig: { responseModalities: ['IMAGE'], imageConfig: { imageSize: '1K' } },
       }),
-    });
-    const json: any = await r.json().catch(() => null);
+    }, Math.min(GEMINI_TIMEOUT_MS, Math.max(0, ctx.budget.remaining() - CHECK_TIMEOUT_MS - DELIVERY_RESERVE_MS)));
+    const json = r.json;
     if (!r.ok) {
-      const msg = json?.error?.message || `HTTP ${r.status}`;
-      console.error('[badplaner] Gemini-Fehler', r.status, msg);
+      console.error('[badplaner] Gemini-Fehler', r.status);
       if (r.status === 429) return { ok: false, error: 'Der Bilddienst ist gerade ausgelastet. Bitte in einer Minute noch einmal versuchen.' };
       return { ok: false, error: 'Das Ideenbild konnte nicht erstellt werden. Bitte später noch einmal versuchen oder rufen Sie uns an.' };
     }
@@ -632,19 +631,20 @@ async function generateImage(prompt: string, photo: Photo, swatch: Photo | null)
       console.error('[badplaner] Gemini ohne Bild:', reason);
       return { ok: false, error: 'Aus diesem Foto konnte kein Ideenbild erstellt werden. Bitte ein anderes Foto versuchen: von der Tür aus, das ganze Bad im Bild, Licht an.' };
     }
-    const mime = imagePart.inlineData.mimeType || 'image/png';
-    return { ok: true, mime: mime === 'image/jpeg' ? 'image/jpeg' : 'image/png', data: imagePart.inlineData.data };
+    const mime = imagePart.inlineData.mimeType;
+    if (mime !== 'image/png' && mime !== 'image/jpeg') throw new Error('Unsupported generated image');
+    const data = normalizeBase64(imagePart.inlineData.data, MAX_RESPONSE_BASE64);
+    validateImageBytes(Buffer.from(data, 'base64'), mime);
+    return { ok: true, mime, data };
   } catch (err: any) {
-    const timeout = err && err.name === 'AbortError';
-    console.error('[badplaner] Gemini nicht erreichbar', timeout ? 'Timeout' : err);
+    const timeout = err && (err.name === 'AbortError' || err.name === 'TimeoutError');
+    console.error('[badplaner] Gemini nicht erreichbar', timeout ? 'Timeout' : 'invalid response');
     return {
       ok: false,
       error: timeout
         ? 'Das hat zu lange gedauert. Bitte noch einmal versuchen.'
         : 'Der Bilddienst ist im Moment nicht erreichbar. Bitte später noch einmal versuchen.',
     };
-  } finally {
-    clearTimeout(timer);
   }
 }
 
@@ -652,25 +652,23 @@ async function generateImage(prompt: string, photo: Photo, swatch: Photo | null)
 
 /**
  * Fragt ein Gemini-Textmodell, ob das Ideenbild eine Öffnung (Fenster, Dachfenster,
- * Tür, Glasfläche) enthält, die im Foto nicht da ist. Liefert null, wenn die Prüfung
- * nicht möglich war (Modell fehlt, Timeout, unlesbare Antwort): dann gilt das Bild.
+ * Tür, Glasfläche) enthält, die im Foto nicht da ist. Nicht verfügbare oder
+ * unlesbare Prüfungen sind ein Fehler und erlauben niemals die Bildauslieferung.
+ * Dies ist noch kein vollständiger Geometrie-/Ausstattungschecker.
  */
-async function checkOpenings(photo: Photo, gen: { mime: string; data: string }): Promise<{ extra: boolean; reason: string } | null> {
-  const model = process.env.BADPLANER_CHECK_MODEL === undefined ? 'gemini-3.6-flash' : process.env.BADPLANER_CHECK_MODEL;
-  if (!model) return null;
+async function checkOpenings(photo: Photo, gen: { mime: string; data: string }, ctx: RequestContext): Promise<CheckResult> {
+  const model = env.BADPLANER_CHECK_MODEL === undefined ? 'gemini-3.6-flash' : env.BADPLANER_CHECK_MODEL;
+  if (!model?.trim()) return { status: 'unavailable' };
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
   const question =
     'Image 1 is a photo of a bathroom. Image 2 is an edited "after renovation" version of the same photo, same camera position. ' +
     'Compare the openings in the walls and ceiling: windows, roof windows (skylights), doors, glass openings to the outside. ' +
     'Does image 2 contain any such opening that does not exist at roughly the same place in image 1? A glass shower screen or a mirror is NOT an opening. ' +
     'Answer with JSON only, no markdown: {"extra_openings": true or false, "reason": "short English reason, max 20 words"}';
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), CHECK_TIMEOUT_MS);
   try {
-    const r = await fetch(url, {
+    const r = await request(ctx, url, {
       method: 'POST',
-      signal: controller.signal,
-      headers: { 'x-goog-api-key': process.env.GEMINI_API_KEY, 'content-type': 'application/json' },
+      headers: { 'x-goog-api-key': env.GEMINI_API_KEY || '', 'content-type': 'application/json' },
       body: JSON.stringify({
         contents: [
           {
@@ -684,23 +682,22 @@ async function checkOpenings(photo: Photo, gen: { mime: string; data: string }):
         ],
         generationConfig: { temperature: 0, responseMimeType: 'application/json' },
       }),
-    });
-    const json: any = await r.json().catch(() => null);
+    }, Math.min(CHECK_TIMEOUT_MS, Math.max(0, ctx.budget.remaining() - DELIVERY_RESERVE_MS)));
+    const json = r.json;
     if (!r.ok) {
-      console.error('[badplaner] Fensterprüfung fehlgeschlagen', r.status, json?.error?.message || '');
-      return null;
+      console.error('[badplaner] Fensterprüfung fehlgeschlagen', r.status);
+      return { status: 'unavailable' };
     }
     const textOut: string = json?.candidates?.[0]?.content?.parts?.map((p: any) => p.text || '').join('') || '';
-    const m = textOut.match(/\{[\s\S]*\}/);
-    if (!m) return null;
-    const parsed = JSON.parse(m[0]);
-    if (typeof parsed.extra_openings !== 'boolean') return null;
-    return { extra: parsed.extra_openings, reason: String(parsed.reason || '').slice(0, 160) };
-  } catch (err: any) {
-    console.error('[badplaner] Fensterprüfung nicht möglich', err && err.name === 'AbortError' ? 'Timeout' : err);
-    return null;
-  } finally {
-    clearTimeout(timer);
+    if (json?.candidates?.[0]?.finishReason !== 'STOP') return { status: 'unavailable' };
+    const parsed = JSON.parse(textOut);
+    if (!parsed || Array.isArray(parsed) || typeof parsed.extra_openings !== 'boolean' || typeof parsed.reason !== 'string'
+      || !parsed.reason.trim() || parsed.reason.length > 160
+      || Object.keys(parsed).some((key) => key !== 'extra_openings' && key !== 'reason')) return { status: 'unavailable' };
+    return parsed.extra_openings ? { status: 'rejected', reason: parsed.reason.slice(0, 160) } : { status: 'approved' };
+  } catch {
+    console.error('[badplaner] Fensterprüfung nicht möglich');
+    return { status: 'unavailable' };
   }
 }
 
@@ -716,19 +713,20 @@ interface LeadMail {
 
 /**
  * Schickt den Lead per Resend (mit Anhängen). Ohne RESEND_API_KEY oder bei
- * einem Fehler geht er ohne Bilder an Formspree, damit er nie verloren geht.
+ * einer eindeutigen Ablehnung geht er ohne Bilder an Formspree. Es gibt noch
+ * keine persistente Lead-Ablage; ein unklarer Versand wird nicht automatisch wiederholt.
  */
-async function sendLeadMail(mail: LeadMail): Promise<void> {
-  const key = process.env.RESEND_API_KEY;
+async function sendLeadMail(mail: LeadMail, ctx: RequestContext): Promise<MailResult> {
+  const key = env.RESEND_API_KEY;
   if (key) {
     try {
-      const r = await fetch('https://api.resend.com/emails', {
+      const r = await request(ctx, 'https://api.resend.com/emails', {
         method: 'POST',
         headers: { Authorization: `Bearer ${key}`, 'content-type': 'application/json' },
         body: JSON.stringify({
           from: mailFrom(),
-          to: [process.env.BADPLANER_TO || business.email],
-          cc: [process.env.BADPLANER_CC || business.emailSecondary],
+          to: [env.BADPLANER_TO || business.email],
+          cc: [env.BADPLANER_CC || business.emailSecondary],
           reply_to: mail.replyTo,
           subject: mail.subject,
           html: leadHtml(mail),
@@ -736,10 +734,13 @@ async function sendLeadMail(mail: LeadMail): Promise<void> {
           attachments: mail.attachments,
         }),
       });
-      if (r.ok) return;
-      console.error('[badplaner] Resend-Fehler', r.status, await r.text().catch(() => ''));
-    } catch (err: any) {
-      console.error('[badplaner] Resend nicht erreichbar', err && err.message);
+      if (r.ok && typeof r.json?.id === 'string' && r.json.id) return { status: 'accepted', provider: 'resend', attachments: true };
+      if (r.ok) return { status: 'unknown', provider: 'resend' };
+      console.error('[badplaner] Resend-Fehler', r.status);
+    } catch {
+      // A timeout/network error can occur after acceptance; do not duplicate it blindly.
+      console.error('[badplaner] Resend-Zustellung unklar');
+      return { status: 'unknown', provider: 'resend' };
     }
   } else {
     console.warn('[badplaner] RESEND_API_KEY fehlt, Lead geht an Formspree (ohne Bilder)');
@@ -763,14 +764,18 @@ async function sendLeadMail(mail: LeadMail): Promise<void> {
       fields._replyto = mail.replyTo;
       fields.email = mail.replyTo;
     }
-    const r = await fetch(business.formspreeEndpoint, {
+    const r = await request(ctx, business.formspreeEndpoint, {
       method: 'POST',
       headers: { 'content-type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify(fields),
     });
-    if (!r.ok) console.error('[badplaner] Formspree-Fehler', r.status, await r.text().catch(() => ''));
-  } catch (err: any) {
-    console.error('[badplaner] Formspree nicht erreichbar', err && err.message);
+    if (r.ok && r.json?.ok === true) return { status: 'accepted', provider: 'formspree', attachments: false };
+    if (r.ok) return { status: 'unknown', provider: 'formspree' };
+    console.error('[badplaner] Formspree-Fehler', r.status);
+    return { status: 'failed', provider: 'formspree' };
+  } catch {
+    console.error('[badplaner] Formspree-Zustellung unklar');
+    return { status: 'unknown', provider: 'formspree' };
   }
 }
 
@@ -894,7 +899,7 @@ function customerMail(v: CustomerMailInput): { subject: string; html: string; te
 
 /**
  * Schickt die Kundenmail über Resend. Ohne RESEND_API_KEY wird sie übersprungen,
- * und ein Fehler beim Versand darf die Antwort an den Kunden nie verhindern.
+ * und der Status wird separat vom freigegebenen Bild an den Client zurückgegeben.
  */
 async function sendCustomerMail(v: {
   to: string;
@@ -903,22 +908,22 @@ async function sendCustomerMail(v: {
   individuell: boolean;
   auswahl: [string, string][];
   image: { mime: string; data: string; filename: string };
-}): Promise<void> {
-  const key = process.env.RESEND_API_KEY;
+}, ctx: RequestContext): Promise<MailResult> {
+  const key = env.RESEND_API_KEY;
   if (!key) {
     console.warn('[badplaner] RESEND_API_KEY fehlt, Kundenmail wird übersprungen');
-    return;
+    return { status: 'skipped' };
   }
   const imageCid = 'ideenbild';
   const mail = customerMail({ name: v.name, pkg: v.pkg, individuell: v.individuell, auswahl: v.auswahl, imageCid });
   try {
-    const r = await fetch('https://api.resend.com/emails', {
+    const r = await request(ctx, 'https://api.resend.com/emails', {
       method: 'POST',
       headers: { Authorization: `Bearer ${key}`, 'content-type': 'application/json' },
       body: JSON.stringify({
         from: mailFrom(),
         to: [v.to],
-        reply_to: process.env.BADPLANER_TO || business.email,
+        reply_to: env.BADPLANER_TO || business.email,
         subject: mail.subject,
         html: mail.html,
         text: mail.text,
@@ -928,14 +933,16 @@ async function sendCustomerMail(v: {
           { filename: v.image.filename, content: v.image.data, content_type: v.image.mime },
         ],
       }),
-    });
+    }, 6000);
     if (!r.ok) {
-      console.error('[badplaner] Kundenmail nicht versendet', r.status, await r.text().catch(() => ''));
-      return;
+      console.error('[badplaner] Kundenmail nicht versendet', r.status);
+      return { status: 'failed', provider: 'resend' };
     }
-    console.log('[badplaner] Kundenmail versendet');
-  } catch (err: any) {
-    console.error('[badplaner] Kundenmail nicht möglich', err && err.message);
+    if (typeof r.json?.id !== 'string' || !r.json.id) return { status: 'unknown', provider: 'resend' };
+    return { status: 'accepted', provider: 'resend' };
+  } catch {
+    console.error('[badplaner] Kundenmail-Zustellung unklar');
+    return { status: 'unknown', provider: 'resend' };
   }
 }
 
@@ -943,18 +950,18 @@ async function sendCustomerMail(v: {
 
 /**
  * Legt den Kontakt in der Resend-Audience an. Ohne RESEND_AUDIENCE_ID passiert
- * nichts; jeder Fehler wird nur protokolliert und blockiert die Antwort nie.
+ * nichts; Fehler werden als eigener Status gemeldet und blockieren das Bild nicht.
  */
-async function subscribeNewsletter(email: string, name: string): Promise<void> {
-  const key = process.env.RESEND_API_KEY;
-  const audience = process.env.RESEND_AUDIENCE_ID;
+async function subscribeNewsletter(email: string, name: string, ctx: RequestContext): Promise<MailResult> {
+  const key = env.RESEND_API_KEY;
+  const audience = env.RESEND_AUDIENCE_ID;
   if (!key || !audience) {
     console.log('[badplaner] Newsletter angehakt, aber RESEND_AUDIENCE_ID fehlt: nur im Lead-Mail vermerkt');
-    return;
+    return { status: 'skipped' };
   }
   try {
     const parts = name.split(/\s+/).filter(Boolean);
-    const r = await fetch(`https://api.resend.com/audiences/${encodeURIComponent(audience)}/contacts`, {
+    const r = await request(ctx, `https://api.resend.com/audiences/${encodeURIComponent(audience)}/contacts`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${key}`, 'content-type': 'application/json' },
       body: JSON.stringify({
@@ -963,21 +970,21 @@ async function subscribeNewsletter(email: string, name: string): Promise<void> {
         last_name: parts.slice(1).join(' '),
         unsubscribed: false,
       }),
-    });
+    }, 2000);
     if (!r.ok) {
       console.log('[badplaner] Newsletter-Eintrag nicht möglich', r.status);
-      return;
+      return { status: 'failed', provider: 'resend' };
     }
-    console.log('[badplaner] Newsletter-Eintrag angelegt');
-  } catch (err: any) {
-    console.log('[badplaner] Newsletter-Eintrag fehlgeschlagen', err && err.message);
+    return { status: typeof r.json?.id === 'string' && r.json.id ? 'accepted' : 'unknown', provider: 'resend' };
+  } catch {
+    return { status: 'unknown', provider: 'resend' };
   }
 }
 
 /* ---------- Hilfen ---------- */
 
 function mailFrom(): string {
-  return process.env.BADPLANER_FROM || 'Badplaner <badplaner@newlivingdesign.ch>';
+  return env.BADPLANER_FROM || 'Badplaner <badplaner@newlivingdesign.ch>';
 }
 
 function bad(res: any, error: string) {
@@ -998,14 +1005,14 @@ function esc(s: string): string {
 }
 
 function newId(): string {
-  return `bp-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+  return dependencies.newId();
 }
 
 function swissTime(): string {
   try {
-    return new Intl.DateTimeFormat('de-CH', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Europe/Zurich' }).format(new Date());
+    return new Intl.DateTimeFormat('de-CH', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Europe/Zurich' }).format(new Date(dependencies.clock.now()));
   } catch {
-    return new Date().toISOString();
+    return new Date(dependencies.clock.now()).toISOString();
   }
 }
 
@@ -1019,7 +1026,9 @@ function readCounterCookie(header: unknown, today: string): number {
   if (typeof header !== 'string') return 0;
   const m = header.match(new RegExp(`(?:^|;\\s*)${COOKIE_NAME}=([^;]*)`));
   if (!m) return 0;
-  const [count, date] = decodeURIComponent(m[1]).split(':');
+  let value: string;
+  try { value = decodeURIComponent(m[1]); } catch { return 0; }
+  const [count, date] = value.split(':');
   if (date !== today) return 0;
   const n = parseInt(count, 10);
   return Number.isFinite(n) && n > 0 ? n : 0;
@@ -1028,3 +1037,8 @@ function readCounterCookie(header: unknown, today: string): number {
 function counterCookie(count: number, today: string): string {
   return `${COOKIE_NAME}=${count}:${today}; Path=/api/badplaner; Max-Age=86400; HttpOnly; Secure; SameSite=Lax`;
 }
+
+return handler;
+}
+
+export default createHandler();
