@@ -791,7 +791,7 @@ const Badplaner: React.FC = () => {
                         </legend>
                         {tileGroups.map((g) => (
                           <SwatchGroup
-                            key={g.key}
+                            key={`${sel.look}:${g.key}`}
                             name="platte"
                             title={g.key}
                             meta={g.items[0].supplier}
