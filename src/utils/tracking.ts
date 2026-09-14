@@ -132,7 +132,7 @@ function enableMetaPixel(): void {
   if (!window.fbq) {
     const fn = function (...args: unknown[]) {
       if (n.callMethod) {
-        n.callMethod.apply(n, args);
+        n.callMethod(...args);
       } else {
         n.queue.push(args);
       }
@@ -219,6 +219,7 @@ export function installLeadClickTracking(): void {
  * ("Erweiterte Messung" im Datenstream), darum hier nur der Meta Pixel.
  */
 export function trackPageView(_path: string): void {
+  void _path;
   if (window.fbq && pixelLoaded) {
     window.fbq('track', 'PageView');
   }
