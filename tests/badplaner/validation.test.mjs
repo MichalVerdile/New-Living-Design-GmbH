@@ -279,3 +279,12 @@ test('Badezimmer supports shower only, bathtub only, both and neither', () => {
     assert.equal(selected.requiresQuote, quote);
   }
 });
+
+test('Gefälledusche is available in every bathroom package', () => {
+  for (const pkg of packageIds) {
+    const option = optionsForPackage(pkg).showers.find((entry) => entry.id === 'walk-in');
+    assert.ok(option, `${pkg} must offer the floor-level shower`);
+    assert.match(option.label, /Gefälledusche/);
+    assert.equal(normalizeSelection(uiPayload(pkg, { dusche: 'walk-in', badewanne: 'keine' })).shower.id, 'walk-in');
+  }
+});

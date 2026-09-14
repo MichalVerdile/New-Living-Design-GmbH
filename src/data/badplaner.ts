@@ -769,13 +769,13 @@ export const tapSeries: Record<PackageId, string> = {
 
 /* ---------- Wandhöhe, Dusche / Badewanne, Waschtisch, Spiegel ---------- */
 
-/** Standard bei NLD: nur in Dusche und Wanne raumhoch, sonst bis ca. 120 cm. */
+/** Standard bei NLD: der ganze Dusch- und Wannenbereich raumhoch, sonst bis ca. 120 cm. */
 export const wallOptions: ChoiceOption[] = [
   {
     id: 'halbhoch',
-    label: 'In Dusche und Badewanne raumhoch, übrige Wände bis ca. 120 cm',
+    label: 'Im ganzen Dusch- und Wannenbereich raumhoch, übrige Wände bis ca. 120 cm',
     prompt:
-      'the walls tiled with the same tiles only up to about 120 cm height with a clean straight top edge, the wall above painted plain matte white; only in the shower or bathtub area the tiles go all the way up to the ceiling',
+      'the walls tiled with the same tiles only up to about 120 cm height with a clean straight top edge, the wall above painted plain matte white; inside the shower, every wall surface around the entire perimeter of the shower tray or sloped tiled shower floor is continuously tiled with the same wall tiles all the way up to the ceiling, including every side wall and return; every wall surface in the bathtub wet area is also tiled all the way up to the ceiling',
   },
   {
     id: 'raumhoch',
@@ -786,8 +786,8 @@ export const wallOptions: ChoiceOption[] = [
 
 export const showerOptions: ChoiceOption[] = [
   { id: 'keine', label: 'Keine Dusche', prompt: 'no shower, shower tray, shower enclosure or shower controls' },
-  { id: 'duschwanne', label: 'Dusche mit Duschwanne', prompt: 'shower with a low shower tray and a fixed glass panel' },
-  { id: 'walk-in', label: 'Walk-in, bodeneben und gefliest', prompt: 'floor-level walk-in shower tiled with the same tiles, linear drain and a fixed glass panel', packages: ['essenza', 'atelier'] },
+  { id: 'duschwanne', label: 'Dusche mit Duschwanne', prompt: 'shower with a low shower tray and a fixed glass panel; every wall around the entire shower-tray perimeter is tiled continuously to the ceiling' },
+  { id: 'walk-in', label: 'Gefälledusche / Walk-in, bodeneben gefliest', prompt: 'floor-level walk-in shower with a correctly sloped tiled shower floor, linear drain and a fixed glass panel; every wall around the entire shower-floor perimeter is tiled continuously to the ceiling' },
 ];
 
 export const bathtubOptions: ChoiceOption[] = [

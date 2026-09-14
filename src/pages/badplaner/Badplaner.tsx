@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import styles from './Badplaner.module.css';
 import { SEOHead } from '../../components';
@@ -289,6 +289,14 @@ const Badplaner: React.FC = () => {
   const stepRefs = useRef<Record<number, HTMLElement | null>>({});
   const renderSubmittingRef = useRef(false);
   const planSubmittingRef = useRef(false);
+  const scrollRestoreRef = useRef<number | null>(null);
+
+  useLayoutEffect(() => {
+    if (scrollRestoreRef.current === null) return;
+    const scrollY = scrollRestoreRef.current;
+    scrollRestoreRef.current = null;
+    window.scrollTo({ top: scrollY, left: window.scrollX, behavior: 'auto' });
+  });
 
   useEffect(() => {
     setIsVisible(true);
@@ -320,21 +328,24 @@ const Badplaner: React.FC = () => {
     [options, room],
   );
 
-  const goTo = (next: Step) => {
+  const goTo = (next: Step, scroll = true) => {
     if (renderSubmittingRef.current) return;
     if (next === 4 && !canOpenStep4) return;
     setStep(next);
-    // kurz warten, bis der Schritt aufgeklappt ist, dann hinscrollen
-    setTimeout(() => stepRefs.current[next]?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+    if (scroll) {
+      // Nur ausdrückliche Navigation scrollt. Eine Auswahl darf die Seite nicht versetzen.
+      setTimeout(() => stepRefs.current[next]?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+    }
   };
 
   const choosePackage = (id: PackageId) => {
     if (!room) return;
+    scrollRestoreRef.current = window.scrollY;
     setIndividuell(false);
     setPkg(id);
     setSel(defaultSelection(id, room));
     setOpenPanel(null);
-    goTo(2);
+    goTo(2, false);
   };
 
   /** Vierte Karte: erst danach das nächstgelegene Paket als Grundlage wählen. */
@@ -958,6 +969,7 @@ const Badplaner: React.FC = () => {
 
                     {room === 'badezimmer' && <PositionPanel id="nassbereich" title="Dusche / Badewanne" summary={`${chosen.shower?.label ?? ''} · ${chosen.bathtub?.label ?? ''}`} open={openPanel === 'nassbereich'} onToggle={() => setOpenPanel(openPanel === 'nassbereich' ? null : 'nassbereich')}>
                       <fieldset className={styles.group}><legend>Dusche</legend><ChoicePicker name="dusche" value={sel.shower} onChange={(id) => choose('shower', id)} items={options.showers.map((o) => ({ id: o.id, label: o.label }))} /></fieldset>
+                      {sel.shower !== 'keine' && <p className={styles.wetAreaNote}>Bei Duschwanne und Gefälledusche werden die Wandflächen im gesamten Duschbereich bis zur Decke mit Platten belegt.</p>}
                       <fieldset className={styles.group}><legend>Badewanne</legend><ChoicePicker name="badewanne" value={sel.bathtub} onChange={(id) => choose('bathtub', id)} items={options.bathtubs.map((o) => ({ id: o.id, label: o.label }))} /></fieldset>
                       {quoteOnly && <p className={styles.quoteNote}>Diese Kombination wird als individuelle Offerte geprüft. Es wird kein zusätzlicher Raum erfunden; Umbauten bleiben in der bestehenden Nasszone.</p>}
                     </PositionPanel>}

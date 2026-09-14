@@ -119,6 +119,16 @@ test('Gäste-WC prompt and checker require no shower or bathtub', async () => {
   assert.match(checker.body.contents[0].parts[0].text, /guest WC.*shower_present=false.*bathtub_present=false/);
 });
 
+test('shower prompt tiles the full tray or sloped-floor perimeter to the ceiling', async () => {
+  const approved = JSON.stringify({ extra_openings: false, toilet_moved: false, layout_changed: false, shower_present: true, bathtub_present: false, reason: 'fixture comparison' });
+  const h = harness({ checks: [() => checked(false, approved)] });
+  const res = await h.invoke(payload({ dusche: 'walk-in', badewanne: 'keine', wall: 'halbhoch' }));
+  assert.equal(res.statusCode, 200);
+  const generation = h.calls.find((call) => call.body?.generationConfig?.responseModalities);
+  assert.match(generation.body.contents[0].parts[0].text, /entire perimeter of the shower tray or sloped tiled shower floor/);
+  assert.match(generation.body.contents[0].parts[0].text, /every wall around the entire shower-floor perimeter is tiled continuously to the ceiling/);
+});
+
 test('fixture checker rejects a shower in a Gäste-WC', async () => {
   const wrong = JSON.stringify({ extra_openings: false, toilet_moved: false, layout_changed: false, shower_present: true, bathtub_present: false, reason: 'unexpected shower' });
   const h = harness({ checks: [() => checked(false, wrong), () => checked(false, wrong)] });
