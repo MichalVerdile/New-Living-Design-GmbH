@@ -271,6 +271,7 @@
 }
 
 .category-section {
+  scroll-margin-top: 6rem;
   padding: 8rem 0;
   position: relative;
   width: 100%;

@@ -204,6 +204,7 @@
 
 .footer-contact-content {
   flex: 1;
+  min-width: 0;
 }
 
 .footer-contact-link {
@@ -391,6 +392,54 @@
   
   .footer-hours-time {
     text-align: left;
+  }
+}
+
+@media (max-width: 240px) {
+  .footer-container {
+    padding-inline: 0.75rem;
+  }
+
+  .footer-content {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .footer-section,
+  .footer-logo,
+  .footer-tagline,
+  .footer-quicklinks,
+  .footer-social-links {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .footer-logo {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .footer-logo-image {
+    width: auto;
+    max-width: 100%;
+    height: auto;
+    max-height: 3rem;
+  }
+
+  .footer-brand-name,
+  .footer-tagline,
+  .footer-quicklink,
+  .footer-contact-link {
+    overflow-wrap: anywhere;
+  }
+
+  .footer-quicklinks,
+  .footer-social-links {
+    justify-content: center;
+    gap: 0.5rem;
+  }
+
+  .footer-social-links {
+    flex-wrap: wrap;
   }
 }
 

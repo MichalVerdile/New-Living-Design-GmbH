@@ -98,7 +98,7 @@ const Products: React.FC = () => {
       <section className={styles['product-categories']}>
         <div className={styles['categories-container']}>
           {/* Badmöbel */}
-          <div className={`${styles['category-section']} ${styles.light}`}>
+          <div id="bad" className={`${styles['category-section']} ${styles.light}`}>
             <div className={styles['category-content']}>
               <div className={styles['category-text']}>
                 <h3 className={styles['category-title']}>Badmöbel</h3>
@@ -135,7 +135,7 @@ const Products: React.FC = () => {
           </div>
 
           {/* Wellness */}
-          <div className={`${styles['category-section']} ${styles.light}`}>
+          <div id="wellness" className={`${styles['category-section']} ${styles.light}`}>
             <div className={styles['category-content']}>
               <div className={styles['category-text']}>
                 <h3 className={styles['category-title']}>Wellness</h3>
@@ -153,7 +153,7 @@ const Products: React.FC = () => {
           </div>
 
           {/* Bodenbeläge */}
-          <div className={`${styles['category-section']} ${styles.dark} ${styles.reverse}`}>
+          <div id="platten" className={`${styles['category-section']} ${styles.dark} ${styles.reverse}`}>
             <div className={styles['category-content']}>
               <div className={styles['category-text']}>
                 <h3 className={styles['category-title']}>Bodenbeläge</h3>

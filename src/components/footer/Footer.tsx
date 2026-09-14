@@ -23,13 +23,17 @@ const Footer: React.FC<FooterProps> = ({ className = '' }) => {
                 <h3 className="footer-brand-name">New Living Design</h3>
               </div>
               <p className="footer-tagline">
-                Badumbau, Küchen und Platten aus einer Hand. Ausstellung in Zofingen,
-                Umbau durch die eigene Equipe im Umkreis von 40 km.
+                Bad, Platten und Wellness. Produkte entdecken und persönlich beraten lassen –
+                in unserer Ausstellung in Zofingen.
               </p>
               <nav className="footer-quicklinks" aria-label="Wichtige Seiten">
+                <Link to="/badplaner" className="footer-quicklink">Badplaner</Link>
                 <Link to="/badumbau-zofingen" className="footer-quicklink">Badumbau Zofingen</Link>
+                <Link to="/dienstleistungen" className="footer-quicklink">Dienstleistungen</Link>
+                <Link to="/partner" className="footer-quicklink">Partner</Link>
                 <Link to="/referenzen" className="footer-quicklink">Referenzen</Link>
                 <Link to="/blog" className="footer-quicklink">Blog</Link>
+                <Link to="/booking" className="footer-quicklink">Beratung & Ausstellung</Link>
                 <Link to="/kontakt" className="footer-quicklink">Kontakt</Link>
               </nav>
               <div className="footer-social-links">
