@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import styles from './Badplaner.module.css';
 import { SEOHead } from '../../components';
@@ -289,6 +289,14 @@ const Badplaner: React.FC = () => {
   const stepRefs = useRef<Record<number, HTMLElement | null>>({});
   const renderSubmittingRef = useRef(false);
   const planSubmittingRef = useRef(false);
+  const scrollRestoreRef = useRef<number | null>(null);
+
+  useLayoutEffect(() => {
+    if (scrollRestoreRef.current === null) return;
+    const scrollY = scrollRestoreRef.current;
+    scrollRestoreRef.current = null;
+    window.scrollTo({ top: scrollY, left: window.scrollX, behavior: 'auto' });
+  });
 
   useEffect(() => {
     setIsVisible(true);
@@ -332,6 +340,7 @@ const Badplaner: React.FC = () => {
 
   const choosePackage = (id: PackageId) => {
     if (!room) return;
+    scrollRestoreRef.current = window.scrollY;
     setIndividuell(false);
     setPkg(id);
     setSel(defaultSelection(id, room));
