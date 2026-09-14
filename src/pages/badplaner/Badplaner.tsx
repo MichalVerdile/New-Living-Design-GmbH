@@ -23,9 +23,9 @@ import { MAX_PLAN_BASE64, MAX_SOURCE_IMAGE_BYTES } from './imageValidation';
  * api/badplaner.ts. Beim Prerendering (ohne Browser) wird nur der Startzustand
  * gerendert; alles mit Datei, Kamera oder Fenster passiert in Handlern.
  *
- * Schritt 2 zeigt alle Auswahlen offen untereinander: zuerst "Basis"
- * (Platten bzw. Look, Unterbau, Dusche/Badewanne, Wandhöhe), danach "Details"
- * (alles Weitere). Alles ist vorbelegt, keine Auswahl ist Pflicht.
+ * Schritt 2 zeigt zuerst die wichtigsten Auswahlen. Umfangreiche Materialfamilien
+ * und die optionalen Details sind einklappbar; alle Werte bleiben vorbelegt und
+ * jede bisherige Option bleibt erreichbar.
  */
 
 const PAGE_URL = `${business.siteUrl}/badplaner`;
@@ -188,6 +188,38 @@ const SwatchPicker: React.FC<{ name: string; items: PickItem[]; value: string; o
     ))}
   </div>
 );
+
+/** Eine Materialfamilie: nur die bereits gewählte Familie ist anfangs geöffnet. */
+const SwatchGroup: React.FC<{
+  name: string;
+  title: string;
+  meta?: string;
+  items: PickItem[];
+  value: string;
+  onChange: (id: string) => void;
+  note?: string;
+}> = ({ name, title, meta, items, value, onChange, note }) => {
+  const selected = items.find((item) => item.id === value);
+  const [open, setOpen] = useState(Boolean(selected));
+
+  return (
+    <details className={styles.swatchGroup} open={open} onToggle={(event) => setOpen(event.currentTarget.open)}>
+      <summary className={styles.swatchGroupSummary}>
+        <span className={styles.swatchGroupHeading}>
+          <span className={styles.swatchGroupTitle}>{title}</span>
+          {meta && <span className={styles.swatchGroupMeta}>{meta}</span>}
+        </span>
+        <span className={styles.swatchGroupStatus}>
+          {selected ? `${selected.label} · ` : ''}{items.length} {items.length === 1 ? 'Option' : 'Optionen'}
+        </span>
+      </summary>
+      <div className={styles.swatchGroupBody}>
+        <SwatchPicker name={name} items={items} value={value} onChange={onChange} />
+        {note && <p className={styles.hint}>{note}</p>}
+      </div>
+    </details>
+  );
+};
 
 /** Kleine runde Auswahl (Keramikfarbe, Oberfläche, Format, Fenster). */
 const ChipPicker: React.FC<{ name: string; items: PickItem[]; value: string; onChange: (id: string) => void }> = ({ name, items, value, onChange }) => (
@@ -758,16 +790,16 @@ const Badplaner: React.FC = () => {
                           Material <span className={styles.groupMeta}>· im Look {chosen.look?.label ?? ''}</span>
                         </legend>
                         {tileGroups.map((g) => (
-                          <div key={g.key} className={styles.subGroup}>
-                            <p className={styles.groupSub}>{g.key} <span className={styles.groupSubMeta}>{g.items[0].supplier}</span></p>
-                            <SwatchPicker
-                              name="platte"
-                              value={sel.tile}
-                              onChange={(id) => choose('tile', id)}
-                              items={g.items.map((t) => ({ id: t.id, label: t.color, image: t.image, meta: 'Grossformat' }))}
-                            />
-                            {g.items.find((t) => t.note) && <p className={styles.hint}>{g.items.find((t) => t.note)?.note}</p>}
-                          </div>
+                          <SwatchGroup
+                            key={g.key}
+                            name="platte"
+                            title={g.key}
+                            meta={g.items[0].supplier}
+                            value={sel.tile}
+                            onChange={(id) => choose('tile', id)}
+                            items={g.items.map((t) => ({ id: t.id, label: t.color, image: t.image, meta: 'Grossformat' }))}
+                            note={g.items.find((t) => t.note)?.note}
+                          />
                         ))}
                         <p className={styles.hint}>{TILE_HINT}</p>
                       </fieldset>
@@ -788,16 +820,16 @@ const Badplaner: React.FC = () => {
                       <fieldset className={styles.group}>
                         <legend>Platten <span className={styles.groupMeta}>· Serie und Farbe</span></legend>
                         {tileGroups.map((g) => (
-                          <div key={g.key} className={styles.subGroup}>
-                            <p className={styles.groupSub}>{g.key} <span className={styles.groupSubMeta}>{g.items[0].supplier}</span></p>
-                            <SwatchPicker
-                              name="platte"
-                              value={sel.tile}
-                              onChange={(id) => choose('tile', id)}
-                              items={g.items.map((t) => ({ id: t.id, label: t.color, image: t.image }))}
-                            />
-                            {g.items.find((t) => t.note) && <p className={styles.hint}>{g.items.find((t) => t.note)?.note}</p>}
-                          </div>
+                          <SwatchGroup
+                            key={g.key}
+                            name="platte"
+                            title={g.key}
+                            meta={g.items[0].supplier}
+                            value={sel.tile}
+                            onChange={(id) => choose('tile', id)}
+                            items={g.items.map((t) => ({ id: t.id, label: t.color, image: t.image }))}
+                            note={g.items.find((t) => t.note)?.note}
+                          />
                         ))}
                         <p className={styles.hint}>{TILE_HINT}</p>
                       </fieldset>
@@ -808,15 +840,14 @@ const Badplaner: React.FC = () => {
                     <fieldset className={styles.group}>
                       <legend>Unterbau <span className={styles.groupMeta}>· {options.bases[0]?.supplier}</span></legend>
                       {baseGroups.map((g) => (
-                        <div key={g.key} className={styles.subGroup}>
-                          <p className={styles.groupSub}>{g.key}</p>
-                          <SwatchPicker
-                            name="unterbau"
-                            value={sel.base}
-                            onChange={(id) => choose('base', id)}
-                            items={g.items.map((b) => ({ id: b.id, label: b.label, image: b.image, hex: b.hex }))}
-                          />
-                        </div>
+                        <SwatchGroup
+                          key={g.key}
+                          name="unterbau"
+                          title={g.key}
+                          value={sel.base}
+                          onChange={(id) => choose('base', id)}
+                          items={g.items.map((b) => ({ id: b.id, label: b.label, image: b.image, hex: b.hex }))}
+                        />
                       ))}
                     </fieldset>
                   )}
@@ -848,9 +879,15 @@ const Badplaner: React.FC = () => {
                   )}
 
                   {/* Zweite Ebene: alles Weitere. Alles ist vorbelegt, nichts ist Pflicht. */}
-                  <h3 className={`${styles.blockTitle} ${styles.blockTitleDetails}`}>Details</h3>
-                  <p className={styles.blockHint}>Alles ist sinnvoll vorbelegt. Wer mag, verfeinert hier.</p>
-
+                  <details className={styles.detailsDisclosure}>
+                    <summary className={styles.detailsSummary}>
+                      <span>
+                        <span className={styles.detailsTitle}>Details verfeinern</span>
+                        <span className={styles.detailsHint}>Optional · alles ist sinnvoll vorbelegt</span>
+                      </span>
+                      <span className={styles.detailsAction} aria-hidden="true" />
+                    </summary>
+                    <div className={styles.detailsBody}>
                   {isAtelier && (
                     <>
                       <fieldset className={styles.group}>
@@ -881,16 +918,15 @@ const Badplaner: React.FC = () => {
                             <fieldset className={styles.group}>
                               <legend>Akzentmaterial</legend>
                               {accentGroups.map((g) => (
-                                <div key={g.key} className={styles.subGroup}>
-                                  <p className={styles.groupSub}>{g.key}</p>
-                                  <SwatchPicker
-                                    name="akzent"
-                                    value={sel.accent}
-                                    onChange={(id) => choose('accent', id)}
-                                    items={g.items.map((a) => ({ id: a.id, label: a.label, image: a.image }))}
-                                  />
-                                  {g.items.find((a) => a.note) && <p className={styles.hint}>{g.items.find((a) => a.note)?.note}</p>}
-                                </div>
+                                <SwatchGroup
+                                  key={g.key}
+                                  name="akzent"
+                                  title={g.key}
+                                  value={sel.accent}
+                                  onChange={(id) => choose('accent', id)}
+                                  items={g.items.map((a) => ({ id: a.id, label: a.label, image: a.image }))}
+                                  note={g.items.find((a) => a.note)?.note}
+                                />
                               ))}
                             </fieldset>
                           )}
@@ -903,15 +939,14 @@ const Badplaner: React.FC = () => {
                     <fieldset className={styles.group}>
                       <legend>Waschtischplatte <span className={styles.groupMeta}>· {options.tops[0]?.supplier}</span></legend>
                       {topGroups.map((g) => (
-                        <div key={g.key} className={styles.subGroup}>
-                          <p className={styles.groupSub}>{g.key}</p>
-                          <SwatchPicker
-                            name="top"
-                            value={sel.top}
-                            onChange={(id) => choose('top', id)}
-                            items={g.items.map((t) => ({ id: t.id, label: t.color, image: t.image }))}
-                          />
-                        </div>
+                        <SwatchGroup
+                          key={g.key}
+                          name="top"
+                          title={g.key}
+                          value={sel.top}
+                          onChange={(id) => choose('top', id)}
+                          items={g.items.map((t) => ({ id: t.id, label: t.color, image: t.image }))}
+                        />
                       ))}
                     </fieldset>
                   )}
@@ -949,15 +984,15 @@ const Badplaner: React.FC = () => {
                     {sel.floorDifferent && (
                       <div className={styles.subGroup}>
                         {tileGroups.map((g) => (
-                          <div key={g.key} className={styles.subGroup}>
-                            <p className={styles.groupSub}>{g.key} <span className={styles.groupSubMeta}>{g.items[0].supplier}</span></p>
-                            <SwatchPicker
-                              name="boden"
-                              value={sel.floor}
-                              onChange={(id) => choose('floor', id)}
-                              items={g.items.map((t) => ({ id: t.id, label: t.color, image: t.image }))}
-                            />
-                          </div>
+                          <SwatchGroup
+                            key={g.key}
+                            name="boden"
+                            title={g.key}
+                            meta={g.items[0].supplier}
+                            value={sel.floor}
+                            onChange={(id) => choose('floor', id)}
+                            items={g.items.map((t) => ({ id: t.id, label: t.color, image: t.image }))}
+                          />
                         ))}
                       </div>
                     )}
@@ -1025,6 +1060,8 @@ const Badplaner: React.FC = () => {
                       />
                     </fieldset>
                   )}
+                    </div>
+                  </details>
 
                   <div className={styles.stepActions}>
                     <button type="button" className={styles.ctaDark} onClick={() => goTo(3)}>Weiter zum Foto</button>

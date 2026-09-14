@@ -36,9 +36,9 @@ const Products: React.FC = () => {
   return (
     <main className={styles['products-page']}>
       <SEOHead
-        title="Produkte – New Living Design GmbH | Badezimmer, Küchen, Bodenbeläge"
-        description="Entdecken Sie hochwertige Produkte von New Living Design: Badezimmermöbel, Küchen, Armaturen, Sanitärapparate, Bodenbeläge, Wandverkleidungen, Heizkörper, Wellness und Accessoires."
-        keywords="Badezimmermöbel, Küchen, Armaturen, Sanitärapparate, Bodenbeläge, Wandverkleidungen, Heizkörper, Wellness, Accessoires, Interior Design, Schweiz"
+        title="Bad, Platten & Wellness kaufen | New Living Design Zofingen"
+        description="Badmöbel, Armaturen, Keramikplatten und Wellness-Lösungen auswählen: Entdecken Sie Produkte und Muster in unserer Ausstellung in Zofingen."
+        keywords="Badmöbel Zofingen, Keramikplatten kaufen, Platten Ausstellung, Wellnesskabine, Armaturen, Sanitärapparate, Ausstellung Zofingen, Schweiz"
         url="/produkte"
         type="website"
         image="https://newlivingdesign.ch/assets/14264-rchi-mirabilia-villas-01.webp"
@@ -50,20 +50,20 @@ const Products: React.FC = () => {
           <div className={styles['hero-overlay']}></div>
           <img
             src={heroImage}
-            alt="Hochwertige Produktvielfalt von New Living Design - Badezimmer, Küchen, Bodenbeläge und Interior Design Lösungen"
+            alt="Ausstellung für Bad, Platten und Wellness bei New Living Design in Zofingen"
             className={styles['hero-bg-image']}
           />
         </div>
         <div className={styles['hero-container']}>
           <div className={`${styles['hero-content']} ${isVisible ? styles.visible : ''}`}>
             <h1 className={styles['hero-title']}>
-              <span className={styles['title-line']}>Entdecken Sie unsere</span>
-              <span className={styles['title-highlight']}>Produktvielfalt</span>
+              <span className={styles['title-line']}>Bad, Platten</span>
+              <span className={styles['title-highlight']}>&amp; Wellness</span>
             </h1>
             <div className={styles['hero-description']}>
               <p>
-                Von Standardartikeln bis hin zu den neuesten Designstücken –
-                für jeden Bedarf haben wir etwas Passendes.
+                Produkte, Materialien und Farben in echt vergleichen –
+                mit persönlicher Beratung in unserer Ausstellung in Zofingen.
               </p>
             </div>
           </div>
@@ -79,16 +79,16 @@ const Products: React.FC = () => {
         <div className={styles['introduction-container']}>
           <div className={styles['section-header']}>
             <span className={styles['section-label']}>Unser Sortiment</span>
-            <h2 className={styles['section-title']}>Vielfalt trifft auf Qualität</h2>
+            <h2 className={styles['section-title']}>Auswählen, anfassen, entscheiden</h2>
           </div>
           <div className={styles['introduction-content']}>
             <p>
-              Unser Produktsortiment bietet Ihnen eine umfassende Auswahl. Von Standardartikeln bis hin zu den neuesten massgeschneiderten Designerstücken,
-              von kostengünstigen bis zu hochwertigen Optionen – für jeden Bedarf haben wir etwas Passendes.
-              Unsere Vielfalt an Produkten sorgt dafür, dass unser Sortiment sowohl breit als auch tief ist.
+              Im Mittelpunkt stehen Bad, Platten und Wellness. Dazu finden Sie bei uns passende Armaturen,
+              Sanitärapparate, Wandverkleidungen, Küchen, Beleuchtung und Accessoires – von bewährten
+              Standardlösungen bis zu besonderen Designstücken.
             </p>
             <p>
-              Entdecken Sie unsere Angebote auf unserer Webseite oder besuchen Sie uns direkt im Ausstellungsraum.
+              Besuchen Sie unsere Ausstellung, vergleichen Sie Muster und lassen Sie sich eine stimmige Auswahl zusammenstellen.
             </p>
           </div>
         </div>
@@ -104,10 +104,13 @@ const Products: React.FC = () => {
                 <h3 className={styles['category-title']}>Badmöbel</h3>
                 <div className={styles['category-description']}>
                   <p>
-                    Unsere Lieferanten bieten eine äusserst umfangreiche Palette von Badmöbeln und massgefertigten Möbeln aus
-                    Corian® und Korakril™ an. Diese Möbelstücke sind speziell darauf ausgelegt, den unterschiedlichen
-                    Bedürfnissen jedes Kunden gerecht zu werden.
+                    Wählen Sie Badmöbel, Waschtische, Armaturen und Keramik passend zu Ihrem Raum und Stil.
+                    Neben Serienmöbeln zeigen wir auch massgefertigte Lösungen aus Corian® und Korakril™.
                   </p>
+                  <div className={styles['category-highlights']} aria-label="Bad-Sortiment">
+                    <span>Badmöbel</span><span>Armaturen</span><span>Keramik</span>
+                  </div>
+                  <Link to="/kontakt" className={styles['category-link']}>Badberatung anfragen <span aria-hidden="true">↗</span></Link>
                 </div>
               </div>
               <div className={styles['category-image']}>
@@ -138,34 +141,42 @@ const Products: React.FC = () => {
           <div id="wellness" className={`${styles['category-section']} ${styles.light}`}>
             <div className={styles['category-content']}>
               <div className={styles['category-text']}>
-                <h3 className={styles['category-title']}>Wellness</h3>
+                <h3 className={styles['category-title']}>Wellness für Ihr Zuhause</h3>
                 <div className={styles['category-description']}>
                   <p>
-                    Dank unserer herausragenden Partnerschaften mit führenden Lieferanten im Wellness-Bereich präsentieren
-                    wir Ihnen eine umfassende Auswahl an Produkten für Ihre persönliche Entspannung.
+                    Entdecken Sie Wellnesskabinen und Lösungen für Wärme, Dampf und Entspannung. Wir beraten Sie,
+                    welche Ausführung zu Ihren Räumen, Ihren Gewohnheiten und Ihrem Budget passt.
                   </p>
+                  <div className={styles['category-highlights']} aria-label="Wellness-Sortiment">
+                    <span>Wellnesskabinen</span><span>Wärme</span><span>Dampf</span>
+                  </div>
+                  <Link to="/kontakt" className={styles['category-link']}>Wellness-Beratung anfragen <span aria-hidden="true">↗</span></Link>
                 </div>
               </div>
               <div className={styles['category-image']}>
-                <img src={wellnessImage} alt="Wellness" />
+                <img src={wellnessImage} alt="Wellnesskabine für Wärme und Entspannung" />
               </div>
             </div>
           </div>
 
-          {/* Bodenbeläge */}
+          {/* Platten */}
           <div id="platten" className={`${styles['category-section']} ${styles.dark} ${styles.reverse}`}>
             <div className={styles['category-content']}>
               <div className={styles['category-text']}>
-                <h3 className={styles['category-title']}>Bodenbeläge</h3>
+                <h3 className={styles['category-title']}>Platten für Wand und Boden</h3>
                 <div className={styles['category-description']}>
                   <p>
-                    Wir sind bestens ausgestattet, wenn es um Bodenbeläge geht! Unser Sortiment reicht von Keramikböden
-                    bis hin zu Parkettverkleidungen. Wir bieten eine breite Auswahl an Keramikplatten an.
+                    Vergleichen Sie Keramikplatten, Feinsteinzeug, Mosaik und Grossformate direkt am Muster.
+                    Gemeinsam finden wir Farbe, Oberfläche und Format für Bad, Küche oder Wohnraum.
                   </p>
+                  <div className={styles['category-highlights']} aria-label="Platten-Sortiment">
+                    <span>Keramik</span><span>Grossformate</span><span>Mosaik</span>
+                  </div>
+                  <Link to="/kontakt" className={styles['category-link']}>Plattenberatung anfragen <span aria-hidden="true">↗</span></Link>
                 </div>
               </div>
               <div className={styles['category-image']}>
-                <img src={bodenbelaegeImage} alt="Bodenbeläge" />
+                <img src={bodenbelaegeImage} alt="Grossformatige Keramikplatten für Wand und Boden" />
               </div>
             </div>
           </div>
@@ -313,21 +324,14 @@ const Products: React.FC = () => {
           "@type": "ItemList",
           "name": "Produktkategorien von New Living Design",
           "itemListElement": [
-            "Bodenbeläge",
-            "Wandverkleidungen",
-            "Badmöbel",
-            "Armaturen",
-            "Sanitärapparate",
-            "Heizkörper",
-            "Wellness",
-            "Küchen",
-            "Beleuchtungen",
-            "Accessoires"
+            { name: "Badmöbel, Armaturen und Keramik", anchor: "bad" },
+            { name: "Platten für Wand und Boden", anchor: "platten" },
+            { name: "Wellness für Ihr Zuhause", anchor: "wellness" }
           ].map((cat, i) => ({
             "@type": "ListItem",
             "position": i + 1,
-            "name": cat,
-            "url": `https://newlivingdesign.ch/produkte#${cat.toLowerCase()}`
+            "name": cat.name,
+            "url": `https://newlivingdesign.ch/produkte#${cat.anchor}`
           }))
         }) }} />
     </main>

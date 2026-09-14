@@ -8,6 +8,7 @@ const root = fileURLToPath(new URL('../', import.meta.url));
 const dist = path.join(root, 'dist');
 const page = (route = '') => readFileSync(path.join(dist, route, 'index.html'), 'utf8');
 const home = page();
+const products = page('produkte');
 const main = home.match(/<main\b[^>]*>([\s\S]*?)<\/main>/)?.[1];
 assert.ok(main, 'Home has a prerendered main landmark');
 assert.match(home, /data-prerendered="\/"/);
@@ -15,8 +16,15 @@ assert.match(main, /<h1\b[^>]*>Bad, Platten[\s\S]*?Wellness\.[\s\S]*?<\/h1>/);
 assert.equal([...main.matchAll(/<h1\b/g)].length, 1);
 for (const anchor of ['bad', 'platten', 'wellness']) {
   assert.ok(main.includes(`href="/produkte#${anchor}"`), `Home links to ${anchor}`);
-  assert.ok(page('produkte').includes(`id="${anchor}"`), `Product target ${anchor} exists`);
+  assert.ok(products.includes(`id="${anchor}"`), `Product target ${anchor} exists`);
 }
+assert.match(products, /Bad, Platten[\s\S]*?Wellness/);
+assert.match(products, /Platten für Wand und Boden/);
+assert.match(products, /Wellness für Ihr Zuhause/);
+assert.match(products, /Badberatung anfragen/);
+assert.match(products, /Plattenberatung anfragen/);
+assert.match(products, /Wellness-Beratung anfragen/);
+assert.doesNotMatch(products, /<h3[^>]*>Bodenbeläge<\/h3>/);
 const ordered = ['sortiment-title', 'showroom-title', 'references-title', 'planner-title', 'renovation-title', 'contact-title'];
 for (let index = 1; index < ordered.length; index += 1) {
   assert.ok(main.indexOf(`id="${ordered[index - 1]}"`) < main.indexOf(`id="${ordered[index]}"`), `Home order: ${ordered[index - 1]} before ${ordered[index]}`);
@@ -66,4 +74,13 @@ const source = readFileSync(path.join(root, 'src/pages/home/Home.tsx'), 'utf8');
 for (const [, name] of source.matchAll(/styles\.([A-Za-z][A-Za-z0-9]*)/g)) assert.ok(css.includes(`.${name}`), `CSS module defines ${name}`);
 assert.match(css, /prefers-reduced-motion/);
 assert.match(readFileSync(path.join(root, 'src/components/header/Header.css'), 'utf8'), /min-width: 1100px/);
-console.log('PR2 static checks passed: sales-first order, category/reference anchors, 7 local images, six-link navigation, secondary routes, prices and SEO. Browser/layout QA remains unverified.');
+
+const badplaner = readFileSync(path.join(root, 'src/pages/badplaner/Badplaner.tsx'), 'utf8');
+assert.match(badplaner, /const SwatchGroup/);
+assert.match(badplaner, /Details verfeinern/);
+assert.match(badplaner, /useState\(Boolean\(selected\)\)/);
+const whatsapp = readFileSync(path.join(root, 'src/components/whatsapp/WhatsAppButton.tsx'), 'utf8');
+assert.match(whatsapp, /Ihre Produkte und eine Beratung in Ihrer Ausstellung/);
+assert.doesNotMatch(whatsapp, /interessiere mich für einen Badumbau/);
+
+console.log('PR2 static checks passed: sales-first order, category/reference anchors, 7 local images, six-link navigation, product CTAs, progressive Badplaner choices, generic WhatsApp, prices and SEO. Browser/layout QA remains unverified.');
