@@ -885,8 +885,8 @@ const Badplaner: React.FC = () => {
                         <label className={styles.field} htmlFor="bp-budget"><span>Budgetrahmen (optional)</span><input id="bp-budget" value={beratung.budget} onChange={(e) => setBeratung({ ...beratung, budget: e.target.value })} placeholder="Freiwillige Angabe" /></label>
                       </div>
                       <label className={styles.field} htmlFor="bp-beratung-file">
-                        <span>Foto, Masse oder Plan (optional)</span>
-                        <input id="bp-beratung-file" type="file" accept={beratung.imageWanted ? 'image/jpeg,image/png,image/webp' : 'image/jpeg,image/png,image/webp,application/pdf'} onChange={onBeratungFile} />
+                        <span>{beratung.imageWanted ? 'Foto des Raums (erforderlich für ein Ideenbild)' : 'Foto, Masse oder Plan (optional)'}</span>
+                        <input id="bp-beratung-file" type="file" accept={beratung.imageWanted ? 'image/jpeg,image/png,image/webp' : 'image/jpeg,image/png,image/webp,application/pdf'} required={beratung.imageWanted} onChange={onBeratungFile} />
                       </label>
                       <label className={styles.consent} htmlFor="bp-image-wanted">
                         <input id="bp-image-wanted" type="checkbox" checked={beratung.imageWanted} onChange={(e) => {
