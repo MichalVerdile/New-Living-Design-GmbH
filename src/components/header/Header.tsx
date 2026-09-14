@@ -6,6 +6,7 @@ import logo from '../../assets/S__2_-removebg-preview_edited.avif';
 
 const defaultNavigationItems: NavigationItem[] = [
   { name: 'Bad', href: '/produkte#bad' },
+  { name: 'Küchen', href: '/produkte#kuechen' },
   { name: 'Platten', href: '/produkte#platten' },
   { name: 'Wellness', href: '/produkte#wellness' },
   { name: 'Badplaner', href: '/badplaner' },

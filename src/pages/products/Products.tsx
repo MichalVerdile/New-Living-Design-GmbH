@@ -9,10 +9,10 @@ import armaturenImage from '../../assets/Newform_Deltazero_P2.webp';
 import sanitaerapparateImage from '../../assets/Ambiente-Set-5.webp';
 import heizkoerperImage from '../../assets/image.avif';
 import wellnessImage from '../../assets/Zen_Combi_duo_Linear_6-1030x1030.webp';
-import kuechenImage from '../../assets/ixycxivw.avif';
 import beleuchtungenImage from '../../assets/BEAM_STICK_family_color_edited.avif';
 import accessoiresImage from '../../assets/viv-au2420bmset5_5.avif';
 import { SEOHead } from '../../components';
+import { photoUrl } from '../../data/references';
 
 const Products: React.FC = () => {
   const [isVisible, setIsVisible] = useState(false);
@@ -36,9 +36,9 @@ const Products: React.FC = () => {
   return (
     <main className={styles['products-page']}>
       <SEOHead
-        title="Bad, Platten & Wellness kaufen | New Living Design Zofingen"
-        description="Badmöbel, Armaturen, Keramikplatten und Wellness-Lösungen auswählen: Entdecken Sie Produkte und Muster in unserer Ausstellung in Zofingen."
-        keywords="Badmöbel Zofingen, Keramikplatten kaufen, Platten Ausstellung, Wellnesskabine, Armaturen, Sanitärapparate, Ausstellung Zofingen, Schweiz"
+        title="Bad, Küchen, Platten & Wellness | New Living Design Zofingen"
+        description="Bad, Küchen, Keramikplatten und Wellness-Lösungen auswählen: Produkte, 3D-Planung und persönliche Beratung in Zofingen."
+        keywords="Badmöbel Zofingen, Küchenplanung Zofingen, Küchenmontage, Keramikplatten kaufen, Wellnesskabine, Ausstellung Zofingen, Schweiz"
         url="/produkte"
         type="website"
         image="https://newlivingdesign.ch/assets/14264-rchi-mirabilia-villas-01.webp"
@@ -50,14 +50,14 @@ const Products: React.FC = () => {
           <div className={styles['hero-overlay']}></div>
           <img
             src={heroImage}
-            alt="Ausstellung für Bad, Platten und Wellness bei New Living Design in Zofingen"
+            alt="Ausstellung für Bad, Küchen, Platten und Wellness bei New Living Design in Zofingen"
             className={styles['hero-bg-image']}
           />
         </div>
         <div className={styles['hero-container']}>
           <div className={`${styles['hero-content']} ${isVisible ? styles.visible : ''}`}>
             <h1 className={styles['hero-title']}>
-              <span className={styles['title-line']}>Bad, Platten</span>
+              <span className={styles['title-line']}>Bad, Küchen, Platten</span>
               <span className={styles['title-highlight']}>&amp; Wellness</span>
             </h1>
             <div className={styles['hero-description']}>
@@ -83,8 +83,8 @@ const Products: React.FC = () => {
           </div>
           <div className={styles['introduction-content']}>
             <p>
-              Im Mittelpunkt stehen Bad, Platten und Wellness. Dazu finden Sie bei uns passende Armaturen,
-              Sanitärapparate, Wandverkleidungen, Küchen, Beleuchtung und Accessoires – von bewährten
+              Bad, Küchen, Platten und Wellness stehen bei uns gleichberechtigt im Mittelpunkt. Dazu finden Sie
+              passende Armaturen, Sanitärapparate, Wandverkleidungen, Beleuchtung und Accessoires – von bewährten
               Standardlösungen bis zu besonderen Designstücken.
             </p>
             <p>
@@ -120,19 +120,24 @@ const Products: React.FC = () => {
           </div>
 
           {/* Küchen */}
-          <div className={`${styles['category-section']} ${styles.dark} ${styles.reverse}`}>
+          <div id="kuechen" className={`${styles['category-section']} ${styles.dark} ${styles.reverse}`}>
             <div className={styles['category-content']}>
               <div className={styles['category-text']}>
                 <h3 className={styles['category-title']}>Küchen</h3>
                 <div className={styles['category-description']}>
                   <p>
-                    Dank unserer langjährigen Partnerschaften mit führenden Küchenherstellern präsentieren wir eine
-                    breite Palette hochwertiger Küchenlösungen. Von modernen bis zu zeitlosen Klassikern.
+                    Wir planen Küchen passend zu Raum, Alltag und Stil und machen die Auswahl mit einer
+                    3D-Visualisierung verständlich. Wir koordinieren die Lieferung, die fachgerechte Montage und
+                    auf Wunsch die Renovation der bestehenden Küche.
                   </p>
+                  <div className={styles['category-highlights']} aria-label="Küchenleistungen">
+                    <span>Planung &amp; 3D</span><span>Lieferung</span><span>Montage &amp; Renovation</span>
+                  </div>
+                  <Link to="/kontakt" className={styles['category-link']}>Küchenberatung anfragen <span aria-hidden="true">↗</span></Link>
                 </div>
               </div>
               <div className={styles['category-image']}>
-                <img src={kuechenImage} alt="Küchen" />
+                <img src={photoUrl('kueche-insel-messing-01.webp')} alt="Realisierte Küche mit Insel, Messingdetails und Einbaugeräten" loading="lazy" width="1200" height="800" />
               </div>
             </div>
           </div>
@@ -325,6 +330,7 @@ const Products: React.FC = () => {
           "name": "Produktkategorien von New Living Design",
           "itemListElement": [
             { name: "Badmöbel, Armaturen und Keramik", anchor: "bad" },
+            { name: "Küchenplanung, Lieferung, Montage und Renovation", anchor: "kuechen" },
             { name: "Platten für Wand und Boden", anchor: "platten" },
             { name: "Wellness für Ihr Zuhause", anchor: "wellness" }
           ].map((cat, i) => ({

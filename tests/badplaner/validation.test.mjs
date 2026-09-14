@@ -11,18 +11,18 @@ const { optionsForPackage } = await import(pathToFileURL(resolve(build, 'src/dat
 const packageIds = ['essenza', 'colore', 'atelier'];
 const fieldLists = {
   platte: 'tiles', unterbau: 'bases', top: 'tops', becken: 'basinTypes',
-  keramik: 'sanitary', wall: 'walls', dusche: 'showers', waschtisch: 'basins', spiegel: 'mirrors',
+  keramik: 'sanitary', wall: 'walls', dusche: 'showers', badewanne: 'bathtubs', waschtisch: 'basins', spiegel: 'mirrors',
 };
 const legacyAliases = {
   paket: 'package', platte: 'tile', unterbau: 'furniture', keramik: 'sanitary',
-  dusche: 'shower', waschtisch: 'basin', spiegel: 'mirror',
+  dusche: 'shower', badewanne: 'bathtub', waschtisch: 'basin', spiegel: 'mirror',
 };
 
 /** Mirrors the current UI's JSON payload, including conditional empty strings. */
 function uiPayload(pkg, changes = {}) {
   const opts = optionsForPackage(pkg);
   const payload = {
-    kind: 'render', paket: pkg, individuell: false,
+    kind: 'render', raum: 'badezimmer', paket: pkg, individuell: false,
     format: pkg === 'atelier' ? '' : opts.formats[0],
     look: pkg === 'atelier' ? opts.tiles[0].look : '',
     boden: '', kombination: pkg === 'atelier' ? 'einheitlich' : '',
@@ -60,6 +60,7 @@ for (const pkg of packageIds) {
     assert.equal(selected.sanitary.id, payload.keramik);
     assert.equal(selected.wall.id, payload.wall);
     assert.equal(selected.shower.id, payload.dusche);
+    assert.equal(selected.bathtub.id, payload.badewanne);
     assert.equal(selected.basin.id, payload.waschtisch);
     assert.equal(selected.mirror.id, payload.spiegel);
     assert.equal(selected.floorTile, undefined);
@@ -98,6 +99,7 @@ for (const pkg of packageIds) {
     assert.equal(selected.sanitary.id, changes.keramik);
     assert.equal(selected.wall.id, changes.wall);
     assert.equal(selected.shower.id, changes.dusche);
+    assert.equal(selected.bathtub.id, changes.badewanne);
     assert.equal(selected.basin.id, changes.waschtisch);
     assert.equal(selected.mirror.id, changes.spiegel);
     if (pkg === 'atelier') assert.equal(selected.finish.id, changes.finish);
@@ -240,4 +242,40 @@ test('empty canonical fields can use legacy IDs, but invalid IDs are not truncat
   const payload = uiPayload('essenza');
   assert.equal(normalizeSelection({ ...payload, platte: '', tile: payload.platte }).tile.id, payload.platte);
   rejectsField({ ...payload, platte: `${payload.platte}${' '.repeat(200)}invalid` }, 'platte');
+});
+
+test('Gäste-WC rejects shower, bathtub and double basin remnants', () => {
+  const guest = uiPayload('essenza', { raum: 'gaeste-wc', dusche: '', badewanne: '', waschtisch: 'einzel' });
+  const selected = normalizeSelection(guest);
+  assert.equal(selected.isGuestWc, true);
+  assert.equal(selected.shower, undefined);
+  assert.equal(selected.bathtub, undefined);
+  assert.equal(selected.requiresQuote, true);
+  rejectsField({ ...guest, dusche: 'duschwanne' }, 'dusche');
+  rejectsField({ ...guest, badewanne: 'einbau' }, 'badewanne');
+  rejectsField({ ...guest, waschtisch: 'doppel' }, 'waschtisch');
+});
+
+test('Gäste-WC rejects a shower-niche accent in an Atelier request', () => {
+  const opts = optionsForPackage('atelier');
+  const accent = opts.accents.find((entry) => entry.placement.includes('duschnische'));
+  assert.ok(accent);
+  rejectsField(uiPayload('atelier', {
+    raum: 'gaeste-wc', dusche: '', badewanne: '', waschtisch: 'einzel',
+    kombination: 'kombination', akzentFlaeche: 'duschnische', akzent: accent.id,
+  }), 'akzentFlaeche');
+});
+
+test('Badezimmer supports shower only, bathtub only, both and neither', () => {
+  for (const [dusche, badewanne, quote] of [
+    ['duschwanne', 'keine', false],
+    ['keine', 'einbau', false],
+    ['duschwanne', 'einbau', true],
+    ['keine', 'keine', true],
+  ]) {
+    const selected = normalizeSelection(uiPayload('essenza', { dusche, badewanne }));
+    assert.equal(selected.shower.id, dusche);
+    assert.equal(selected.bathtub.id, badewanne);
+    assert.equal(selected.requiresQuote, quote);
+  }
 });

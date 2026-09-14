@@ -14,10 +14,10 @@ const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwM
 function payload(changes = {}) {
   const options = optionsForPackage('essenza');
   return {
-    kind: 'render', paket: 'essenza', format: options.formats[0],
+    kind: 'render', raum: 'badezimmer', paket: 'essenza', format: options.formats[0],
     platte: options.tiles[0].id, unterbau: options.bases[0].id, top: options.tops[0].id,
     becken: options.basinTypes[0].id, finish: '', keramik: options.sanitary[0].id,
-    wall: options.walls[0].id, dusche: options.showers[0].id, waschtisch: options.basins[0].id,
+    wall: options.walls[0].id, dusche: options.showers[0].id, badewanne: options.bathtubs[0].id, waschtisch: options.basins[0].id,
     spiegel: options.mirrors[0].id, windows: '0', foto: `data:image/png;base64,${PNG}`,
     name: 'Fixture Person', email: 'fixture@example.invalid', telefon: '+41 00 000 00 00', consent: true,
     ...changes,
@@ -47,7 +47,7 @@ function fakeClock() {
 
 const response = (body, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
 const generated = (data = PNG, mimeType = 'image/png') => response({ candidates: [{ content: { parts: [{ inlineData: { mimeType, data } }] }, finishReason: 'STOP' }] });
-const checked = (extra = false, text) => response({ candidates: [{ content: { parts: [{ text: text ?? JSON.stringify({ extra_openings: extra, reason: 'fixture comparison' }) }] }, finishReason: 'STOP' }] });
+const checked = (extra = false, text) => response({ candidates: [{ content: { parts: [{ text: text ?? JSON.stringify({ extra_openings: extra, toilet_moved: false, layout_changed: false, shower_present: false, bathtub_present: false, reason: 'fixture comparison' }) }] }, finishReason: 'STOP' }] });
 
 function harness(settings = {}) {
   const clock = fakeClock();
@@ -109,6 +109,39 @@ test('approved rendering reaches company and customer, reporting provider accept
   assert.equal('lead_saved' in res.body, false);
 });
 
+test('Gäste-WC prompt and checker require no shower or bathtub', async () => {
+  const h = harness();
+  const res = await h.invoke(payload({ raum: 'gaeste-wc', dusche: '', badewanne: '', waschtisch: 'einzel' }));
+  assert.equal(res.statusCode, 200);
+  const generation = h.calls.find((call) => call.body?.generationConfig?.responseModalities);
+  const checker = h.calls.find((call) => call.body?.generationConfig?.responseMimeType);
+  assert.match(generation.body.contents[0].parts[0].text, /guest WC: the result must contain NO shower/);
+  assert.match(checker.body.contents[0].parts[0].text, /guest WC.*shower_present=false.*bathtub_present=false/);
+});
+
+test('fixture checker rejects a shower in a Gäste-WC', async () => {
+  const wrong = JSON.stringify({ extra_openings: false, toilet_moved: false, layout_changed: false, shower_present: true, bathtub_present: false, reason: 'unexpected shower' });
+  const h = harness({ checks: [() => checked(false, wrong), () => checked(false, wrong)] });
+  const res = await h.invoke(payload({ raum: 'gaeste-wc', dusche: '', badewanne: '', waschtisch: 'einzel' }));
+  assert.equal(res.statusCode, 502);
+  assert.equal(res.body.code, 'RENDER_REJECTED');
+  assert.equal(h.counts().mail, 0);
+});
+
+test('individual consultation sends one lead and never calls Gemini', async () => {
+  const h = harness();
+  const res = await h.invoke({ kind: 'beratung', raum: 'gaeste-wc', priorities: 'Mehr Stauraum und pflegeleichte Flächen', name: 'Fixture Person', email: 'fixture@example.invalid', telefon: '+41 00 000 00 00', consent: true });
+  assert.equal(res.statusCode, 200);
+  assert.deepEqual(h.counts(), { generation: 0, checks: 0, mail: 1 });
+});
+
+test('consultation image request requires a room photo before provider calls', async () => {
+  const h = harness();
+  const res = await h.invoke({ kind: 'beratung', raum: 'badezimmer', priorities: 'Neue Aufteilung', imageWanted: true, name: 'Fixture Person', email: 'fixture@example.invalid', telefon: '+41 00 000 00 00', consent: true });
+  assert.equal(res.statusCode, 400);
+  assert.equal(h.calls.length, 0);
+});
+
 for (const [name, change] of Object.entries({
   'missing option': { top: undefined }, 'unknown option': { platte: 'unknown' },
   'missing windows': { windows: '' }, 'missing consent': { consent: false },
@@ -144,7 +177,7 @@ test('second approved result replaces first rejected result', async () => {
   const res = await h.invoke();
   assert.equal(res.statusCode, 200); assert.deepEqual(h.counts(), { generation: 2, checks: 2, mail: 2 });
   const retry = h.calls.filter((call) => call.body?.generationConfig?.responseModalities)[1];
-  assert.match(retry.body.contents[0].parts[0].text, /previous attempt was rejected/);
+  assert.match(retry.body.contents[0].parts[0].text, /failed the structural and fixture check/);
 });
 
 for (const [name, second] of [

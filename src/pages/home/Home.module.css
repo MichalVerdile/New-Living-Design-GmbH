@@ -29,7 +29,7 @@
 .assortment { background: #fff; scroll-margin-top: 6rem; }
 .sectionHead { display: flex; justify-content: space-between; align-items: end; gap: 2rem; margin-bottom: 2.4rem; }
 .sectionHead > .textLink { flex-shrink: 0; }
-.categoryGrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.6rem; }
+.categoryGrid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1.35rem; }
 .categoryCard { display: block; text-decoration: none; min-width: 0; }
 .categoryImage { position: relative; overflow: hidden; background: #e9e8e1; aspect-ratio: 1.12; }
 .categoryImage img { display: block; width: 100%; height: 100%; object-fit: cover; transition: transform .3s ease; }
@@ -88,6 +88,7 @@
   .heroCopy { padding: 3.1rem 2rem; }
   .hero, .heroFigure img { min-height: 570px; }
   .heroAddress { gap: .6rem; }
+  .categoryGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .categoryGrid, .referenceGrid { gap: 1.1rem; }
   .packageRow a { padding: 1rem .7rem; }
 }
