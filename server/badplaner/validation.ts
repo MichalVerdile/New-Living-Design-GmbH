@@ -56,7 +56,7 @@ function requireEmpty(id: string, field: string): undefined {
 /**
  * Resolves only explicitly selected, package-allowed equipment. The UI already
  * sends its preselected IDs. The only derived values are its documented empty
- * Atelier format, fixed chrome outside Atelier and an optional floor format.
+ * Atelier format, fixed chrome for Essenza and an optional floor format.
  * This is pure validation: no requests, counters, price changes or prompt edits.
  */
 export function normalizeSelection(body: Record<string, unknown>) {
@@ -90,10 +90,10 @@ export function normalizeSelection(body: Record<string, unknown>) {
     : requireEmpty(tapSeriesId, 'armaturenserie');
 
   const finishId = stringField(body, 'finish');
-  if (!isAtelier && finishId && finishId !== 'treemme-cromo') {
+  if (pkg.id === 'essenza' && finishId && finishId !== 'treemme-cromo') {
     throw new ValidationError('finish', 'Die Armaturen-Oberfläche ist in diesem Paket fest auf Chrom gesetzt.');
   }
-  const finish = requireOption(opts.finishes, isAtelier ? finishId : 'treemme-cromo', 'finish');
+  const finish = requireOption(opts.finishes, pkg.id === 'essenza' ? 'treemme-cromo' : finishId, 'finish');
   const sanitary = requireOption(opts.sanitary, aliasedField(body, 'keramik', 'sanitary'), 'keramik');
   const wall = requireOption(opts.walls, stringField(body, 'wall'), 'wall');
   const showerId = aliasedField(body, 'dusche', 'shower');

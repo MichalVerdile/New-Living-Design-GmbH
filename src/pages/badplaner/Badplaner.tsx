@@ -64,7 +64,7 @@ interface Selection {
   top: string;                  // Waschtischplatte
   basinType: string;            // integriertes Becken oder Aufsatzbecken (Atelier)
   tapSeries: string;            // Armaturenserie (Colore)
-  finish: string;               // Armaturen-Oberfläche (Atelier)
+  finish: string;               // Armaturen-Oberfläche (Colore und Atelier)
   sanitary: string;             // Keramikfarbe
   wall: string;                 // Wandhöhe
   shower: string;
@@ -244,11 +244,11 @@ const PositionPanel: React.FC<{
   summary: string;
   image?: string | null;
   open: boolean;
-  onToggle: () => void;
+  onToggle: (trigger: HTMLButtonElement) => void;
   children: React.ReactNode;
 }> = ({ id, title, summary, image, open, onToggle, children }) => (
   <section className={`${styles.positionPanel} ${open ? styles.positionPanelOpen : ''}`}>
-    <button type="button" className={styles.positionHead} onClick={onToggle} aria-expanded={open} aria-controls={`position-${id}`}>
+    <button type="button" className={styles.positionHead} onClick={(event) => onToggle(event.currentTarget)} aria-expanded={open} aria-controls={`position-${id}`}>
       {image && <Swatch image={image} label={summary} />}
       <span className={styles.positionText}><strong>{title}</strong><span>{summary}</span></span>
       <span className={styles.positionToggle} aria-hidden="true">{open ? '−' : '+'}</span>
@@ -275,7 +275,7 @@ const Badplaner: React.FC = () => {
   const [photoError, setPhotoError] = useState('');
   const [windows, setWindows] = useState(''); // Fenster auf dem Foto: '0' | '1' | '2' | '3'
 
-  const [contact, setContact] = useState({ name: '', phone: '', email: '', consent: false, newsletter: false });
+  const [contact, setContact] = useState({ name: '', phone: '', email: '', place: '', consent: false, newsletter: false });
   const [status, setStatus] = useState<'idle' | 'sending' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
   const [result, setResult] = useState<Result | null>(null);
@@ -290,6 +290,7 @@ const Badplaner: React.FC = () => {
   const renderSubmittingRef = useRef(false);
   const planSubmittingRef = useRef(false);
   const scrollRestoreRef = useRef<number | null>(null);
+  const panelAnchorRef = useRef<{ trigger: HTMLButtonElement; top: number } | null>(null);
 
   useLayoutEffect(() => {
     if (scrollRestoreRef.current === null) return;
@@ -297,6 +298,14 @@ const Badplaner: React.FC = () => {
     scrollRestoreRef.current = null;
     window.scrollTo({ top: scrollY, left: window.scrollX, behavior: 'auto' });
   });
+
+  useLayoutEffect(() => {
+    const anchor = panelAnchorRef.current;
+    if (!anchor) return;
+    panelAnchorRef.current = null;
+    const nextTop = anchor.trigger.getBoundingClientRect().top;
+    window.scrollBy({ top: nextTop - anchor.top, left: 0, behavior: 'auto' });
+  }, [openPanel]);
 
   useEffect(() => {
     setIsVisible(true);
@@ -346,6 +355,11 @@ const Badplaner: React.FC = () => {
     setSel(defaultSelection(id, room));
     setOpenPanel(null);
     goTo(2, false);
+  };
+
+  const togglePanel = (id: string, trigger: HTMLButtonElement) => {
+    panelAnchorRef.current = { trigger, top: trigger.getBoundingClientRect().top };
+    setOpenPanel((current) => (current === id ? null : id));
   };
 
   /** Vierte Karte: erst danach das nächstgelegene Paket als Grundlage wählen. */
@@ -448,7 +462,7 @@ const Badplaner: React.FC = () => {
           unterbau: sel.base,
           becken: sel.basinType,
           armaturenserie: pkg === 'colore' ? sel.tapSeries : '',
-          finish: isAtelier ? sel.finish : '',
+          finish: pkg === 'colore' || isAtelier ? sel.finish : '',
           keramik: sel.sanitary,
           wall: sel.wall,
           dusche: sel.shower,
@@ -460,6 +474,7 @@ const Badplaner: React.FC = () => {
           name: contact.name.trim(),
           email: contact.email.trim(),
           telefon: contact.phone.trim(),
+          place: contact.place.trim(),
           newsletter: contact.newsletter,
           consent: contact.consent,
           website: gotcha,
@@ -718,8 +733,8 @@ const Badplaner: React.FC = () => {
     if (chosen.basinType && options.basinTypes.length > 1) {
       summaryRows.push({ label: 'Waschbeckenart', value: chosen.basinType.label });
     }
-    if (pkg === 'colore' && chosen.tapSeries) {
-      summaryRows.push({ label: 'Armaturen', value: `${chosen.tapSeries.label}, Chrom` });
+    if (pkg === 'colore' && chosen.tapSeries && chosen.finish) {
+      summaryRows.push({ label: 'Armaturen', value: `${chosen.tapSeries.label}, ${chosen.finish.label}` });
     } else if (isAtelier && chosen.finish) {
       summaryRows.push({ label: 'Armaturen', value: `${chosen.finish.label}, ${options.tapSeries}` });
     } else if (options.tapSeries) {
@@ -943,52 +958,52 @@ const Badplaner: React.FC = () => {
 
                   <h3 className={styles.blockTitle}>Positionen</h3>
                   <div className={styles.positionList}>
-                    <PositionPanel id="wand" title="Wandplatten" summary={`${chosen.tile?.supplier ?? ''} ${chosen.tile?.series ?? ''} ${chosen.tile?.color ?? ''} · ${wallLabel}`} image={chosen.tile?.image} open={openPanel === 'wand'} onToggle={() => setOpenPanel(openPanel === 'wand' ? null : 'wand')}>
+                    <PositionPanel id="wand" title="Wandplatten" summary={`${chosen.tile?.supplier ?? ''} ${chosen.tile?.series ?? ''} ${chosen.tile?.color ?? ''} · ${wallLabel}`} image={chosen.tile?.image} open={openPanel === 'wand'} onToggle={(trigger) => togglePanel('wand', trigger)}>
                       {!isAtelier && options.formats.length > 1 && <fieldset className={styles.group}><legend>Format</legend><ChipPicker name="format" value={sel.format} onChange={(id) => choose('format', id)} items={options.formats.map((f) => ({ id: f, label: `${f.replace('x', '×')} cm` }))} /></fieldset>}
                       <fieldset className={styles.group}><legend>Serie und Farbe</legend>{tileGroups.map((g) => <div className={styles.subGroup} key={g.key}><h4 className={styles.groupSub}>{g.key} <span className={styles.groupSubMeta}>{g.items[0].supplier} · {g.items.length} Optionen</span></h4><SwatchPicker name="platte" value={sel.tile} onChange={(id) => choose('tile', id)} items={g.items.map((t) => ({ id: t.id, label: t.color, image: t.image }))} /></div>)}<p className={styles.hint}>{TILE_HINT}</p></fieldset>
                       <fieldset className={styles.group}><legend>Höhe des Wandbelags</legend><ChoicePicker name="wall" value={sel.wall} onChange={(id) => choose('wall', id)} items={options.walls.map((o) => ({ id: o.id, label: room === 'gaeste-wc' && o.id === 'halbhoch' ? 'Wände bis ca. 120 cm, oberhalb weiss gestrichen' : o.label }))} /></fieldset>
                     </PositionPanel>
 
-                    <PositionPanel id="boden" title="Bodenplatten" summary={sel.floorDifferent && chosen.floor ? `${chosen.floor.supplier} ${chosen.floor.series} ${chosen.floor.color}` : 'Gleiche Platte wie an der Wand'} image={(sel.floorDifferent ? chosen.floor : chosen.tile)?.image} open={openPanel === 'boden'} onToggle={() => setOpenPanel(openPanel === 'boden' ? null : 'boden')}>
+                    <PositionPanel id="boden" title="Bodenplatten" summary={sel.floorDifferent && chosen.floor ? `${chosen.floor.supplier} ${chosen.floor.series} ${chosen.floor.color}` : 'Gleiche Platte wie an der Wand'} image={(sel.floorDifferent ? chosen.floor : chosen.tile)?.image} open={openPanel === 'boden'} onToggle={(trigger) => togglePanel('boden', trigger)}>
                       <ChoicePicker name="bodenart" value={sel.floorDifferent ? 'anders' : 'gleich'} onChange={(id) => choose('floorDifferent', id === 'anders')} items={[{ id: 'gleich', label: 'Gleiche Platte wie an der Wand' }, { id: 'anders', label: 'Andere Bodenplatte wählen' }]} />
                       {sel.floorDifferent && <fieldset className={styles.group}><legend>Serie und Farbe für den Boden</legend>{tileGroups.map((g) => <div className={styles.subGroup} key={g.key}><h4 className={styles.groupSub}>{g.key} <span className={styles.groupSubMeta}>{g.items[0].supplier}</span></h4><SwatchPicker name="boden" value={sel.floor} onChange={(id) => choose('floor', id)} items={g.items.map((t) => ({ id: t.id, label: t.color, image: t.image }))} /></div>)}</fieldset>}
                     </PositionPanel>
 
-                    <PositionPanel id="unterbau" title="Unterbau" summary={chosen.base ? `${chosen.base.supplier} ${chosen.base.label}` : 'Vorausgewählt'} image={chosen.base?.image} open={openPanel === 'unterbau'} onToggle={() => setOpenPanel(openPanel === 'unterbau' ? null : 'unterbau')}>
+                    <PositionPanel id="unterbau" title="Unterbau" summary={chosen.base ? `${chosen.base.supplier} ${chosen.base.label}` : 'Vorausgewählt'} image={chosen.base?.image} open={openPanel === 'unterbau'} onToggle={(trigger) => togglePanel('unterbau', trigger)}>
                       {baseGroups.map((g) => <div className={styles.subGroup} key={g.key}><h4 className={styles.groupSub}>{g.key} <span className={styles.groupSubMeta}>{g.items.length} Optionen</span></h4><SwatchPicker name="unterbau" value={sel.base} onChange={(id) => choose('base', id)} items={g.items.map((b) => ({ id: b.id, label: b.label, image: b.image, hex: b.hex }))} /></div>)}
                     </PositionPanel>
 
-                    <PositionPanel id="top" title="Waschtischplatte" summary={chosen.top ? `${chosen.top.supplier} ${chosen.top.label}` : 'Vorausgewählt'} image={chosen.top?.image} open={openPanel === 'top'} onToggle={() => setOpenPanel(openPanel === 'top' ? null : 'top')}>
+                    <PositionPanel id="top" title="Waschtischplatte" summary={chosen.top ? `${chosen.top.supplier} ${chosen.top.label}` : 'Vorausgewählt'} image={chosen.top?.image} open={openPanel === 'top'} onToggle={(trigger) => togglePanel('top', trigger)}>
                       {topGroups.map((g) => <div className={styles.subGroup} key={g.key}><h4 className={styles.groupSub}>{g.key}</h4><SwatchPicker name="top" value={sel.top} onChange={(id) => choose('top', id)} items={g.items.map((t) => ({ id: t.id, label: t.color, image: t.image }))} /></div>)}
                     </PositionPanel>
 
-                    <PositionPanel id="becken" title="Waschbecken" summary={`${chosen.basinType?.label ?? ''} · ${chosen.basin?.label ?? ''}`} image={chosen.basinType?.image} open={openPanel === 'becken'} onToggle={() => setOpenPanel(openPanel === 'becken' ? null : 'becken')}>
+                    <PositionPanel id="becken" title="Waschbecken" summary={`${chosen.basinType?.label ?? ''} · ${chosen.basin?.label ?? ''}`} image={chosen.basinType?.image} open={openPanel === 'becken'} onToggle={(trigger) => togglePanel('becken', trigger)}>
                       {options.basinTypes.length > 1 && <fieldset className={styles.group}><legend>Waschbeckenart</legend><CardPicker name="becken" diagram value={sel.basinType} onChange={(id) => choose('basinType', id)} items={options.basinTypes.map((b) => ({ id: b.id, label: b.label, image: b.image, meta: [b.supplier, b.example].filter(Boolean).join(' · ') }))} /></fieldset>}
                       <fieldset className={styles.group}><legend>Konfiguration</legend><ChoicePicker name="waschtisch" value={sel.basin} onChange={(id) => choose('basin', id)} items={options.basins.filter((o) => room === 'badezimmer' || o.id === 'einzel').map((o) => ({ id: o.id, label: o.label }))} /></fieldset>
                     </PositionPanel>
 
-                    {room === 'badezimmer' && <PositionPanel id="nassbereich" title="Dusche / Badewanne" summary={`${chosen.shower?.label ?? ''} · ${chosen.bathtub?.label ?? ''}`} open={openPanel === 'nassbereich'} onToggle={() => setOpenPanel(openPanel === 'nassbereich' ? null : 'nassbereich')}>
+                    {room === 'badezimmer' && <PositionPanel id="nassbereich" title="Dusche / Badewanne" summary={`${chosen.shower?.label ?? ''} · ${chosen.bathtub?.label ?? ''}`} open={openPanel === 'nassbereich'} onToggle={(trigger) => togglePanel('nassbereich', trigger)}>
                       <fieldset className={styles.group}><legend>Dusche</legend><ChoicePicker name="dusche" value={sel.shower} onChange={(id) => choose('shower', id)} items={options.showers.map((o) => ({ id: o.id, label: o.label }))} /></fieldset>
                       {sel.shower !== 'keine' && <p className={styles.wetAreaNote}>Bei Duschwanne und Gefälledusche werden die Wandflächen im gesamten Duschbereich bis zur Decke mit Platten belegt.</p>}
                       <fieldset className={styles.group}><legend>Badewanne</legend><ChoicePicker name="badewanne" value={sel.bathtub} onChange={(id) => choose('bathtub', id)} items={options.bathtubs.map((o) => ({ id: o.id, label: o.label }))} /></fieldset>
                       {quoteOnly && <p className={styles.quoteNote}>Diese Kombination wird als individuelle Offerte geprüft. Es wird kein zusätzlicher Raum erfunden; Umbauten bleiben in der bestehenden Nasszone.</p>}
                     </PositionPanel>}
 
-                    <PositionPanel id="armaturen" title="Armaturen" summary={pkg === 'colore' && chosen.tapSeries ? `${chosen.tapSeries.label}, Chrom` : isAtelier && chosen.finish ? `${chosen.finish.label}, ${options.tapSeries}` : options.tapSeries} image={chosen.tapSeries?.image || chosen.finish?.image} open={openPanel === 'armaturen'} onToggle={() => setOpenPanel(openPanel === 'armaturen' ? null : 'armaturen')}>
+                    <PositionPanel id="armaturen" title="Armaturen" summary={pkg === 'colore' && chosen.tapSeries && chosen.finish ? `${chosen.tapSeries.label}, ${chosen.finish.label}` : isAtelier && chosen.finish ? `${chosen.finish.label}, ${options.tapSeries}` : options.tapSeries} image={chosen.tapSeries?.image || chosen.finish?.image} open={openPanel === 'armaturen'} onToggle={(trigger) => togglePanel('armaturen', trigger)}>
                       {pkg === 'colore' && <CardPicker name="armaturenserie" value={sel.tapSeries} onChange={(id) => choose('tapSeries', id)} items={options.tapSeriesOptions.map((t) => ({ id: t.id, label: t.label, image: t.image, meta: t.shape }))} />}
-                      {isAtelier && <ChipPicker name="finish" value={sel.finish} onChange={(id) => choose('finish', id)} items={options.finishes.map((f) => ({ id: f.id, label: f.label, image: f.image }))} />}
+                      {(pkg === 'colore' || isAtelier) && <ChipPicker name="finish" value={sel.finish} onChange={(id) => choose('finish', id)} items={options.finishes.map((f) => ({ id: f.id, label: f.label, image: f.image }))} />}
                       {pkg === 'essenza' && <p className={styles.hint}>{options.tapSeries}. Im Paket enthalten, keine weitere Auswahl.</p>}
                     </PositionPanel>
 
-                    <PositionPanel id="keramik" title="Sanitärkeramik" summary={chosen.sanitary?.label ?? 'Vorausgewählt'} image={chosen.sanitary?.image} open={openPanel === 'keramik'} onToggle={() => setOpenPanel(openPanel === 'keramik' ? null : 'keramik')}>
+                    <PositionPanel id="keramik" title="Sanitärkeramik" summary={chosen.sanitary?.label ?? 'Vorausgewählt'} image={chosen.sanitary?.image} open={openPanel === 'keramik'} onToggle={(trigger) => togglePanel('keramik', trigger)}>
                       <ChipPicker name="keramik" value={sel.sanitary} onChange={(id) => choose('sanitary', id)} items={options.sanitary.map((s) => ({ id: s.id, label: s.label, image: s.image, hex: s.hex }))} />
                     </PositionPanel>
 
-                    <PositionPanel id="spiegel" title="Spiegel" summary={chosen.mirror?.label ?? 'Vorausgewählt'} open={openPanel === 'spiegel'} onToggle={() => setOpenPanel(openPanel === 'spiegel' ? null : 'spiegel')}>
+                    <PositionPanel id="spiegel" title="Spiegel" summary={chosen.mirror?.label ?? 'Vorausgewählt'} open={openPanel === 'spiegel'} onToggle={(trigger) => togglePanel('spiegel', trigger)}>
                       <ChoicePicker name="spiegel" value={sel.mirror} onChange={(id) => choose('mirror', id)} items={options.mirrors.map((o) => ({ id: o.id, label: o.label }))} />
                     </PositionPanel>
 
-                    {isAtelier && <PositionPanel id="akzent" title="Akzentmaterial" summary={sel.accentMode === 'kombination' && chosen.accent ? `${chosen.accentPlacement?.label}: ${chosen.accent.label}` : 'Einheitliches Materialbild'} image={sel.accentMode === 'kombination' ? chosen.accent?.image : undefined} open={openPanel === 'akzent'} onToggle={() => setOpenPanel(openPanel === 'akzent' ? null : 'akzent')}>
+                    {isAtelier && <PositionPanel id="akzent" title="Akzentmaterial" summary={sel.accentMode === 'kombination' && chosen.accent ? `${chosen.accentPlacement?.label}: ${chosen.accent.label}` : 'Einheitliches Materialbild'} image={sel.accentMode === 'kombination' ? chosen.accent?.image : undefined} open={openPanel === 'akzent'} onToggle={(trigger) => togglePanel('akzent', trigger)}>
                       <ChoicePicker name="kombination" value={sel.accentMode} onChange={(id) => choose('accentMode', id)} items={options.accentModes.map((a) => ({ id: a.id, label: a.label }))} />
                       {sel.accentMode === 'kombination' && <><fieldset className={styles.group}><legend>Akzentfläche</legend><ChoicePicker name="akzentflaeche" value={sel.accentPlacement} onChange={(id) => choosePlacement(id as AccentPlacementId)} items={availableAccentPlacements.map((a) => ({ id: a.id, label: a.label }))} /></fieldset>{accentGroups.map((g) => <div className={styles.subGroup} key={g.key}><h4 className={styles.groupSub}>{g.key}</h4><SwatchPicker name="akzent" value={sel.accent} onChange={(id) => choose('accent', id)} items={g.items.map((a) => ({ id: a.id, label: a.label, image: a.image }))} /></div>)}</>}
                     </PositionPanel>}
@@ -1119,6 +1134,10 @@ const Badplaner: React.FC = () => {
                     <label className={styles.field} htmlFor="bp-phone">
                       <span>Telefon oder WhatsApp</span>
                       <input type="tel" id="bp-phone" name="telefon" required autoComplete="tel" placeholder="+41 ..." value={contact.phone} onChange={(e) => setContact({ ...contact, phone: e.target.value })} />
+                    </label>
+                    <label className={styles.field} htmlFor="bp-place">
+                      <span>PLZ / Ort</span>
+                      <input type="text" id="bp-place" name="place" required autoComplete="postal-code" placeholder="z. B. 4800 Zofingen" value={contact.place} onChange={(e) => setContact({ ...contact, place: e.target.value })} />
                     </label>
                   </div>
                   <label className={styles.consent} htmlFor="bp-consent">

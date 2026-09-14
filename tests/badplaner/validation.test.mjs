@@ -28,7 +28,7 @@ function uiPayload(pkg, changes = {}) {
     boden: '', kombination: pkg === 'atelier' ? 'einheitlich' : '',
     akzentFlaeche: '', akzent: '',
     armaturenserie: pkg === 'colore' ? opts.tapSeriesOptions[0].id : '',
-    finish: pkg === 'atelier' ? opts.finishes[0].id : '',
+    finish: pkg === 'atelier' || pkg === 'colore' ? opts.finishes[0].id : '',
     windows: '1', name: 'Test Person', email: 'test@example.invalid', telefon: '12345678', consent: true,
   };
   for (const [field, list] of Object.entries(fieldLists)) payload[field] = opts[list][0]?.id ?? '';
@@ -71,7 +71,7 @@ for (const pkg of packageIds) {
     assert.equal(selected.placement, undefined);
     assert.equal(selected.accent, undefined);
     assert.equal(selected.format, pkg === 'atelier' ? selected.tile.format : payload.format);
-    assert.equal(selected.finish.id, 'treemme-cromo');
+    assert.equal(selected.finish.id, pkg === 'essenza' ? 'treemme-cromo' : payload.finish);
     assert.equal(selected.tapSeriesOption?.id, pkg === 'colore' ? payload.armaturenserie : undefined);
     assert.equal(selected.look?.id, pkg === 'atelier' ? payload.look : undefined);
   });
@@ -88,8 +88,8 @@ for (const pkg of packageIds) {
     for (const [field, list] of Object.entries(fieldLists)) changes[field] = opts[list].at(-1).id;
     if (pkg === 'atelier') {
       changes.look = opts.tiles.at(-1).look;
-      changes.finish = opts.finishes.at(-1).id;
     }
+    if (pkg === 'atelier' || pkg === 'colore') changes.finish = opts.finishes.at(-1).id;
     if (pkg === 'colore') changes.armaturenserie = opts.tapSeriesOptions.at(-1).id;
     const selected = normalizeSelection(uiPayload(pkg, changes));
     assert.equal(selected.tile.id, changes.platte);
@@ -102,7 +102,7 @@ for (const pkg of packageIds) {
     assert.equal(selected.bathtub.id, changes.badewanne);
     assert.equal(selected.basin.id, changes.waschtisch);
     assert.equal(selected.mirror.id, changes.spiegel);
-    if (pkg === 'atelier') assert.equal(selected.finish.id, changes.finish);
+    if (pkg === 'atelier' || pkg === 'colore') assert.equal(selected.finish.id, changes.finish);
     if (pkg === 'colore') assert.equal(selected.tapSeriesOption.id, changes.armaturenserie);
   });
 
@@ -161,13 +161,6 @@ for (const pkg of ['essenza', 'colore']) {
     for (const format of optionsForPackage(pkg).formats) assert.equal(normalizeSelection(uiPayload(pkg, { format })).format, format);
   });
 
-  test(`${pkg}: fixed finish permits omitted/empty/chrome, rejects explicit non-chrome`, () => {
-    for (const finish of [undefined, '', 'treemme-cromo']) {
-      assert.equal(normalizeSelection(uiPayload(pkg, { finish })).finish.id, 'treemme-cromo');
-    }
-    for (const finish of ['treemme-nero-opaco', 'treemme-bronze-pvd', 'unknown']) rejectsField(uiPayload(pkg, { finish }), 'finish');
-  });
-
   test(`${pkg}: Atelier-only fields may be empty but never silently ignored`, () => {
     const values = { look: 'travertin', kombination: 'einheitlich', akzentFlaeche: 'waschtisch', akzent: optionsForPackage('atelier').accents[0].id };
     for (const [field, value] of Object.entries(values)) {
@@ -177,6 +170,18 @@ for (const pkg of ['essenza', 'colore']) {
     }
   });
 }
+
+test('Essenza keeps its fixed chrome finish', () => {
+  for (const finish of [undefined, '', 'treemme-cromo']) assert.equal(normalizeSelection(uiPayload('essenza', { finish })).finish.id, 'treemme-cromo');
+  for (const finish of ['treemme-nero-opaco', 'treemme-bronze-pvd', 'unknown']) rejectsField(uiPayload('essenza', { finish }), 'finish');
+});
+
+test('Colore requires and accepts every available finish', () => {
+  for (const finish of [undefined, '', 'unknown', 'treemme-bronze-pvd']) rejectsField(uiPayload('colore', { finish }), 'finish');
+  for (const finish of optionsForPackage('colore').finishes) {
+    assert.equal(normalizeSelection(uiPayload('colore', { finish: finish.id })).finish.id, finish.id);
+  }
+});
 
 test('tap series is required only for Colore; other packages reject even a known series', () => {
   for (const armaturenserie of [undefined, '', 'unknown']) rejectsField(uiPayload('colore', { armaturenserie }), 'armaturenserie');

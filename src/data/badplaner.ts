@@ -763,7 +763,7 @@ export const tapFinishes: FinishOption[] = [
 
 export const tapSeries: Record<PackageId, string> = {
   essenza: 'Treemme Up+, Aufputz, verchromt',
-  colore: 'Treemme, Chrom',
+  colore: 'Treemme',
   atelier: 'Treemme, Unterputz',
 };
 
