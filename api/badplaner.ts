@@ -482,9 +482,9 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
       details: leadDetails(rejectedNote, 'abgelehnt (Prüfung), nicht angezeigt'),
       attachments: [{ filename: photoName, content: photo.data }],
     }, ctx);
-    // Der abgelehnte Versuch hat Gemini zweimal beschäftigt und ist als Lead zugestellt
-    // worden: er zählt als Versuch, sonst liesse er sich endlos wiederholen.
-    res.setHeader('Set-Cookie', counterCookie(cookie + 1, today));
+    // Ein abgelehntes Ideenbild ist für den Kunden kein Versuch: sein Tageslimit
+    // bleibt unberührt, er darf es gleich nochmals probieren. Gegen endloses
+    // Wiederholen bleibt das IP-Limit stehen, darum wird es nicht zurückgedreht.
     delivered = true;
     return res.status(502).json({
       ok: false, code: 'RENDER_REJECTED',
