@@ -193,17 +193,31 @@ test('fixture checker rejects a shower in a Gäste-WC', async () => {
   assert.deepEqual(leadMail.body.attachments.map(({ filename }) => filename), ['foto.png']);
 });
 
-test('rejected renders consume the device cookie and IP quota', async () => {
+test('a rejected render leaves the customer his daily attempts', async () => {
   const wrong = JSON.stringify({ extra_openings: true, toilet_moved: false, layout_changed: false, view_changed: false, shower_present: false, bathtub_present: false, reason: 'invented window' });
   const h = harness({ checks: Array.from({ length: 20 }, () => () => checked(false, wrong)) });
+  // Zehn abgelehnte Bilder hintereinander: das Gerätelimit bleibt unberührt,
+  // es wird kein Zähler-Cookie gesetzt.
   for (let attempt = 0; attempt < 10; attempt += 1) {
     const res = await h.invoke();
     assert.equal(res.statusCode, 502);
-    assert.match(res.headers['Set-Cookie'], /nldbp=1:2026-09-13/);
+    assert.equal(res.headers['Set-Cookie'], undefined);
   }
+  // Das IP-Limit greift weiter, damit sich das nicht endlos wiederholen lässt.
   const blocked = await h.invoke();
   assert.equal(blocked.statusCode, 429);
   assert.deepEqual(h.counts(), { generation: 20, checks: 20, mail: 10 });
+});
+
+test('after a rejection the next attempt still counts as the first', async () => {
+  const wrong = JSON.stringify({ extra_openings: true, toilet_moved: false, layout_changed: false, view_changed: false, shower_present: false, bathtub_present: false, reason: 'invented window' });
+  const h = harness({ checks: [() => checked(false, wrong), () => checked(false, wrong), () => checked()] });
+  const rejected = await h.invoke();
+  assert.equal(rejected.statusCode, 502);
+  assert.equal(rejected.headers['Set-Cookie'], undefined);
+  const ok = await h.invoke();
+  assert.equal(ok.statusCode, 200);
+  assert.match(ok.headers['Set-Cookie'], /nldbp=1:2026-09-13/);
 });
 
 test('a changed field of view is noted for us but the customer still gets the image', async () => {
