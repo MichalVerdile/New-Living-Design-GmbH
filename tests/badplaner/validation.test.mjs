@@ -29,7 +29,7 @@ function uiPayload(pkg, changes = {}) {
     akzentFlaeche: '', akzent: '',
     armaturenserie: pkg === 'colore' ? opts.tapSeriesOptions[0].id : '',
     finish: pkg === 'atelier' || pkg === 'colore' ? opts.finishes[0].id : '',
-    windows: '1', name: 'Test Person', email: 'test@example.invalid', telefon: '12345678', consent: true,
+    windows: '1', cistern: 'unterputz', name: 'Test Person', email: 'test@example.invalid', telefon: '12345678', consent: true,
   };
   for (const [field, list] of Object.entries(fieldLists)) payload[field] = opts[list][0]?.id ?? '';
   return JSON.parse(JSON.stringify({ ...payload, ...changes }));
@@ -170,6 +170,13 @@ for (const pkg of ['essenza', 'colore']) {
     }
   });
 }
+
+test('cistern is required and accepts only Aufputz or Unterputz', () => {
+  for (const cistern of [undefined, '', 'sichtbar', 'unknown', null, false]) rejectsField(uiPayload('essenza', { cistern }), 'cistern');
+  for (const cistern of ['aufputz', 'unterputz', ' AUFPUTZ ']) {
+    assert.equal(normalizeSelection(uiPayload('essenza', { cistern })).cistern, cistern.trim().toLowerCase());
+  }
+});
 
 test('Essenza keeps its fixed chrome finish', () => {
   for (const finish of [undefined, '', 'treemme-cromo']) assert.equal(normalizeSelection(uiPayload('essenza', { finish })).finish.id, 'treemme-cromo');

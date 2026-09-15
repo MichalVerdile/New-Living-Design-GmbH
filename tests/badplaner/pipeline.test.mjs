@@ -18,7 +18,7 @@ function payload(changes = {}) {
     platte: options.tiles[0].id, unterbau: options.bases[0].id, top: options.tops[0].id,
     becken: options.basinTypes[0].id, finish: '', keramik: options.sanitary[0].id,
     wall: options.walls[0].id, dusche: options.showers[0].id, badewanne: options.bathtubs[0].id, waschtisch: options.basins[0].id,
-    spiegel: options.mirrors[0].id, windows: '0', foto: `data:image/png;base64,${PNG}`,
+    spiegel: options.mirrors[0].id, windows: '0', cistern: 'unterputz', foto: `data:image/png;base64,${PNG}`,
     name: 'Fixture Person', email: 'fixture@example.invalid', telefon: '+41 00 000 00 00', place: '4800 Zofingen', consent: true,
     ...changes,
   };
@@ -47,7 +47,7 @@ function fakeClock() {
 
 const response = (body, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
 const generated = (data = PNG, mimeType = 'image/png') => response({ candidates: [{ content: { parts: [{ inlineData: { mimeType, data } }] }, finishReason: 'STOP' }] });
-const checked = (extra = false, text) => response({ candidates: [{ content: { parts: [{ text: text ?? JSON.stringify({ extra_openings: extra, toilet_moved: false, layout_changed: false, shower_present: false, bathtub_present: false, reason: 'fixture comparison' }) }] }, finishReason: 'STOP' }] });
+const checked = (extra = false, text) => response({ candidates: [{ content: { parts: [{ text: text ?? JSON.stringify({ extra_openings: extra, toilet_moved: false, layout_changed: false, view_changed: false, shower_present: false, bathtub_present: false, reason: 'fixture comparison' }) }] }, finishReason: 'STOP' }] });
 
 function harness(settings = {}) {
   const clock = fakeClock();
@@ -107,6 +107,37 @@ test('approved rendering reaches company and customer, reporting provider accept
   assert.match(res.headers['Set-Cookie'], /HttpOnly; Secure; SameSite=Lax/);
   assert.equal(res.headers['Cache-Control'], 'no-store');
   assert.equal('lead_saved' in res.body, false);
+  const leadMail = h.calls.find((call) => call.url === 'https://api.resend.com/emails');
+  assert.match(JSON.stringify(leadMail.body), /Muster/);
+  assert.match(JSON.stringify(leadMail.body), /nicht geladen/);
+});
+
+test('cistern is required and only accepts the two supported values', async () => {
+  for (const cistern of [undefined, '', 'sichtbar', 'unknown']) {
+    const h = harness(); const res = await h.invoke(payload({ cistern }));
+    assert.equal(res.statusCode, 400); assert.equal(res.body.field, 'cistern');
+    assert.deepEqual(h.counts(), { generation: 0, checks: 0, mail: 0 });
+  }
+});
+
+test('Aufputz and Unterputz produce explicit, exclusive toilet branches', async () => {
+  for (const cistern of ['aufputz', 'unterputz']) {
+    const h = harness(); const res = await h.invoke(payload({ cistern }));
+    assert.equal(res.statusCode, 200);
+    const generation = h.calls.find((call) => call.body?.generationConfig?.responseModalities);
+    const prompt = generation.body.contents[0].parts[0].text;
+    const checker = h.calls.find((call) => call.url.includes('generativelanguage.googleapis.com') && !call.body?.generationConfig?.responseModalities);
+    const checkPrompt = checker.body.contents[0].parts[0].text;
+    if (cistern === 'aufputz') {
+      assert.match(prompt, /slim sanitary module stands in front of the existing wall/);
+      assert.match(prompt, /wall behind is neither moved nor opened/);
+      assert.match(checkPrompt, /must NOT be reported as layout_changed/);
+    } else {
+      assert.match(prompt, /cistern is concealed inside the wall and stays concealed/);
+      assert.match(prompt, /no visible cistern and no sanitary module/);
+      assert.doesNotMatch(checkPrompt, /must NOT be reported as layout_changed/);
+    }
+  }
 });
 
 test('Colore uses the selected tap series and finish in prompt and lead mail', async () => {
@@ -138,7 +169,7 @@ test('Gäste-WC prompt and checker require no shower or bathtub', async () => {
 });
 
 test('shower prompt tiles the full tray or sloped-floor perimeter to the ceiling', async () => {
-  const approved = JSON.stringify({ extra_openings: false, toilet_moved: false, layout_changed: false, shower_present: true, bathtub_present: false, reason: 'fixture comparison' });
+  const approved = JSON.stringify({ extra_openings: false, toilet_moved: false, layout_changed: false, view_changed: false, shower_present: true, bathtub_present: false, reason: 'fixture comparison' });
   const h = harness({ checks: [() => checked(false, approved)] });
   const res = await h.invoke(payload({ dusche: 'walk-in', badewanne: 'keine', wall: 'halbhoch' }));
   assert.equal(res.statusCode, 200);
@@ -148,12 +179,26 @@ test('shower prompt tiles the full tray or sloped-floor perimeter to the ceiling
 });
 
 test('fixture checker rejects a shower in a Gäste-WC', async () => {
-  const wrong = JSON.stringify({ extra_openings: false, toilet_moved: false, layout_changed: false, shower_present: true, bathtub_present: false, reason: 'unexpected shower' });
+  const wrong = JSON.stringify({ extra_openings: false, toilet_moved: false, layout_changed: false, view_changed: false, shower_present: true, bathtub_present: false, reason: 'unexpected shower' });
   const h = harness({ checks: [() => checked(false, wrong), () => checked(false, wrong)] });
   const res = await h.invoke(payload({ raum: 'gaeste-wc', dusche: '', badewanne: '', waschtisch: 'einzel' }));
   assert.equal(res.statusCode, 502);
   assert.equal(res.body.code, 'RENDER_REJECTED');
-  assert.equal(h.counts().mail, 0);
+  assert.equal(res.body.delivery.lead, 'accepted');
+  assert.equal(h.counts().mail, 1);
+  const leadMail = h.calls.find((call) => call.url === 'https://api.resend.com/emails');
+  assert.match(leadMail.body.subject, /Ideenbild abgelehnt/);
+  assert.match(JSON.stringify(leadMail.body), /unexpected shower/);
+  assert.deepEqual(leadMail.body.attachments.map(({ filename }) => filename), ['foto.png']);
+});
+
+test('checker rejects a changed camera or expanded field of view', async () => {
+  const changedView = JSON.stringify({ extra_openings: false, toilet_moved: false, layout_changed: false, view_changed: true, shower_present: false, bathtub_present: false, reason: 'camera and visible room bounds changed' });
+  const h = harness({ checks: [() => checked(false, changedView), () => checked(false, changedView)] });
+  const res = await h.invoke(payload({ dusche: 'keine', badewanne: 'keine' }));
+  assert.equal(res.statusCode, 502);
+  assert.equal(res.body.code, 'RENDER_REJECTED');
+  assert.deepEqual(h.counts(), { generation: 2, checks: 2, mail: 1 });
 });
 
 test('individual consultation sends one lead and never calls Gemini', async () => {
@@ -193,11 +238,16 @@ test('oversize JSON is rejected before provider calls', async () => {
   assert.equal(res.statusCode, 413); assert.equal(h.calls.length, 0);
 });
 
-test('second rejected result is never returned or mailed', async () => {
+test('second rejected result is never returned, while the lead and original photo are preserved', async () => {
   const h = harness({ checks: [() => checked(true), () => checked(true)] });
   const res = await h.invoke();
   assert.equal(res.body.code, 'RENDER_REJECTED'); assert.equal(res.statusCode, 502);
-  assert.equal(res.body.image, undefined); assert.deepEqual(h.counts(), { generation: 2, checks: 2, mail: 0 });
+  assert.equal(res.body.image, undefined); assert.deepEqual(h.counts(), { generation: 2, checks: 2, mail: 1 });
+  const leadMail = h.calls.find((call) => call.url === 'https://api.resend.com/emails');
+  assert.match(JSON.stringify(leadMail.body), /Ideenbild.*abgelehnt \(Prüfung\), nicht angezeigt/);
+  assert.match(JSON.stringify(leadMail.body), /Muster/);
+  assert.equal(leadMail.body.attachments.length, 1);
+  assert.equal(leadMail.body.attachments[0].filename, 'foto.png');
 });
 
 test('second approved result replaces first rejected result', async () => {
@@ -264,7 +314,7 @@ test('failed render attempts do not consume the IP counter', async () => {
 
 test('retry is skipped when full render, check and delivery reserve cannot fit', async () => {
   const h = harness({ generateDelays: [30000], checks: [() => checked(true)] }); const res = await h.invoke();
-  assert.equal(res.body.code, 'RENDER_REJECTED'); assert.deepEqual(h.counts(), { generation: 1, checks: 1, mail: 0 });
+  assert.equal(res.body.code, 'RENDER_REJECTED'); assert.deepEqual(h.counts(), { generation: 1, checks: 1, mail: 1 });
 });
 
 test('company mail fallback success is explicit and reports missing attachments', async () => {
@@ -348,6 +398,9 @@ test('current large catalog originals below 5 MiB retain their visual reference'
   const generation = h.calls.find((call) => call.body?.generationConfig?.responseModalities);
   assert.equal(generation.body.contents[0].parts.length, 3);
   assert.equal(Buffer.from(generation.body.contents[0].parts[2].inlineData.data, 'base64').length, bytes.length);
+  const leadMail = h.calls.find((call) => call.url === 'https://api.resend.com/emails');
+  assert.match(JSON.stringify(leadMail.body), /Muster/);
+  assert.match(JSON.stringify(leadMail.body), /geladen/);
 });
 
 test('generated response headers and streaming bytes respect the provider cap', async () => {

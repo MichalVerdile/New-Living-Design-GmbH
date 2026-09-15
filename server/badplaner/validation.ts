@@ -65,6 +65,11 @@ export function normalizeSelection(body: Record<string, unknown>) {
     throw new ValidationError('raum', 'Bitte Badezimmer oder Gäste-WC wählen.');
   }
   const room = roomId as RoomType;
+  const cisternId = stringField(body, 'cistern').toLowerCase();
+  if (cisternId !== 'aufputz' && cisternId !== 'unterputz') {
+    throw new ValidationError('cistern', 'Bitte angeben, ob der Spülkasten sichtbar oder in der Wand ist.');
+  }
+  const cistern = cisternId as 'aufputz' | 'unterputz';
   const isGuestWc = room === 'gaeste-wc';
   const packageId = aliasedField(body, 'paket', 'package', true);
   const pkg = requireOption(bathPackages, packageId, 'paket');
@@ -156,7 +161,7 @@ export function normalizeSelection(body: Record<string, unknown>) {
   const requiresQuote = isGuestWc || (!!shower && !!bathtub && (shower.id === 'keine') === (bathtub.id === 'keine'));
 
   return {
-    room, isGuestWc, pkg, opts, isAtelier, individuell, tile, floorTile, base, top, basinType,
+    room, isGuestWc, cistern, pkg, opts, isAtelier, individuell, tile, floorTile, base, top, basinType,
     tapSeriesOption, finish, sanitary, wall, shower, bathtub, basin, mirror, look, format,
     floorFormat, accentMode, isKombi, placement, accent,
     requiresQuote,

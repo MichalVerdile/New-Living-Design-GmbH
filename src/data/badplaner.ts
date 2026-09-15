@@ -874,6 +874,10 @@ export const swatchSources: { file: string; src: string }[] = (() => {
 
 export const badplanerFaq: { question: string; answer: string }[] = [
   {
+    question: 'Was passiert mit dem sichtbaren Spülkasten?',
+    answer: 'Ist der Spülkasten heute sichtbar über dem WC montiert, ersetzen wir ihn durch ein schlankes Sanitärmodul mit Glasfront vor der bestehenden Wand. Es ist rund 10 cm tief, braucht keine Vorwand und keine Maurerarbeiten, und ist im Fixpreis enthalten.',
+  },
+  {
     question: 'Kostet der Badplaner etwas?',
     answer: 'Nein. Das Ideenbild ist kostenlos und unverbindlich. Pro Gerät sind drei Ideenbilder pro Tag möglich.',
   },
