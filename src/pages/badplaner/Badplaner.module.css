@@ -25,7 +25,7 @@
 }
 .heroContent {
   position: relative; z-index: 2;
-  max-width: 860px; text-align: center; color: #fff;
+  width: 100%; min-width: 0; max-width: 860px; text-align: center; color: #fff;
   opacity: 0; transform: translateY(30px); transition: all 1s ease-out;
 }
 .heroContent.visible { opacity: 1; transform: translateY(0); }
@@ -397,6 +397,63 @@
 .faqItem[open] summary::after { content: '–'; }
 .faqItem p { margin: 0 0 1.25rem; color: #374151; line-height: 1.65; }
 .center { text-align: center; margin-top: 2rem; }
+
+/* 200 % Browserzoom auf schmalen Telefonen entspricht rund 160–195 CSS-Pixeln. */
+@media (max-width: 240px) {
+  .hero { min-height: auto; padding: 2.5rem .35rem; }
+  .eyebrow { max-width: 100%; padding: .4rem .6rem; letter-spacing: .06em; box-sizing: border-box; }
+  .heroTitle { font-size: 1.45rem; overflow-wrap: anywhere; }
+  .heroText { font-size: .92rem; line-height: 1.5; overflow-wrap: anywhere; }
+  .heroActions { gap: .5rem; }
+  .heroNote { margin-top: 1rem; font-size: .78rem; overflow-wrap: anywhere; }
+  .ctaPrimary, .ctaSecondary, .ctaDark, .ctaLight {
+    width: 100%; max-width: 100%; padding: .7rem .45rem; border-radius: 1rem;
+    font-size: .85rem; line-height: 1.25; white-space: normal; overflow-wrap: anywhere; box-sizing: border-box;
+  }
+
+  .section { padding: 3rem 0; }
+  .container { padding-inline: .35rem; }
+  .sectionHeader { margin-bottom: 1.5rem; }
+  .sectionLabel { max-width: 100%; padding: .4rem .55rem; font-size: .72rem; letter-spacing: .04em; box-sizing: border-box; }
+  .sectionTitle { font-size: 1.35rem; overflow-wrap: anywhere; }
+
+  .steps { gap: .6rem; }
+  .step { border-radius: .8rem; }
+  .stepHead {
+    grid-template-columns: 36px minmax(0, 1fr) 12px; gap: .35rem;
+    padding: .65rem .45rem;
+  }
+  .stepHead > span:nth-child(2) { min-width: 0; }
+  .stepNumber { width: 36px; height: 36px; border-radius: 9px; font-size: .95rem; }
+  .stepTitle { font-size: .82rem; overflow-wrap: anywhere; }
+  .stepSummary { font-size: .72rem; overflow-wrap: anywhere; }
+  .stepChevron { font-size: .85rem; }
+  .stepBody { padding: 0 .45rem 1rem; }
+  .choiceTitle { font-size: .95rem; overflow-wrap: anywhere; }
+
+  .roomChoice, .consultationForm, .positionBody, .summaryBox { padding: .65rem; }
+  .roomChoice strong, .packageName { font-size: 1rem; overflow-wrap: anywhere; }
+  .roomChoice span, .packageClaim, .packageFacts { overflow-wrap: anywhere; }
+  .package { padding: .9rem .55rem .9rem 2.15rem; }
+  .package::before { left: .65rem; top: 1rem; width: 16px; height: 16px; }
+  .packageBadge { position: static; align-self: start; padding-inline: .55rem; overflow-wrap: anywhere; }
+
+  .positionHead { grid-template-columns: 32px minmax(0, 1fr) 22px; gap: .3rem; padding: .35rem; }
+  .positionHead > .swatchImg, .positionHead > .swatchFallback { width: 32px; height: 32px; }
+  .positionToggle { width: 22px; height: 22px; font-size: .9rem; }
+  .positionText strong, .positionText span, .group legend, .optionLabel, .optionMeta { overflow-wrap: anywhere; }
+  .upload { padding: .75rem .35rem; }
+  .uploadActions { grid-template-columns: 1fr; }
+  .uploadActions label { padding-inline: .4rem; overflow-wrap: anywhere; }
+  .field input, .field textarea { padding-inline: .55rem; }
+  .consent { grid-template-columns: 16px minmax(0, 1fr); gap: .4rem; overflow-wrap: anywhere; }
+  .consent input { width: 16px; height: 16px; }
+
+  .howStep { grid-template-columns: 1fr; gap: .6rem; padding: .75rem; }
+  .faqItem { padding-inline: .65rem; }
+  .faqItem summary { padding-right: 1.8rem; font-size: .88rem; overflow-wrap: anywhere; }
+  .faqItem summary::after { width: 22px; height: 22px; }
+}
 
 /* Grössere Bildschirme */
 @media (min-width: 560px) {
