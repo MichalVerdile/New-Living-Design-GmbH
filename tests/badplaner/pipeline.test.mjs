@@ -129,7 +129,8 @@ test('Aufputz and Unterputz produce explicit, exclusive toilet branches', async 
     const checker = h.calls.find((call) => call.url.includes('generativelanguage.googleapis.com') && !call.body?.generationConfig?.responseModalities);
     const checkPrompt = checker.body.contents[0].parts[0].text;
     if (cistern === 'aufputz') {
-      assert.match(prompt, /slim sanitary module stands in front of the existing wall/);
+      assert.match(prompt, /is completely removed and must not survive in any form/);
+      assert.match(prompt, /one slim sanitary module: a flat tempered glass front panel/);
       assert.match(prompt, /wall behind is neither moved nor opened/);
       assert.match(checkPrompt, /must NOT be reported as layout_changed/);
     } else {
@@ -194,15 +195,15 @@ test('fixture checker rejects a shower in a Gäste-WC', async () => {
 
 test('rejected renders consume the device cookie and IP quota', async () => {
   const wrong = JSON.stringify({ extra_openings: true, toilet_moved: false, layout_changed: false, view_changed: false, shower_present: false, bathtub_present: false, reason: 'invented window' });
-  const h = harness({ checks: Array.from({ length: 12 }, () => () => checked(false, wrong)) });
-  for (let attempt = 0; attempt < 6; attempt += 1) {
+  const h = harness({ checks: Array.from({ length: 20 }, () => () => checked(false, wrong)) });
+  for (let attempt = 0; attempt < 10; attempt += 1) {
     const res = await h.invoke();
     assert.equal(res.statusCode, 502);
     assert.match(res.headers['Set-Cookie'], /nldbp=1:2026-09-13/);
   }
   const blocked = await h.invoke();
   assert.equal(blocked.statusCode, 429);
-  assert.deepEqual(h.counts(), { generation: 12, checks: 12, mail: 6 });
+  assert.deepEqual(h.counts(), { generation: 20, checks: 20, mail: 10 });
 });
 
 test('checker rejects a changed camera or expanded field of view', async () => {
@@ -371,7 +372,7 @@ test('host header injection cannot select a swatch origin', async () => {
 
 test('malformed cookie remains recoverable and device limit performs zero requests', async () => {
   const h = harness(); assert.equal((await h.invoke(payload(), { headers: { cookie: 'nldbp=%E0%A4%A' } })).statusCode, 200);
-  const limited = harness(); const res = await limited.invoke(payload(), { headers: { cookie: 'nldbp=3:2026-09-13' } });
+  const limited = harness(); const res = await limited.invoke(payload(), { headers: { cookie: 'nldbp=5:2026-09-13' } });
   assert.equal(res.statusCode, 429); assert.equal(limited.calls.length, 0);
 });
 
