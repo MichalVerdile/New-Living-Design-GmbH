@@ -153,6 +153,27 @@ interface Photo {
   data: string;
 }
 
+/**
+ * Gemini rendert nur in festen Seitenverhältnissen. Ohne Angabe wählt das Modell
+ * selbst eines: ein Ideenbild im anderen Format sieht aus wie ein verschobener
+ * Bildausschnitt, und genau das lehnt die Prüfung ab. Darum das nächstgelegene
+ * unterstützte Verhältnis des Kundenfotos mitschicken.
+ */
+const ASPECT_RATIOS: ReadonlyArray<readonly [string, number]> = [
+  ['9:16', 9 / 16], ['3:4', 3 / 4], ['1:1', 1], ['4:3', 4 / 3], ['16:9', 16 / 9],
+];
+
+export function nearestAspectRatio(width: number, height: number): string {
+  if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) return '';
+  const ratio = width / height;
+  // Abstand im Logarithmus: 4:3 und 3:4 liegen damit gleich weit von 1:1 entfernt.
+  let best = ASPECT_RATIOS[0];
+  for (const candidate of ASPECT_RATIOS) {
+    if (Math.abs(Math.log(ratio / candidate[1])) < Math.abs(Math.log(ratio / best[1]))) best = candidate;
+  }
+  return best[0];
+}
+
 /* ---------- Handler ---------- */
 
 export interface BadplanerDependencies {
@@ -174,7 +195,7 @@ interface CheckFlags {
   shower_present: boolean;
   bathtub_present: boolean;
 }
-type CheckResult = { status: 'approved' } | { status: 'rejected'; reason: string; flags: CheckFlags } | { status: 'unavailable' } | { status: 'disabled' };
+type CheckResult = { status: 'approved'; note?: string } | { status: 'rejected'; reason: string; flags: CheckFlags } | { status: 'unavailable' } | { status: 'disabled' };
 
 /** Each factory owns its best-effort counters. Tests inject HTTP, clock and IDs. */
 export function createHandler(overrides: Partial<BadplanerDependencies> = {}) {
@@ -288,9 +309,11 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   // 4. Foto: neu als data-URL im Feld `foto`, alt als { mime, data } im Feld `photo`
   const photo = readPhoto(body);
   if (!photo) return bad(res, 'Bitte ein Foto Ihres Bads (JPEG, PNG oder WebP) hochladen.');
+  let photoRatio = '';
   try {
     photo.data = normalizeBase64(photo.data, MAX_PHOTO_BASE64);
-    validateImageBytes(Buffer.from(photo.data, 'base64'), photo.mime);
+    const size = validateImageBytes(Buffer.from(photo.data, 'base64'), photo.mime);
+    photoRatio = nearestAspectRatio(size.width, size.height);
   } catch { return bad(res, 'Das Foto ist ungültig oder zu gross. Bitte JPEG, PNG oder WebP wählen.'); }
   if (!env.GEMINI_API_KEY) {
     console.error('[badplaner] Bilddienst nicht konfiguriert');
@@ -416,9 +439,11 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
     ['Lead-ID', leadId],
   ];
 
-  // A full retry needs 50s generation + 20s check + 25s delivery. With a 105s
-  // deadline it is intentionally possible only after a first pass under 10s.
-  let gen = await generateImage(prompt, photo, swatch, ctx);
+  // Der zweite Versuch wird weiter unten an der gemessenen Dauer des ersten
+  // Durchgangs entschieden, nicht an den Höchstwerten.
+  console.info('[badplaner] Seitenverhältnis', photoRatio || 'automatisch');
+  const passStarted = dependencies.clock.now();
+  let gen = await generateImage(prompt, photo, swatch, ctx, photoRatio);
   if (gen.ok === false) return res.status(502).json({ ok: false, error: gen.error });
   let checkNote = 'ok';
   const wantedFixtures = { room, shower: shower ? shower.id !== 'keine' : false, bathtub: bathtub ? bathtub.id !== 'keine' : false, cistern };
@@ -434,10 +459,13 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   let check = await checkWithUnavailableRetry(gen);
   let checkAttempt = 1;
   if (check.status === 'rejected') logRejectedCheck(check, checkAttempt);
-  if (check.status === 'rejected' && ctx.budget.remaining() >= GEMINI_TIMEOUT_MS + CHECK_TIMEOUT_MS + DELIVERY_RESERVE_MS) {
+  // Ein zweiter Durchgang dauert ungefähr so lange wie der erste. Die alte Schranke
+  // rechnete mit den Höchstwerten (95 s) und liess den zweiten Versuch nie zu.
+  const secondPassMs = Math.round((dependencies.clock.now() - passStarted) * 1.3) + DELIVERY_RESERVE_MS;
+  if (check.status === 'rejected' && ctx.budget.remaining() >= secondPassMs) {
     // The rejected image never becomes a fallback if the retry/check fails.
     const retryPrompt = `${prompt}\nIMPORTANT: a previous attempt failed the structural and fixture check: ${check.reason}. Correct that exact issue. Keep the original layout, every opening and toilet position, and show exactly the requested shower and bathtub state.`;
-    const second = await generateImage(retryPrompt, photo, swatch, ctx);
+    const second = await generateImage(retryPrompt, photo, swatch, ctx, photoRatio);
     if (second.ok === false) return res.status(502).json({ ok: false, code: 'RENDER_FAILED', error: second.error });
     check = await checkWithUnavailableRetry(second);
     gen = second;
@@ -463,6 +491,10 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
       delivery: { lead: leadDelivery.status, leadProvider: leadDelivery.provider, leadAttachments: leadDelivery.attachments },
       error: 'Das Ideenbild konnte nicht sicher bestätigt werden und wird nicht angezeigt. Bitte später erneut versuchen oder uns direkt kontaktieren.',
     });
+  }
+  if (check.status === 'approved' && check.note) {
+    checkNote = checkNote + ', Bildausschnitt verändert: ' + check.note;
+    console.info('[badplaner] Bildausschnitt verändert, Ideenbild trotzdem geliefert:', check.note);
   }
   if (check.status === 'unavailable') checkNote = 'nicht möglich (Prüfdienst nicht erreichbar)';
   if (check.status === 'disabled') checkNote = 'deaktiviert';
@@ -751,7 +783,7 @@ function buildPrompt(v: {
 
   return [
     intro,
-    `Produce a photorealistic "after renovation" photo of image 1 with these hard constraints: identical camera position, angle and lens; identical walls, ceiling, floor plan and room size; every window, door and roof window stays exactly where it is with the same size; do NOT add, remove, resize or move any window, door, niche or opening; ${windowRule} The toilet stays exactly where it is with the same orientation because its drain cannot be moved. The washbasin stays on the same wall in the same place. Radiators stay. Never create extra floor area. A bathtub-to-shower transformation must use only the original bathtub footprint.`,
+    `Produce a photorealistic "after renovation" photo of image 1 with these hard constraints: identical camera position, angle, lens and framing: the result keeps exactly the same crop and aspect ratio as image 1, never zooms out, never widens the view and never shows floor, wall or ceiling area beyond the edges of image 1; identical walls, ceiling, floor plan and room size; every window, door and roof window stays exactly where it is with the same size; do NOT add, remove, resize or move any window, door, niche or opening; ${windowRule} The toilet stays exactly where it is with the same orientation because its drain cannot be moved. The washbasin stays on the same wall in the same place. Radiators stay. Never create extra floor area. A bathtub-to-shower transformation must use only the original bathtub footprint.`,
     `Requested result for this ${v.room === 'gaeste-wc' ? 'guest WC' : 'bathroom'} (style "${v.packageName}"):${look} ${surfaces}; ${fixtures}; if a toilet is visible in image 1, ${toilet}; ${vanity}; ${v.tapPrompt}.${accent} Remove clutter, towels, bottles, shower curtain and rugs. Natural daylight, no people, no text.`,
   ].join('\n');
 }
@@ -796,7 +828,7 @@ async function loadSwatch(image: string, src: string, ctx: RequestContext): Prom
 
 type GenResult = { ok: true; mime: string; data: string } | { ok: false; error: string };
 
-async function generateImage(prompt: string, photo: Photo, swatch: Photo | null, ctx: RequestContext): Promise<GenResult> {
+async function generateImage(prompt: string, photo: Photo, swatch: Photo | null, ctx: RequestContext, aspectRatio = ''): Promise<GenResult> {
   const model = env.BADPLANER_MODEL || 'gemini-3.1-flash-image';
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
   const parts: any[] = [{ text: prompt }, { inlineData: { mimeType: photo.mime, data: photo.data } }];
@@ -808,7 +840,7 @@ async function generateImage(prompt: string, photo: Photo, swatch: Photo | null,
       headers: { 'x-goog-api-key': env.GEMINI_API_KEY || '', 'content-type': 'application/json' },
       body: JSON.stringify({
         contents: [{ role: 'user', parts }],
-        generationConfig: { responseModalities: ['IMAGE'], imageConfig: { imageSize: '1K' } },
+        generationConfig: { responseModalities: ['IMAGE'], imageConfig: aspectRatio ? { imageSize: '1K', aspectRatio } : { imageSize: '1K' } },
       }),
     }, Math.min(GEMINI_TIMEOUT_MS, Math.max(0, ctx.budget.remaining() - CHECK_TIMEOUT_MS - DELIVERY_RESERVE_MS)));
     const json = r.json;
@@ -905,9 +937,12 @@ async function checkOpenings(
       shower_present: parsed.shower_present,
       bathtub_present: parsed.bathtub_present,
     };
-    const rejected = flags.extra_openings || flags.toilet_moved || flags.layout_changed || flags.view_changed
+    const rejected = flags.extra_openings || flags.toilet_moved || flags.layout_changed
       || flags.shower_present !== wanted.shower || flags.bathtub_present !== wanted.bathtub;
-    return rejected ? { status: 'rejected', reason: parsed.reason.slice(0, 200), flags } : { status: 'approved' };
+    if (rejected) return { status: 'rejected', reason: parsed.reason.slice(0, 200), flags };
+    // Ein anderer Bildausschnitt allein ist kein Grund, dem Kunden nichts zu zeigen:
+    // Fenster, WC, Wände und Ausstattung stimmen dann ja. Er wird nur vermerkt.
+    return flags.view_changed ? { status: 'approved', note: parsed.reason.slice(0, 200) } : { status: 'approved' };
   } catch {
     console.error('[badplaner] Fensterprüfung nicht möglich');
     return { status: 'unavailable' };
