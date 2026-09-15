@@ -32,7 +32,7 @@ async function decode(file: File): Promise<Drawable> {
     return await new Promise<HTMLImageElement>((resolve, reject) => {
       const img = new Image();
       img.onload = () => resolve(img);
-      img.onerror = () => reject(new Error('Bild konnte nicht gelesen werden'));
+      img.onerror = () => reject(new Error('Dieses Foto konnte nicht geöffnet werden. Bitte ein anderes wählen oder es mit «Foto aufnehmen» neu aufnehmen.'));
       img.src = url;
     });
   } finally {
@@ -56,7 +56,13 @@ export async function resizeImageFile(
     throw new Error('Dieses Bildformat können wir nicht lesen (zum Beispiel HEIC vom iPhone). Bitte ein JPEG, PNG oder WebP wählen oder das Foto direkt mit der Kamera aufnehmen.');
   }
   if (file.size < 1 || file.size > MAX_SOURCE_IMAGE_BYTES) throw new Error('Das Bild darf höchstens 20 MB gross sein.');
-  const bytes = new Uint8Array(await file.arrayBuffer());
+  let bytes: Uint8Array;
+  try {
+    bytes = new Uint8Array(await file.arrayBuffer());
+  } catch {
+    // Android liefert für Fotos, die nur in der Cloud liegen, einen NotReadableError.
+    throw new Error('Dieses Foto konnte nicht geöffnet werden. Es liegt vielleicht nur in der Cloud und nicht auf dem Gerät: Bitte öffnen Sie es einmal in der Galerie oder nehmen Sie es mit «Foto aufnehmen» neu auf.');
+  }
   const sourceLimits = { maxBytes: MAX_SOURCE_IMAGE_BYTES, maxPixels: 50_000_000, maxSide: 12_000 };
   validateImageBytes(bytes, declaredMime || sniffImageMime(bytes) || '', sourceLimits);
 
