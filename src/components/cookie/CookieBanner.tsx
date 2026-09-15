@@ -63,8 +63,10 @@ const CookieBanner: React.FC = () => {
                 marginLeft: "10px"
             }}
             contentStyle={{
-                flex: "1 0 300px",
+                flex: "1 1 300px",
                 margin: "0",
+                minWidth: "0",
+                width: "100%",
                 maxWidth: "none"
             }}
             containerClasses="cookie-banner-container"
