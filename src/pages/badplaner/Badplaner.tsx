@@ -36,6 +36,10 @@ const WINDOW_OPTIONS = [
   { id: '2', label: '2 Fenster' },
   { id: '3', label: '3 oder mehr' },
 ];
+const CISTERN_OPTIONS = [
+  { id: 'aufputz', label: 'Spülkasten sichtbar (Aufputz)' },
+  { id: 'unterputz', label: 'Spülkasten in der Wand (Unterputz)' },
+];
 const API_URL = '/api/badplaner';
 const MAX_PLAN_PDF_BYTES = 3_000_000; // Base64 + JSON remains below the API request cap.
 const RENDER_TIMEOUT_MS = 115_000;
@@ -274,6 +278,7 @@ const Badplaner: React.FC = () => {
   const [photoBusy, setPhotoBusy] = useState(false);
   const [photoError, setPhotoError] = useState('');
   const [windows, setWindows] = useState(''); // Fenster auf dem Foto: '0' | '1' | '2' | '3'
+  const [cistern, setCistern] = useState('');
 
   const [contact, setContact] = useState({ name: '', phone: '', email: '', place: '', consent: false, newsletter: false });
   const [status, setStatus] = useState<'idle' | 'sending' | 'error'>('idle');
@@ -319,7 +324,8 @@ const Badplaner: React.FC = () => {
   const options = pkg ? optionsForPackage(pkg) : null;
   const pkgInfo = pkg ? bathPackages.find((p) => p.id === pkg) : undefined;
   const isAtelier = pkg === 'atelier';
-  const canOpenStep4 = !!room && !!pkg && !!sel && !!photo && /^[0-3]$/.test(windows) && !photoBusy;
+  const canOpenStep4 = !!room && !!pkg && !!sel && !!photo && /^[0-3]$/.test(windows)
+    && (cistern === 'aufputz' || cistern === 'unterputz') && !photoBusy;
 
   // Platten des gewählten Looks (Atelier) bzw. des Pakets
   const tileList = useMemo(() => {
@@ -410,6 +416,7 @@ const Badplaner: React.FC = () => {
       const resized = await resizeImageFile(file, 1280, 0.82);
       setPhoto(resized);
       setWindows(''); // neues Foto, Fenster neu angeben
+      setCistern('');
     } catch (error) {
       setPhoto(null);
       setPhotoError(error instanceof Error ? error.message : 'Das Bild konnte nicht gelesen werden. Bitte JPEG, PNG oder WebP wählen.');
@@ -423,7 +430,7 @@ const Badplaner: React.FC = () => {
     if (renderSubmittingRef.current) return;
     if (!room || !pkg || !sel || !photo || !canOpenStep4) {
       setStatus('error');
-      setErrorMsg('Bitte wählen Sie Raum, Stil oder Paket, Foto und die Anzahl sichtbarer Fenster.');
+      setErrorMsg('Bitte wählen Sie Raum, Stil oder Paket, Foto, Fensterzahl und Spülkastenart.');
       return;
     }
     const form = new FormData(e.currentTarget);
@@ -470,6 +477,7 @@ const Badplaner: React.FC = () => {
           waschtisch: sel.basin,
           spiegel: sel.mirror,
           windows,
+          cistern,
           foto: photo.dataUrl,
           name: contact.name.trim(),
           email: contact.email.trim(),
@@ -741,6 +749,9 @@ const Badplaner: React.FC = () => {
       summaryRows.push({ label: 'Armaturen', value: options.tapSeries });
     }
     if (chosen.sanitary) summaryRows.push({ label: 'Keramik', value: chosen.sanitary.label });
+    if (cistern) summaryRows.push({ label: 'WC / Spülkasten', value: cistern === 'aufputz'
+      ? 'Aufputz, ersetzt durch Sanitärmodul (im Fixpreis enthalten)'
+      : 'Unterputz' });
     if (chosen.basin) summaryRows.push({ label: 'Waschtisch', value: chosen.basin.label });
     if (chosen.mirror) summaryRows.push({ label: 'Spiegel', value: chosen.mirror.label });
   }
@@ -1067,9 +1078,14 @@ const Badplaner: React.FC = () => {
                         <ChipPicker name="windows" items={WINDOW_OPTIONS} value={windows} onChange={setWindows} />
                         <p className={styles.hint}>Damit das Ideenbild kein Fenster dazuerfindet: Fenster, Türen und Wände bleiben, wie sie sind.</p>
                       </fieldset>
+                      <fieldset className={styles.group}>
+                        <legend>Wie ist der Spülkasten beim WC eingebaut?</legend>
+                        <ChipPicker name="cistern" items={CISTERN_OPTIONS} value={cistern} onChange={setCistern} />
+                        <p className={styles.hint}>Ein sichtbarer Spülkasten wird im Ideenbild durch das im Fixpreis enthaltene Sanitärmodul ersetzt.</p>
+                      </fieldset>
                       <div className={styles.stepActions}>
-                        <button type="button" className={styles.ctaDark} onClick={() => goTo(4)} disabled={!windows}>Weiter zu Kontakt</button>
-                        {!windows && <span className={styles.hint}>Bitte die Fenster angeben.</span>}
+                        <button type="button" className={styles.ctaDark} onClick={() => goTo(4)} disabled={!windows || !cistern}>Weiter zu Kontakt</button>
+                        {(!windows || !cistern) && <span className={styles.hint}>Bitte Fenster und Spülkasten angeben.</span>}
                       </div>
                       <div className={`${styles.uploadActions} ${styles.changePhoto}`}>
                         <span className={styles.uploadAction}>
@@ -1293,7 +1309,12 @@ const Badplaner: React.FC = () => {
           </div>
           <p className={styles.hint} style={{ textAlign: 'center', marginTop: '2rem' }}>
             Lieber direkt sprechen? <a href={`tel:${business.phone.e164}`} data-lead="badplaner-faq">{business.phone.display}</a> oder{' '}
-            <a href={`https://wa.me/${business.whatsapp.e164.replace('+', '')}`} target="_blank" rel="noopener noreferrer" data-lead="badplaner-faq">WhatsApp</a>.
+            <a
+              href={`https://wa.me/${business.whatsapp.e164.replace('+', '')}?text=${encodeURIComponent('Guten Tag, ich interessiere mich für Ihre Produkte und eine Beratung in Ihrer Ausstellung. Können Sie mich kontaktieren?')}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              data-lead="badplaner-faq"
+            >WhatsApp</a>.
           </p>
         </div>
       </section>

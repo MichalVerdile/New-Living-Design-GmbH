@@ -18,7 +18,7 @@ function payload(changes = {}) {
     platte: options.tiles[0].id, unterbau: options.bases[0].id, top: options.tops[0].id,
     becken: options.basinTypes[0].id, finish: '', keramik: options.sanitary[0].id,
     wall: options.walls[0].id, dusche: options.showers[0].id, badewanne: options.bathtubs[0].id, waschtisch: options.basins[0].id,
-    spiegel: options.mirrors[0].id, windows: '0', foto: `data:image/png;base64,${PNG}`,
+    spiegel: options.mirrors[0].id, windows: '0', cistern: 'unterputz', foto: `data:image/png;base64,${PNG}`,
     name: 'Fixture Person', email: 'fixture@example.invalid', telefon: '+41 00 000 00 00', place: '4800 Zofingen', consent: true,
     ...changes,
   };
@@ -107,6 +107,37 @@ test('approved rendering reaches company and customer, reporting provider accept
   assert.match(res.headers['Set-Cookie'], /HttpOnly; Secure; SameSite=Lax/);
   assert.equal(res.headers['Cache-Control'], 'no-store');
   assert.equal('lead_saved' in res.body, false);
+  const leadMail = h.calls.find((call) => call.url === 'https://api.resend.com/emails');
+  assert.match(JSON.stringify(leadMail.body), /Muster/);
+  assert.match(JSON.stringify(leadMail.body), /nicht geladen/);
+});
+
+test('cistern is required and only accepts the two supported values', async () => {
+  for (const cistern of [undefined, '', 'sichtbar', 'unknown']) {
+    const h = harness(); const res = await h.invoke(payload({ cistern }));
+    assert.equal(res.statusCode, 400); assert.equal(res.body.field, 'cistern');
+    assert.deepEqual(h.counts(), { generation: 0, checks: 0, mail: 0 });
+  }
+});
+
+test('Aufputz and Unterputz produce explicit, exclusive toilet branches', async () => {
+  for (const cistern of ['aufputz', 'unterputz']) {
+    const h = harness(); const res = await h.invoke(payload({ cistern }));
+    assert.equal(res.statusCode, 200);
+    const generation = h.calls.find((call) => call.body?.generationConfig?.responseModalities);
+    const prompt = generation.body.contents[0].parts[0].text;
+    const checker = h.calls.find((call) => call.url.includes('generativelanguage.googleapis.com') && !call.body?.generationConfig?.responseModalities);
+    const checkPrompt = checker.body.contents[0].parts[0].text;
+    if (cistern === 'aufputz') {
+      assert.match(prompt, /slim sanitary module stands in front of the existing wall/);
+      assert.match(prompt, /wall behind is neither moved nor opened/);
+      assert.match(checkPrompt, /must NOT be reported as layout_changed/);
+    } else {
+      assert.match(prompt, /cistern is concealed inside the wall and stays concealed/);
+      assert.match(prompt, /no visible cistern and no sanitary module/);
+      assert.doesNotMatch(checkPrompt, /must NOT be reported as layout_changed/);
+    }
+  }
 });
 
 test('Colore uses the selected tap series and finish in prompt and lead mail', async () => {
@@ -348,6 +379,9 @@ test('current large catalog originals below 5 MiB retain their visual reference'
   const generation = h.calls.find((call) => call.body?.generationConfig?.responseModalities);
   assert.equal(generation.body.contents[0].parts.length, 3);
   assert.equal(Buffer.from(generation.body.contents[0].parts[2].inlineData.data, 'base64').length, bytes.length);
+  const leadMail = h.calls.find((call) => call.url === 'https://api.resend.com/emails');
+  assert.match(JSON.stringify(leadMail.body), /Muster/);
+  assert.match(JSON.stringify(leadMail.body), /geladen/);
 });
 
 test('generated response headers and streaming bytes respect the provider cap', async () => {

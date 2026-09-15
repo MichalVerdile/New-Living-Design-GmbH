@@ -105,6 +105,7 @@ interface RenderBody {
   spiegel?: string;
   mirror?: string;              // alt
   windows?: string;
+  cistern?: string;
   foto?: string;                // data-URL
   photo?: { mime: string; data: string };   // alt
   name?: string;
@@ -258,7 +259,7 @@ async function handler(req: any, res: any) {
 /* ---------- kind: render ---------- */
 
 async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestContext) {
-  const { room, isGuestWc, pkg, opts, isAtelier, individuell, tile, floorTile, base, top, basinType,
+  const { room, isGuestWc, cistern, pkg, opts, isAtelier, individuell, tile, floorTile, base, top, basinType,
     tapSeriesOption, finish, sanitary, wall, shower, bathtub, basin, mirror, look, format,
     floorFormat, accentMode, placement, accent, requiresQuote } = normalizeSelection(body as unknown as Record<string, unknown>);
 
@@ -351,6 +352,7 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
     tapPrompt: isGuestWc ? `washbasin tap in ${finish.prompt}; no shower mixer, bath filler or shower controls` : taps.prompt,
     withSwatch: !!swatch,
     windows,
+    cistern,
   });
 
   // A full retry needs 50s generation + 20s check + 25s delivery. With a 105s
@@ -358,7 +360,7 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   let gen = await generateImage(prompt, photo, swatch, ctx);
   if (gen.ok === false) return res.status(502).json({ ok: false, error: gen.error });
   let checkNote = 'ok';
-  const wantedFixtures = { room, shower: shower ? shower.id !== 'keine' : false, bathtub: bathtub ? bathtub.id !== 'keine' : false };
+  const wantedFixtures = { room, shower: shower ? shower.id !== 'keine' : false, bathtub: bathtub ? bathtub.id !== 'keine' : false, cistern };
   const checkWithUnavailableRetry = async (image: { mime: string; data: string }): Promise<CheckResult> => {
     let result = await checkOpenings(photo, image, wantedFixtures, ctx);
     if (result.status === 'unavailable'
@@ -426,6 +428,10 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
     ['PLZ / Ort', place || '–'],
     ...auswahl,
     ['Fenster laut Kunde', windows === '0' ? 'keine' : windows === '3' ? '3 oder mehr' : windows],
+    ['WC / Spülkasten', cistern === 'aufputz'
+      ? 'Aufputz, ersetzt durch Sanitärmodul (im Fixpreis enthalten)'
+      : 'Unterputz'],
+    ['Muster', swatch ? 'geladen' : 'nicht geladen'],
     ['Fensterprüfung', checkNote],
     ['Newsletter', newsletter ? 'ja' : 'nein'],
     ['Zeitpunkt', swissTime()],
@@ -676,6 +682,7 @@ function buildPrompt(v: {
   tapPrompt: string;
   withSwatch: boolean;
   windows: string;
+  cistern: 'aufputz' | 'unterputz';
 }): string {
   const intro = v.withSwatch
     ? `Photo editing task. Image 1 is the customer's existing bathroom. Image 2 is ONLY a close-up material sample (tile texture and colour); ignore everything else about image 2, it contains no layout information.`
@@ -705,11 +712,14 @@ function buildPrompt(v: {
         v.wantsShower ? `${v.showerPrompt} inside the original wet-area footprint` : 'NO shower, shower tray, shower enclosure or shower controls',
         v.wantsBathtub ? `${v.bathtubPrompt} inside the original wet-area footprint` : 'NO bathtub and no bath filler',
       ].join('; ');
+  const toilet = v.cistern === 'aufputz'
+    ? `the visible surface-mounted cistern above the toilet is removed; in its place a slim sanitary module stands in front of the existing wall: tempered glass front, about 10 cm deep and about 110 cm high, with a flush button integrated at the top; the toilet is wall-hung, rimless, in ${v.sanitaryPrompt}, mounted on that module at exactly the same position as the existing toilet; the wall behind is neither moved nor opened and no new partition wall is built`
+    : `the cistern is concealed inside the wall and stays concealed; no visible cistern and no sanitary module in front of the wall; the toilet is wall-hung, rimless, in ${v.sanitaryPrompt}, at exactly its existing position`;
 
   return [
     intro,
     `Produce a photorealistic "after renovation" photo of image 1 with these hard constraints: identical camera position, angle and lens; identical walls, ceiling, floor plan and room size; every window, door and roof window stays exactly where it is with the same size; do NOT add, remove, resize or move any window, door, niche or opening; ${windowRule} The toilet stays exactly where it is with the same orientation because its drain cannot be moved. The washbasin stays on the same wall in the same place. Radiators stay. Never create extra floor area. A bathtub-to-shower transformation must use only the original bathtub footprint.`,
-    `Requested result for this ${v.room === 'gaeste-wc' ? 'guest WC' : 'bathroom'} (style "${v.packageName}"):${look} ${surfaces}; ${fixtures}; if a toilet is visible in image 1, a wall-hung rimless toilet in ${v.sanitaryPrompt} at exactly its existing position; ${vanity}; ${v.tapPrompt}.${accent} Remove clutter, towels, bottles, shower curtain and rugs. Natural daylight, no people, no text.`,
+    `Requested result for this ${v.room === 'gaeste-wc' ? 'guest WC' : 'bathroom'} (style "${v.packageName}"):${look} ${surfaces}; ${fixtures}; if a toilet is visible in image 1, ${toilet}; ${vanity}; ${v.tapPrompt}.${accent} Remove clutter, towels, bottles, shower curtain and rugs. Natural daylight, no people, no text.`,
   ].join('\n');
 }
 
@@ -721,18 +731,29 @@ async function loadSwatch(image: string, src: string, ctx: RequestContext): Prom
   if (src.startsWith('https://')) candidates.push(src); // source comes only from the server-owned catalog
   const started = dependencies.clock.now();
   for (const url of candidates) {
+    let status: number | 'keine Antwort' = 'keine Antwort';
+    let contentType = '–';
+    let byteLength = 0;
     try {
       const remaining = 8000 - (dependencies.clock.now() - started);
       if (remaining <= 0) break;
       const r = await request(ctx, url, { headers: { 'User-Agent': 'NewLivingDesign-Badplaner/1.0' } }, remaining, true);
-      if (!r.ok) continue;
-      const type = (r.headers.get('content-type') || '').split(';')[0].trim();
-      if (!type.startsWith('image/')) continue;
+      status = r.status;
+      contentType = (r.headers.get('content-type') || '').split(';')[0].trim() || '–';
+      byteLength = r.bytes.length;
+      if (!r.ok || !contentType.startsWith('image/')) {
+        console.warn('[badplaner] Swatch nicht geladen', url, `status=${status}`, `type=${contentType}`, `bytes=${byteLength}`);
+        continue;
+      }
       const bytes = r.bytes;
-      const metadata = validateImageBytes(bytes, type, { maxBytes: MAX_SWATCH_BYTES, maxPixels: 50000000, maxSide: 12000 });
+      const metadata = validateImageBytes(bytes, contentType, { maxBytes: MAX_SWATCH_BYTES, maxPixels: 50000000, maxSide: 12000 });
+      const fileName = new URL(url).pathname.split('/').pop() || 'Muster';
+      console.info('[badplaner] Swatch geladen', fileName, `${Math.ceil(bytes.length / 1024)} kB`);
       return { mime: metadata.mime, data: Buffer.from(bytes).toString('base64') };
-    } catch {
-      console.warn('[badplaner] Swatch nicht geladen');
+    } catch (err: any) {
+      const errorName = typeof err?.name === 'string' ? err.name : 'Error';
+      const errorMessage = typeof err?.message === 'string' ? err.message.replace(/\s+/g, ' ').slice(0, 180) : 'unbekannter Fehler';
+      console.warn('[badplaner] Swatch nicht geladen', url, `status=${status}`, `type=${contentType}`, `bytes=${byteLength}`, `${errorName}: ${errorMessage}`);
     }
   }
   return null;
@@ -798,7 +819,7 @@ async function generateImage(prompt: string, photo: Photo, swatch: Photo | null,
 async function checkOpenings(
   photo: Photo,
   gen: { mime: string; data: string },
-  wanted: { room: 'badezimmer' | 'gaeste-wc'; shower: boolean; bathtub: boolean },
+  wanted: { room: 'badezimmer' | 'gaeste-wc'; shower: boolean; bathtub: boolean; cistern: 'aufputz' | 'unterputz' },
   ctx: RequestContext,
 ): Promise<CheckResult> {
   const model = env.BADPLANER_CHECK_MODEL === undefined ? 'gemini-3.6-flash' : env.BADPLANER_CHECK_MODEL;
@@ -808,6 +829,7 @@ async function checkOpenings(
     'Image 1 is the original room. Image 2 is an edited renovation result. Compare them strictly. ' +
     'Set extra_openings true if any window, roof window, door, niche or outside opening was added, removed, resized or moved. ' +
     'Set toilet_moved true if the toilet position or orientation changed. Set layout_changed true if walls, room size, floor area or fixed fixture footprint moved. ' +
+    (wanted.cistern === 'aufputz' ? 'A slim sanitary module in front of an existing wall, replacing a surface-mounted cistern, is expected in this renovation: it must NOT be reported as layout_changed, and a toilet mounted on that module at the same place must NOT be reported as toilet_moved. ' : '') +
     `The requested result is a ${wanted.room === 'gaeste-wc' ? 'guest WC' : 'bathroom'} with shower_present=${wanted.shower} and bathtub_present=${wanted.bathtub}. ` +
     'Report whether image 2 visibly contains a shower (including tray/enclosure) and a bathtub. A mirror or glass shower screen is not an opening. ' +
     'Answer with JSON only, no markdown and exactly these keys: {"extra_openings":false,"toilet_moved":false,"layout_changed":false,"shower_present":false,"bathtub_present":false,"reason":"short English reason, max 30 words"}';
