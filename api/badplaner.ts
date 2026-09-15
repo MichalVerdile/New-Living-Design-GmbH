@@ -47,6 +47,7 @@ import { business, individualPackage, packageNote, type BathPackage } from '../s
 import { Budget, TimeoutError, type Clock } from '../server/badplaner/budget.js';
 import { normalizeSelection, ValidationError } from '../server/badplaner/validation.js';
 import { normalizeBase64, validateImageBytes, MAX_PHOTO_BASE64, MAX_PLAN_BASE64 } from '../src/pages/badplaner/imageValidation.js';
+import { SANITARY_MODULE_PHOTO } from '../server/badplaner/sanitaermodul.js';
 
 // Node-Globals ohne @types/node (api/tsconfig.json ist auf Edge ausgelegt)
 declare const process: any;
@@ -354,6 +355,11 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   // 6. Swatch (Materialprobe der Wandplatte) laden: zuerst unsere Kopie, sonst Lieferant, sonst ohne
   const swatch = await loadSwatch(tile.image, tile.src || '', ctx);
 
+  // 6b. Nur bei Aufputz: Produktfoto des Sanitärmoduls als weitere Vorlage.
+  // Beschreiben allein genügt dem Modell nicht, es baut sonst eine verkleidete
+  // Vorwand. Das Bild liegt im Code, darum kann es weder fehlen noch Zeit kosten.
+  const moduleImage = cistern === 'aufputz' ? SANITARY_MODULE_PHOTO : null;
+
   // 7. Armaturen: Essenza Aufputz verchromt, Colore in der gewählten Serie und Oberfläche,
   //    Atelier Unterputz in der gewählten Oberfläche.
   const taps = tapDescription(pkg.id as PackageId, finish, tapSeriesOption, opts.tapSeries);
@@ -382,6 +388,7 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
     mirrorPrompt: mirror.prompt,
     tapPrompt: isGuestWc ? `washbasin tap in ${finish.prompt}; no shower mixer, bath filler or shower controls` : taps.prompt,
     withSwatch: !!swatch,
+    moduleImageNumber: moduleImage ? (swatch ? 3 : 2) : 0,
     windows,
     cistern,
   });
@@ -431,6 +438,7 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
       ? 'Aufputz, ersetzt durch Sanitärmodul (im Fixpreis enthalten)'
       : 'Unterputz'],
     ['Muster', swatch ? 'geladen' : 'nicht geladen'],
+    ...(cistern === 'aufputz' ? [['Sanitärmodul', 'OLI QR INOX Pavimento, Vorlagebild mitgeschickt'] as [string, string]] : []),
     ['Fensterprüfung', checkStatus],
     ...(imageStatus ? [['Ideenbild', imageStatus] as [string, string]] : []),
     ['Newsletter', newsletter ? 'ja' : 'nein'],
@@ -443,7 +451,7 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   // Durchgangs entschieden, nicht an den Höchstwerten.
   console.info('[badplaner] Seitenverhältnis', photoRatio || 'automatisch');
   const passStarted = dependencies.clock.now();
-  let gen = await generateImage(prompt, photo, swatch, ctx, photoRatio);
+  let gen = await generateImage(prompt, photo, swatch, moduleImage, ctx, photoRatio);
   if (gen.ok === false) return res.status(502).json({ ok: false, error: gen.error });
   let checkNote = 'ok';
   const wantedFixtures = { room, shower: shower ? shower.id !== 'keine' : false, bathtub: bathtub ? bathtub.id !== 'keine' : false, cistern };
@@ -465,7 +473,7 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   if (check.status === 'rejected' && ctx.budget.remaining() >= secondPassMs) {
     // The rejected image never becomes a fallback if the retry/check fails.
     const retryPrompt = `${prompt}\nIMPORTANT: a previous attempt failed the structural and fixture check: ${check.reason}. Correct that exact issue. Keep the original layout, every opening and toilet position, and show exactly the requested shower and bathtub state.`;
-    const second = await generateImage(retryPrompt, photo, swatch, ctx, photoRatio);
+    const second = await generateImage(retryPrompt, photo, swatch, moduleImage, ctx, photoRatio);
     if (second.ok === false) return res.status(502).json({ ok: false, code: 'RENDER_FAILED', error: second.error });
     check = await checkWithUnavailableRetry(second);
     gen = second;
@@ -746,12 +754,16 @@ function buildPrompt(v: {
   mirrorPrompt: string;
   tapPrompt: string;
   withSwatch: boolean;
+  moduleImageNumber: number;
   windows: string;
   cistern: 'aufputz' | 'unterputz';
 }): string {
-  const intro = v.withSwatch
+  const moduleIntro = v.moduleImageNumber
+    ? ` Image ${v.moduleImageNumber} is ONLY a product photo of one sanitary module on a plain white background: a slim upright panel standing on the floor, with a white tempered glass front in two parts, a one-piece brushed stainless steel edge framing it, a small flush button near the top and an arched cut-out at the bottom. It shows the part to build in and nothing else: no room, no wall, no layout, no colour scheme.`
+    : '';
+  const intro = (v.withSwatch
     ? `Photo editing task. Image 1 is the customer's existing bathroom. Image 2 is ONLY a close-up material sample (tile texture and colour); ignore everything else about image 2, it contains no layout information.`
-    : `Photo editing task. Image 1 is the customer's existing bathroom.`;
+    : `Photo editing task. Image 1 is the customer's existing bathroom.`) + moduleIntro;
   const asSample = v.withSwatch ? ' as in image 2' : '';
   const windowRule =
     v.windows === '0'
@@ -778,7 +790,7 @@ function buildPrompt(v: {
         v.wantsBathtub ? `${v.bathtubPrompt} inside the original wet-area footprint` : 'NO bathtub and no bath filler',
       ].join('; ');
   const toilet = v.cistern === 'aufputz'
-    ? `the existing surface-mounted cistern, the visible boxed cistern above or behind the toilet, is completely removed and must not survive in any form: no white cistern box, no boxed-in panel, no tiled shelf where it stood; in its exact place, standing in front of the existing wall, there is one slim sanitary module: a flat tempered glass front panel, glossy and clearly readable as glass with soft reflections, about 10 cm deep, about 110 cm high, no wider than the toilet, with a small rectangular flush plate integrated at the top edge; the toilet is wall-hung, rimless, in ${v.sanitaryPrompt}, mounted on the front of that module at exactly the same position as the existing toilet and floating clear of the floor; the wall behind is neither moved nor opened and no new partition wall is built`
+    ? `the existing surface-mounted cistern, the visible boxed cistern above or behind the toilet, is completely removed and must not survive in any form: no white cistern box, no boxed-in panel, no tiled shelf, no tiled or panelled cladding where it stood; in its exact place, standing on the floor flat against the existing wall, there is exactly the sanitary module of image ${v.moduleImageNumber}, copied part for part: its white glass front in two parts, the one-piece brushed stainless steel edge around it, the small flush button near the top and the arched cut-out at the bottom; it is about 11 cm deep, about as wide as the toilet and roughly one metre high, a factory-made glass and steel part, never tiled, never clad and never boxed in; the toilet is rimless, in ${v.sanitaryPrompt}, floor-standing on the floor directly in front of that module at exactly its existing position, not wall-hung and not floating; the wall behind is neither moved nor opened and no new partition wall is built`
     : `the cistern is concealed inside the wall and stays concealed; no visible cistern and no sanitary module in front of the wall; the toilet is wall-hung, rimless, in ${v.sanitaryPrompt}, at exactly its existing position`;
 
   return [
@@ -828,11 +840,12 @@ async function loadSwatch(image: string, src: string, ctx: RequestContext): Prom
 
 type GenResult = { ok: true; mime: string; data: string } | { ok: false; error: string };
 
-async function generateImage(prompt: string, photo: Photo, swatch: Photo | null, ctx: RequestContext, aspectRatio = ''): Promise<GenResult> {
+async function generateImage(prompt: string, photo: Photo, swatch: Photo | null, extra: Photo | null, ctx: RequestContext, aspectRatio = ''): Promise<GenResult> {
   const model = env.BADPLANER_MODEL || 'gemini-3.1-flash-image';
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
   const parts: any[] = [{ text: prompt }, { inlineData: { mimeType: photo.mime, data: photo.data } }];
   if (swatch) parts.push({ inlineData: { mimeType: swatch.mime, data: swatch.data } });
+  if (extra) parts.push({ inlineData: { mimeType: extra.mime, data: extra.data } });
 
   try {
     const r = await request(ctx, url, {
