@@ -47,7 +47,7 @@ function fakeClock() {
 
 const response = (body, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
 const generated = (data = PNG, mimeType = 'image/png') => response({ candidates: [{ content: { parts: [{ inlineData: { mimeType, data } }] }, finishReason: 'STOP' }] });
-const checked = (extra = false, text) => response({ candidates: [{ content: { parts: [{ text: text ?? JSON.stringify({ extra_openings: extra, toilet_moved: false, layout_changed: false, shower_present: false, bathtub_present: false, reason: 'fixture comparison' }) }] }, finishReason: 'STOP' }] });
+const checked = (extra = false, text) => response({ candidates: [{ content: { parts: [{ text: text ?? JSON.stringify({ extra_openings: extra, toilet_moved: false, layout_changed: false, view_changed: false, shower_present: false, bathtub_present: false, reason: 'fixture comparison' }) }] }, finishReason: 'STOP' }] });
 
 function harness(settings = {}) {
   const clock = fakeClock();
@@ -169,7 +169,7 @@ test('Gäste-WC prompt and checker require no shower or bathtub', async () => {
 });
 
 test('shower prompt tiles the full tray or sloped-floor perimeter to the ceiling', async () => {
-  const approved = JSON.stringify({ extra_openings: false, toilet_moved: false, layout_changed: false, shower_present: true, bathtub_present: false, reason: 'fixture comparison' });
+  const approved = JSON.stringify({ extra_openings: false, toilet_moved: false, layout_changed: false, view_changed: false, shower_present: true, bathtub_present: false, reason: 'fixture comparison' });
   const h = harness({ checks: [() => checked(false, approved)] });
   const res = await h.invoke(payload({ dusche: 'walk-in', badewanne: 'keine', wall: 'halbhoch' }));
   assert.equal(res.statusCode, 200);
@@ -179,7 +179,7 @@ test('shower prompt tiles the full tray or sloped-floor perimeter to the ceiling
 });
 
 test('fixture checker rejects a shower in a Gäste-WC', async () => {
-  const wrong = JSON.stringify({ extra_openings: false, toilet_moved: false, layout_changed: false, shower_present: true, bathtub_present: false, reason: 'unexpected shower' });
+  const wrong = JSON.stringify({ extra_openings: false, toilet_moved: false, layout_changed: false, view_changed: false, shower_present: true, bathtub_present: false, reason: 'unexpected shower' });
   const h = harness({ checks: [() => checked(false, wrong), () => checked(false, wrong)] });
   const res = await h.invoke(payload({ raum: 'gaeste-wc', dusche: '', badewanne: '', waschtisch: 'einzel' }));
   assert.equal(res.statusCode, 502);
@@ -190,6 +190,15 @@ test('fixture checker rejects a shower in a Gäste-WC', async () => {
   assert.match(leadMail.body.subject, /Ideenbild abgelehnt/);
   assert.match(JSON.stringify(leadMail.body), /unexpected shower/);
   assert.deepEqual(leadMail.body.attachments.map(({ filename }) => filename), ['foto.png']);
+});
+
+test('checker rejects a changed camera or expanded field of view', async () => {
+  const changedView = JSON.stringify({ extra_openings: false, toilet_moved: false, layout_changed: false, view_changed: true, shower_present: false, bathtub_present: false, reason: 'camera and visible room bounds changed' });
+  const h = harness({ checks: [() => checked(false, changedView), () => checked(false, changedView)] });
+  const res = await h.invoke(payload({ dusche: 'keine', badewanne: 'keine' }));
+  assert.equal(res.statusCode, 502);
+  assert.equal(res.body.code, 'RENDER_REJECTED');
+  assert.deepEqual(h.counts(), { generation: 2, checks: 2, mail: 1 });
 });
 
 test('individual consultation sends one lead and never calls Gemini', async () => {

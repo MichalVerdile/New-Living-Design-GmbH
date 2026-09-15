@@ -170,6 +170,7 @@ interface CheckFlags {
   extra_openings: boolean;
   toilet_moved: boolean;
   layout_changed: boolean;
+  view_changed: boolean;
   shower_present: boolean;
   bathtub_present: boolean;
 }
@@ -842,7 +843,7 @@ async function generateImage(prompt: string, photo: Photo, swatch: Photo | null,
  * Fragt ein Gemini-Textmodell, ob das Ideenbild eine Öffnung (Fenster, Dachfenster,
  * Tür, Glasfläche) enthält, die im Foto nicht da ist. Nicht verfügbare oder
  * unlesbare Prüfungen werden vom Aufrufer separat behandelt.
- * Dies ist noch kein vollständiger Geometrie-/Ausstattungschecker.
+ * Prüft zusätzlich, dass Kamera, Bildausschnitt und sichtbare Raumgrenzen erhalten bleiben.
  */
 async function checkOpenings(
   photo: Photo,
@@ -857,10 +858,11 @@ async function checkOpenings(
     'Image 1 is the original room. Image 2 is an edited renovation result. Compare them strictly. ' +
     'Set extra_openings true if any window, roof window, door, niche or outside opening was added, removed, resized or moved. ' +
     'Set toilet_moved true if the toilet position or orientation changed. Set layout_changed true if walls, room size, floor area or fixed fixture footprint moved. ' +
+    'Set view_changed true if camera position, angle, lens, framing, perspective or visible room boundaries changed, or if image 2 reveals invented floor or wall area outside image 1. Judge only the shared visible field of view; an edited result must remain pixel-comparable to image 1. ' +
     (wanted.cistern === 'aufputz' ? 'A slim sanitary module in front of an existing wall, replacing a surface-mounted cistern, is expected in this renovation: it must NOT be reported as layout_changed, and a toilet mounted on that module at the same place must NOT be reported as toilet_moved. ' : '') +
     `The requested result is a ${wanted.room === 'gaeste-wc' ? 'guest WC' : 'bathroom'} with shower_present=${wanted.shower} and bathtub_present=${wanted.bathtub}. ` +
     'Report whether image 2 visibly contains a shower (including tray/enclosure) and a bathtub. A mirror or glass shower screen is not an opening. ' +
-    'Answer with JSON only, no markdown and exactly these keys: {"extra_openings":false,"toilet_moved":false,"layout_changed":false,"shower_present":false,"bathtub_present":false,"reason":"short English reason, max 30 words"}';
+    'Answer with JSON only, no markdown and exactly these keys: {"extra_openings":false,"toilet_moved":false,"layout_changed":false,"view_changed":false,"shower_present":false,"bathtub_present":false,"reason":"short English reason, max 30 words"}';
   try {
     const r = await request(ctx, url, {
       method: 'POST',
@@ -887,7 +889,7 @@ async function checkOpenings(
     const textOut: string = json?.candidates?.[0]?.content?.parts?.map((p: any) => p.text || '').join('') || '';
     if (json?.candidates?.[0]?.finishReason !== 'STOP') return { status: 'unavailable' };
     const parsed = JSON.parse(textOut);
-    const keys = ['extra_openings', 'toilet_moved', 'layout_changed', 'shower_present', 'bathtub_present'];
+    const keys = ['extra_openings', 'toilet_moved', 'layout_changed', 'view_changed', 'shower_present', 'bathtub_present'];
     if (!parsed || Array.isArray(parsed) || keys.some((key) => typeof parsed[key] !== 'boolean') || typeof parsed.reason !== 'string'
       || !parsed.reason.trim() || parsed.reason.length > 200
       || Object.keys(parsed).some((key) => ![...keys, 'reason'].includes(key))) return { status: 'unavailable' };
@@ -895,10 +897,11 @@ async function checkOpenings(
       extra_openings: parsed.extra_openings,
       toilet_moved: parsed.toilet_moved,
       layout_changed: parsed.layout_changed,
+      view_changed: parsed.view_changed,
       shower_present: parsed.shower_present,
       bathtub_present: parsed.bathtub_present,
     };
-    const rejected = flags.extra_openings || flags.toilet_moved || flags.layout_changed
+    const rejected = flags.extra_openings || flags.toilet_moved || flags.layout_changed || flags.view_changed
       || flags.shower_present !== wanted.shower || flags.bathtub_present !== wanted.bathtub;
     return rejected ? { status: 'rejected', reason: parsed.reason.slice(0, 200), flags } : { status: 'approved' };
   } catch {
