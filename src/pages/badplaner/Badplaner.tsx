@@ -1049,7 +1049,7 @@ const Badplaner: React.FC = () => {
                             type="file"
                             id="bp-foto-kamera"
                             className={styles.fileInput}
-                            accept="image/*"
+                            accept="image/jpeg,image/png,image/webp"
                             capture="environment"
                             onChange={onPhoto}
                             disabled={photoBusy}
@@ -1061,7 +1061,7 @@ const Badplaner: React.FC = () => {
                             type="file"
                             id="bp-foto-galerie"
                             className={styles.fileInput}
-                            accept="image/*"
+                            accept="image/jpeg,image/png,image/webp"
                             onChange={onPhoto}
                             disabled={photoBusy}
                           />
@@ -1085,7 +1085,7 @@ const Badplaner: React.FC = () => {
                       <fieldset className={styles.group}>
                         <legend>Wie ist der Spülkasten beim WC eingebaut?</legend>
                         <ChipPicker name="cistern" items={CISTERN_OPTIONS} value={cistern} onChange={setCistern} />
-                        <p className={styles.hint}>Ein sichtbarer Spülkasten wird im Ideenbild durch das im Fixpreis enthaltene Sanitärmodul ersetzt.</p>
+                        <p className={styles.hint}>Aufputz: Der Spülkasten ist sichtbar, meist als Kasten über oder hinter dem WC. Unterputz: Das WC hängt an der Wand, sichtbar ist nur die Betätigungsplatte. Ein sichtbarer Spülkasten wird im Ideenbild durch das im Fixpreis enthaltene Sanitärmodul ersetzt.</p>
                       </fieldset>
                       <div className={styles.stepActions}>
                         <button type="button" className={styles.ctaDark} onClick={() => goTo(4)} disabled={!windows || !cistern}>Weiter zu Kontakt</button>
@@ -1097,7 +1097,7 @@ const Badplaner: React.FC = () => {
                             type="file"
                             id="bp-foto-kamera-neu"
                             className={styles.fileInput}
-                            accept="image/*"
+                            accept="image/jpeg,image/png,image/webp"
                             capture="environment"
                             onChange={onPhoto}
                             disabled={photoBusy}
@@ -1109,7 +1109,7 @@ const Badplaner: React.FC = () => {
                             type="file"
                             id="bp-foto-galerie-neu"
                             className={styles.fileInput}
-                            accept="image/*"
+                            accept="image/jpeg,image/png,image/webp"
                             onChange={onPhoto}
                             disabled={photoBusy}
                           />
