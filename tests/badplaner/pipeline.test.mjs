@@ -6,7 +6,7 @@ import { pathToFileURL } from 'node:url';
 // No test can accidentally reach a real provider, even through the default export.
 globalThis.fetch = async () => { throw new Error('External network is forbidden in tests'); };
 const moduleUrl = (name) => pathToFileURL(path.join(process.env.BADPLANER_TEST_BUILD, name));
-const { createHandler } = await import(moduleUrl('api/badplaner.js'));
+const { createHandler, nearestAspectRatio } = await import(moduleUrl('api/badplaner.js'));
 const { optionsForPackage } = await import(moduleUrl('src/data/badplaner.js'));
 const { Budget, TimeoutError } = await import(moduleUrl('server/badplaner/budget.js'));
 const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jX1EAAAAASUVORK5CYII=';
@@ -206,13 +206,40 @@ test('rejected renders consume the device cookie and IP quota', async () => {
   assert.deepEqual(h.counts(), { generation: 20, checks: 20, mail: 10 });
 });
 
-test('checker rejects a changed camera or expanded field of view', async () => {
+test('a changed field of view is noted for us but the customer still gets the image', async () => {
   const changedView = JSON.stringify({ extra_openings: false, toilet_moved: false, layout_changed: false, view_changed: true, shower_present: false, bathtub_present: false, reason: 'camera and visible room bounds changed' });
-  const h = harness({ checks: [() => checked(false, changedView), () => checked(false, changedView)] });
+  const h = harness({ checks: [() => checked(false, changedView)] });
+  const res = await h.invoke(payload({ dusche: 'keine', badewanne: 'keine' }));
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.body.ok, true);
+  assert.deepEqual(h.counts(), { generation: 1, checks: 1, mail: 2 });
+  const leadMail = h.calls.find((call) => call.url === 'https://api.resend.com/emails');
+  assert.match(JSON.stringify(leadMail.body), /Bildausschnitt ver/);
+});
+
+test('a moved toilet is still rejected even when the field of view held', async () => {
+  const movedToilet = JSON.stringify({ extra_openings: false, toilet_moved: true, layout_changed: false, view_changed: false, shower_present: false, bathtub_present: false, reason: 'toilet moved to the opposite wall' });
+  const h = harness({ checks: [() => checked(false, movedToilet), () => checked(false, movedToilet)] });
   const res = await h.invoke(payload({ dusche: 'keine', badewanne: 'keine' }));
   assert.equal(res.statusCode, 502);
   assert.equal(res.body.code, 'RENDER_REJECTED');
   assert.deepEqual(h.counts(), { generation: 2, checks: 2, mail: 1 });
+});
+
+test('the generation request carries the aspect ratio of the customer photo', async () => {
+  const h = harness(); await h.invoke();
+  const gen = h.calls.find((call) => call.url.includes('generativelanguage.googleapis.com') && call.body?.generationConfig?.responseModalities);
+  assert.equal(gen.body.generationConfig.imageConfig.imageSize, '1K');
+  assert.equal(gen.body.generationConfig.imageConfig.aspectRatio, '1:1');
+});
+
+test('nearestAspectRatio picks a format Gemini supports', () => {
+  assert.equal(nearestAspectRatio(720, 1280), '9:16');
+  assert.equal(nearestAspectRatio(1280, 720), '16:9');
+  assert.equal(nearestAspectRatio(1200, 1600), '3:4');
+  assert.equal(nearestAspectRatio(1600, 1200), '4:3');
+  assert.equal(nearestAspectRatio(1024, 1024), '1:1');
+  assert.equal(nearestAspectRatio(0, 800), '');
 });
 
 test('individual consultation sends one lead and never calls Gemini', async () => {
@@ -326,9 +353,14 @@ test('failed render attempts do not consume the IP counter', async () => {
   assert.equal((await h.invoke()).statusCode, 200);
 });
 
-test('retry is skipped when full render, check and delivery reserve cannot fit', async () => {
-  const h = harness({ generateDelays: [30000], checks: [() => checked(true)] }); const res = await h.invoke();
+test('retry is skipped when a second pass of the measured length cannot fit', async () => {
+  const h = harness({ generateDelays: [45000], checks: [() => checked(true)] }); const res = await h.invoke();
   assert.equal(res.body.code, 'RENDER_REJECTED'); assert.deepEqual(h.counts(), { generation: 1, checks: 1, mail: 1 });
+});
+
+test('retry runs when the first pass was fast enough to repeat', async () => {
+  const h = harness({ generateDelays: [20000], checks: [() => checked(true)] }); const res = await h.invoke();
+  assert.equal(res.statusCode, 200); assert.deepEqual(h.counts(), { generation: 2, checks: 2, mail: 2 });
 });
 
 test('company mail fallback success is explicit and reports missing attachments', async () => {
