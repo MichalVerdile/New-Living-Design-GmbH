@@ -192,6 +192,19 @@ test('fixture checker rejects a shower in a Gäste-WC', async () => {
   assert.deepEqual(leadMail.body.attachments.map(({ filename }) => filename), ['foto.png']);
 });
 
+test('rejected renders consume the device cookie and IP quota', async () => {
+  const wrong = JSON.stringify({ extra_openings: true, toilet_moved: false, layout_changed: false, view_changed: false, shower_present: false, bathtub_present: false, reason: 'invented window' });
+  const h = harness({ checks: Array.from({ length: 12 }, () => () => checked(false, wrong)) });
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    const res = await h.invoke();
+    assert.equal(res.statusCode, 502);
+    assert.match(res.headers['Set-Cookie'], /nldbp=1:2026-09-13/);
+  }
+  const blocked = await h.invoke();
+  assert.equal(blocked.statusCode, 429);
+  assert.deepEqual(h.counts(), { generation: 12, checks: 12, mail: 6 });
+});
+
 test('checker rejects a changed camera or expanded field of view', async () => {
   const changedView = JSON.stringify({ extra_openings: false, toilet_moved: false, layout_changed: false, view_changed: true, shower_present: false, bathtub_present: false, reason: 'camera and visible room bounds changed' });
   const h = harness({ checks: [() => checked(false, changedView), () => checked(false, changedView)] });

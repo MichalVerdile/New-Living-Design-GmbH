@@ -749,6 +749,10 @@ const Badplaner: React.FC = () => {
       summaryRows.push({ label: 'Armaturen', value: options.tapSeries });
     }
     if (chosen.sanitary) summaryRows.push({ label: 'Keramik', value: chosen.sanitary.label });
+    if (windows) summaryRows.push({
+      label: 'Fenster im Foto',
+      value: windows === '0' ? 'keine' : windows === '3' ? '3 oder mehr' : windows,
+    });
     if (cistern) summaryRows.push({ label: 'WC / Spülkasten', value: cistern === 'aufputz'
       ? 'Aufputz, ersetzt durch Sanitärmodul (im Fixpreis enthalten)'
       : 'Unterputz' });

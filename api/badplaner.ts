@@ -454,6 +454,10 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
       details: leadDetails(rejectedNote, 'abgelehnt (Prüfung), nicht angezeigt'),
       attachments: [{ filename: photoName, content: photo.data }],
     }, ctx);
+    // Der abgelehnte Versuch hat Gemini zweimal beschäftigt und ist als Lead zugestellt
+    // worden: er zählt als Versuch, sonst liesse er sich endlos wiederholen.
+    res.setHeader('Set-Cookie', counterCookie(cookie + 1, today));
+    delivered = true;
     return res.status(502).json({
       ok: false, code: 'RENDER_REJECTED',
       delivery: { lead: leadDelivery.status, leadProvider: leadDelivery.provider, leadAttachments: leadDelivery.attachments },
