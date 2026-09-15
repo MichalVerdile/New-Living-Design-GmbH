@@ -131,7 +131,7 @@ test('Aufputz and Unterputz produce explicit, exclusive toilet branches', async 
     if (cistern === 'aufputz') {
       assert.match(prompt, /is completely removed and must not survive in any form/);
       assert.match(prompt, /exactly the sanitary module of image \d, copied part for part/);
-      assert.match(prompt, /floor-standing on the floor directly in front of that module/);
+      assert.match(prompt, /the toilet is wall-hung, rimless, in .*hanging on the front of that module/);
       assert.match(prompt, /wall behind is neither moved nor opened/);
       assert.match(checkPrompt, /must NOT be reported as layout_changed/);
     } else {
@@ -276,7 +276,7 @@ test('the sanitary module travels as its own reference image', async () => {
   assert.match(prompt, /exactly the sanitary module of image 3, copied part for part/);
   assert.match(prompt, /never tiled, never clad and never boxed in/);
   const leadMail = h.calls.find((call) => call.url === 'https://api.resend.com/emails');
-  assert.match(JSON.stringify(leadMail.body), /OLI QR INOX Pavimento/);
+  assert.match(JSON.stringify(leadMail.body), /OLI QR INOX Sospeso/);
 });
 
 test('the module image needs no network call and none is made for it', async () => {
