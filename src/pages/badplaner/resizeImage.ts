@@ -53,7 +53,7 @@ export async function resizeImageFile(
   // Unzulässige Formate und Dateigrössen vor Lesen und vor Browser-Decodierung abweisen.
   const declaredMime = file.type.trim().toLowerCase();
   if (declaredMime && !['image/jpeg', 'image/png', 'image/webp'].includes(declaredMime)) {
-    throw new Error('Bitte wählen Sie ein JPEG-, PNG- oder WebP-Bild.');
+    throw new Error('Dieses Bildformat können wir nicht lesen (zum Beispiel HEIC vom iPhone). Bitte ein JPEG, PNG oder WebP wählen oder das Foto direkt mit der Kamera aufnehmen.');
   }
   if (file.size < 1 || file.size > MAX_SOURCE_IMAGE_BYTES) throw new Error('Das Bild darf höchstens 20 MB gross sein.');
   const bytes = new Uint8Array(await file.arrayBuffer());
