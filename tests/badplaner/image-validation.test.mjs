@@ -214,6 +214,35 @@ test('client rejects file type/size and hostile dimensions before decoding', asy
   assert.equal(decodes, 0);
 });
 
+test('a file the browser cannot read byte by byte is still decoded', async (t) => {
+  // Android wirft für manche Dateien aus dem Dateiwähler NotReadableError,
+  // sowohl bei arrayBuffer() als auch im FileReader. Der Decoder bekommt
+  // dieselbe Datei aber oft trotzdem auf.
+  const unreadable = () => { const err = new Error('The requested file could not be read'); err.name = 'NotReadableError'; throw err; };
+  const bitmap = { width: 800, height: 600, close() {} };
+  let decodedFromFile = 0;
+  stubGlobal(t, 'createImageBitmap', async (source) => { if (source === file) decodedFromFile += 1; return bitmap; });
+  stubGlobal(t, 'FileReader', class { readAsArrayBuffer() { this.onerror(); } });
+  const canvas = { width: 0, height: 0, getContext: () => ({ fillRect() {}, drawImage() {} }), toDataURL: () => `data:image/jpeg;base64,${realImages['image/jpeg']}` };
+  stubGlobal(t, 'document', { createElement: () => canvas });
+  const file = { type: 'image/jpeg', size: 4096, arrayBuffer: unreadable };
+  const image = await resizeImageFile(file, 400);
+  assert.equal(decodedFromFile, 1);
+  assert.equal(image.width, 400);
+  assert.equal(image.height, 300);
+  assert.equal(image.base64, realImages['image/jpeg']);
+});
+
+test('an unreadable file that no decoder opens reports it in German', async (t) => {
+  const unreadable = () => { const err = new Error('The requested file could not be read'); err.name = 'NotReadableError'; throw err; };
+  stubGlobal(t, 'createImageBitmap', async () => { throw new Error('decode failed'); });
+  stubGlobal(t, 'FileReader', class { readAsArrayBuffer() { this.onerror(); } });
+  stubGlobal(t, 'URL', { createObjectURL: () => 'blob:fixture', revokeObjectURL() {} });
+  stubGlobal(t, 'Image', class { set src(_value) { setTimeout(() => this.onerror(), 0); } });
+  const file = { type: 'image/jpeg', size: 4096, arrayBuffer: unreadable };
+  await assert.rejects(resizeImageFile(file), (err) => err.name === 'Error' && /nicht lesen/.test(err.message));
+});
+
 test('client sniffs missing MIME, returns oriented dimensions and always closes bitmap', async (t) => {
   let closed = 0;
   let encoded = realImages['image/jpeg'];
