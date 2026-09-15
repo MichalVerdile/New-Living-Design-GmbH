@@ -419,7 +419,10 @@ const Badplaner: React.FC = () => {
       setCistern('');
     } catch (error) {
       setPhoto(null);
-      setPhotoError(error instanceof Error ? error.message : 'Das Bild konnte nicht gelesen werden. Bitte JPEG, PNG oder WebP wählen.');
+      // Nur unsere eigenen Meldungen sind deutsch und hilfreich. Eine DOMException
+      // des Browsers (NotReadableError, SecurityError) darf nie beim Kunden landen.
+      const own = error instanceof Error && error.name === 'Error' && error.message;
+      setPhotoError(own || 'Dieses Foto konnte nicht geöffnet werden. Bitte ein anderes wählen oder es mit «Foto aufnehmen» neu aufnehmen.');
     } finally {
       setPhotoBusy(false);
     }
@@ -1049,7 +1052,7 @@ const Badplaner: React.FC = () => {
                             type="file"
                             id="bp-foto-kamera"
                             className={styles.fileInput}
-                            accept="image/jpeg,image/png,image/webp"
+                            accept="image/*"
                             capture="environment"
                             onChange={onPhoto}
                             disabled={photoBusy}
@@ -1061,7 +1064,7 @@ const Badplaner: React.FC = () => {
                             type="file"
                             id="bp-foto-galerie"
                             className={styles.fileInput}
-                            accept="image/jpeg,image/png,image/webp"
+                            accept="image/*"
                             onChange={onPhoto}
                             disabled={photoBusy}
                           />
@@ -1097,7 +1100,7 @@ const Badplaner: React.FC = () => {
                             type="file"
                             id="bp-foto-kamera-neu"
                             className={styles.fileInput}
-                            accept="image/jpeg,image/png,image/webp"
+                            accept="image/*"
                             capture="environment"
                             onChange={onPhoto}
                             disabled={photoBusy}
@@ -1109,7 +1112,7 @@ const Badplaner: React.FC = () => {
                             type="file"
                             id="bp-foto-galerie-neu"
                             className={styles.fileInput}
-                            accept="image/jpeg,image/png,image/webp"
+                            accept="image/*"
                             onChange={onPhoto}
                             disabled={photoBusy}
                           />
