@@ -166,7 +166,14 @@ export interface BadplanerDependencies {
 type DeliveryStatus = 'accepted' | 'failed' | 'unknown' | 'skipped';
 interface MailResult { status: DeliveryStatus; provider?: 'resend' | 'formspree'; attachments?: boolean }
 interface RequestContext { budget: Budget }
-type CheckResult = { status: 'approved' } | { status: 'rejected'; reason: string } | { status: 'unavailable' } | { status: 'disabled' };
+interface CheckFlags {
+  extra_openings: boolean;
+  toilet_moved: boolean;
+  layout_changed: boolean;
+  shower_present: boolean;
+  bathtub_present: boolean;
+}
+type CheckResult = { status: 'approved' } | { status: 'rejected'; reason: string; flags: CheckFlags } | { status: 'unavailable' } | { status: 'disabled' };
 
 /** Each factory owns its best-effort counters. Tests inject HTTP, clock and IDs. */
 export function createHandler(overrides: Partial<BadplanerDependencies> = {}) {
@@ -355,40 +362,9 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
     cistern,
   });
 
-  // A full retry needs 50s generation + 20s check + 25s delivery. With a 105s
-  // deadline it is intentionally possible only after a first pass under 10s.
-  let gen = await generateImage(prompt, photo, swatch, ctx);
-  if (gen.ok === false) return res.status(502).json({ ok: false, error: gen.error });
-  let checkNote = 'ok';
-  const wantedFixtures = { room, shower: shower ? shower.id !== 'keine' : false, bathtub: bathtub ? bathtub.id !== 'keine' : false, cistern };
-  const checkWithUnavailableRetry = async (image: { mime: string; data: string }): Promise<CheckResult> => {
-    let result = await checkOpenings(photo, image, wantedFixtures, ctx);
-    if (result.status === 'unavailable'
-      && ctx.budget.remaining() >= CHECK_RETRY_DELAY_MS + CHECK_TIMEOUT_MS + DELIVERY_RESERVE_MS) {
-      await dependencies.sleep(CHECK_RETRY_DELAY_MS);
-      result = await checkOpenings(photo, image, wantedFixtures, ctx);
-    }
-    return result;
-  };
-  let check = await checkWithUnavailableRetry(gen);
-  if (check.status === 'rejected' && ctx.budget.remaining() >= GEMINI_TIMEOUT_MS + CHECK_TIMEOUT_MS + DELIVERY_RESERVE_MS) {
-    // The rejected image never becomes a fallback if the retry/check fails.
-    const retryPrompt = `${prompt}\nIMPORTANT: a previous attempt failed the structural and fixture check: ${check.reason}. Correct that exact issue. Keep the original layout, every opening and toilet position, and show exactly the requested shower and bathtub state.`;
-    const second = await generateImage(retryPrompt, photo, swatch, ctx);
-    if (second.ok === false) return res.status(502).json({ ok: false, code: 'RENDER_FAILED', error: second.error });
-    check = await checkWithUnavailableRetry(second);
-    gen = second;
-    if (check.status === 'approved') checkNote = '1. Versuch verworfen, 2. Versuch ok';
-  }
-  if (check.status === 'rejected') return res.status(502).json({
-    ok: false, code: 'RENDER_REJECTED',
-    error: 'Das Ideenbild konnte nicht sicher bestätigt werden und wird nicht angezeigt. Bitte später erneut versuchen oder uns direkt kontaktieren.',
-  });
-  if (check.status === 'unavailable') checkNote = 'nicht möglich (Prüfdienst nicht erreichbar)';
-  if (check.status === 'disabled') checkNote = 'deaktiviert';
-  console.log('[badplaner] Fensterprüfung:', checkNote);
-
-  // 10. Auswahl in Klartext: dieselben Zeilen für das Lead-Mail und die Kundenmail
+  // 9. Auswahl in Klartext: dieselben Zeilen für Lead- und Kundenmail. Sie
+  // werden vor der Prüfung aufgebaut, damit NLD den bereits erfassten Lead
+  // auch dann erhält, wenn kein Ideenbild sicher angezeigt werden darf.
   const packageLabel = requiresQuote
     ? `${pkg.name} – Individuelle Offerte`
     : `${pkg.name} (ab CHF ${pkg.priceLabel})`;
@@ -418,10 +394,9 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   row('Waschtisch', basin.label);
   row('Spiegel', mirror.label);
 
-  // 11. Lead-Mail an NLD (Resend mit Anhängen, sonst Formspree ohne Bilder)
   const leadId = newId();
-  const imageName = gen.mime === 'image/png' ? 'ideenbild.png' : 'ideenbild.jpg';
-  const details: [string, string][] = [
+  const photoName = photo.mime === 'image/png' ? 'foto.png' : photo.mime === 'image/webp' ? 'foto.webp' : 'foto.jpg';
+  const leadDetails = (checkStatus: string, imageStatus?: string): [string, string][] => [
     ['Name', name],
     ['Telefon / WhatsApp', phone],
     ['E-Mail', email],
@@ -432,19 +407,72 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
       ? 'Aufputz, ersetzt durch Sanitärmodul (im Fixpreis enthalten)'
       : 'Unterputz'],
     ['Muster', swatch ? 'geladen' : 'nicht geladen'],
-    ['Fensterprüfung', checkNote],
+    ['Fensterprüfung', checkStatus],
+    ...(imageStatus ? [['Ideenbild', imageStatus] as [string, string]] : []),
     ['Newsletter', newsletter ? 'ja' : 'nein'],
     ['Zeitpunkt', swissTime()],
     ['Seite', req.headers?.referer || req.headers?.referrer || '/badplaner'],
     ['Lead-ID', leadId],
   ];
+
+  // A full retry needs 50s generation + 20s check + 25s delivery. With a 105s
+  // deadline it is intentionally possible only after a first pass under 10s.
+  let gen = await generateImage(prompt, photo, swatch, ctx);
+  if (gen.ok === false) return res.status(502).json({ ok: false, error: gen.error });
+  let checkNote = 'ok';
+  const wantedFixtures = { room, shower: shower ? shower.id !== 'keine' : false, bathtub: bathtub ? bathtub.id !== 'keine' : false, cistern };
+  const checkWithUnavailableRetry = async (image: { mime: string; data: string }): Promise<CheckResult> => {
+    let result = await checkOpenings(photo, image, wantedFixtures, ctx);
+    if (result.status === 'unavailable'
+      && ctx.budget.remaining() >= CHECK_RETRY_DELAY_MS + CHECK_TIMEOUT_MS + DELIVERY_RESERVE_MS) {
+      await dependencies.sleep(CHECK_RETRY_DELAY_MS);
+      result = await checkOpenings(photo, image, wantedFixtures, ctx);
+    }
+    return result;
+  };
+  let check = await checkWithUnavailableRetry(gen);
+  let checkAttempt = 1;
+  if (check.status === 'rejected') logRejectedCheck(check, checkAttempt);
+  if (check.status === 'rejected' && ctx.budget.remaining() >= GEMINI_TIMEOUT_MS + CHECK_TIMEOUT_MS + DELIVERY_RESERVE_MS) {
+    // The rejected image never becomes a fallback if the retry/check fails.
+    const retryPrompt = `${prompt}\nIMPORTANT: a previous attempt failed the structural and fixture check: ${check.reason}. Correct that exact issue. Keep the original layout, every opening and toilet position, and show exactly the requested shower and bathtub state.`;
+    const second = await generateImage(retryPrompt, photo, swatch, ctx);
+    if (second.ok === false) return res.status(502).json({ ok: false, code: 'RENDER_FAILED', error: second.error });
+    check = await checkWithUnavailableRetry(second);
+    gen = second;
+    checkAttempt = 2;
+    if (check.status === 'rejected') logRejectedCheck(check, checkAttempt);
+    if (check.status === 'approved') checkNote = '1. Versuch verworfen, 2. Versuch ok';
+  }
+  if (check.status === 'rejected') {
+    const rejectedNote = `abgelehnt: ${check.reason}`;
+    const leadDelivery = await sendLeadMail({
+      subject: `Badplaner-Lead: ${name} – ${isGuestWc ? 'Gäste-WC' : pkg.name} – Ideenbild abgelehnt`,
+      replyTo: email,
+      intro: 'Neuer Lead aus dem Badplaner. Das Ideenbild wurde von der automatischen Prüfung abgelehnt und dem Kunden nicht angezeigt. Das Originalfoto ist im Anhang.',
+      details: leadDetails(rejectedNote, 'abgelehnt (Prüfung), nicht angezeigt'),
+      attachments: [{ filename: photoName, content: photo.data }],
+    }, ctx);
+    return res.status(502).json({
+      ok: false, code: 'RENDER_REJECTED',
+      delivery: { lead: leadDelivery.status, leadProvider: leadDelivery.provider, leadAttachments: leadDelivery.attachments },
+      error: 'Das Ideenbild konnte nicht sicher bestätigt werden und wird nicht angezeigt. Bitte später erneut versuchen oder uns direkt kontaktieren.',
+    });
+  }
+  if (check.status === 'unavailable') checkNote = 'nicht möglich (Prüfdienst nicht erreichbar)';
+  if (check.status === 'disabled') checkNote = 'deaktiviert';
+  console.log('[badplaner] Fensterprüfung:', checkNote);
+
+  // 11. Lead-Mail an NLD (Resend mit Anhängen, sonst Formspree ohne Bilder)
+  const imageName = gen.mime === 'image/png' ? 'ideenbild.png' : 'ideenbild.jpg';
+  const details = leadDetails(checkNote);
   const leadDelivery = await sendLeadMail({
     subject: `Badplaner-Lead: ${name} – ${isGuestWc ? 'Gäste-WC' : pkg.name}`,
     replyTo: email,
     intro: 'Neuer Lead aus dem Badplaner. Foto und Ideenbild im Anhang.',
     details,
     attachments: [
-      { filename: 'foto.jpg', content: photo.data },
+      { filename: photoName, content: photo.data },
       { filename: imageName, content: gen.data },
     ],
   }, ctx);
@@ -863,13 +891,28 @@ async function checkOpenings(
     if (!parsed || Array.isArray(parsed) || keys.some((key) => typeof parsed[key] !== 'boolean') || typeof parsed.reason !== 'string'
       || !parsed.reason.trim() || parsed.reason.length > 200
       || Object.keys(parsed).some((key) => ![...keys, 'reason'].includes(key))) return { status: 'unavailable' };
-    const rejected = parsed.extra_openings || parsed.toilet_moved || parsed.layout_changed
-      || parsed.shower_present !== wanted.shower || parsed.bathtub_present !== wanted.bathtub;
-    return rejected ? { status: 'rejected', reason: parsed.reason.slice(0, 200) } : { status: 'approved' };
+    const flags: CheckFlags = {
+      extra_openings: parsed.extra_openings,
+      toilet_moved: parsed.toilet_moved,
+      layout_changed: parsed.layout_changed,
+      shower_present: parsed.shower_present,
+      bathtub_present: parsed.bathtub_present,
+    };
+    const rejected = flags.extra_openings || flags.toilet_moved || flags.layout_changed
+      || flags.shower_present !== wanted.shower || flags.bathtub_present !== wanted.bathtub;
+    return rejected ? { status: 'rejected', reason: parsed.reason.slice(0, 200), flags } : { status: 'approved' };
   } catch {
     console.error('[badplaner] Fensterprüfung nicht möglich');
     return { status: 'unavailable' };
   }
+}
+
+function logRejectedCheck(check: Extract<CheckResult, { status: 'rejected' }>, attempt: number) {
+  console.warn('[badplaner] Fensterprüfung abgelehnt', {
+    attempt,
+    reason: check.reason,
+    flags: check.flags,
+  });
 }
 
 /* ---------- Lead-Mail an NLD ---------- */

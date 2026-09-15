@@ -184,7 +184,12 @@ test('fixture checker rejects a shower in a Gäste-WC', async () => {
   const res = await h.invoke(payload({ raum: 'gaeste-wc', dusche: '', badewanne: '', waschtisch: 'einzel' }));
   assert.equal(res.statusCode, 502);
   assert.equal(res.body.code, 'RENDER_REJECTED');
-  assert.equal(h.counts().mail, 0);
+  assert.equal(res.body.delivery.lead, 'accepted');
+  assert.equal(h.counts().mail, 1);
+  const leadMail = h.calls.find((call) => call.url === 'https://api.resend.com/emails');
+  assert.match(leadMail.body.subject, /Ideenbild abgelehnt/);
+  assert.match(JSON.stringify(leadMail.body), /unexpected shower/);
+  assert.deepEqual(leadMail.body.attachments.map(({ filename }) => filename), ['foto.png']);
 });
 
 test('individual consultation sends one lead and never calls Gemini', async () => {
@@ -224,11 +229,16 @@ test('oversize JSON is rejected before provider calls', async () => {
   assert.equal(res.statusCode, 413); assert.equal(h.calls.length, 0);
 });
 
-test('second rejected result is never returned or mailed', async () => {
+test('second rejected result is never returned, while the lead and original photo are preserved', async () => {
   const h = harness({ checks: [() => checked(true), () => checked(true)] });
   const res = await h.invoke();
   assert.equal(res.body.code, 'RENDER_REJECTED'); assert.equal(res.statusCode, 502);
-  assert.equal(res.body.image, undefined); assert.deepEqual(h.counts(), { generation: 2, checks: 2, mail: 0 });
+  assert.equal(res.body.image, undefined); assert.deepEqual(h.counts(), { generation: 2, checks: 2, mail: 1 });
+  const leadMail = h.calls.find((call) => call.url === 'https://api.resend.com/emails');
+  assert.match(JSON.stringify(leadMail.body), /Ideenbild.*abgelehnt \(Prüfung\), nicht angezeigt/);
+  assert.match(JSON.stringify(leadMail.body), /Muster/);
+  assert.equal(leadMail.body.attachments.length, 1);
+  assert.equal(leadMail.body.attachments[0].filename, 'foto.png');
 });
 
 test('second approved result replaces first rejected result', async () => {
@@ -295,7 +305,7 @@ test('failed render attempts do not consume the IP counter', async () => {
 
 test('retry is skipped when full render, check and delivery reserve cannot fit', async () => {
   const h = harness({ generateDelays: [30000], checks: [() => checked(true)] }); const res = await h.invoke();
-  assert.equal(res.body.code, 'RENDER_REJECTED'); assert.deepEqual(h.counts(), { generation: 1, checks: 1, mail: 0 });
+  assert.equal(res.body.code, 'RENDER_REJECTED'); assert.deepEqual(h.counts(), { generation: 1, checks: 1, mail: 1 });
 });
 
 test('company mail fallback success is explicit and reports missing attachments', async () => {
