@@ -1073,6 +1073,7 @@ const Badplaner: React.FC = () => {
                       </div>
                       <span className={styles.hint}>
                         Jetzt neu aufnehmen oder ein Foto nehmen, das Sie schon haben. Am besten von der Tür aus, das ganze Bad im Bild, Licht an.
+                        {' '}Ein Bild aus Google Fotos oder aus der Cloud lässt sich oft nicht lesen: wählen Sie es unter «Dieses Gerät» oder nehmen Sie es neu auf.
                       </span>
                     </div>
                   )}
