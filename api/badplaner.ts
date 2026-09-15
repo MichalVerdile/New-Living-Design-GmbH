@@ -62,8 +62,8 @@ const MAX_RESPONSE_BASE64 = 3.5 * 1024 * 1024;
 const MAX_SWATCH_BYTES = 5 * 1024 * 1024; // current catalog originals include files >4 MiB
 const TOTAL_TIMEOUT_MS = 105000; // 15 seconds below the platform limit
 const DELIVERY_RESERVE_MS = 25000;
-const PER_DEVICE_PER_DAY = 3;                 // Cookie nldbp
-const PER_IP_PER_DAY = 6;                     // In-Memory
+const PER_DEVICE_PER_DAY = 5;                 // Cookie nldbp
+const PER_IP_PER_DAY = 10;                    // In-Memory, muss über dem Gerätelimit liegen
 const GEMINI_TIMEOUT_MS = 50000;
 const CHECK_TIMEOUT_MS = 20000;
 const CHECK_RETRY_DELAY_MS = 750;
@@ -746,7 +746,7 @@ function buildPrompt(v: {
         v.wantsBathtub ? `${v.bathtubPrompt} inside the original wet-area footprint` : 'NO bathtub and no bath filler',
       ].join('; ');
   const toilet = v.cistern === 'aufputz'
-    ? `the visible surface-mounted cistern above the toilet is removed; in its place a slim sanitary module stands in front of the existing wall: tempered glass front, about 10 cm deep and about 110 cm high, with a flush button integrated at the top; the toilet is wall-hung, rimless, in ${v.sanitaryPrompt}, mounted on that module at exactly the same position as the existing toilet; the wall behind is neither moved nor opened and no new partition wall is built`
+    ? `the existing surface-mounted cistern, the visible boxed cistern above or behind the toilet, is completely removed and must not survive in any form: no white cistern box, no boxed-in panel, no tiled shelf where it stood; in its exact place, standing in front of the existing wall, there is one slim sanitary module: a flat tempered glass front panel, glossy and clearly readable as glass with soft reflections, about 10 cm deep, about 110 cm high, no wider than the toilet, with a small rectangular flush plate integrated at the top edge; the toilet is wall-hung, rimless, in ${v.sanitaryPrompt}, mounted on the front of that module at exactly the same position as the existing toilet and floating clear of the floor; the wall behind is neither moved nor opened and no new partition wall is built`
     : `the cistern is concealed inside the wall and stays concealed; no visible cistern and no sanitary module in front of the wall; the toilet is wall-hung, rimless, in ${v.sanitaryPrompt}, at exactly its existing position`;
 
   return [
