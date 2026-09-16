@@ -19,6 +19,22 @@ type Drawable = ImageBitmap | HTMLImageElement;
 
 const UNREADABLE = 'Dieses Foto konnte der Browser nicht lesen. Bitte ein anderes Foto wählen oder es mit «Foto aufnehmen» neu aufnehmen.';
 
+/**
+ * Kurzcode am Ende der Meldung: welche Leseversuche woran gescheitert sind.
+ * Für den Kunden belanglos, für uns der einzige Hinweis, warum ein Foto auf
+ * einem fremden Gerät nicht aufgeht — ein Screenshot der Meldung genügt dann.
+ */
+function failureCode(log: string[]): string {
+  const seen: string[] = [];
+  for (const entry of log) if (entry && !seen.includes(entry)) seen.push(entry);
+  return seen.length ? ` (Code ${seen.join('/').slice(0, 60)})` : '';
+}
+
+function noteFailure(log: string[], step: string, error: unknown): void {
+  const name = error instanceof Error && error.name ? error.name : 'Fehler';
+  log.push(`${step}:${name}`);
+}
+
 /** Decodiert über ein <img>-Element; nimmt File oder Blob. */
 function decodeViaImg(source: Blob): Promise<HTMLImageElement> {
   const url = URL.createObjectURL(source);
@@ -38,23 +54,24 @@ function decodeViaImg(source: Blob): Promise<HTMLImageElement> {
  * Dateiwähler bei `arrayBuffer()` einen NotReadableError, während der ältere
  * FileReader dieselbe Datei noch hergibt — darum beide Wege.
  */
-async function readBytes(file: Blob): Promise<Uint8Array> {
+async function readBytes(file: Blob, log: string[] = []): Promise<Uint8Array> {
   try {
     return new Uint8Array(await file.arrayBuffer());
-  } catch {
+  } catch (error) {
+    noteFailure(log, 'buf', error);
     return await new Promise<Uint8Array>((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(new Uint8Array(reader.result as ArrayBuffer));
-      reader.onerror = () => reject(new Error(UNREADABLE));
+      reader.onerror = () => { noteFailure(log, 'fr', reader.error); reject(new Error(UNREADABLE)); };
       reader.readAsArrayBuffer(file);
     });
   }
 }
 
 /** Wie readBytes, gibt aber null zurueck, statt zu werfen. */
-async function tryReadBytes(file: Blob): Promise<Uint8Array | null> {
+async function tryReadBytes(file: Blob, log: string[] = []): Promise<Uint8Array | null> {
   try {
-    return await readBytes(file);
+    return await readBytes(file, log);
   } catch {
     return null;
   }
@@ -65,7 +82,7 @@ async function tryReadBytes(file: Blob): Promise<Uint8Array | null> {
  * im Browser durch verschiedene Leseroutinen, und ein Foto, das der eine nicht
  * hergibt, öffnet der nächste oft doch.
  */
-async function decodeOnce(file: File, known: Uint8Array | null): Promise<Drawable> {
+async function decodeOnce(file: File, known: Uint8Array | null, log: string[]): Promise<Drawable> {
   if (known) {
     // Die Bytes sind schon geprüft: daraus einen eigenen Blob bauen und diesen
     // decodieren, damit die Datei kein zweites Mal aus dem Dateiwähler kommt.
@@ -73,44 +90,50 @@ async function decodeOnce(file: File, known: Uint8Array | null): Promise<Drawabl
     if (typeof createImageBitmap === 'function') {
       try {
         return await createImageBitmap(checked, { imageOrientation: 'from-image' });
-      } catch { /* nächster Weg */ }
+      } catch (error) { noteFailure(log, 'bmpX', error); }
       try {
         return await createImageBitmap(checked);
-      } catch { /* nächster Weg */ }
+      } catch (error) { noteFailure(log, 'bmp', error); }
     }
     return await decodeViaImg(checked);
   }
   if (typeof createImageBitmap === 'function') {
     try {
       return await createImageBitmap(file, { imageOrientation: 'from-image' });
-    } catch { /* nächster Weg */ }
+    } catch (error) { noteFailure(log, 'bmpX', error); }
     try {
       return await createImageBitmap(file);
-    } catch { /* nächster Weg */ }
+    } catch (error) { noteFailure(log, 'bmp', error); }
   }
   try {
     return await decodeViaImg(file);
-  } catch { /* nächster Weg */ }
+  } catch (error) { noteFailure(log, 'img', error); }
   // Letzter Weg: Bytes holen und daraus einen frischen Blob bauen. Der ist vom
   // Dateiwähler losgelöst und lässt sich auch dann noch decodieren, wenn die
   // Originaldatei zwischendurch nicht mehr lesbar ist.
-  const blob = new Blob([await readBytes(file)], { type: file.type || 'image/jpeg' });
+  const blob = new Blob([await readBytes(file, log)], { type: file.type || 'image/jpeg' });
   if (typeof createImageBitmap === 'function') {
     try {
       return await createImageBitmap(blob, { imageOrientation: 'from-image' });
-    } catch { /* nächster Weg */ }
+    } catch (error) { noteFailure(log, 'bmpB', error); }
   }
   return await decodeViaImg(blob);
 }
 
-async function decode(file: File, known: Uint8Array | null): Promise<Drawable> {
+async function decode(file: File, known: Uint8Array | null, log: string[]): Promise<Drawable> {
   try {
-    return await decodeOnce(file, known);
-  } catch {
+    return await decodeOnce(file, known, log);
+  } catch (error) {
+    noteFailure(log, 'lauf1', error);
     // Eine Datei aus der Cloud wird auf dem Gerät teils erst beim zweiten
     // Zugriff bereitgestellt: einmal kurz warten und alles nochmals versuchen.
     await new Promise((resolve) => setTimeout(resolve, 400));
-    return await decodeOnce(file, known);
+    try {
+      return await decodeOnce(file, known, log);
+    } catch (second) {
+      noteFailure(log, 'lauf2', second);
+      throw new Error(UNREADABLE + failureCode(log));
+    }
   }
 }
 
@@ -133,7 +156,8 @@ export async function resizeImageFile(
   const sourceLimits = { maxBytes: MAX_SOURCE_IMAGE_BYTES, maxPixels: 50_000_000, maxSide: 12_000 };
   // Normalfall: Bytes lesen und prüfen, bevor der Browser überhaupt decodiert.
   // Das hält ein absichtlich riesiges Bild vom Decoder fern.
-  const bytes = await tryReadBytes(file);
+  const log: string[] = [];
+  const bytes = await tryReadBytes(file, log);
   if (bytes) validateImageBytes(bytes, declaredMime || sniffImageMime(bytes) || '', sourceLimits);
 
   let source: Drawable | undefined;
@@ -141,10 +165,10 @@ export async function resizeImageFile(
     // Lassen sich die Bytes nicht lesen, ist das Foto nicht zwangsläufig kaputt:
     // der Decoder öffnet dieselbe Datei oft trotzdem. Die Grenzen unten greifen
     // dann auf dem decodierten Bild.
-    source = await decode(file, bytes);
+    source = await decode(file, bytes, log);
     const srcW = 'naturalWidth' in source ? source.naturalWidth : source.width;
     const srcH = 'naturalHeight' in source ? source.naturalHeight : source.height;
-    if (!Number.isSafeInteger(srcW) || !Number.isSafeInteger(srcH) || srcW < 1 || srcH < 1) throw new Error(UNREADABLE);
+    if (!Number.isSafeInteger(srcW) || !Number.isSafeInteger(srcH) || srcW < 1 || srcH < 1) throw new Error(UNREADABLE + failureCode([...log, 'masse:0']));
     if (srcW > sourceLimits.maxSide || srcH > sourceLimits.maxSide || srcW * srcH > sourceLimits.maxPixels) {
       throw new Error('Die Bildauflösung ist zu gross. Bitte wählen Sie ein kleineres Bild.');
     }
