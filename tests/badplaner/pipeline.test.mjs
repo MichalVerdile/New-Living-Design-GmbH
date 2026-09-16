@@ -195,7 +195,9 @@ test('fixture checker rejects a shower in a Gäste-WC', async () => {
   const leadMail = h.calls.find((call) => call.url === 'https://api.resend.com/emails');
   assert.match(leadMail.body.subject, /Ideenbild abgelehnt/);
   assert.match(JSON.stringify(leadMail.body), /unexpected shower/);
-  assert.deepEqual(leadMail.body.attachments.map(({ filename }) => filename), ['foto.png']);
+  // Das verworfene Bild geht nur an uns, damit wir sehen, was die Pruefung beanstandet hat.
+  assert.deepEqual(leadMail.body.attachments.map(({ filename }) => filename), ['foto.png', 'verworfen.jpg']);
+  assert.equal(h.counts().mail, 1, 'the customer must not receive a rejected image');
 });
 
 test('a rejected render leaves the customer his daily attempts', async () => {
@@ -386,8 +388,9 @@ test('second rejected result is never returned, while the lead and original phot
   const leadMail = h.calls.find((call) => call.url === 'https://api.resend.com/emails');
   assert.match(JSON.stringify(leadMail.body), /Ideenbild.*abgelehnt \(Prüfung\), nicht angezeigt/);
   assert.match(JSON.stringify(leadMail.body), /Muster/);
-  assert.equal(leadMail.body.attachments.length, 1);
-  assert.equal(leadMail.body.attachments[0].filename, 'foto.png');
+  assert.deepEqual(leadMail.body.attachments.map(({ filename }) => filename), ['foto.png', 'verworfen.jpg']);
+  // Der zweite, ebenfalls verworfene Versuch ist der, den wir zu sehen bekommen.
+  assert.ok(leadMail.body.attachments[1].content.length > 0);
 });
 
 test('second approved result replaces first rejected result', async () => {
