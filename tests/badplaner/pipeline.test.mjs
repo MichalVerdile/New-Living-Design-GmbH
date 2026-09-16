@@ -134,6 +134,8 @@ test('Aufputz and Unterputz produce explicit, exclusive toilet branches', async 
       assert.match(prompt, /clearly more than twice as tall as it is wide/);
       assert.match(prompt, /flush button on the glass front near the top, never on the top surface/);
       assert.match(prompt, /the toilet is wall-hung, rimless, in .*hanging on the front of that module/);
+      // Ein Holzsitz auf weisser Keramik war einer der Befunde vom 16.09.
+      assert.match(prompt, /its seat and lid are in the very same .*never wood, never a contrasting colour/);
       assert.match(prompt, /wall behind is neither moved nor opened/);
       assert.match(checkPrompt, /the module itself is not layout_changed/);
       // Die Ausnahme fuer das Modul darf ein verschobenes WC nicht mehr durchlassen.
@@ -341,6 +343,58 @@ test('an integrated washbasin keeps the countertop material, not the ceramic col
   assert.equal(res.statusCode, 200, `unexpected status ${res.statusCode}: ${JSON.stringify(res.body).slice(0, 200)}`);
   const generation = h.calls.find((call) => call.body?.generationConfig?.responseModalities);
   assert.doesNotMatch(generation.body.contents[0].parts[0].text, /as the toilet, exactly the same colour and finish/);
+});
+
+test('the toilet keeps its wall, also under a sloping ceiling', async () => {
+  const h = harness();
+  const res = await h.invoke(payload());
+  assert.equal(res.statusCode, 200);
+  const generation = h.calls.find((call) => call.body?.generationConfig?.responseModalities);
+  const prompt = generation.body.contents[0].parts[0].text;
+  // Zweimal gesehen: unter der Dachschraege wandert das WC an die gerade Wand.
+  assert.match(prompt, /on the same wall of the room as in image 1/);
+  assert.match(prompt, /never moved to a straight or rear wall to gain headroom/);
+});
+
+test('an Unterputz toilet also keeps seat and lid in the ceramic colour', async () => {
+  const h = harness();
+  const res = await h.invoke(payload({ cistern: 'unterputz' }));
+  assert.equal(res.statusCode, 200);
+  const generation = h.calls.find((call) => call.body?.generationConfig?.responseModalities);
+  assert.match(generation.body.contents[0].parts[0].text, /with seat and lid in the very same .*never wood/);
+});
+
+test('kein Auswahlname traegt italienischen Katalogtext oder ein doppeltes Wort', () => {
+  // "Artistic mosaic (immagine di categoria)" und "Onyx Onyx Black" standen so im Badplaner.
+  const scraperText = /immagine|categoria|prodotto|scheda tecnica|non disponibile/i;
+  for (const id of ['essenza', 'colore', 'atelier']) {
+    const options = optionsForPackage(id);
+    for (const [group, list] of Object.entries(options)) {
+      if (!Array.isArray(list)) continue;
+      for (const option of list) {
+        if (!option || typeof option.label !== 'string') continue;
+        assert.ok(!scraperText.test(option.label), `${group}: ${option.label} traegt italienischen Katalogtext`);
+        const words = option.label.split(' ');
+        for (let i = 0; i < words.length - 1; i += 1) {
+          assert.notEqual(words[i], words[i + 1], `${group}: ${option.label} wiederholt ein Wort`);
+        }
+      }
+    }
+  }
+});
+
+test('every tap finish carries a German name, not only the Italian one', () => {
+  const german = /\((Chrom|Schwarz matt|Weiss matt|Gold gebürstet|Nickel gebürstet|Edelstahl gebürstet|Roségold gebürstet|Messing gebürstet|Anthrazit)\)/;
+  for (const id of ['essenza', 'colore', 'atelier']) {
+    for (const finish of optionsForPackage(id).finishes) {
+      // Der Kunde in Zofingen liest "Cromo" nicht als Chrom.
+      const italian = /^(Cromo|Nero Opaco|Bianco Opaco|Oro Spazzolato|Nichel Spazzolato|Inox Spazzolato|Oro Rosa Spazzolato|Ottone Spazzolato|Gun Metal-PVD)$/;
+      assert.ok(!italian.test(finish.label), `${finish.label} has no German name`);
+      if (/Spazzolato|Opaco|^Cromo|Gun Metal/.test(finish.label)) {
+        assert.match(finish.label, german, `${finish.label} is missing its German name`);
+      }
+    }
+  }
 });
 
 test('individual consultation sends one lead and never calls Gemini', async () => {

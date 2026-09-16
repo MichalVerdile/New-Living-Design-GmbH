@@ -309,6 +309,9 @@
 .fileInput:disabled + label { opacity: .55; cursor: default; }
 .changePhoto { margin: 1rem auto 0; }
 .preview { width: 100%; max-height: 420px; object-fit: contain; border-radius: 1rem; background: #111; display: block; }
+.previewBox { position: relative; }
+.previewRemove { position: absolute; top: .6rem; right: .6rem; width: 2.4rem; height: 2.4rem; border-radius: 50%; border: none; background: rgba(17, 17, 17, .72); color: #fff; font-size: 1.5rem; line-height: 1; cursor: pointer; display: grid; place-items: center; }
+.previewRemove:hover, .previewRemove:focus-visible { background: rgba(17, 17, 17, .92); }
 
 /* Formular (Kontakt) */
 .formRow { display: grid; grid-template-columns: 1fr; gap: 1rem; margin-bottom: 1rem; }
