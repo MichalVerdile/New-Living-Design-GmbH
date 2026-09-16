@@ -131,9 +131,13 @@ test('Aufputz and Unterputz produce explicit, exclusive toilet branches', async 
     if (cistern === 'aufputz') {
       assert.match(prompt, /is completely removed and must not survive in any form/);
       assert.match(prompt, /exactly the sanitary module of image \d, copied part for part/);
+      assert.match(prompt, /clearly more than twice as tall as it is wide/);
+      assert.match(prompt, /flush button on the glass front near the top, never on the top surface/);
       assert.match(prompt, /the toilet is wall-hung, rimless, in .*hanging on the front of that module/);
       assert.match(prompt, /wall behind is neither moved nor opened/);
-      assert.match(checkPrompt, /must NOT be reported as layout_changed/);
+      assert.match(checkPrompt, /the module itself is not layout_changed/);
+      // Die Ausnahme fuer das Modul darf ein verschobenes WC nicht mehr durchlassen.
+      assert.match(checkPrompt, /if the toilet is on a different wall than in image 1, or shifted along its wall, or turned, set toilet_moved true/);
     } else {
       assert.match(prompt, /cistern is concealed inside the wall and stays concealed/);
       assert.match(prompt, /no visible cistern and no sanitary module/);
@@ -299,6 +303,42 @@ test('Unterputz carries no module image and forbids a module in front of the wal
   const prompt = generation.body.contents[0].parts[0].text;
   assert.doesNotMatch(prompt, /product photo of one sanitary module/);
   assert.match(prompt, /no visible cistern and no sanitary module in front of the wall/);
+});
+
+test('the washbasin gets the same ceramic colour as the toilet', async () => {
+  const options = optionsForPackage('colore');
+  const coloured = options.sanitary.find((entry) => entry.id !== 'weiss') || options.sanitary[0];
+  const h = harness();
+  const res = await h.invoke(payload({
+    paket: 'colore', format: options.formats[0], platte: options.tiles[0].id,
+    unterbau: options.bases[0].id, top: options.tops[0].id, becken: 'aufsatz',
+    armaturenserie: 'treemme-ran', finish: 'treemme-nero-opaco', keramik: coloured.id,
+    wall: options.walls[0].id, dusche: options.showers[0].id, badewanne: options.bathtubs[0].id,
+    waschtisch: options.basins[0].id, spiegel: options.mirrors[0].id,
+  }));
+  assert.equal(res.statusCode, 200);
+  const generation = h.calls.find((call) => call.body?.generationConfig?.responseModalities);
+  const prompt = generation.body.contents[0].parts[0].text;
+  // Ein Bad mit farbigem WC und weissem Becken ist eine Farbe zu viel.
+  assert.ok(prompt.includes(`in the same ${coloured.prompt} as the toilet, exactly the same colour and finish`),
+    'washbasin does not carry the ceramic colour');
+});
+
+test('an integrated washbasin keeps the countertop material, not the ceramic colour', async () => {
+  const options = optionsForPackage('atelier');
+  assert.ok(options.basinTypes.some((entry) => entry.id === 'integriert'), 'atelier should offer an integrated basin');
+  const tile = options.tiles[0];
+  const h = harness();
+  const res = await h.invoke(payload({
+    paket: 'atelier', look: tile.look, format: tile.format, platte: tile.id, kombination: 'einheitlich',
+    unterbau: options.bases[0].id, top: options.tops[0].id, becken: 'integriert',
+    finish: options.finishes[0].id, keramik: options.sanitary[0].id,
+    wall: options.walls[0].id, dusche: options.showers[0].id, badewanne: options.bathtubs[0].id,
+    waschtisch: options.basins[0].id, spiegel: options.mirrors[0].id,
+  }));
+  assert.equal(res.statusCode, 200, `unexpected status ${res.statusCode}: ${JSON.stringify(res.body).slice(0, 200)}`);
+  const generation = h.calls.find((call) => call.body?.generationConfig?.responseModalities);
+  assert.doesNotMatch(generation.body.contents[0].parts[0].text, /as the toilet, exactly the same colour and finish/);
 });
 
 test('individual consultation sends one lead and never calls Gemini', async () => {

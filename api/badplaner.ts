@@ -383,6 +383,8 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
     sanitaryPrompt: sanitary.prompt,
     basinPrompt: basin.prompt,
     basinTypePrompt: basinType?.prompt,
+    // Ein integriertes Becken ist aus dem Plattenmaterial, nicht aus Keramik.
+    basinIsCeramic: !!basinType && basinType.id !== 'integriert',
     topPrompt: top.prompt,
     basePrompt: base.prompt,
     mirrorPrompt: mirror.prompt,
@@ -749,6 +751,7 @@ function buildPrompt(v: {
   sanitaryPrompt: string;
   basinPrompt: string;
   basinTypePrompt?: string;
+  basinIsCeramic: boolean;
   topPrompt: string;
   basePrompt: string;
   mirrorPrompt: string;
@@ -782,7 +785,10 @@ function buildPrompt(v: {
     v.accentPrompt && v.accentPlacementPrompt
       ? ` Exactly ONE accent area in a second material: ${v.accentPlacementPrompt}, covered with ${v.accentPrompt}. Every other tiled surface, including the floor and all other walls, keeps the main material; no second accent area anywhere.`
       : '';
-  const vanity = `if a washbasin is visible in image 1, ${v.basinPrompt} at its existing place on a wall-hung vanity: front and body in ${v.basePrompt}, countertop in ${v.topPrompt}${v.basinTypePrompt ? `, ${v.basinTypePrompt}` : ''}, with ${v.mirrorPrompt} above it`;
+  // Die gewaehlte Sanitaerkeramik gilt fuer WC und Waschbecken. Ohne das hier
+  // blieb das Becken weiss, waehrend das WC farbig war: zwei Farben in einem Bad.
+  const basinColour = v.basinIsCeramic ? ` in the same ${v.sanitaryPrompt} as the toilet, exactly the same colour and finish,` : '';
+  const vanity = `if a washbasin is visible in image 1, ${v.basinPrompt} at its existing place on a wall-hung vanity: front and body in ${v.basePrompt}, countertop in ${v.topPrompt}${v.basinTypePrompt ? `, ${v.basinTypePrompt}${basinColour}` : basinColour}, with ${v.mirrorPrompt} above it`;
   const fixtures = v.room === 'gaeste-wc'
     ? 'This is a guest WC: the result must contain NO shower, shower tray, shower enclosure, shower controls, bathtub or bath filler. Do not convert any visible area into a shower or bathtub.'
     : [
@@ -790,7 +796,7 @@ function buildPrompt(v: {
         v.wantsBathtub ? `${v.bathtubPrompt} inside the original wet-area footprint` : 'NO bathtub and no bath filler',
       ].join('; ');
   const toilet = v.cistern === 'aufputz'
-    ? `the existing surface-mounted cistern, the visible boxed cistern above or behind the toilet, is completely removed and must not survive in any form: no white cistern box, no boxed-in panel, no tiled shelf, no tiled or panelled cladding where it stood; in its exact place, flat against the existing wall, there is exactly the sanitary module of image ${v.moduleImageNumber}, copied part for part: its white glass front in two parts and the one-piece brushed stainless steel edge around it, with the small flush button near the top; it is about 11 cm deep, about 50 cm wide and about 115 cm high, reaching down to the floor, a factory-made glass and steel part, never tiled, never clad and never boxed in; the toilet is wall-hung, rimless, in ${v.sanitaryPrompt}, hanging on the front of that module at exactly the same position as the existing toilet and floating clear of the floor; the wall behind is neither moved nor opened and no new partition wall is built`
+    ? `the existing surface-mounted cistern, the visible boxed cistern above or behind the toilet, is completely removed and must not survive in any form: no white cistern box, no boxed-in panel, no tiled shelf, no tiled or panelled cladding where it stood; in its exact place, flat against the existing wall, there is exactly the sanitary module of image ${v.moduleImageNumber}, copied part for part: one flat white glass front in two parts, framed by a narrow brushed stainless steel edge along the sides only, and a small flush button on the glass front near the top, never on the top surface; it is about 11 cm deep, about 50 cm wide and about 115 cm high, so clearly more than twice as tall as it is wide, reaching down to the floor, a factory-made glass and steel part, never tiled, never clad and never boxed in; the toilet is wall-hung, rimless, in ${v.sanitaryPrompt}, hanging on the front of that module at exactly the same position as the existing toilet and floating clear of the floor; the wall behind is neither moved nor opened and no new partition wall is built`
     : `the cistern is concealed inside the wall and stays concealed; no visible cistern and no sanitary module in front of the wall; the toilet is wall-hung, rimless, in ${v.sanitaryPrompt}, at exactly its existing position`;
 
   return [
@@ -908,7 +914,7 @@ async function checkOpenings(
     'Set extra_openings true if any window, roof window, door, niche or outside opening was added, removed, resized or moved. ' +
     'Set toilet_moved true if the toilet position or orientation changed. Set layout_changed true if walls, room size, floor area or fixed fixture footprint moved. ' +
     'Set view_changed true if camera position, angle, lens, framing, perspective or visible room boundaries changed, or if image 2 reveals invented floor or wall area outside image 1. Judge only the shared visible field of view; an edited result must remain pixel-comparable to image 1. ' +
-    (wanted.cistern === 'aufputz' ? 'A slim sanitary module in front of an existing wall, replacing a surface-mounted cistern, is expected in this renovation: it must NOT be reported as layout_changed, and a toilet mounted on that module at the same place must NOT be reported as toilet_moved. ' : '') +
+    (wanted.cistern === 'aufputz' ? 'One exception, and only this one: a slim sanitary module standing flat against an existing wall, replacing a surface-mounted cistern, is expected in this renovation, so the module itself is not layout_changed, and the toilet sitting about 10 cm further forward because of that module is not toilet_moved. Everything else about the toilet is judged strictly: if the toilet is on a different wall than in image 1, or shifted along its wall, or turned, set toilet_moved true. ' : '') +
     `The requested result is a ${wanted.room === 'gaeste-wc' ? 'guest WC' : 'bathroom'} with shower_present=${wanted.shower} and bathtub_present=${wanted.bathtub}. ` +
     'Report whether image 2 visibly contains a shower (including tray/enclosure) and a bathtub. A mirror or glass shower screen is not an opening. ' +
     'Answer with JSON only, no markdown and exactly these keys: {"extra_openings":false,"toilet_moved":false,"layout_changed":false,"view_changed":false,"shower_present":false,"bathtub_present":false,"reason":"short English reason, max 30 words"}';
