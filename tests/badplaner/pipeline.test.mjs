@@ -364,6 +364,25 @@ test('an Unterputz toilet also keeps seat and lid in the ceramic colour', async 
   assert.match(generation.body.contents[0].parts[0].text, /with seat and lid in the very same .*never wood/);
 });
 
+test('kein Auswahlname traegt italienischen Katalogtext oder ein doppeltes Wort', () => {
+  // "Artistic mosaic (immagine di categoria)" und "Onyx Onyx Black" standen so im Badplaner.
+  const scraperText = /immagine|categoria|prodotto|scheda tecnica|non disponibile/i;
+  for (const id of ['essenza', 'colore', 'atelier']) {
+    const options = optionsForPackage(id);
+    for (const [group, list] of Object.entries(options)) {
+      if (!Array.isArray(list)) continue;
+      for (const option of list) {
+        if (!option || typeof option.label !== 'string') continue;
+        assert.ok(!scraperText.test(option.label), `${group}: ${option.label} traegt italienischen Katalogtext`);
+        const words = option.label.split(' ');
+        for (let i = 0; i < words.length - 1; i += 1) {
+          assert.notEqual(words[i], words[i + 1], `${group}: ${option.label} wiederholt ein Wort`);
+        }
+      }
+    }
+  }
+});
+
 test('every tap finish carries a German name, not only the Italian one', () => {
   const german = /\((Chrom|Schwarz matt|Weiss matt|Gold gebürstet|Nickel gebürstet|Edelstahl gebürstet|Roségold gebürstet|Messing gebürstet|Anthrazit)\)/;
   for (const id of ['essenza', 'colore', 'atelier']) {
