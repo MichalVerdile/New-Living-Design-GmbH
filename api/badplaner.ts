@@ -488,9 +488,14 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
     const leadDelivery = await sendLeadMail({
       subject: `Badplaner-Lead: ${name} – ${isGuestWc ? 'Gäste-WC' : pkg.name} – Ideenbild abgelehnt`,
       replyTo: email,
-      intro: 'Neuer Lead aus dem Badplaner. Das Ideenbild wurde von der automatischen Prüfung abgelehnt und dem Kunden nicht angezeigt. Das Originalfoto ist im Anhang.',
+      intro: 'Neuer Lead aus dem Badplaner. Das Ideenbild wurde von der automatischen Prüfung abgelehnt und dem Kunden nicht angezeigt. Originalfoto und das verworfene Bild sind im Anhang — nur für uns, der Kunde hat es nie gesehen.',
       details: leadDetails(rejectedNote, 'abgelehnt (Prüfung), nicht angezeigt'),
-      attachments: [{ filename: photoName, content: photo.data }],
+      // Das verworfene Bild geht mit: ohne es können wir nicht beurteilen, ob die
+      // Prüfung recht hatte oder ein brauchbares Bild unnötig verworfen wurde.
+      attachments: [
+        { filename: photoName, content: photo.data },
+        { filename: 'verworfen.jpg', content: gen.data },
+      ],
     }, ctx);
     // Ein abgelehntes Ideenbild ist für den Kunden kein Versuch: sein Tageslimit
     // bleibt unberührt, er darf es gleich nochmals probieren. Gegen endloses
@@ -499,7 +504,9 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
     return res.status(502).json({
       ok: false, code: 'RENDER_REJECTED',
       delivery: { lead: leadDelivery.status, leadProvider: leadDelivery.provider, leadAttachments: leadDelivery.attachments },
-      error: 'Das Ideenbild konnte nicht sicher bestätigt werden und wird nicht angezeigt. Bitte später erneut versuchen oder uns direkt kontaktieren.',
+      // "Später erneut versuchen" war der falsche Rat: mit demselben Foto scheitert
+      // es wieder. Ein weiter gefasstes Foto hilft dem Modell, den Grundriss zu halten.
+      error: 'Das Ideenbild hat unsere Kontrolle nicht bestanden: Der Grundriss stimmte nicht mit Ihrem Foto überein, darum zeigen wir es Ihnen nicht. Am besten gleich nochmals mit einem Foto vom Türrahmen aus, auf dem das ganze Bad zu sehen ist. Ihre Angaben sind bei uns, wir melden uns.',
     });
   }
   if (check.status === 'approved' && check.note) {
