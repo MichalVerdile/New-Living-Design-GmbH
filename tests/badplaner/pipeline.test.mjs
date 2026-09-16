@@ -130,7 +130,8 @@ test('Aufputz and Unterputz produce explicit, exclusive toilet branches', async 
     const checkPrompt = checker.body.contents[0].parts[0].text;
     if (cistern === 'aufputz') {
       assert.match(prompt, /is completely removed and must not survive in any form/);
-      assert.match(prompt, /one slim sanitary module: a flat tempered glass front panel/);
+      assert.match(prompt, /exactly the sanitary module of image \d, copied part for part/);
+      assert.match(prompt, /the toilet is wall-hung, rimless, in .*hanging on the front of that module/);
       assert.match(prompt, /wall behind is neither moved nor opened/);
       assert.match(checkPrompt, /must NOT be reported as layout_changed/);
     } else {
@@ -254,6 +255,50 @@ test('nearestAspectRatio picks a format Gemini supports', () => {
   assert.equal(nearestAspectRatio(1600, 1200), '4:3');
   assert.equal(nearestAspectRatio(1024, 1024), '1:1');
   assert.equal(nearestAspectRatio(0, 800), '');
+});
+
+test('the sanitary module travels as its own reference image', async () => {
+  const image = () => new Response(Buffer.from(PNG, 'base64'), { status: 200, headers: { 'content-type': 'image/png' } });
+  const h = harness({ swatch: () => image() });
+  const res = await h.invoke(payload({ cistern: 'aufputz' }));
+  assert.equal(res.statusCode, 200);
+  const generation = h.calls.find((call) => call.body?.generationConfig?.responseModalities);
+  const parts = generation.body.contents[0].parts;
+  // Foto, Plattenmuster, Sanitärmodul.
+  assert.equal(parts.filter((part) => part.inlineData).length, 2 + 1);
+  const module = parts.filter((part) => part.inlineData)[2].inlineData;
+  assert.equal(module.mimeType, 'image/jpeg');
+  // Ein echtes JPEG, kein Platzhalter: Base64 eines Bildes von einigen Kilobyte.
+  assert.ok(module.data.startsWith('/9j/'), 'module image is not a JPEG');
+  assert.ok(module.data.length > 2000, `module image too small: ${module.data.length}`);
+  const prompt = parts[0].text;
+  assert.match(prompt, /Image 3 is ONLY a product photo of one sanitary module/);
+  assert.match(prompt, /exactly the sanitary module of image 3, copied part for part/);
+  assert.match(prompt, /never tiled, never clad and never boxed in/);
+  const leadMail = h.calls.find((call) => call.url === 'https://api.resend.com/emails');
+  assert.match(JSON.stringify(leadMail.body), /OLI QR INOX Sospeso/);
+});
+
+test('the module image needs no network call and none is made for it', async () => {
+  const h = harness();
+  const res = await h.invoke(payload({ cistern: 'aufputz' }));
+  assert.equal(res.statusCode, 200);
+  assert.equal(h.calls.filter((call) => call.url.includes('oli-world')).length, 0);
+  const generation = h.calls.find((call) => call.body?.generationConfig?.responseModalities);
+  // Plattenmuster fehlt hier (404), das Modul ist trotzdem dabei: Foto + Modul.
+  assert.equal(generation.body.contents[0].parts.filter((part) => part.inlineData).length, 2);
+  assert.match(generation.body.contents[0].parts[0].text, /Image 2 is ONLY a product photo of one sanitary module/);
+});
+
+test('Unterputz carries no module image and forbids a module in front of the wall', async () => {
+  const h = harness();
+  const res = await h.invoke(payload({ cistern: 'unterputz' }));
+  assert.equal(res.statusCode, 200);
+  const generation = h.calls.find((call) => call.body?.generationConfig?.responseModalities);
+  assert.equal(generation.body.contents[0].parts.filter((part) => part.inlineData).length, 1);
+  const prompt = generation.body.contents[0].parts[0].text;
+  assert.doesNotMatch(prompt, /product photo of one sanitary module/);
+  assert.match(prompt, /no visible cistern and no sanitary module in front of the wall/);
 });
 
 test('individual consultation sends one lead and never calls Gemini', async () => {
