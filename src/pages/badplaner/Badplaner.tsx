@@ -275,6 +275,16 @@ const Badplaner: React.FC = () => {
   const [beratungError, setBeratungError] = useState('');
 
   const [photo, setPhoto] = useState<ResizedImage | null>(null);
+  const PHOTO_INPUTS = ['bp-foto-kamera', 'bp-foto-galerie', 'bp-foto-kamera-neu', 'bp-foto-galerie-neu'];
+  const removePhoto = () => {
+    setPhoto(null);
+    setPhotoError('');
+    // Sonst meldet der Browser beim gleichen Foto kein change-Ereignis mehr.
+    for (const id of PHOTO_INPUTS) {
+      const input = document.getElementById(id) as HTMLInputElement | null;
+      if (input) input.value = '';
+    }
+  };
   const [photoBusy, setPhotoBusy] = useState(false);
   const [photoError, setPhotoError] = useState('');
   const [windows, setWindows] = useState(''); // Fenster auf dem Foto: '0' | '1' | '2' | '3'
@@ -1040,7 +1050,16 @@ const Badplaner: React.FC = () => {
               {step === 3 && (
                 <div id="schritt-3-inhalt" className={styles.stepBody}>
                   {photo ? (
-                    <img src={photo.dataUrl} alt="Ihr Foto" className={styles.preview} />
+                    <div className={styles.previewBox}>
+                      <img src={photo.dataUrl} alt="Ihr Foto" className={styles.preview} />
+                      <button
+                        type="button"
+                        className={styles.previewRemove}
+                        onClick={removePhoto}
+                        aria-label="Foto entfernen"
+                        title="Foto entfernen"
+                      >×</button>
+                    </div>
                   ) : (
                     <div className={styles.upload}>
                       <p className={styles.uploadTitle}>
