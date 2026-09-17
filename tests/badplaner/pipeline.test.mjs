@@ -54,8 +54,8 @@ const inv = (changes = {}) => ({ toilet: 'left', washbasin: 'left', shower: 'non
 // Die sichtbare Reihenfolge von links nach rechts folgt dem Inventar, solange
 // ein Test nichts anderes sagt.
 const order = (state) => ['washbasin', 'toilet', 'bidet', 'shower', 'bathtub'].filter((key) => state[key] !== 'none');
-const checked = (extra = false, text) => response({ candidates: [{ content: { parts: [{ text: text ?? JSON.stringify({ before: inv(), after: inv(), order_before: order(inv()), order_after: order(inv()), nearest_before: 'toilet', nearest_after: 'toilet', extra_openings: extra, view_changed: false, reason: 'inventory' }) }] }, finishReason: 'STOP' }] });
-const checkedInv = (before, after, extra = {}) => response({ candidates: [{ content: { parts: [{ text: JSON.stringify({ before: inv(before), after: inv(after), order_before: order(inv(before)), order_after: order(inv(after)), nearest_before: 'toilet', nearest_after: 'toilet', extra_openings: false, view_changed: false, reason: 'inventory', ...extra }) }] }, finishReason: 'STOP' }] });
+const checked = (extra = false, text) => response({ candidates: [{ content: { parts: [{ text: text ?? JSON.stringify({ before: inv(), after: inv(), order_before: order(inv()), order_after: order(inv()), nearest_before: 'toilet', nearest_after: 'toilet', toilet_on_low_wall_before: false, toilet_on_low_wall_after: false, extra_openings: extra, view_changed: false, reason: 'inventory' }) }] }, finishReason: 'STOP' }] });
+const checkedInv = (before, after, extra = {}) => response({ candidates: [{ content: { parts: [{ text: JSON.stringify({ before: inv(before), after: inv(after), order_before: order(inv(before)), order_after: order(inv(after)), nearest_before: 'toilet', nearest_after: 'toilet', toilet_on_low_wall_before: false, toilet_on_low_wall_after: false, extra_openings: false, view_changed: false, reason: 'inventory', ...extra }) }] }, finishReason: 'STOP' }] });
 
 function harness(settings = {}) {
   const clock = fakeClock();
@@ -155,8 +155,12 @@ test('Aufputz and Unterputz produce explicit, exclusive toilet branches', async 
       // und verkleidet sie. Die Pruefung darf sie nicht als neue Wand lesen.
       assert.match(checkPrompt, /A slim pre-wall behind the toilet, tiled or clad, is normal building work and is not a wall of the room/);
     } else {
-      assert.match(prompt, /cistern is concealed inside the wall and stays concealed/);
-      assert.match(prompt, /no visible cistern and no sanitary module/);
+      assert.match(prompt, /the cistern stays hidden exactly where it already is/);
+      assert.match(prompt, /no new free-standing module is added/);
+      // Diegos Befund vom 17.09.: das WC haengt an einem Muretto, das die Spuelkasten
+      // traegt. Das Modell hat es eingeebnet und das WC an die Wand dahinter geschoben.
+      assert.match(prompt, /that low wall is part of the room and stays: same place, same length, same height, same depth, only newly tiled/);
+      assert.match(prompt, /do not push the toilet back against the wall behind it/);
     }
   }
 });
@@ -264,10 +268,12 @@ test('das Bidet wird weggeraeumt, und ein stehengebliebenes Bidet wird verworfen
   assert.match(JSON.stringify(leadMail.body), /the bidet is still there, on the right wall/);
 });
 
-test('nach einem echten ersten Durchgang bleibt Zeit fuer den zweiten', async () => {
-  // 35 s Generierung und 4 s Pruefung sind gemessene Werte aus der Produktion.
-  // Mit der alten Reserve (25 s) und dem Faktor 1.3 kam der zweite Versuch nie.
-  const h = harness({ generateDelays: [35000, 35000], checkDelays: [4000, 4000], checks: [() => checked(true), () => checked(false)] });
+test('nach einem schnellen ersten Durchgang bleibt Zeit fuer den zweiten', async () => {
+  // Mit gemini-3-pro-image dauert ein Durchgang 33 bis 46 s und die Pruefung
+  // liest ein 2K-Bild. Zwei volle Durchgaenge passen nur, wenn der erste
+  // schnell war; sonst bekommt der Kunde die ehrliche Absage statt eines
+  // zweiten Versuchs, und der Lead ist trotzdem bei uns.
+  const h = harness({ generateDelays: [25000, 25000], checkDelays: [8000, 8000], checks: [() => checked(true), () => checked(false)] });
   const res = await h.invoke();
   assert.equal(h.counts().generation, 2, 'der zweite Versuch muss laufen');
   assert.equal(res.statusCode, 200);
@@ -281,7 +287,9 @@ test('der Prompt ist eine Bearbeitung, keine Neuzeichnung', async () => {
   const prompt = h.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
   assert.match(prompt, /This is an edit of image 1, not a new picture/);
   assert.match(prompt, /KEEP THE POSITIONS/);
-  assert.match(prompt, /its place along that wall, measured against the corners, the door and the window/);
+  assert.match(prompt, /its place along it, measured against the corners, the door and the window/);
+  // Ein Muretto ist Raum, keine Einrichtung: es bleibt stehen.
+  assert.match(prompt, /A half-height wall, a low built wall or a boxed pre-wall that a fixture stands against is part of the room, not furniture/);
   // Die Duscharmatur stand ueber dem WC statt in der Dusche.
   assert.match(prompt, /Every shower fitting[^.]*sits inside the shower area on the shower wall, never on a wall next to the toilet or the washbasin/);
 });
@@ -373,6 +381,7 @@ test('WC und Dusche duerfen an derselben Wand nicht die Plaetze tauschen', async
     before: inv({ shower: 'right', toilet: 'right' }), after: inv({ shower: 'right', toilet: 'right' }),
     order_before: ['washbasin', 'shower', 'toilet'], order_after: ['washbasin', 'toilet', 'shower'],
     nearest_before: 'toilet', nearest_after: 'toilet',
+    toilet_on_low_wall_before: false, toilet_on_low_wall_after: false,
     extra_openings: false, view_changed: false, reason: 'inventory',
   }) }] }, finishReason: 'STOP' }] });
   const h = harness({ checks: [swapped, swapped] });
@@ -389,6 +398,7 @@ test('ein weggeraeumtes Stueck aendert die Reihenfolge nicht', async () => {
     before: inv({ bidet: 'right', toilet: 'right' }), after: inv({ toilet: 'right' }),
     order_before: ['washbasin', 'toilet', 'bidet'], order_after: ['washbasin', 'toilet'],
     nearest_before: 'bidet', nearest_after: 'toilet',
+    toilet_on_low_wall_before: false, toilet_on_low_wall_after: false,
     extra_openings: false, view_changed: false, reason: 'inventory',
   }) }] }, finishReason: 'STOP' }] })] });
   const res = await h.invoke();
@@ -403,6 +413,7 @@ test('das WC darf an seiner Wand nicht nach hinten rutschen', async () => {
     before: inv({ toilet: 'right', shower: 'back' }), after: inv({ toilet: 'right', shower: 'back' }),
     order_before: ['washbasin', 'shower', 'toilet'], order_after: ['washbasin', 'shower', 'toilet'],
     nearest_before: 'toilet', nearest_after: 'washbasin',
+    toilet_on_low_wall_before: false, toilet_on_low_wall_after: false,
     extra_openings: false, view_changed: false, reason: 'inventory',
   }) }] }, finishReason: 'STOP' }] });
   const h = harness({ checks: [shifted, shifted] });
@@ -410,6 +421,34 @@ test('das WC darf an seiner Wand nicht nach hinten rutschen', async () => {
   assert.equal(res.statusCode, 502);
   const leadMail = h.calls.find((call) => call.url === 'https://api.resend.com/emails');
   assert.match(JSON.stringify(leadMail.body), /in the photo the toilet is closest to the camera, in the result the washbasin/);
+});
+
+test('ein verschwundenes Muretto unter dem WC wird verworfen', async () => {
+  // Diegos Befund vom 17.09.: das WC haengt rechts neben der Tuer an einem niedrigen
+  // Mauerstueck, das die Spuelkasten traegt. Das Modell hat das Mauerstueck eingeebnet
+  // und das WC an die Wand dahinter geschoben. Wand, Reihenfolge und Tiefe bleiben
+  // dabei gleich, also merkt es keine der anderen Pruefungen.
+  const flattened = () => checkedInv({ toilet: 'right' }, { toilet: 'right' },
+    { toilet_on_low_wall_before: true, toilet_on_low_wall_after: false });
+  const h = harness({ checks: [flattened, flattened] });
+  const res = await h.invoke();
+  assert.equal(res.statusCode, 502);
+  assert.equal(res.body.code, 'RENDER_REJECTED');
+  const leadMail = h.calls.find((call) => call.url === 'https://api.resend.com/emails');
+  assert.match(JSON.stringify(leadMail.body), /the low wall the toilet stood against is gone/);
+});
+
+test('ein erhaltenes Muretto und ein neu gebautes sind kein Fehler', async () => {
+  // Steht das Mauerstueck weiter, ist alles in Ordnung. Und baut das Modell eines neu,
+  // wo vorher keines war, ist das genau die Vorwand, die Diego ohnehin mauert.
+  for (const flags of [
+    { toilet_on_low_wall_before: true, toilet_on_low_wall_after: true },
+    { toilet_on_low_wall_before: false, toilet_on_low_wall_after: true },
+  ]) {
+    const h = harness({ checks: [() => checkedInv({ toilet: 'right' }, { toilet: 'right' }, flags)] });
+    const res = await h.invoke();
+    assert.equal(res.statusCode, 200);
+  }
 });
 
 test('fixture checker rejects a shower in a Gäste-WC', async () => {
@@ -528,7 +567,7 @@ test('Unterputz carries no module image and forbids a module in front of the wal
   assert.equal(generation.body.contents[0].parts.filter((part) => part.inlineData).length, 1);
   const prompt = generation.body.contents[0].parts[0].text;
   assert.doesNotMatch(prompt, /product photo of one sanitary module/);
-  assert.match(prompt, /no visible cistern and no sanitary module in front of the wall/);
+  assert.match(prompt, /In both cases no new free-standing module is added/);
 });
 
 test('the washbasin gets the same ceramic colour as the toilet', async () => {
@@ -715,7 +754,7 @@ test('unavailable checker retries once, delivers the lead and marks the mail', a
   const h = harness({ checks: [() => response({}, 503), () => response({}, 503)] }); const res = await h.invoke();
   assert.equal(res.statusCode, 200); assert.equal(res.body.image.data, PNG);
   assert.deepEqual(h.counts(), { generation: 1, checks: 2, mail: 2 });
-  assert.match(JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails')?.body), /Fensterprüfung.*nicht möglich \(Prüfdienst nicht erreichbar\)/);
+  assert.match(JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails')?.body), /Fensterprüfung.*nicht möglich \(HTTP 503\)/);
 });
 
 test('ein Ausfall des Bilddienstes wird gemeldet, der Lead aber nicht weggeworfen', async () => {
