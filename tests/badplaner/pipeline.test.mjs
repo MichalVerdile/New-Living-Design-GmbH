@@ -316,6 +316,21 @@ test('eine unbrauchbare Antwort der Pruefung gilt als nicht verfuegbar, nicht al
   }
 });
 
+test('das Ideenbild entsteht mit dem genauesten Modell, nicht dem billigsten', async () => {
+  // Qualitaet vor Ersparnis: das Bild ist das Produkt. 2K kostet bei diesem
+  // Modell gleich viel wie 1K.
+  const h = harness();
+  await h.invoke();
+  const gen = h.calls.find((call) => call.body?.generationConfig?.responseModalities);
+  assert.match(gen.url, /models\/gemini-3-pro-image:generateContent/);
+  assert.equal(gen.body.generationConfig.imageConfig.imageSize, '2K');
+
+  // Umschaltbar ohne Codeaenderung, falls ein neueres Modell kommt.
+  const other = harness({ env: { BADPLANER_MODEL: 'gemini-3.1-flash-image' } });
+  await other.invoke();
+  assert.match(other.calls.find((call) => call.body?.generationConfig?.responseModalities).url, /gemini-3\.1-flash-image/);
+});
+
 test('fixture checker rejects a shower in a Gäste-WC', async () => {
   const h = harness({ checks: [() => checkedInv({}, { shower: 'right' }), () => checkedInv({}, { shower: 'right' })] });
   const res = await h.invoke(payload({ raum: 'gaeste-wc', dusche: '', badewanne: '', waschtisch: 'einzel' }));
@@ -378,7 +393,7 @@ test('a moved toilet is still rejected even when the field of view held', async 
 test('the generation request carries the aspect ratio of the customer photo', async () => {
   const h = harness(); await h.invoke();
   const gen = h.calls.find((call) => call.url.includes('generativelanguage.googleapis.com') && call.body?.generationConfig?.responseModalities);
-  assert.equal(gen.body.generationConfig.imageConfig.imageSize, '1K');
+  assert.equal(gen.body.generationConfig.imageConfig.imageSize, '2K');
   assert.equal(gen.body.generationConfig.imageConfig.aspectRatio, '1:1');
 });
 
@@ -625,7 +640,7 @@ test('unavailable checker retries once, delivers the lead and marks the mail', a
 test('ein Ausfall des Bilddienstes wird gemeldet, der Lead aber nicht weggeworfen', async () => {
   // Diegos Probe vom 17.09: erster Versuch scheiterte, und es kam gar keine Mail.
   // Der Kunde hatte das ganze Formular ausgefuellt, wir hatten davon nichts.
-  for (const settings of [{ generateDelays: [50001] }, { generations: [() => generated('AAAA')] }, { generations: [() => generated(PNG, 'image/svg+xml')] }]) {
+  for (const settings of [{ generateDelays: [65001] }, { generations: [() => generated('AAAA')] }, { generations: [() => generated(PNG, 'image/svg+xml')] }]) {
     const h = harness(settings); const res = await h.invoke();
     assert.equal(res.statusCode, 502);
     assert.equal(res.body.code, 'RENDER_FAILED');
@@ -805,7 +820,7 @@ test('slow response body is timed out, not only response headers', async () => {
   const h = harness({ generations: [() => new Response(new ReadableStream({ cancel() { cancelCalled = true; } }), { headers: { 'content-type': 'application/json' } })] });
   const pending = h.invoke();
   for (let i = 0; i < 30 && h.counts().generation === 0; i += 1) await Promise.resolve();
-  h.clock.advance(50000);
+  h.clock.advance(65000);
   const res = await pending;
   assert.equal(res.statusCode, 502); assert.equal(cancelCalled, true); assert.equal(h.counts().mail, 1);
 });
