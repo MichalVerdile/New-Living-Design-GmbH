@@ -476,9 +476,29 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   }
 
   console.info('[badplaner] Seitenverhältnis', photoRatio || 'automatisch');
+  // Wenn der Bilddienst nichts liefert, war der Kunde trotzdem da: Name, Telefon
+  // und Foto sind das Wertvolle. Frueher ging bei einem Fehler alles verloren.
+  const leadWithoutImage = async (note: string, discarded?: { mime: string; data: string }) => {
+    const failDelivery = await sendLeadMail({
+      subject: `Badplaner-Lead: ${name} - ${isGuestWc ? 'Gaeste-WC' : pkg.name} - kein Ideenbild erzeugt`,
+      replyTo: email,
+      intro: 'Neuer Lead aus dem Badplaner. Der Bilddienst hat kein Ideenbild geliefert, der Kunde hat keines gesehen. Das Foto liegt bei, damit wir das Bild von Hand nachliefern koennen.',
+      details: leadDetails(note, 'nicht erzeugt: Bilddienst hat nicht geliefert'),
+      attachments: [
+        { filename: photoName, content: photo.data },
+        ...(discarded ? [{ filename: 'verworfen.jpg', content: discarded.data }] : []),
+      ],
+    }, ctx);
+    return {
+      ok: false as const, code: 'RENDER_FAILED',
+      delivery: { lead: failDelivery.status, leadProvider: failDelivery.provider, leadAttachments: failDelivery.attachments },
+      error: 'Das Ideenbild konnte gerade nicht erzeugt werden. Ihre Angaben und Ihr Foto sind bei uns, wir melden uns und schicken es Ihnen nach. Sie koennen es auch gleich nochmals versuchen.',
+    };
+  };
+
   const passStarted = dependencies.clock.now();
   let gen = await generateImage(prompt, photo, swatch, moduleImage, ctx, photoRatio);
-  if (gen.ok === false) return res.status(502).json({ ok: false, error: gen.error });
+  if (gen.ok === false) return res.status(502).json(await leadWithoutImage(`Bilddienst: ${gen.error}`));
   let checkNote = 'ok';
   const wantedFixtures = { room, shower: shower ? shower.id !== 'keine' : false, bathtub: bathtub ? bathtub.id !== 'keine' : false, cistern };
   const checkWithUnavailableRetry = async (image: { mime: string; data: string }): Promise<CheckResult> => {
@@ -500,7 +520,7 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
     // The rejected image never becomes a fallback if the retry/check fails.
     const retryPrompt = `${prompt}\nIMPORTANT: a previous attempt failed the structural and fixture check: ${check.reason}. Correct that exact issue. Keep the original layout, every opening and toilet position, and show exactly the requested shower and bathtub state.`;
     const second = await generateImage(retryPrompt, photo, swatch, moduleImage, ctx, photoRatio);
-    if (second.ok === false) return res.status(502).json({ ok: false, code: 'RENDER_FAILED', error: second.error });
+    if (second.ok === false) return res.status(502).json(await leadWithoutImage(`1. Versuch verworfen (${check.reason}), 2. Versuch: ${second.error}`, gen));
     check = await checkWithUnavailableRetry(second);
     gen = second;
     checkAttempt = 2;
