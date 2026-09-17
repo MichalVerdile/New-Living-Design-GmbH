@@ -331,6 +331,37 @@ test('das Ideenbild entsteht mit dem genauesten Modell, nicht dem billigsten', a
   assert.match(other.calls.find((call) => call.body?.generationConfig?.responseModalities).url, /gemini-3\.1-flash-image/);
 });
 
+test('ein 2K-Ideenbild passt durch alle Groessengrenzen', async () => {
+  // Der erste Lauf mit gemini-3-pro-image scheiterte nach 25 s: drei Grenzen
+  // waren auf 1K zugeschnitten und haben das fertige Bild weggeworfen.
+  const { deflateSync } = await import('node:zlib');
+  const crcTable = Array.from({ length: 256 }, (unused, n) => { let c = n; for (let k = 0; k < 8; k += 1) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; return c >>> 0; });
+  const crc = (buf) => { let c = 0xffffffff; for (const byte of buf) c = crcTable[(c ^ byte) & 0xff] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; };
+  const chunk = (type, data) => { const head = Buffer.alloc(4); head.writeUInt32BE(data.length); const body = Buffer.concat([Buffer.from(type, 'ascii'), data]); const tail = Buffer.alloc(4); tail.writeUInt32BE(crc(body)); return Buffer.concat([head, body, tail]); };
+  const width = 1536; const height = 2048;
+  const ihdr = Buffer.alloc(13); ihdr.writeUInt32BE(width, 0); ihdr.writeUInt32BE(height, 4); ihdr[8] = 8; ihdr[9] = 0;
+  const raw = Buffer.alloc(height * (width + 1));
+  const png = Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    chunk('IHDR', ihdr), chunk('IDAT', deflateSync(raw)), chunk('IEND', Buffer.alloc(0)),
+  ]).toString('base64');
+
+  const h = harness({ generations: [() => generated(png)] });
+  const res = await h.invoke();
+  assert.equal(res.statusCode, 200, 'ein 2K-Bild darf nicht an unseren eigenen Grenzen scheitern');
+  assert.equal(res.body.image.data, png);
+});
+
+test('scheitert der Bilddienst, steht der technische Grund in der Lead-Mail', async () => {
+  const h = harness({ generations: [() => response({ error: { message: 'image size 2K is not supported' } }, 400)] });
+  const res = await h.invoke();
+  assert.equal(res.statusCode, 502);
+  const leadMail = h.calls.find((call) => call.url === 'https://api.resend.com/emails');
+  assert.match(JSON.stringify(leadMail.body), /HTTP 400: image size 2K is not supported/);
+  // Der Kunde liest davon nichts.
+  assert.doesNotMatch(res.body.error, /HTTP 400/);
+});
+
 test('fixture checker rejects a shower in a Gäste-WC', async () => {
   const h = harness({ checks: [() => checkedInv({}, { shower: 'right' }), () => checkedInv({}, { shower: 'right' })] });
   const res = await h.invoke(payload({ raum: 'gaeste-wc', dusche: '', badewanne: '', waschtisch: 'einzel' }));
