@@ -54,8 +54,8 @@ const inv = (changes = {}) => ({ toilet: 'left', washbasin: 'left', shower: 'non
 // Die sichtbare Reihenfolge von links nach rechts folgt dem Inventar, solange
 // ein Test nichts anderes sagt.
 const order = (state) => ['washbasin', 'toilet', 'bidet', 'shower', 'bathtub'].filter((key) => state[key] !== 'none');
-const checked = (extra = false, text) => response({ candidates: [{ content: { parts: [{ text: text ?? JSON.stringify({ before: inv(), after: inv(), order_before: order(inv()), order_after: order(inv()), nearest_before: 'toilet', nearest_after: 'toilet', toilet_on_low_wall_before: false, toilet_on_low_wall_after: false, extra_openings: extra, view_changed: false, reason: 'inventory' }) }] }, finishReason: 'STOP' }] });
-const checkedInv = (before, after, extra = {}) => response({ candidates: [{ content: { parts: [{ text: JSON.stringify({ before: inv(before), after: inv(after), order_before: order(inv(before)), order_after: order(inv(after)), nearest_before: 'toilet', nearest_after: 'toilet', toilet_on_low_wall_before: false, toilet_on_low_wall_after: false, extra_openings: false, view_changed: false, reason: 'inventory', ...extra }) }] }, finishReason: 'STOP' }] });
+const checked = (extra = false, text) => response({ candidates: [{ content: { parts: [{ text: text ?? JSON.stringify({ before: inv(), after: inv(), order_before: order(inv()), order_after: order(inv()), nearest_before: 'toilet', nearest_after: 'toilet', toilet_on_low_wall_before: false, toilet_on_low_wall_after: false, foreground_object_before: false, foreground_object_after: false, window_much_bigger: false, extra_openings: extra, view_changed: false, reason: 'inventory' }) }] }, finishReason: 'STOP' }] });
+const checkedInv = (before, after, extra = {}) => response({ candidates: [{ content: { parts: [{ text: JSON.stringify({ before: inv(before), after: inv(after), order_before: order(inv(before)), order_after: order(inv(after)), nearest_before: 'toilet', nearest_after: 'toilet', toilet_on_low_wall_before: false, toilet_on_low_wall_after: false, foreground_object_before: false, foreground_object_after: false, window_much_bigger: false, extra_openings: false, view_changed: false, reason: 'inventory', ...extra }) }] }, finishReason: 'STOP' }] });
 
 function harness(settings = {}) {
   const clock = fakeClock();
@@ -278,7 +278,7 @@ test('nach einem schnellen ersten Durchgang bleibt Zeit fuer den zweiten', async
   assert.equal(h.counts().generation, 2, 'der zweite Versuch muss laufen');
   assert.equal(res.statusCode, 200);
   const leadMail = h.calls.find((call) => call.url === 'https://api.resend.com/emails');
-  assert.match(JSON.stringify(leadMail.body), /1\. Versuch verworfen, 2\. Versuch ok/);
+  assert.match(JSON.stringify(leadMail.body), /1\. Versuch verworfen \(an opening was added or lost.*2\. Versuch ok/);
 });
 
 test('der Prompt ist eine Bearbeitung, keine Neuzeichnung', async () => {
@@ -382,6 +382,7 @@ test('WC und Dusche duerfen an derselben Wand nicht die Plaetze tauschen', async
     order_before: ['washbasin', 'shower', 'toilet'], order_after: ['washbasin', 'toilet', 'shower'],
     nearest_before: 'toilet', nearest_after: 'toilet',
     toilet_on_low_wall_before: false, toilet_on_low_wall_after: false,
+    foreground_object_before: false, foreground_object_after: false, window_much_bigger: false,
     extra_openings: false, view_changed: false, reason: 'inventory',
   }) }] }, finishReason: 'STOP' }] });
   const h = harness({ checks: [swapped, swapped] });
@@ -399,6 +400,7 @@ test('ein weggeraeumtes Stueck aendert die Reihenfolge nicht', async () => {
     order_before: ['washbasin', 'toilet', 'bidet'], order_after: ['washbasin', 'toilet'],
     nearest_before: 'bidet', nearest_after: 'toilet',
     toilet_on_low_wall_before: false, toilet_on_low_wall_after: false,
+    foreground_object_before: false, foreground_object_after: false, window_much_bigger: false,
     extra_openings: false, view_changed: false, reason: 'inventory',
   }) }] }, finishReason: 'STOP' }] })] });
   const res = await h.invoke();
@@ -414,6 +416,7 @@ test('das WC darf an seiner Wand nicht nach hinten rutschen', async () => {
     order_before: ['washbasin', 'shower', 'toilet'], order_after: ['washbasin', 'shower', 'toilet'],
     nearest_before: 'toilet', nearest_after: 'washbasin',
     toilet_on_low_wall_before: false, toilet_on_low_wall_after: false,
+    foreground_object_before: false, foreground_object_after: false, window_much_bigger: false,
     extra_openings: false, view_changed: false, reason: 'inventory',
   }) }] }, finishReason: 'STOP' }] });
   const h = harness({ checks: [shifted, shifted] });
@@ -436,6 +439,64 @@ test('ein verschwundenes Muretto unter dem WC wird verworfen', async () => {
   assert.equal(res.body.code, 'RENDER_REJECTED');
   const leadMail = h.calls.find((call) => call.url === 'https://api.resend.com/emails');
   assert.match(JSON.stringify(leadMail.body), /the low wall the toilet stood against is gone/);
+});
+
+test('der zweite Versuch bekommt die ganze Liste noch einmal mit', async () => {
+  // Diegos Gaeste-WC vom 17.09.: erster Versuch verworfen, zweiter ok, aber ohne
+  // Waschtischunterbau. Der Nachbesserungssatz nannte nur Grundriss, Oeffnungen und WC.
+  const h = harness({ checks: [() => checkedInv({ toilet: 'left' }, { toilet: 'right' }), () => checked()],
+    generateDelays: [1000, 1000], checkDelays: [1000, 1000] });
+  const res = await h.invoke();
+  assert.equal(res.statusCode, 200);
+  const generations = h.calls.filter((call) => call.body?.generationConfig?.responseModalities);
+  assert.equal(generations.length, 2);
+  const retryPrompt = generations[1].body.contents[0].parts[0].text;
+  assert.match(retryPrompt, /the washbasin on its own vanity unit with the mirror above it/);
+  assert.match(retryPrompt, /everything in the foreground at the edge of the picture/);
+});
+
+test('eine verschwundene Tuer im Vordergrund wird verworfen', async () => {
+  // Probe vom 17.09.: im Foto steht links vorne der offene Tuerfluegel und nimmt ein
+  // Viertel des Bildes ein. Im Ideenbild ist er weg, das Modell hat die Kamera gedreht.
+  // Waende, Reihenfolge, Tiefe und Muretto blieben dabei gleich.
+  const turned = () => checkedInv({}, {}, { foreground_object_before: true, foreground_object_after: false });
+  const h = harness({ checks: [turned, turned] });
+  const res = await h.invoke();
+  assert.equal(res.statusCode, 502);
+  assert.equal(res.body.code, 'RENDER_REJECTED');
+  const leadMail = h.calls.find((call) => call.url === 'https://api.resend.com/emails');
+  assert.match(JSON.stringify(leadMail.body), /what stood in the foreground of the photo, at the edge of the picture, is gone/);
+});
+
+test('ein Fenster, das viel groesser wird, wird verworfen', async () => {
+  // Dasselbe Bild von aussen gemessen: das Fenster nimmt im Ideenbild viel mehr Platz
+  // ein als im Foto, die Kamera ist also naeher herangegangen.
+  const zoomed = () => checkedInv({}, {}, { window_much_bigger: true });
+  const h = harness({ checks: [zoomed, zoomed] });
+  const res = await h.invoke();
+  assert.equal(res.statusCode, 502);
+  const leadMail = h.calls.find((call) => call.url === 'https://api.resend.com/emails');
+  assert.match(JSON.stringify(leadMail.body), /the window takes up much more of the result than of the photo/);
+});
+
+test('ein Vordergrund, der im Foto gar nicht da war, ist kein Fehler', async () => {
+  // Nur das Verschwinden zaehlt. Taucht vorne etwas auf, wo im Foto nichts war,
+  // ist das kein Grund, dem Kunden nichts zu zeigen.
+  const h = harness({ checks: [() => checkedInv({}, {}, { foreground_object_before: false, foreground_object_after: true })] });
+  const res = await h.invoke();
+  assert.equal(res.statusCode, 200);
+});
+
+test('der Prompt haelt den Vordergrund und den Waschtischunterbau fest', async () => {
+  const h = harness();
+  await h.invoke();
+  const prompt = h.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
+  // Der Tuerfluegel im Vordergrund gehoert zum Bild.
+  assert.match(prompt, /Whatever stands in the immediate foreground at the edge of image 1 belongs to the picture and stays/);
+  assert.match(prompt, /Every window keeps the same share of the picture it has in image 1/);
+  // "Loose furniture is gone" hat im Gaeste-WC den Waschtischunterbau mitgenommen.
+  assert.match(prompt, /the washbasin's own vanity unit is not loose furniture and is always there/);
+  assert.doesNotMatch(prompt, /Loose furniture, clutter/);
 });
 
 test('ein erhaltenes Muretto und ein neu gebautes sind kein Fehler', async () => {
