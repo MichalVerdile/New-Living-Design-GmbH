@@ -31,7 +31,7 @@
  *                        "Badplaner <badplaner@newlivingdesign.ch>",
  *                        Domain muss bei Resend verifiziert sein)
  *   BADPLANER_DAILY_CAP  Maximale Ideenbilder pro Tag insgesamt (Default 60)
- *   BADPLANER_MODEL      Gemini-Modell (Default gemini-3.1-flash-image)
+ *   BADPLANER_MODEL      Gemini-Modell (Default gemini-3-pro-image, das genaueste)
  *   BADPLANER_CHECK_MODEL Gemini-Textmodell für die Fensterprüfung (Default gemini-3.6-flash);
  *                        leer lassen = Prüfung bewusst deaktiviert
  *
@@ -65,7 +65,7 @@ const TOTAL_TIMEOUT_MS = 105000; // 15 seconds below the platform limit
 const DELIVERY_RESERVE_MS = 15000;
 const PER_DEVICE_PER_DAY = 5;                 // Cookie nldbp
 const PER_IP_PER_DAY = 10;                    // In-Memory, muss über dem Gerätelimit liegen
-const GEMINI_TIMEOUT_MS = 50000;
+const GEMINI_TIMEOUT_MS = 65000;  // gemini-3-pro-image denkt mit und braucht laenger als Flash
 const CHECK_TIMEOUT_MS = 14000;   // gemessen: die Pruefung braucht rund 4 s
 const CHECK_RETRY_DELAY_MS = 750;
 const COOKIE_NAME = 'nldbp';
@@ -908,7 +908,10 @@ async function loadSwatch(image: string, src: string, ctx: RequestContext): Prom
 type GenResult = { ok: true; mime: string; data: string } | { ok: false; error: string };
 
 async function generateImage(prompt: string, photo: Photo, swatch: Photo | null, extra: Photo | null, ctx: RequestContext, aspectRatio = ''): Promise<GenResult> {
-  const model = env.BADPLANER_MODEL || 'gemini-3.1-flash-image';
+  // Das Ideenbild ist das Produkt: es soll das Bad des Kunden zeigen, nicht
+  // irgendein schoenes Bad. Darum das genaueste Modell, nicht das billigste.
+  // 2K kostet bei diesem Modell gleich viel wie 1K, also 2K.
+  const model = env.BADPLANER_MODEL || 'gemini-3-pro-image';
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
   const parts: any[] = [{ text: prompt }, { inlineData: { mimeType: photo.mime, data: photo.data } }];
   if (swatch) parts.push({ inlineData: { mimeType: swatch.mime, data: swatch.data } });
@@ -920,7 +923,7 @@ async function generateImage(prompt: string, photo: Photo, swatch: Photo | null,
       headers: { 'x-goog-api-key': env.GEMINI_API_KEY || '', 'content-type': 'application/json' },
       body: JSON.stringify({
         contents: [{ role: 'user', parts }],
-        generationConfig: { responseModalities: ['IMAGE'], imageConfig: aspectRatio ? { imageSize: '1K', aspectRatio } : { imageSize: '1K' } },
+        generationConfig: { responseModalities: ['IMAGE'], imageConfig: aspectRatio ? { imageSize: '2K', aspectRatio } : { imageSize: '2K' } },
       }),
     }, Math.min(GEMINI_TIMEOUT_MS, Math.max(0, ctx.budget.remaining() - CHECK_TIMEOUT_MS - DELIVERY_RESERVE_MS)));
     const json = r.json;
