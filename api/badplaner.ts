@@ -451,6 +451,30 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
 
   // Der zweite Versuch wird weiter unten an der gemessenen Dauer des ersten
   // Durchgangs entschieden, nicht an den Höchstwerten.
+  // 9b. Zeigt das Foto ueberhaupt ein Bad? Spart bei einem falschen Foto zwei
+  // Generierungen und sagt dem Kunden, was wirklich fehlt.
+  const photoCheck: PhotoCheck = ctx.budget.remaining() >= CHECK_TIMEOUT_MS + DELIVERY_RESERVE_MS
+    ? await checkPhoto(photo, room, ctx)
+    : { status: 'unavailable' };
+  if (photoCheck.status === 'wrong_room') {
+    console.warn('[badplaner] Foto zeigt kein Bad', photoCheck.reason);
+    const wrongRoomDelivery = await sendLeadMail({
+      subject: `Badplaner-Lead: ${name} - ${isGuestWc ? 'Gaeste-WC' : pkg.name} - Foto zeigt kein Bad`,
+      replyTo: email,
+      intro: 'Neuer Lead aus dem Badplaner. Auf dem Foto ist kein Bad und kein WC zu erkennen, darum wurde gar kein Ideenbild erzeugt. Das Foto liegt bei.',
+      details: leadDetails(`nicht noetig: Foto zeigt kein Bad (${photoCheck.reason})`, 'nicht erzeugt: Foto zeigt kein Bad'),
+      attachments: [{ filename: photoName, content: photo.data }],
+    }, ctx);
+    // Wie bei einem verworfenen Ideenbild: sein Tageslimit bleibt unberuehrt,
+    // er darf mit dem richtigen Foto sofort nochmals.
+    delivered = true;
+    return res.status(422).json({
+      ok: false, code: 'PHOTO_NOT_A_BATHROOM',
+      delivery: { lead: wrongRoomDelivery.status, leadProvider: wrongRoomDelivery.provider, leadAttachments: wrongRoomDelivery.attachments },
+      error: 'Auf Ihrem Foto erkennen wir kein Bad und kein WC. Stellen Sie sich bitte in den Türrahmen und fotografieren Sie den ganzen Raum, mit WC und Waschbecken im Bild. Ihre Angaben sind bei uns, wir melden uns.',
+    });
+  }
+
   console.info('[badplaner] Seitenverhältnis', photoRatio || 'automatisch');
   const passStarted = dependencies.clock.now();
   let gen = await generateImage(prompt, photo, swatch, moduleImage, ctx, photoRatio);
@@ -971,6 +995,54 @@ async function checkOpenings(
     return flags.view_changed ? { status: 'approved', note: parsed.reason.slice(0, 200) } : { status: 'approved' };
   } catch {
     console.error('[badplaner] Fensterprüfung nicht möglich');
+    return { status: 'unavailable' };
+  }
+}
+
+/**
+ * Vorpruefung des Kundenfotos, vor der teuren Bildgenerierung: zeigt es
+ * ueberhaupt ein Bad oder ein WC? Ein Balkon, ein Wohnzimmer oder ein
+ * Screenshot zwingt das Bildmodell, den ganzen Raum zu erfinden. Die
+ * Oeffnungspruefung verwirft das Ergebnis danach ohnehin, nur eben nach zwei
+ * Generierungen und ohne dem Kunden zu sagen, woran es wirklich lag.
+ * Im Zweifel laesst diese Pruefung durch: ein ausgeraeumtes Bad soll nicht
+ * abgewiesen werden.
+ */
+type PhotoCheck = { status: 'ok' } | { status: 'wrong_room'; reason: string } | { status: 'unavailable' };
+
+async function checkPhoto(photo: Photo, room: 'badezimmer' | 'gaeste-wc', ctx: RequestContext): Promise<PhotoCheck> {
+  const model = env.BADPLANER_CHECK_MODEL === undefined ? 'gemini-3.6-flash' : env.BADPLANER_CHECK_MODEL;
+  if (!model?.trim()) return { status: 'unavailable' };
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+  const question =
+    `A customer uploaded this photo as the ${room === 'gaeste-wc' ? 'guest WC' : 'bathroom'} they want renovated. ` +
+    'Set is_bathroom true if it shows the inside of a bathroom or a WC, or a room being stripped or built as one: a toilet, a washbasin, a shower, a bathtub, a bidet, a tiled wet area or exposed sanitary pipes is enough. ' +
+    'Set is_bathroom true as well whenever you are not sure. ' +
+    'Set is_bathroom false only when the photo clearly shows something else, for example a living room, a bedroom, a kitchen, a balcony, a garden, an office, a car, a person, a document, a screenshot or a photo of a screen. ' +
+    'Answer with JSON only, no markdown and exactly these keys: {"is_bathroom":true,"reason":"short English reason, max 25 words"}';
+  try {
+    const r = await request(ctx, url, {
+      method: 'POST',
+      headers: { 'x-goog-api-key': env.GEMINI_API_KEY || '', 'content-type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ role: 'user', parts: [{ text: question }, { inlineData: { mimeType: photo.mime, data: photo.data } }] }],
+        generationConfig: { temperature: 0, responseMimeType: 'application/json' },
+      }),
+    }, Math.min(CHECK_TIMEOUT_MS, Math.max(0, ctx.budget.remaining() - DELIVERY_RESERVE_MS)));
+    if (!r.ok) {
+      console.error('[badplaner] Fotopruefung fehlgeschlagen', r.status);
+      return { status: 'unavailable' };
+    }
+    const json = r.json;
+    if (json?.candidates?.[0]?.finishReason !== 'STOP') return { status: 'unavailable' };
+    const textOut: string = json?.candidates?.[0]?.content?.parts?.map((p: any) => p.text || '').join('') || '';
+    const parsed = JSON.parse(textOut);
+    if (!parsed || Array.isArray(parsed) || typeof parsed.is_bathroom !== 'boolean' || typeof parsed.reason !== 'string'
+      || !parsed.reason.trim() || parsed.reason.length > 200
+      || Object.keys(parsed).some((key) => !['is_bathroom', 'reason'].includes(key))) return { status: 'unavailable' };
+    return parsed.is_bathroom ? { status: 'ok' } : { status: 'wrong_room', reason: parsed.reason.slice(0, 200) };
+  } catch {
+    console.error('[badplaner] Fotopruefung nicht moeglich');
     return { status: 'unavailable' };
   }
 }

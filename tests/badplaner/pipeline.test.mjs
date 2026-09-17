@@ -47,12 +47,13 @@ function fakeClock() {
 
 const response = (body, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
 const generated = (data = PNG, mimeType = 'image/png') => response({ candidates: [{ content: { parts: [{ inlineData: { mimeType, data } }] }, finishReason: 'STOP' }] });
+const photoChecked = (isBathroom = true, text) => response({ candidates: [{ content: { parts: [{ text: text ?? JSON.stringify({ is_bathroom: isBathroom, reason: 'toilet and washbasin visible' }) }] }, finishReason: 'STOP' }] });
 const checked = (extra = false, text) => response({ candidates: [{ content: { parts: [{ text: text ?? JSON.stringify({ extra_openings: extra, toilet_moved: false, layout_changed: false, view_changed: false, shower_present: false, bathtub_present: false, reason: 'fixture comparison' }) }] }, finishReason: 'STOP' }] });
 
 function harness(settings = {}) {
   const clock = fakeClock();
   const calls = [];
-  let generation = 0; let checks = 0; let mail = 0; let ids = 0;
+  let generation = 0; let checks = 0; let photoChecks = 0; let mail = 0; let ids = 0;
   const fetch = async (url, init = {}) => {
     const body = init.body ? JSON.parse(init.body) : undefined;
     calls.push({ url, init, body });
@@ -63,6 +64,11 @@ function harness(settings = {}) {
         generation += 1;
         clock.advance(settings.generateDelays?.[generation - 1] ?? 0);
         return settings.generations?.[generation - 1]?.(init) ?? generated();
+      }
+      if ((body.contents?.[0]?.parts || []).filter((part) => part.inlineData).length === 1) {
+        photoChecks += 1;
+        clock.advance(settings.photoCheckDelays?.[photoChecks - 1] ?? 0);
+        return settings.photoChecks?.[photoChecks - 1]?.(init) ?? photoChecked();
       }
       checks += 1;
       clock.advance(settings.checkDelays?.[checks - 1] ?? 0);
@@ -95,7 +101,7 @@ function harness(settings = {}) {
     assert.equal(clock.timers.size, 0, 'all timeout handles must be cleared');
     return res;
   }
-  return { invoke, clock, calls, counts: () => ({ generation, checks, mail }) };
+  return { invoke, clock, calls, counts: () => ({ generation, checks, mail }), photoCount: () => photoChecks };
 }
 
 test('approved rendering reaches company and customer, reporting provider acceptance', async () => {
@@ -126,7 +132,8 @@ test('Aufputz and Unterputz produce explicit, exclusive toilet branches', async 
     assert.equal(res.statusCode, 200);
     const generation = h.calls.find((call) => call.body?.generationConfig?.responseModalities);
     const prompt = generation.body.contents[0].parts[0].text;
-    const checker = h.calls.find((call) => call.url.includes('generativelanguage.googleapis.com') && !call.body?.generationConfig?.responseModalities);
+    const checker = h.calls.find((call) => call.url.includes('generativelanguage.googleapis.com') && !call.body?.generationConfig?.responseModalities
+      && call.body.contents[0].parts.filter((part) => part.inlineData).length === 2);
     const checkPrompt = checker.body.contents[0].parts[0].text;
     if (cistern === 'aufputz') {
       assert.match(prompt, /is completely removed and must not survive in any form/);
@@ -171,7 +178,8 @@ test('Gäste-WC prompt and checker require no shower or bathtub', async () => {
   const res = await h.invoke(payload({ raum: 'gaeste-wc', dusche: '', badewanne: '', waschtisch: 'einzel' }));
   assert.equal(res.statusCode, 200);
   const generation = h.calls.find((call) => call.body?.generationConfig?.responseModalities);
-  const checker = h.calls.find((call) => call.body?.generationConfig?.responseMimeType);
+  const checker = h.calls.find((call) => call.body?.generationConfig?.responseMimeType
+    && call.body.contents[0].parts.filter((part) => part.inlineData).length === 2);
   assert.match(generation.body.contents[0].parts[0].text, /guest WC: the result must contain NO shower/);
   assert.match(checker.body.contents[0].parts[0].text, /guest WC.*shower_present=false.*bathtub_present=false/);
 });
@@ -184,6 +192,54 @@ test('shower prompt tiles the full tray or sloped-floor perimeter to the ceiling
   const generation = h.calls.find((call) => call.body?.generationConfig?.responseModalities);
   assert.match(generation.body.contents[0].parts[0].text, /entire perimeter of the shower tray or sloped tiled shower floor/);
   assert.match(generation.body.contents[0].parts[0].text, /every wall around the entire shower-floor perimeter is tiled continuously to the ceiling/);
+});
+
+test('ein Foto ohne Bad wird gar nicht erst gerendert', async () => {
+  // Michaels Probe vom 16.09: Foto einer Veranda mit Sofa. Frueher lief daraus
+  // zweimal die Bildgenerierung, und der Kunde bekam nur "Kontrolle nicht bestanden".
+  const h = harness({ photoChecks: [() => photoChecked(false)] });
+  const res = await h.invoke();
+  assert.equal(res.statusCode, 422);
+  assert.equal(res.body.code, 'PHOTO_NOT_A_BATHROOM');
+  assert.equal(h.counts().generation, 0, 'ein falsches Foto darf kein Bild kosten');
+  assert.equal(h.counts().checks, 0);
+  assert.match(res.body.error, /kein Bad und kein WC/);
+  assert.equal(res.body.delivery.lead, 'accepted');
+  const leadMail = h.calls.find((call) => call.url === 'https://api.resend.com/emails');
+  assert.match(leadMail.body.subject, /Foto zeigt kein Bad/);
+  assert.deepEqual(leadMail.body.attachments.map(({ filename }) => filename), ['foto.png']);
+  assert.equal(h.counts().mail, 1, 'der Kunde bekommt keine Bildmail');
+});
+
+test('ein falsches Foto kostet den Kunden keinen Tagesversuch', async () => {
+  const h = harness({ photoChecks: [() => photoChecked(false)] });
+  const res = await h.invoke();
+  assert.equal(res.statusCode, 422);
+  assert.equal(res.headers['Set-Cookie'], undefined);
+});
+
+test('die Fotopruefung bekommt nur das Kundenfoto, nicht Muster oder Modul', async () => {
+  const h = harness();
+  await h.invoke(payload({ spuelkasten: 'aufputz' }));
+  const first = h.calls.find((call) => call.url.includes('generativelanguage.googleapis.com'));
+  const parts = first.body.contents[0].parts;
+  assert.equal(parts.filter((part) => part.inlineData).length, 1);
+  assert.match(parts[0].text, /is_bathroom/);
+});
+
+test('eine unlesbare Fotopruefung haelt den Badplaner nicht auf', async () => {
+  // Im Zweifel durchlassen: ein ausgeraeumtes Bad darf nicht abgewiesen werden.
+  const h = harness({ photoChecks: [() => photoChecked(true, 'kein JSON'), () => photoChecked(true, '{}')] });
+  const res = await h.invoke();
+  assert.equal(res.statusCode, 200);
+  assert.equal(h.counts().generation, 1);
+});
+
+test('faellt die Fotopruefung aus, wird trotzdem gerendert', async () => {
+  const h = harness({ photoChecks: [() => response({ error: 'quota' }, 429)] });
+  const res = await h.invoke();
+  assert.equal(res.statusCode, 200);
+  assert.equal(h.counts().generation, 1);
 });
 
 test('fixture checker rejects a shower in a Gäste-WC', async () => {
