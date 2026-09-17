@@ -537,7 +537,8 @@ test('second approved result replaces first rejected result', async () => {
 test('second generation failure after rejection still fails closed', async () => {
   const h = harness({ checks: [() => checked(true)], generations: [() => generated(), () => response({}, 500)] });
   const res = await h.invoke();
-  assert.equal(res.statusCode, 502); assert.equal(res.body.image, undefined); assert.equal(h.counts().mail, 0);
+  // Kein Bild fuer den Kunden, aber der Lead geht an uns (mit dem verworfenen Bild).
+  assert.equal(res.statusCode, 502); assert.equal(res.body.image, undefined); assert.equal(h.counts().mail, 1);
 });
 
 for (const answer of ['not json', '```json\n{"extra_openings":false,"reason":"x"}\n```', '{"extra_openings":"false","reason":"x"}', '{"extra_openings":false}', '{"extra_openings":false,"reason":""}', '{"extra_openings":false,"reason":"x","uncertain":true}', 'null', '[]']) {
@@ -574,11 +575,37 @@ test('unavailable checker retries once, delivers the lead and marks the mail', a
   assert.match(JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails')?.body), /Fensterprüfung.*nicht möglich \(Prüfdienst nicht erreichbar\)/);
 });
 
-test('generation timeout and invalid generated image fail without checker/mail', async () => {
+test('ein Ausfall des Bilddienstes wird gemeldet, der Lead aber nicht weggeworfen', async () => {
+  // Diegos Probe vom 17.09: erster Versuch scheiterte, und es kam gar keine Mail.
+  // Der Kunde hatte das ganze Formular ausgefuellt, wir hatten davon nichts.
   for (const settings of [{ generateDelays: [50001] }, { generations: [() => generated('AAAA')] }, { generations: [() => generated(PNG, 'image/svg+xml')] }]) {
     const h = harness(settings); const res = await h.invoke();
-    assert.equal(res.statusCode, 502); assert.deepEqual(h.counts(), { generation: 1, checks: 0, mail: 0 });
+    assert.equal(res.statusCode, 502);
+    assert.equal(res.body.code, 'RENDER_FAILED');
+    assert.match(res.body.error, /Ihre Angaben und Ihr Foto sind bei uns/);
+    assert.deepEqual(h.counts(), { generation: 1, checks: 0, mail: 1 });
+    const leadMail = h.calls.find((call) => call.url === 'https://api.resend.com/emails');
+    assert.match(leadMail.body.subject, /kein Ideenbild erzeugt/);
+    assert.deepEqual(leadMail.body.attachments.map(({ filename }) => filename), ['foto.png']);
   }
+});
+
+test('auch ein gescheiterter zweiter Versuch behaelt den Lead und das verworfene Bild', async () => {
+  const h = harness({ generateDelays: [35000, 0], checkDelays: [4000], checks: [() => checked(true)],
+    generations: [() => generated(), () => response({ error: 'boom' }, 500)] });
+  const res = await h.invoke();
+  assert.equal(res.statusCode, 502);
+  assert.equal(h.counts().generation, 2);
+  assert.equal(h.counts().mail, 1);
+  const leadMail = h.calls.find((call) => call.url === 'https://api.resend.com/emails');
+  assert.deepEqual(leadMail.body.attachments.map(({ filename }) => filename), ['foto.png', 'verworfen.jpg']);
+});
+
+test('ein Ausfall des Bilddienstes kostet den Kunden keinen Tagesversuch', async () => {
+  const h = harness({ generations: [() => response({ error: 'boom' }, 500)] });
+  const res = await h.invoke();
+  assert.equal(res.statusCode, 502);
+  assert.equal(res.headers['Set-Cookie'], undefined);
 });
 
 test('failed render attempts do not consume the IP counter', async () => {
@@ -690,7 +717,7 @@ test('generated response headers and streaming bytes respect the provider cap', 
     () => new Response(new Uint8Array(6 * 1024 * 1024 + 1)),
   ]) {
     const h = harness({ generations: [large] }); const res = await h.invoke();
-    assert.equal(res.statusCode, 502); assert.equal(h.counts().checks, 0); assert.equal(h.counts().mail, 0);
+    assert.equal(res.statusCode, 502); assert.equal(h.counts().checks, 0); assert.equal(h.counts().mail, 1);
   }
 });
 
@@ -733,5 +760,5 @@ test('slow response body is timed out, not only response headers', async () => {
   for (let i = 0; i < 30 && h.counts().generation === 0; i += 1) await Promise.resolve();
   h.clock.advance(50000);
   const res = await pending;
-  assert.equal(res.statusCode, 502); assert.equal(cancelCalled, true); assert.equal(h.counts().mail, 0);
+  assert.equal(res.statusCode, 502); assert.equal(cancelCalled, true); assert.equal(h.counts().mail, 1);
 });
