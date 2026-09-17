@@ -201,12 +201,15 @@ type Wall = 'left' | 'right' | 'back' | 'front' | 'none';
 const WALLS: Wall[] = ['left', 'right', 'back', 'front', 'none'];
 interface Inventory { toilet: Wall; washbasin: Wall; shower: Wall; bathtub: Wall; bidet: Wall }
 const FIXTURES = ['toilet', 'washbasin', 'shower', 'bathtub', 'bidet'] as const;
+type Fixture = typeof FIXTURES[number];
 
 interface CheckFlags {
   extra_openings: boolean;
   view_changed: boolean;
   before: Inventory;
   after: Inventory;
+  orderBefore: Fixture[];
+  orderAfter: Fixture[];
 }
 type CheckResult = { status: 'approved'; note?: string } | { status: 'rejected'; reason: string; flags: CheckFlags } | { status: 'unavailable' } | { status: 'disabled' };
 
@@ -985,11 +988,13 @@ async function checkOpenings(
     'Image 1 is a room before renovation. Image 2 is the edited result. Report only what you can see, do not judge whether it is good. ' +
     'For image 1 and for image 2, name the wall each sanitary fixture stands against, seen from the camera: "left", "right", "back", "front", or "none" when that fixture is not visible at all. ' +
     'A fixture that is only partly in frame still counts. A slim pre-wall behind the toilet, tiled or clad, is normal building work and is not a wall of the room. ' +
+    'Then list the fixtures of each image in the order you see them from left to right in the picture, using the same words, each fixture at most once and only the ones you can see. ' +
     'Set extra_openings true only if image 2 has a window, roof window, door or outside opening that image 1 does not have, or lost one that image 1 has. ' +
     'Set view_changed true if camera position, angle, lens or framing changed, or if image 2 shows floor, wall or ceiling area that lies outside image 1. ' +
     'Answer with JSON only, no markdown and exactly these keys: ' +
     '{"before":{"toilet":"left","washbasin":"left","shower":"none","bathtub":"none","bidet":"none"},' +
     '"after":{"toilet":"left","washbasin":"left","shower":"none","bathtub":"none","bidet":"none"},' +
+    '"order_before":["washbasin","toilet"],"order_after":["washbasin","toilet"],' +
     '"extra_openings":false,"view_changed":false,"reason":"short English note, max 25 words"}';
   try {
     const r = await request(ctx, url, {
@@ -1023,15 +1028,23 @@ async function checkOpenings(
       if (FIXTURES.some((key) => !WALLS.includes(value[key]))) return null;
       return value as Inventory;
     };
-    const keys = ['before', 'after', 'extra_openings', 'view_changed', 'reason'];
+    const order = (value: any): Fixture[] | null => {
+      if (!Array.isArray(value) || value.length > FIXTURES.length) return null;
+      if (value.some((item) => !FIXTURES.includes(item))) return null;
+      if (new Set(value).size !== value.length) return null;
+      return value as Fixture[];
+    };
+    const keys = ['before', 'after', 'order_before', 'order_after', 'extra_openings', 'view_changed', 'reason'];
     const before = inventory(parsed?.before);
     const after = inventory(parsed?.after);
-    if (!parsed || Array.isArray(parsed) || !before || !after
+    const orderBefore = order(parsed?.order_before);
+    const orderAfter = order(parsed?.order_after);
+    if (!parsed || Array.isArray(parsed) || !before || !after || !orderBefore || !orderAfter
       || typeof parsed.extra_openings !== 'boolean' || typeof parsed.view_changed !== 'boolean'
       || typeof parsed.reason !== 'string' || !parsed.reason.trim() || parsed.reason.length > 200
       || Object.keys(parsed).some((key) => !keys.includes(key))) return { status: 'unavailable' };
-    const flags: CheckFlags = { extra_openings: parsed.extra_openings, view_changed: parsed.view_changed, before, after };
-    const fault = compareInventory(before, after, wanted);
+    const flags: CheckFlags = { extra_openings: parsed.extra_openings, view_changed: parsed.view_changed, before, after, orderBefore, orderAfter };
+    const fault = compareInventory(before, after, wanted) || compareOrder(orderBefore, orderAfter);
     if (flags.extra_openings) return { status: 'rejected', reason: `an opening was added or lost (${parsed.reason.slice(0, 120)})`, flags };
     if (fault) return { status: 'rejected', reason: fault, flags };
     // Ein anderer Bildausschnitt allein ist kein Grund, dem Kunden nichts zu zeigen:
@@ -1089,6 +1102,20 @@ async function checkPhoto(photo: Photo, room: 'badezimmer' | 'gaeste-wc', ctx: R
     console.error('[badplaner] Fotopruefung nicht moeglich');
     return { status: 'unavailable' };
   }
+}
+
+/**
+ * Gleiche Wand genuegt nicht: an derselben Wand koennen WC und Dusche die
+ * Plaetze tauschen. Diego hat das am 17.09. gesehen, die Wandpruefung nicht.
+ * Darum zusaetzlich die Reihenfolge von links nach rechts, verglichen nur
+ * ueber die Stuecke, die auf beiden Bildern vorkommen.
+ */
+function compareOrder(before: Fixture[], after: Fixture[]): string | null {
+  const shared = before.filter((item) => after.includes(item));
+  const afterShared = after.filter((item) => shared.includes(item));
+  if (shared.length < 2) return null;
+  if (shared.join('>') === afterShared.join('>')) return null;
+  return `the fixtures changed places: in the photo ${shared.join(', ')}, in the result ${afterShared.join(', ')}`;
 }
 
 /**

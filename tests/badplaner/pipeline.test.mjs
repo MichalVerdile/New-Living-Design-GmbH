@@ -51,8 +51,11 @@ const photoChecked = (isBathroom = true, text) => response({ candidates: [{ cont
 const inv = (changes = {}) => ({ toilet: 'left', washbasin: 'left', shower: 'none', bathtub: 'none', bidet: 'none', ...changes });
 // Die Pruefung liefert ein Inventar; geurteilt wird im Code. `checked()` ist der
 // unauffaellige Fall: alles steht nachher, wo es vorher stand.
-const checked = (extra = false, text) => response({ candidates: [{ content: { parts: [{ text: text ?? JSON.stringify({ before: inv(), after: inv(), extra_openings: extra, view_changed: false, reason: 'inventory' }) }] }, finishReason: 'STOP' }] });
-const checkedInv = (before, after, extra = {}) => response({ candidates: [{ content: { parts: [{ text: JSON.stringify({ before: inv(before), after: inv(after), extra_openings: false, view_changed: false, reason: 'inventory', ...extra }) }] }, finishReason: 'STOP' }] });
+// Die sichtbare Reihenfolge von links nach rechts folgt dem Inventar, solange
+// ein Test nichts anderes sagt.
+const order = (state) => ['washbasin', 'toilet', 'bidet', 'shower', 'bathtub'].filter((key) => state[key] !== 'none');
+const checked = (extra = false, text) => response({ candidates: [{ content: { parts: [{ text: text ?? JSON.stringify({ before: inv(), after: inv(), order_before: order(inv()), order_after: order(inv()), extra_openings: extra, view_changed: false, reason: 'inventory' }) }] }, finishReason: 'STOP' }] });
+const checkedInv = (before, after, extra = {}) => response({ candidates: [{ content: { parts: [{ text: JSON.stringify({ before: inv(before), after: inv(after), order_before: order(inv(before)), order_after: order(inv(after)), extra_openings: false, view_changed: false, reason: 'inventory', ...extra }) }] }, finishReason: 'STOP' }] });
 
 function harness(settings = {}) {
   const clock = fakeClock();
@@ -360,6 +363,34 @@ test('scheitert der Bilddienst, steht der technische Grund in der Lead-Mail', as
   assert.match(JSON.stringify(leadMail.body), /HTTP 400: image size 2K is not supported/);
   // Der Kunde liest davon nichts.
   assert.doesNotMatch(res.body.error, /HTTP 400/);
+});
+
+test('WC und Dusche duerfen an derselben Wand nicht die Plaetze tauschen', async () => {
+  // Probe vom 17.09.: im Foto steht die Dusche in der Ecke bei der Tuer und das
+  // WC weiter hinten, im Ideenbild umgekehrt. Beide an der rechten Wand, also
+  // hat die Wandpruefung allein nichts gemerkt.
+  const swapped = () => response({ candidates: [{ content: { parts: [{ text: JSON.stringify({
+    before: inv({ shower: 'right', toilet: 'right' }), after: inv({ shower: 'right', toilet: 'right' }),
+    order_before: ['washbasin', 'shower', 'toilet'], order_after: ['washbasin', 'toilet', 'shower'],
+    extra_openings: false, view_changed: false, reason: 'inventory',
+  }) }] }, finishReason: 'STOP' }] });
+  const h = harness({ checks: [swapped, swapped] });
+  const res = await h.invoke(payload({ dusche: 'walk-in', badewanne: 'keine' }));
+  assert.equal(res.statusCode, 502);
+  assert.equal(res.body.code, 'RENDER_REJECTED');
+  const leadMail = h.calls.find((call) => call.url === 'https://api.resend.com/emails');
+  assert.match(JSON.stringify(leadMail.body), /the fixtures changed places/);
+});
+
+test('ein weggeraeumtes Stueck aendert die Reihenfolge nicht', async () => {
+  // Das Bidet verschwindet immer. Das darf die Reihenfolgepruefung nicht ausloesen.
+  const h = harness({ checks: [() => response({ candidates: [{ content: { parts: [{ text: JSON.stringify({
+    before: inv({ bidet: 'right', toilet: 'right' }), after: inv({ toilet: 'right' }),
+    order_before: ['washbasin', 'toilet', 'bidet'], order_after: ['washbasin', 'toilet'],
+    extra_openings: false, view_changed: false, reason: 'inventory',
+  }) }] }, finishReason: 'STOP' }] })] });
+  const res = await h.invoke();
+  assert.equal(res.statusCode, 200);
 });
 
 test('fixture checker rejects a shower in a Gäste-WC', async () => {
