@@ -48,7 +48,11 @@ function fakeClock() {
 const response = (body, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
 const generated = (data = PNG, mimeType = 'image/png') => response({ candidates: [{ content: { parts: [{ inlineData: { mimeType, data } }] }, finishReason: 'STOP' }] });
 const photoChecked = (isBathroom = true, text) => response({ candidates: [{ content: { parts: [{ text: text ?? JSON.stringify({ is_bathroom: isBathroom, reason: 'toilet and washbasin visible' }) }] }, finishReason: 'STOP' }] });
-const checked = (extra = false, text) => response({ candidates: [{ content: { parts: [{ text: text ?? JSON.stringify({ extra_openings: extra, toilet_moved: false, layout_changed: false, view_changed: false, shower_present: false, bathtub_present: false, reason: 'fixture comparison' }) }] }, finishReason: 'STOP' }] });
+const inv = (changes = {}) => ({ toilet: 'left', washbasin: 'left', shower: 'none', bathtub: 'none', bidet: 'none', ...changes });
+// Die Pruefung liefert ein Inventar; geurteilt wird im Code. `checked()` ist der
+// unauffaellige Fall: alles steht nachher, wo es vorher stand.
+const checked = (extra = false, text) => response({ candidates: [{ content: { parts: [{ text: text ?? JSON.stringify({ before: inv(), after: inv(), extra_openings: extra, view_changed: false, reason: 'inventory' }) }] }, finishReason: 'STOP' }] });
+const checkedInv = (before, after, extra = {}) => response({ candidates: [{ content: { parts: [{ text: JSON.stringify({ before: inv(before), after: inv(after), extra_openings: false, view_changed: false, reason: 'inventory', ...extra }) }] }, finishReason: 'STOP' }] });
 
 function harness(settings = {}) {
   const clock = fakeClock();
@@ -144,13 +148,12 @@ test('Aufputz and Unterputz produce explicit, exclusive toilet branches', async 
       // Ein Holzsitz auf weisser Keramik war einer der Befunde vom 16.09.
       assert.match(prompt, /its seat and lid are in the very same .*never wood, never a contrasting colour/);
       assert.match(prompt, /wall behind is neither moved nor opened/);
-      assert.match(checkPrompt, /the module itself is not layout_changed/);
-      // Die Ausnahme fuer das Modul darf ein verschobenes WC nicht mehr durchlassen.
-      assert.match(checkPrompt, /if the toilet is on a different wall than in image 1, or shifted along its wall, or turned, set toilet_moved true/);
+      // Die Vorwand, die das Modul traegt, ist normale Bauarbeit: Diego baut sie
+      // und verkleidet sie. Die Pruefung darf sie nicht als neue Wand lesen.
+      assert.match(checkPrompt, /A slim pre-wall behind the toilet, tiled or clad, is normal building work and is not a wall of the room/);
     } else {
       assert.match(prompt, /cistern is concealed inside the wall and stays concealed/);
       assert.match(prompt, /no visible cistern and no sanitary module/);
-      assert.doesNotMatch(checkPrompt, /must NOT be reported as layout_changed/);
     }
   }
 });
@@ -181,12 +184,11 @@ test('Gäste-WC prompt and checker require no shower or bathtub', async () => {
   const checker = h.calls.find((call) => call.body?.generationConfig?.responseMimeType
     && call.body.contents[0].parts.filter((part) => part.inlineData).length === 2);
   assert.match(generation.body.contents[0].parts[0].text, /guest WC: the result must contain NO shower/);
-  assert.match(checker.body.contents[0].parts[0].text, /guest WC.*shower_present=false.*bathtub_present=false/);
+  assert.match(checker.body.contents[0].parts[0].text, /name the wall each sanitary fixture stands against/);
 });
 
 test('shower prompt tiles the full tray or sloped-floor perimeter to the ceiling', async () => {
-  const approved = JSON.stringify({ extra_openings: false, toilet_moved: false, layout_changed: false, view_changed: false, shower_present: true, bathtub_present: false, reason: 'fixture comparison' });
-  const h = harness({ checks: [() => checked(false, approved)] });
+  const h = harness({ checks: [() => checkedInv({}, { shower: 'back' })] });
   const res = await h.invoke(payload({ dusche: 'walk-in', badewanne: 'keine', wall: 'halbhoch' }));
   assert.equal(res.statusCode, 200);
   const generation = h.calls.find((call) => call.body?.generationConfig?.responseModalities);
@@ -242,16 +244,21 @@ test('faellt die Fotopruefung aus, wird trotzdem gerendert', async () => {
   assert.equal(h.counts().generation, 1);
 });
 
-test('ein entferntes Bidet ist keine Grundrissaenderung', async () => {
-  // Prove vom 17.09: ein sehr gutes Ideenbild wurde verworfen, weil das alte
-  // Bidet fehlte. Im Fixpreis gibt es kein Bidet, es muss also verschwinden.
+test('das Bidet wird weggeraeumt, und ein stehengebliebenes Bidet wird verworfen', async () => {
+  // Probe vom 17.09: im Ideenbild stand das Bidet noch da. Im Fixpreis gibt es keins.
   const h = harness();
   await h.invoke();
-  const checker = h.calls.find((call) => call.body?.generationConfig?.responseMimeType
-    && call.body.contents[0].parts.filter((part) => part.inlineData).length === 2);
-  const question = checker.body.contents[0].parts[0].text;
-  assert.match(question, /a bidet, an old cabinet or shelf, a shower curtain[^.]*is NOT layout_changed/);
-  assert.match(question, /layout_changed is about the room itself/);
+  const prompt = h.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
+  assert.match(prompt, /If image 1 shows a bidet, it is gone/);
+  assert.match(prompt, /nothing standing in its place/);
+
+  const left = () => checkedInv({ bidet: 'right' }, { bidet: 'right' });
+  const second = harness({ checks: [left, left] });
+  const res = await second.invoke();
+  assert.equal(res.statusCode, 502);
+  assert.equal(res.body.code, 'RENDER_REJECTED');
+  const leadMail = second.calls.find((call) => call.url === 'https://api.resend.com/emails');
+  assert.match(JSON.stringify(leadMail.body), /the bidet is still there, on the right wall/);
 });
 
 test('nach einem echten ersten Durchgang bleibt Zeit fuer den zweiten', async () => {
@@ -265,9 +272,52 @@ test('nach einem echten ersten Durchgang bleibt Zeit fuer den zweiten', async ()
   assert.match(JSON.stringify(leadMail.body), /1\. Versuch verworfen, 2\. Versuch ok/);
 });
 
+test('der Prompt ist eine Bearbeitung, keine Neuzeichnung', async () => {
+  const h = harness();
+  await h.invoke();
+  const prompt = h.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
+  assert.match(prompt, /This is an edit of image 1, not a new picture/);
+  assert.match(prompt, /KEEP THE POSITIONS/);
+  assert.match(prompt, /its place along that wall, measured against the corners, the door and the window/);
+  // Die Duscharmatur stand ueber dem WC statt in der Dusche.
+  assert.match(prompt, /Every shower fitting[^.]*sits inside the shower area on the shower wall, never on a wall next to the toilet or the washbasin/);
+});
+
+test('die Dusche muss an die Wand, an der die Wanne stand', async () => {
+  const wrong = () => checkedInv({ bathtub: 'right' }, { shower: 'left' });
+  const h = harness({ checks: [wrong, wrong] });
+  const res = await h.invoke(payload({ dusche: 'walk-in', badewanne: 'keine' }));
+  assert.equal(res.statusCode, 502);
+  const leadMail = h.calls.find((call) => call.url === 'https://api.resend.com/emails');
+  assert.match(JSON.stringify(leadMail.body), /the bathtub it replaces stood on the right wall/);
+});
+
+test('eine fehlende Dusche und ein verschobenes Waschbecken werden verworfen', async () => {
+  const missing = () => checkedInv({ bathtub: 'none' }, { shower: 'none' });
+  const first = harness({ checks: [missing, missing] });
+  const a = await first.invoke(payload({ dusche: 'walk-in', badewanne: 'keine' }));
+  assert.equal(a.statusCode, 502);
+  assert.match(JSON.stringify(first.calls.find((c) => c.url === 'https://api.resend.com/emails').body), /requested shower is missing/);
+
+  const shifted = () => checkedInv({ washbasin: 'left' }, { washbasin: 'back' });
+  const second = harness({ checks: [shifted, shifted] });
+  const bResult = await second.invoke();
+  assert.equal(bResult.statusCode, 502);
+  assert.match(JSON.stringify(second.calls.find((c) => c.url === 'https://api.resend.com/emails').body), /washbasin moved from the left wall to the back wall/);
+});
+
+test('eine unbrauchbare Antwort der Pruefung gilt als nicht verfuegbar, nicht als bestanden', async () => {
+  for (const text of ['kein JSON', JSON.stringify({ before: { toilet: 'links' }, after: {} }), JSON.stringify({ before: {}, after: {}, extra_openings: false, view_changed: false, reason: 'x' })]) {
+    const h = harness({ checks: [() => checked(false, text), () => checked(false, text)] });
+    const res = await h.invoke();
+    assert.equal(res.statusCode, 200, 'nicht lesbar heisst ausgeliefert, aber in der Lead-Mail vermerkt');
+    const leadMail = h.calls.find((call) => call.url === 'https://api.resend.com/emails');
+    assert.match(JSON.stringify(leadMail.body), /nicht m\u00f6glich/);
+  }
+});
+
 test('fixture checker rejects a shower in a Gäste-WC', async () => {
-  const wrong = JSON.stringify({ extra_openings: false, toilet_moved: false, layout_changed: false, view_changed: false, shower_present: true, bathtub_present: false, reason: 'unexpected shower' });
-  const h = harness({ checks: [() => checked(false, wrong), () => checked(false, wrong)] });
+  const h = harness({ checks: [() => checkedInv({}, { shower: 'right' }), () => checkedInv({}, { shower: 'right' })] });
   const res = await h.invoke(payload({ raum: 'gaeste-wc', dusche: '', badewanne: '', waschtisch: 'einzel' }));
   assert.equal(res.statusCode, 502);
   assert.equal(res.body.code, 'RENDER_REJECTED');
@@ -275,15 +325,14 @@ test('fixture checker rejects a shower in a Gäste-WC', async () => {
   assert.equal(h.counts().mail, 1);
   const leadMail = h.calls.find((call) => call.url === 'https://api.resend.com/emails');
   assert.match(leadMail.body.subject, /Ideenbild abgelehnt/);
-  assert.match(JSON.stringify(leadMail.body), /unexpected shower/);
+  assert.match(JSON.stringify(leadMail.body), /shower on the right wall although none was ordered/);
   // Das verworfene Bild geht nur an uns, damit wir sehen, was die Pruefung beanstandet hat.
   assert.deepEqual(leadMail.body.attachments.map(({ filename }) => filename), ['foto.png', 'verworfen.jpg']);
   assert.equal(h.counts().mail, 1, 'the customer must not receive a rejected image');
 });
 
 test('a rejected render leaves the customer his daily attempts', async () => {
-  const wrong = JSON.stringify({ extra_openings: true, toilet_moved: false, layout_changed: false, view_changed: false, shower_present: false, bathtub_present: false, reason: 'invented window' });
-  const h = harness({ checks: Array.from({ length: 20 }, () => () => checked(false, wrong)) });
+  const h = harness({ checks: Array.from({ length: 20 }, () => () => checked(true)) });
   // Zehn abgelehnte Bilder hintereinander: das Gerätelimit bleibt unberührt,
   // es wird kein Zähler-Cookie gesetzt.
   for (let attempt = 0; attempt < 10; attempt += 1) {
@@ -298,8 +347,7 @@ test('a rejected render leaves the customer his daily attempts', async () => {
 });
 
 test('after a rejection the next attempt still counts as the first', async () => {
-  const wrong = JSON.stringify({ extra_openings: true, toilet_moved: false, layout_changed: false, view_changed: false, shower_present: false, bathtub_present: false, reason: 'invented window' });
-  const h = harness({ checks: [() => checked(false, wrong), () => checked(false, wrong), () => checked()] });
+  const h = harness({ checks: [() => checked(true), () => checked(true), () => checked()] });
   const rejected = await h.invoke();
   assert.equal(rejected.statusCode, 502);
   assert.equal(rejected.headers['Set-Cookie'], undefined);
@@ -309,8 +357,7 @@ test('after a rejection the next attempt still counts as the first', async () =>
 });
 
 test('a changed field of view is noted for us but the customer still gets the image', async () => {
-  const changedView = JSON.stringify({ extra_openings: false, toilet_moved: false, layout_changed: false, view_changed: true, shower_present: false, bathtub_present: false, reason: 'camera and visible room bounds changed' });
-  const h = harness({ checks: [() => checked(false, changedView)] });
+  const h = harness({ checks: [() => checkedInv({}, {}, { view_changed: true, reason: 'camera and visible room bounds changed' })] });
   const res = await h.invoke(payload({ dusche: 'keine', badewanne: 'keine' }));
   assert.equal(res.statusCode, 200);
   assert.equal(res.body.ok, true);
@@ -320,8 +367,8 @@ test('a changed field of view is noted for us but the customer still gets the im
 });
 
 test('a moved toilet is still rejected even when the field of view held', async () => {
-  const movedToilet = JSON.stringify({ extra_openings: false, toilet_moved: true, layout_changed: false, view_changed: false, shower_present: false, bathtub_present: false, reason: 'toilet moved to the opposite wall' });
-  const h = harness({ checks: [() => checked(false, movedToilet), () => checked(false, movedToilet)] });
+  const moved = () => checkedInv({ toilet: 'back' }, { toilet: 'right' });
+  const h = harness({ checks: [moved, moved] });
   const res = await h.invoke(payload({ dusche: 'keine', badewanne: 'keine' }));
   assert.equal(res.statusCode, 502);
   assert.equal(res.body.code, 'RENDER_REJECTED');
@@ -431,7 +478,7 @@ test('the toilet keeps its wall, also under a sloping ceiling', async () => {
   const generation = h.calls.find((call) => call.body?.generationConfig?.responseModalities);
   const prompt = generation.body.contents[0].parts[0].text;
   // Zweimal gesehen: unter der Dachschraege wandert das WC an die gerade Wand.
-  assert.match(prompt, /on the same wall of the room as in image 1/);
+  assert.match(prompt, /The toilet keeps its wall and its place because its drain cannot be moved/);
   assert.match(prompt, /never moved to a straight or rear wall to gain headroom/);
 });
 

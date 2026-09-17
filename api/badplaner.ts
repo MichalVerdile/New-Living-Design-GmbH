@@ -188,13 +188,21 @@ export interface BadplanerDependencies {
 type DeliveryStatus = 'accepted' | 'failed' | 'unknown' | 'skipped';
 interface MailResult { status: DeliveryStatus; provider?: 'resend' | 'formspree'; attachments?: boolean }
 interface RequestContext { budget: Budget }
+/**
+ * Die Pruefung beurteilt nicht mehr selbst, sie zaehlt nur auf: welches Stueck
+ * steht an welcher Wand, vorher und nachher. Geurteilt wird hier im Code.
+ * Ein Modell beobachtet zuverlaessiger, als es urteilt.
+ */
+type Wall = 'left' | 'right' | 'back' | 'front' | 'none';
+const WALLS: Wall[] = ['left', 'right', 'back', 'front', 'none'];
+interface Inventory { toilet: Wall; washbasin: Wall; shower: Wall; bathtub: Wall; bidet: Wall }
+const FIXTURES = ['toilet', 'washbasin', 'shower', 'bathtub', 'bidet'] as const;
+
 interface CheckFlags {
   extra_openings: boolean;
-  toilet_moved: boolean;
-  layout_changed: boolean;
   view_changed: boolean;
-  shower_present: boolean;
-  bathtub_present: boolean;
+  before: Inventory;
+  after: Inventory;
 }
 type CheckResult = { status: 'approved'; note?: string } | { status: 'rejected'; reason: string; flags: CheckFlags } | { status: 'unavailable' } | { status: 'disabled' };
 
@@ -852,8 +860,10 @@ function buildPrompt(v: {
 
   return [
     intro,
-    `Produce a photorealistic "after renovation" photo of image 1 with these hard constraints: identical camera position, angle, lens and framing: the result keeps exactly the same crop and aspect ratio as image 1, never zooms out, never widens the view and never shows floor, wall or ceiling area beyond the edges of image 1; identical walls, ceiling, floor plan and room size; every window, door and roof window stays exactly where it is with the same size; do NOT add, remove, resize or move any window, door, niche or opening; ${windowRule} The toilet stays exactly where it is, on the same wall of the room as in image 1 and with the same orientation, because its drain cannot be moved: if it stands under a sloping ceiling it stays under that sloping ceiling, and it is never moved to a straight or rear wall to gain headroom. The washbasin stays on the same wall in the same place. Radiators stay. Never create extra floor area. A bathtub-to-shower transformation must use only the original bathtub footprint.`,
-    `Requested result for this ${v.room === 'gaeste-wc' ? 'guest WC' : 'bathroom'} (style "${v.packageName}"):${look} ${surfaces}; ${fixtures}; if a toilet is visible in image 1, ${toilet}; ${vanity}; ${v.tapPrompt}.${accent} Remove clutter, towels, bottles, shower curtain and rugs. Natural daylight, no people, no text.`,
+    `This is an edit of image 1, not a new picture. Keep image 1 and change only what the CHANGE list names. Everything else stays exactly as it is: the camera position, angle, lens and framing, the same crop and the same aspect ratio, the walls and where they stand, the ceiling including any sloping ceiling, the room proportions, every window, roof window and door at its exact size and position, and the radiators. Never zoom out, never widen the view, never show floor, wall or ceiling beyond the edges of image 1, never create extra floor area. ${windowRule}`,
+    `KEEP THE POSITIONS. Every fixture keeps the wall it stands against in image 1 and its place along that wall, measured against the corners, the door and the window next to it. The toilet keeps its wall and its place because its drain cannot be moved: under a sloping ceiling it stays under that sloping ceiling and is never moved to a straight or rear wall to gain headroom. The washbasin keeps its wall and its place. A bathtub that becomes a shower uses only the bathtub's own footprint, on the same wall.`,
+    `CHANGE this, and only this, in ${v.room === 'gaeste-wc' ? 'this guest WC' : 'this bathroom'} (style "${v.packageName}"):${look} ${surfaces}; ${fixtures}; if a toilet is visible in image 1, ${toilet}; ${vanity}; ${v.tapPrompt}.${accent}`,
+    `TAKE AWAY. If image 1 shows a bidet, it is gone: this bathroom has none, and the wall and floor where it stood are finished like the rest, with nothing standing in its place. The old shower curtain and its rail are gone. Loose furniture, clutter, towels, bottles and rugs are gone. Every shower fitting — mixer, riser, shower head, hand shower — sits inside the shower area on the shower wall, never on a wall next to the toilet or the washbasin. Natural daylight, no people, no text.`,
   ].join('\n');
 }
 
@@ -961,16 +971,15 @@ async function checkOpenings(
   if (!model?.trim()) return { status: 'disabled' };
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
   const question =
-    'Image 1 is the original room. Image 2 is an edited renovation result. Compare them strictly. ' +
-    'Set extra_openings true if any window, roof window, door, niche or outside opening was added, removed, resized or moved. ' +
-    'Set toilet_moved true if the toilet position or orientation changed. Set layout_changed true if walls, room size, floor area or fixed fixture footprint moved. ' +
-    'This is a full renovation, so fixtures the new bathroom does not contain are expected to be gone: a bidet, an old cabinet or shelf, a shower curtain, an old shower enclosure, a radiator cover, an old bathtub replaced by the requested shower, loose furniture or decoration missing in image 2 is NOT layout_changed. ' +
-    'layout_changed is about the room itself: walls moved, added or opened, room size or floor area changed, or a toilet, washbasin, shower or bathtub standing in a different place than in image 1. ' +
-    'Set view_changed true if camera position, angle, lens, framing, perspective or visible room boundaries changed, or if image 2 reveals invented floor or wall area outside image 1. Judge only the shared visible field of view; an edited result must remain pixel-comparable to image 1. ' +
-    (wanted.cistern === 'aufputz' ? 'One exception, and only this one: a slim sanitary module standing flat against an existing wall, replacing a surface-mounted cistern, is expected in this renovation, so the module itself is not layout_changed, and the toilet sitting about 10 cm further forward because of that module is not toilet_moved. Everything else about the toilet is judged strictly: if the toilet is on a different wall than in image 1, or shifted along its wall, or turned, set toilet_moved true. ' : '') +
-    `The requested result is a ${wanted.room === 'gaeste-wc' ? 'guest WC' : 'bathroom'} with shower_present=${wanted.shower} and bathtub_present=${wanted.bathtub}. ` +
-    'Report whether image 2 visibly contains a shower (including tray/enclosure) and a bathtub. A mirror or glass shower screen is not an opening. ' +
-    'Answer with JSON only, no markdown and exactly these keys: {"extra_openings":false,"toilet_moved":false,"layout_changed":false,"view_changed":false,"shower_present":false,"bathtub_present":false,"reason":"short English reason, max 30 words"}';
+    'Image 1 is a room before renovation. Image 2 is the edited result. Report only what you can see, do not judge whether it is good. ' +
+    'For image 1 and for image 2, name the wall each sanitary fixture stands against, seen from the camera: "left", "right", "back", "front", or "none" when that fixture is not visible at all. ' +
+    'A fixture that is only partly in frame still counts. A slim pre-wall behind the toilet, tiled or clad, is normal building work and is not a wall of the room. ' +
+    'Set extra_openings true only if image 2 has a window, roof window, door or outside opening that image 1 does not have, or lost one that image 1 has. ' +
+    'Set view_changed true if camera position, angle, lens or framing changed, or if image 2 shows floor, wall or ceiling area that lies outside image 1. ' +
+    'Answer with JSON only, no markdown and exactly these keys: ' +
+    '{"before":{"toilet":"left","washbasin":"left","shower":"none","bathtub":"none","bidet":"none"},' +
+    '"after":{"toilet":"left","washbasin":"left","shower":"none","bathtub":"none","bidet":"none"},' +
+    '"extra_openings":false,"view_changed":false,"reason":"short English note, max 25 words"}';
   try {
     const r = await request(ctx, url, {
       method: 'POST',
@@ -997,21 +1006,23 @@ async function checkOpenings(
     const textOut: string = json?.candidates?.[0]?.content?.parts?.map((p: any) => p.text || '').join('') || '';
     if (json?.candidates?.[0]?.finishReason !== 'STOP') return { status: 'unavailable' };
     const parsed = JSON.parse(textOut);
-    const keys = ['extra_openings', 'toilet_moved', 'layout_changed', 'view_changed', 'shower_present', 'bathtub_present'];
-    if (!parsed || Array.isArray(parsed) || keys.some((key) => typeof parsed[key] !== 'boolean') || typeof parsed.reason !== 'string'
-      || !parsed.reason.trim() || parsed.reason.length > 200
-      || Object.keys(parsed).some((key) => ![...keys, 'reason'].includes(key))) return { status: 'unavailable' };
-    const flags: CheckFlags = {
-      extra_openings: parsed.extra_openings,
-      toilet_moved: parsed.toilet_moved,
-      layout_changed: parsed.layout_changed,
-      view_changed: parsed.view_changed,
-      shower_present: parsed.shower_present,
-      bathtub_present: parsed.bathtub_present,
+    const inventory = (value: any): Inventory | null => {
+      if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+      if (Object.keys(value).some((key) => !FIXTURES.includes(key as any))) return null;
+      if (FIXTURES.some((key) => !WALLS.includes(value[key]))) return null;
+      return value as Inventory;
     };
-    const rejected = flags.extra_openings || flags.toilet_moved || flags.layout_changed
-      || flags.shower_present !== wanted.shower || flags.bathtub_present !== wanted.bathtub;
-    if (rejected) return { status: 'rejected', reason: parsed.reason.slice(0, 200), flags };
+    const keys = ['before', 'after', 'extra_openings', 'view_changed', 'reason'];
+    const before = inventory(parsed?.before);
+    const after = inventory(parsed?.after);
+    if (!parsed || Array.isArray(parsed) || !before || !after
+      || typeof parsed.extra_openings !== 'boolean' || typeof parsed.view_changed !== 'boolean'
+      || typeof parsed.reason !== 'string' || !parsed.reason.trim() || parsed.reason.length > 200
+      || Object.keys(parsed).some((key) => !keys.includes(key))) return { status: 'unavailable' };
+    const flags: CheckFlags = { extra_openings: parsed.extra_openings, view_changed: parsed.view_changed, before, after };
+    const fault = compareInventory(before, after, wanted);
+    if (flags.extra_openings) return { status: 'rejected', reason: `an opening was added or lost (${parsed.reason.slice(0, 120)})`, flags };
+    if (fault) return { status: 'rejected', reason: fault, flags };
     // Ein anderer Bildausschnitt allein ist kein Grund, dem Kunden nichts zu zeigen:
     // Fenster, WC, Wände und Ausstattung stimmen dann ja. Er wird nur vermerkt.
     return flags.view_changed ? { status: 'approved', note: parsed.reason.slice(0, 200) } : { status: 'approved' };
@@ -1067,6 +1078,36 @@ async function checkPhoto(photo: Photo, room: 'badezimmer' | 'gaeste-wc', ctx: R
     console.error('[badplaner] Fotopruefung nicht moeglich');
     return { status: 'unavailable' };
   }
+}
+
+/**
+ * Vergleicht das Inventar. Jede Regel steht fuer einen Fehler, den wir an
+ * echten Ideenbildern gesehen haben, und fuer nichts sonst.
+ */
+function compareInventory(
+  before: Inventory,
+  after: Inventory,
+  wanted: { room: 'badezimmer' | 'gaeste-wc'; shower: boolean; bathtub: boolean; cistern: 'aufputz' | 'unterputz' },
+): string | null {
+  // Kein Paket enthaelt ein Bidet. Steht es noch da, hat das Modell nicht umgebaut.
+  if (after.bidet !== 'none') return `the bidet is still there, on the ${after.bidet} wall`;
+  if (wanted.shower && after.shower === 'none') return 'the requested shower is missing';
+  if (!wanted.shower && after.shower !== 'none') return `there is a shower on the ${after.shower} wall although none was ordered`;
+  if (wanted.bathtub && after.bathtub === 'none') return 'the requested bathtub is missing';
+  if (!wanted.bathtub && after.bathtub !== 'none') return `there is a bathtub on the ${after.bathtub} wall although none was ordered`;
+  if (before.toilet !== 'none' && after.toilet === 'none') return 'the toilet is missing';
+  if (before.toilet !== 'none' && after.toilet !== before.toilet) {
+    return `the toilet moved from the ${before.toilet} wall to the ${after.toilet} wall`;
+  }
+  if (before.washbasin !== 'none' && after.washbasin !== 'none' && after.washbasin !== before.washbasin) {
+    return `the washbasin moved from the ${before.washbasin} wall to the ${after.washbasin} wall`;
+  }
+  // Wanne wird Dusche: die Dusche gehoert an die Wand, an der die Wanne stand.
+  if (wanted.shower && before.shower === 'none' && before.bathtub !== 'none'
+    && after.shower !== 'none' && after.shower !== before.bathtub) {
+    return `the new shower stands on the ${after.shower} wall, the bathtub it replaces stood on the ${before.bathtub} wall`;
+  }
+  return null;
 }
 
 function logRejectedCheck(check: Extract<CheckResult, { status: 'rejected' }>, attempt: number) {
