@@ -210,6 +210,8 @@ interface CheckFlags {
   after: Inventory;
   orderBefore: Fixture[];
   orderAfter: Fixture[];
+  nearestBefore: Fixture | 'none';
+  nearestAfter: Fixture | 'none';
 }
 type CheckResult = { status: 'approved'; note?: string } | { status: 'rejected'; reason: string; flags: CheckFlags } | { status: 'unavailable' } | { status: 'disabled' };
 
@@ -989,12 +991,14 @@ async function checkOpenings(
     'For image 1 and for image 2, name the wall each sanitary fixture stands against, seen from the camera: "left", "right", "back", "front", or "none" when that fixture is not visible at all. ' +
     'A fixture that is only partly in frame still counts. A slim pre-wall behind the toilet, tiled or clad, is normal building work and is not a wall of the room. ' +
     'Then list the fixtures of each image in the order you see them from left to right in the picture, using the same words, each fixture at most once and only the ones you can see. ' +
+    'Then name, for each image, the one fixture that stands closest to the camera, or "none" when you cannot tell. ' +
     'Set extra_openings true only if image 2 has a window, roof window, door or outside opening that image 1 does not have, or lost one that image 1 has. ' +
     'Set view_changed true if camera position, angle, lens or framing changed, or if image 2 shows floor, wall or ceiling area that lies outside image 1. ' +
     'Answer with JSON only, no markdown and exactly these keys: ' +
     '{"before":{"toilet":"left","washbasin":"left","shower":"none","bathtub":"none","bidet":"none"},' +
     '"after":{"toilet":"left","washbasin":"left","shower":"none","bathtub":"none","bidet":"none"},' +
     '"order_before":["washbasin","toilet"],"order_after":["washbasin","toilet"],' +
+    '"nearest_before":"toilet","nearest_after":"toilet",' +
     '"extra_openings":false,"view_changed":false,"reason":"short English note, max 25 words"}';
   try {
     const r = await request(ctx, url, {
@@ -1034,17 +1038,23 @@ async function checkOpenings(
       if (new Set(value).size !== value.length) return null;
       return value as Fixture[];
     };
-    const keys = ['before', 'after', 'order_before', 'order_after', 'extra_openings', 'view_changed', 'reason'];
+    const nearest = (value: any): Fixture | 'none' | null =>
+      value === 'none' || FIXTURES.includes(value) ? value : null;
+    const keys = ['before', 'after', 'order_before', 'order_after', 'nearest_before', 'nearest_after', 'extra_openings', 'view_changed', 'reason'];
     const before = inventory(parsed?.before);
     const after = inventory(parsed?.after);
     const orderBefore = order(parsed?.order_before);
     const orderAfter = order(parsed?.order_after);
-    if (!parsed || Array.isArray(parsed) || !before || !after || !orderBefore || !orderAfter
+    const nearestBefore = nearest(parsed?.nearest_before);
+    const nearestAfter = nearest(parsed?.nearest_after);
+    if (!parsed || Array.isArray(parsed) || !before || !after || !orderBefore || !orderAfter || !nearestBefore || !nearestAfter
       || typeof parsed.extra_openings !== 'boolean' || typeof parsed.view_changed !== 'boolean'
       || typeof parsed.reason !== 'string' || !parsed.reason.trim() || parsed.reason.length > 200
       || Object.keys(parsed).some((key) => !keys.includes(key))) return { status: 'unavailable' };
-    const flags: CheckFlags = { extra_openings: parsed.extra_openings, view_changed: parsed.view_changed, before, after, orderBefore, orderAfter };
-    const fault = compareInventory(before, after, wanted) || compareOrder(orderBefore, orderAfter);
+    const flags: CheckFlags = { extra_openings: parsed.extra_openings, view_changed: parsed.view_changed, before, after, orderBefore, orderAfter, nearestBefore, nearestAfter };
+    const fault = compareInventory(before, after, wanted)
+      || compareOrder(orderBefore, orderAfter)
+      || compareDepth(before, after, nearestBefore, nearestAfter);
     if (flags.extra_openings) return { status: 'rejected', reason: `an opening was added or lost (${parsed.reason.slice(0, 120)})`, flags };
     if (fault) return { status: 'rejected', reason: fault, flags };
     // Ein anderer Bildausschnitt allein ist kein Grund, dem Kunden nichts zu zeigen:
@@ -1116,6 +1126,24 @@ function compareOrder(before: Fixture[], after: Fixture[]): string | null {
   if (shared.length < 2) return null;
   if (shared.join('>') === afterShared.join('>')) return null;
   return `the fixtures changed places: in the photo ${shared.join(', ')}, in the result ${afterShared.join(', ')}`;
+}
+
+/**
+ * Wand und Reihenfolge reichen nicht: das WC kann an derselben Wand und in
+ * derselben Reihenfolge nach hinten rutschen. Diego hat das am 17.09. zweimal
+ * am selben Foto gesehen. Darum auch, was der Kamera am naechsten steht.
+ * Ein weggeraeumtes Stueck loest die Regel nicht aus.
+ */
+function compareDepth(
+  before: Inventory,
+  after: Inventory,
+  nearestBefore: Fixture | 'none',
+  nearestAfter: Fixture | 'none',
+): string | null {
+  if (nearestBefore === 'none' || nearestAfter === 'none') return null;
+  if (after[nearestBefore] === 'none') return null;
+  if (nearestBefore === nearestAfter) return null;
+  return `in the photo the ${nearestBefore} is closest to the camera, in the result the ${nearestAfter}`;
 }
 
 /**
