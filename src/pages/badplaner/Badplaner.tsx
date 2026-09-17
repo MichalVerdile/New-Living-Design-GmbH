@@ -1201,7 +1201,7 @@ const Badplaner: React.FC = () => {
                   {status === 'sending' && (
                     <div className={styles.progress} role="status" aria-live="polite">
                       <div className={styles.progressBar}><span /></div>
-                      <p className={styles.progressText}>Wir gestalten Ihr Bad und prüfen das Bild. Das kann einen Moment dauern; bitte lassen Sie die Seite offen.</p>
+                      <p className={styles.progressText}>Wir gestalten Ihr Bad und prüfen das Bild. Das dauert bis zu zwei Minuten; bitte lassen Sie die Seite offen.</p>
                     </div>
                   )}
                   {status === 'error' && (
