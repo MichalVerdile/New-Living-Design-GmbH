@@ -54,8 +54,8 @@ const inv = (changes = {}) => ({ toilet: 'left', washbasin: 'left', shower: 'non
 // Die sichtbare Reihenfolge von links nach rechts folgt dem Inventar, solange
 // ein Test nichts anderes sagt.
 const order = (state) => ['washbasin', 'toilet', 'bidet', 'shower', 'bathtub'].filter((key) => state[key] !== 'none');
-const checked = (extra = false, text) => response({ candidates: [{ content: { parts: [{ text: text ?? JSON.stringify({ before: inv(), after: inv(), order_before: order(inv()), order_after: order(inv()), extra_openings: extra, view_changed: false, reason: 'inventory' }) }] }, finishReason: 'STOP' }] });
-const checkedInv = (before, after, extra = {}) => response({ candidates: [{ content: { parts: [{ text: JSON.stringify({ before: inv(before), after: inv(after), order_before: order(inv(before)), order_after: order(inv(after)), extra_openings: false, view_changed: false, reason: 'inventory', ...extra }) }] }, finishReason: 'STOP' }] });
+const checked = (extra = false, text) => response({ candidates: [{ content: { parts: [{ text: text ?? JSON.stringify({ before: inv(), after: inv(), order_before: order(inv()), order_after: order(inv()), nearest_before: 'toilet', nearest_after: 'toilet', extra_openings: extra, view_changed: false, reason: 'inventory' }) }] }, finishReason: 'STOP' }] });
+const checkedInv = (before, after, extra = {}) => response({ candidates: [{ content: { parts: [{ text: JSON.stringify({ before: inv(before), after: inv(after), order_before: order(inv(before)), order_after: order(inv(after)), nearest_before: 'toilet', nearest_after: 'toilet', extra_openings: false, view_changed: false, reason: 'inventory', ...extra }) }] }, finishReason: 'STOP' }] });
 
 function harness(settings = {}) {
   const clock = fakeClock();
@@ -372,6 +372,7 @@ test('WC und Dusche duerfen an derselben Wand nicht die Plaetze tauschen', async
   const swapped = () => response({ candidates: [{ content: { parts: [{ text: JSON.stringify({
     before: inv({ shower: 'right', toilet: 'right' }), after: inv({ shower: 'right', toilet: 'right' }),
     order_before: ['washbasin', 'shower', 'toilet'], order_after: ['washbasin', 'toilet', 'shower'],
+    nearest_before: 'toilet', nearest_after: 'toilet',
     extra_openings: false, view_changed: false, reason: 'inventory',
   }) }] }, finishReason: 'STOP' }] });
   const h = harness({ checks: [swapped, swapped] });
@@ -387,10 +388,28 @@ test('ein weggeraeumtes Stueck aendert die Reihenfolge nicht', async () => {
   const h = harness({ checks: [() => response({ candidates: [{ content: { parts: [{ text: JSON.stringify({
     before: inv({ bidet: 'right', toilet: 'right' }), after: inv({ toilet: 'right' }),
     order_before: ['washbasin', 'toilet', 'bidet'], order_after: ['washbasin', 'toilet'],
+    nearest_before: 'bidet', nearest_after: 'toilet',
     extra_openings: false, view_changed: false, reason: 'inventory',
   }) }] }, finishReason: 'STOP' }] })] });
   const res = await h.invoke();
   assert.equal(res.statusCode, 200);
+});
+
+test('das WC darf an seiner Wand nicht nach hinten rutschen', async () => {
+  // Probe vom 17.09., zweimal am selben Foto: im Foto steht das WC vorne bei der
+  // Tuer, im Ideenbild weiter hinten. Gleiche Wand, gleiche Reihenfolge, also
+  // hat weder die Wand- noch die Reihenfolgepruefung etwas gemerkt.
+  const shifted = () => response({ candidates: [{ content: { parts: [{ text: JSON.stringify({
+    before: inv({ toilet: 'right', shower: 'back' }), after: inv({ toilet: 'right', shower: 'back' }),
+    order_before: ['washbasin', 'shower', 'toilet'], order_after: ['washbasin', 'shower', 'toilet'],
+    nearest_before: 'toilet', nearest_after: 'washbasin',
+    extra_openings: false, view_changed: false, reason: 'inventory',
+  }) }] }, finishReason: 'STOP' }] });
+  const h = harness({ checks: [shifted, shifted] });
+  const res = await h.invoke(payload({ dusche: 'walk-in', badewanne: 'keine' }));
+  assert.equal(res.statusCode, 502);
+  const leadMail = h.calls.find((call) => call.url === 'https://api.resend.com/emails');
+  assert.match(JSON.stringify(leadMail.body), /in the photo the toilet is closest to the camera, in the result the washbasin/);
 });
 
 test('fixture checker rejects a shower in a Gäste-WC', async () => {
