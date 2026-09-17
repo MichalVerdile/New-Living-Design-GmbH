@@ -242,6 +242,29 @@ test('faellt die Fotopruefung aus, wird trotzdem gerendert', async () => {
   assert.equal(h.counts().generation, 1);
 });
 
+test('ein entferntes Bidet ist keine Grundrissaenderung', async () => {
+  // Prove vom 17.09: ein sehr gutes Ideenbild wurde verworfen, weil das alte
+  // Bidet fehlte. Im Fixpreis gibt es kein Bidet, es muss also verschwinden.
+  const h = harness();
+  await h.invoke();
+  const checker = h.calls.find((call) => call.body?.generationConfig?.responseMimeType
+    && call.body.contents[0].parts.filter((part) => part.inlineData).length === 2);
+  const question = checker.body.contents[0].parts[0].text;
+  assert.match(question, /a bidet, an old cabinet or shelf, a shower curtain[^.]*is NOT layout_changed/);
+  assert.match(question, /layout_changed is about the room itself/);
+});
+
+test('nach einem echten ersten Durchgang bleibt Zeit fuer den zweiten', async () => {
+  // 35 s Generierung und 4 s Pruefung sind gemessene Werte aus der Produktion.
+  // Mit der alten Reserve (25 s) und dem Faktor 1.3 kam der zweite Versuch nie.
+  const h = harness({ generateDelays: [35000, 35000], checkDelays: [4000, 4000], checks: [() => checked(true), () => checked(false)] });
+  const res = await h.invoke();
+  assert.equal(h.counts().generation, 2, 'der zweite Versuch muss laufen');
+  assert.equal(res.statusCode, 200);
+  const leadMail = h.calls.find((call) => call.url === 'https://api.resend.com/emails');
+  assert.match(JSON.stringify(leadMail.body), /1\. Versuch verworfen, 2\. Versuch ok/);
+});
+
 test('fixture checker rejects a shower in a Gäste-WC', async () => {
   const wrong = JSON.stringify({ extra_openings: false, toilet_moved: false, layout_changed: false, view_changed: false, shower_present: true, bathtub_present: false, reason: 'unexpected shower' });
   const h = harness({ checks: [() => checked(false, wrong), () => checked(false, wrong)] });

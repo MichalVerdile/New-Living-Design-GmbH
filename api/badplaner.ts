@@ -62,11 +62,11 @@ const MAX_REQUEST_BYTES = 4 * 1024 * 1024;
 const MAX_RESPONSE_BASE64 = 3.5 * 1024 * 1024;
 const MAX_SWATCH_BYTES = 5 * 1024 * 1024; // current catalog originals include files >4 MiB
 const TOTAL_TIMEOUT_MS = 105000; // 15 seconds below the platform limit
-const DELIVERY_RESERVE_MS = 25000;
+const DELIVERY_RESERVE_MS = 15000;
 const PER_DEVICE_PER_DAY = 5;                 // Cookie nldbp
 const PER_IP_PER_DAY = 10;                    // In-Memory, muss über dem Gerätelimit liegen
 const GEMINI_TIMEOUT_MS = 50000;
-const CHECK_TIMEOUT_MS = 20000;
+const CHECK_TIMEOUT_MS = 14000;   // gemessen: die Pruefung braucht rund 4 s
 const CHECK_RETRY_DELAY_MS = 750;
 const COOKIE_NAME = 'nldbp';
 
@@ -495,7 +495,7 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   if (check.status === 'rejected') logRejectedCheck(check, checkAttempt);
   // Ein zweiter Durchgang dauert ungefähr so lange wie der erste. Die alte Schranke
   // rechnete mit den Höchstwerten (95 s) und liess den zweiten Versuch nie zu.
-  const secondPassMs = Math.round((dependencies.clock.now() - passStarted) * 1.3) + DELIVERY_RESERVE_MS;
+  const secondPassMs = Math.round((dependencies.clock.now() - passStarted) * 1.15) + DELIVERY_RESERVE_MS;
   if (check.status === 'rejected' && ctx.budget.remaining() >= secondPassMs) {
     // The rejected image never becomes a fallback if the retry/check fails.
     const retryPrompt = `${prompt}\nIMPORTANT: a previous attempt failed the structural and fixture check: ${check.reason}. Correct that exact issue. Keep the original layout, every opening and toilet position, and show exactly the requested shower and bathtub state.`;
@@ -944,6 +944,8 @@ async function checkOpenings(
     'Image 1 is the original room. Image 2 is an edited renovation result. Compare them strictly. ' +
     'Set extra_openings true if any window, roof window, door, niche or outside opening was added, removed, resized or moved. ' +
     'Set toilet_moved true if the toilet position or orientation changed. Set layout_changed true if walls, room size, floor area or fixed fixture footprint moved. ' +
+    'This is a full renovation, so fixtures the new bathroom does not contain are expected to be gone: a bidet, an old cabinet or shelf, a shower curtain, an old shower enclosure, a radiator cover, an old bathtub replaced by the requested shower, loose furniture or decoration missing in image 2 is NOT layout_changed. ' +
+    'layout_changed is about the room itself: walls moved, added or opened, room size or floor area changed, or a toilet, washbasin, shower or bathtub standing in a different place than in image 1. ' +
     'Set view_changed true if camera position, angle, lens, framing, perspective or visible room boundaries changed, or if image 2 reveals invented floor or wall area outside image 1. Judge only the shared visible field of view; an edited result must remain pixel-comparable to image 1. ' +
     (wanted.cistern === 'aufputz' ? 'One exception, and only this one: a slim sanitary module standing flat against an existing wall, replacing a surface-mounted cistern, is expected in this renovation, so the module itself is not layout_changed, and the toilet sitting about 10 cm further forward because of that module is not toilet_moved. Everything else about the toilet is judged strictly: if the toilet is on a different wall than in image 1, or shifted along its wall, or turned, set toilet_moved true. ' : '') +
     `The requested result is a ${wanted.room === 'gaeste-wc' ? 'guest WC' : 'bathroom'} with shower_present=${wanted.shower} and bathtub_present=${wanted.bathtub}. ` +
