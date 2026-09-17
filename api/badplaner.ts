@@ -535,14 +535,15 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   const secondPassMs = Math.round((dependencies.clock.now() - passStarted) * 1.15) + DELIVERY_RESERVE_MS;
   if (check.status === 'rejected' && ctx.budget.remaining() >= secondPassMs) {
     // The rejected image never becomes a fallback if the retry/check fails.
-    const retryPrompt = `${prompt}\nIMPORTANT: a previous attempt failed the structural and fixture check: ${check.reason}. Correct that exact issue. Keep the original layout, every opening and toilet position, and show exactly the requested shower and bathtub state.`;
+    const firstReason = check.reason;
+    const retryPrompt = `${prompt}\nIMPORTANT: a previous attempt failed the structural and fixture check: ${check.reason}. Correct that exact issue. Everything else from the instructions above still applies without exception: the same camera and framing, everything in the foreground at the edge of the picture, every opening, the toilet on its wall and its place, the washbasin on its own vanity unit with the mirror above it, and exactly the requested shower and bathtub state.`;
     const second = await generateImage(retryPrompt, photo, swatch, moduleImage, ctx, photoRatio);
     if (second.ok === false) return res.status(502).json(await leadWithoutImage(`1. Versuch verworfen (${check.reason}), 2. Versuch: ${second.detail}`, gen));
     check = await checkWithUnavailableRetry(second);
     gen = second;
     checkAttempt = 2;
     if (check.status === 'rejected') logRejectedCheck(check, checkAttempt);
-    if (check.status === 'approved') checkNote = '1. Versuch verworfen, 2. Versuch ok';
+    if (check.status === 'approved') checkNote = `1. Versuch verworfen (${firstReason}), 2. Versuch ok`;
   }
   if (check.status === 'rejected') {
     const rejectedNote = `abgelehnt: ${check.reason}`;
@@ -869,10 +870,11 @@ function buildPrompt(v: {
 
   return [
     intro,
-    `This is an edit of image 1, not a new picture. Keep image 1 and change only what the CHANGE list names. Everything else stays exactly as it is: the camera position, angle, lens and framing, the same crop and the same aspect ratio, the walls and where they stand, the ceiling including any sloping ceiling, the room proportions, every window, roof window and door at its exact size and position, and the radiators. Never zoom out, never widen the view, never show floor, wall or ceiling beyond the edges of image 1, never create extra floor area. ${windowRule}`,
+    `This is an edit of image 1, not a new picture. Keep image 1 and change only what the CHANGE list names. Everything else stays exactly as it is: the camera position, angle, lens and framing, the same crop and the same aspect ratio, the walls and where they stand, the ceiling including any sloping ceiling, the room proportions, every window, roof window and door at its exact size and position, and the radiators. Never zoom out, never widen the view, never show floor, wall or ceiling beyond the edges of image 1, never create extra floor area. "
+    + "Whatever stands in the immediate foreground at the edge of image 1 belongs to the picture and stays: an open door leaf, a door frame, the edge of a wall, a piece of furniture cut off by the border. It keeps its place and takes up the same part of the picture as before, and is never removed to show more of the room. Every window keeps the same share of the picture it has in image 1; do not move closer to it and do not make it larger. ${windowRule}`,
     `KEEP THE POSITIONS. A half-height wall, a low built wall or a boxed pre-wall that a fixture stands against is part of the room, not furniture: it keeps its place, its length, its height and its depth, and the fixture stays mounted on it. Every fixture keeps the wall or low wall it stands against in image 1 and its place along it, measured against the corners, the door and the window next to it. The toilet keeps its wall and its place because its drain cannot be moved: under a sloping ceiling it stays under that sloping ceiling and is never moved to a straight or rear wall to gain headroom. The washbasin keeps its wall and its place. A bathtub that becomes a shower uses only the bathtub's own footprint, on the same wall.`,
     `CHANGE this, and only this, in ${v.room === 'gaeste-wc' ? 'this guest WC' : 'this bathroom'} (style "${v.packageName}"):${look} ${surfaces}; ${fixtures}; if a toilet is visible in image 1, ${toilet}; ${vanity}; ${v.tapPrompt}.${accent}`,
-    `TAKE AWAY. If image 1 shows a bidet, it is gone: this bathroom has none, and the wall and floor where it stood are finished like the rest, with nothing standing in its place. The old shower curtain and its rail are gone. Loose furniture, clutter, towels, bottles and rugs are gone. Every shower fitting — mixer, riser, shower head, hand shower — sits inside the shower area on the shower wall, never on a wall next to the toilet or the washbasin. Natural daylight, no people, no text.`,
+    `TAKE AWAY. If image 1 shows a bidet, it is gone: this bathroom has none, and the wall and floor where it stood are finished like the rest, with nothing standing in its place. The old shower curtain and its rail are gone. Clutter, towels, bottles and rugs are gone, and so is loose furniture that just stands around; the washbasin's own vanity unit is not loose furniture and is always there, as described above. Every shower fitting — mixer, riser, shower head, hand shower — sits inside the shower area on the shower wall, never on a wall next to the toilet or the washbasin. Natural daylight, no people, no text.`,
   ].join('\n');
 }
 
@@ -993,6 +995,8 @@ async function checkOpenings(
     'Then list the fixtures of each image in the order you see them from left to right in the picture, using the same words, each fixture at most once and only the ones you can see. ' +
     'Then name, for each image, the one fixture that stands closest to the camera, or "none" when you cannot tell. ' +
     'Then say, for each image, whether the toilet hangs on or stands against a half-height wall, a low built wall or a boxed pre-wall in front of the room wall, rather than directly against a full-height wall. ' +
+    'Then say, for each image, whether something large stands in the immediate foreground at the edge of the picture and is cut off by the border — an open door leaf, a door frame, the near edge of a wall, a piece of furniture — taking up roughly a fifth of the picture or more. ' +
+    'Set window_much_bigger true only if a window that is visible in both images takes up a clearly larger part of image 2 than of image 1, about half again as large or more. ' +
     'Set extra_openings true only if image 2 has a window, roof window, door or outside opening that image 1 does not have, or lost one that image 1 has. ' +
     'Set view_changed true if camera position, angle, lens or framing changed, or if image 2 shows floor, wall or ceiling area that lies outside image 1. ' +
     'Answer with JSON only, no markdown and exactly these keys: ' +
@@ -1001,6 +1005,7 @@ async function checkOpenings(
     '"order_before":["washbasin","toilet"],"order_after":["washbasin","toilet"],' +
     '"nearest_before":"toilet","nearest_after":"toilet",' +
     '"toilet_on_low_wall_before":false,"toilet_on_low_wall_after":false,' +
+    '"foreground_object_before":false,"foreground_object_after":false,"window_much_bigger":false,' +
     '"extra_openings":false,"view_changed":false,"reason":"short English note, max 25 words"}';
   try {
     const r = await request(ctx, url, {
@@ -1043,7 +1048,8 @@ async function checkOpenings(
     const nearest = (value: any): Fixture | 'none' | null =>
       value === 'none' || FIXTURES.includes(value) ? value : null;
     const keys = ['before', 'after', 'order_before', 'order_after', 'nearest_before', 'nearest_after',
-      'toilet_on_low_wall_before', 'toilet_on_low_wall_after', 'extra_openings', 'view_changed', 'reason'];
+      'toilet_on_low_wall_before', 'toilet_on_low_wall_after', 'foreground_object_before', 'foreground_object_after',
+      'window_much_bigger', 'extra_openings', 'view_changed', 'reason'];
     const before = inventory(parsed?.before);
     const after = inventory(parsed?.after);
     const orderBefore = order(parsed?.order_before);
@@ -1052,6 +1058,8 @@ async function checkOpenings(
     const nearestAfter = nearest(parsed?.nearest_after);
     if (!parsed || Array.isArray(parsed) || !before || !after || !orderBefore || !orderAfter || !nearestBefore || !nearestAfter
       || typeof parsed.toilet_on_low_wall_before !== 'boolean' || typeof parsed.toilet_on_low_wall_after !== 'boolean'
+      || typeof parsed.foreground_object_before !== 'boolean' || typeof parsed.foreground_object_after !== 'boolean'
+      || typeof parsed.window_much_bigger !== 'boolean'
       || typeof parsed.extra_openings !== 'boolean' || typeof parsed.view_changed !== 'boolean'
       || typeof parsed.reason !== 'string' || !parsed.reason.trim() || parsed.reason.length > 200
       || Object.keys(parsed).some((key) => !keys.includes(key))) return { status: 'unavailable', detail: 'Antwort unlesbar' };
@@ -1059,10 +1067,20 @@ async function checkOpenings(
     const lowWallLost = parsed.toilet_on_low_wall_before && !parsed.toilet_on_low_wall_after
       ? 'the low wall the toilet stood against is gone, so the toilet no longer sits where it did'
       : null;
+    // Steht im Foto vorne am Bildrand die offene Tuer und fehlt sie im Ideenbild,
+    // hat das Modell den Blickwinkel gedreht: der Kunde erkennt sein Bad nicht wieder.
+    const foregroundLost = parsed.foreground_object_before && !parsed.foreground_object_after
+      ? 'what stood in the foreground of the photo, at the edge of the picture, is gone, so the view is no longer the same'
+      : null;
+    const zoomedIn = parsed.window_much_bigger
+      ? 'the window takes up much more of the result than of the photo, so the camera moved closer'
+      : null;
     const fault = compareInventory(before, after, wanted)
       || compareOrder(orderBefore, orderAfter)
       || compareDepth(before, after, nearestBefore, nearestAfter)
-      || lowWallLost;
+      || lowWallLost
+      || foregroundLost
+      || zoomedIn;
     if (flags.extra_openings) return { status: 'rejected', reason: `an opening was added or lost (${parsed.reason.slice(0, 120)})`, flags };
     if (fault) return { status: 'rejected', reason: fault, flags };
     // Ein anderer Bildausschnitt allein ist kein Grund, dem Kunden nichts zu zeigen:
