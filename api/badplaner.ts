@@ -70,7 +70,7 @@ const DELIVERY_RESERVE_MS = 15000;
 const PER_DEVICE_PER_DAY = 5;                 // Cookie nldbp
 const PER_IP_PER_DAY = 10;                    // In-Memory, muss über dem Gerätelimit liegen
 const GEMINI_TIMEOUT_MS = 65000;  // gemini-3-pro-image denkt mit und braucht laenger als Flash
-const CHECK_TIMEOUT_MS = 14000;   // gemessen: die Pruefung braucht rund 4 s
+const CHECK_TIMEOUT_MS = 25000;   // sie liest jetzt ein 2K-Bild, 14 s waren zu knapp
 const CHECK_RETRY_DELAY_MS = 750;
 const COOKIE_NAME = 'nldbp';
 
@@ -213,7 +213,7 @@ interface CheckFlags {
   nearestBefore: Fixture | 'none';
   nearestAfter: Fixture | 'none';
 }
-type CheckResult = { status: 'approved'; note?: string } | { status: 'rejected'; reason: string; flags: CheckFlags } | { status: 'unavailable' } | { status: 'disabled' };
+type CheckResult = { status: 'approved'; note?: string } | { status: 'rejected'; reason: string; flags: CheckFlags } | { status: 'unavailable'; detail: string } | { status: 'disabled' };
 
 /** Each factory owns its best-effort counters. Tests inject HTTP, clock and IDs. */
 export function createHandler(overrides: Partial<BadplanerDependencies> = {}) {
@@ -574,7 +574,7 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
     checkNote = checkNote + ', Bildausschnitt verändert: ' + check.note;
     console.info('[badplaner] Bildausschnitt verändert, Ideenbild trotzdem geliefert:', check.note);
   }
-  if (check.status === 'unavailable') checkNote = 'nicht möglich (Prüfdienst nicht erreichbar)';
+  if (check.status === 'unavailable') checkNote = `nicht möglich (${check.detail})`;
   if (check.status === 'disabled') checkNote = 'deaktiviert';
   console.log('[badplaner] Fensterprüfung:', checkNote);
 
@@ -865,12 +865,12 @@ function buildPrompt(v: {
       ].join('; ');
   const toilet = v.cistern === 'aufputz'
     ? `the existing surface-mounted cistern, the visible boxed cistern above or behind the toilet, is completely removed and must not survive in any form: no white cistern box, no boxed-in panel, no tiled shelf, no tiled or panelled cladding where it stood; in its exact place, flat against the existing wall, there is exactly the sanitary module of image ${v.moduleImageNumber}, copied part for part: one flat white glass front in two parts, framed by a narrow brushed stainless steel edge along the sides only, and a small flush button on the glass front near the top, never on the top surface; it is about 11 cm deep, about 50 cm wide and about 115 cm high, so clearly more than twice as tall as it is wide, reaching down to the floor, a factory-made glass and steel part, never tiled, never clad and never boxed in; the toilet is wall-hung, rimless, in ${v.sanitaryPrompt}, hanging on the front of that module at exactly the same position as the existing toilet and floating clear of the floor; its seat and lid are in the very same ${v.sanitaryPrompt}, never wood, never a contrasting colour; the wall behind is neither moved nor opened and no new partition wall is built`
-    : `the cistern is concealed inside the wall and stays concealed; no visible cistern and no sanitary module in front of the wall; the toilet is wall-hung, rimless, in ${v.sanitaryPrompt}, with seat and lid in the very same ${v.sanitaryPrompt}, never wood, never a contrasting colour, at exactly its existing position`;
+    : `the cistern stays hidden exactly where it already is. If the toilet in image 1 hangs on a half-height wall, a low built wall or boxed pre-wall that carries the cistern and often has a shelf on top, that low wall is part of the room and stays: same place, same length, same height, same depth, only newly tiled, and the toilet stays mounted on its front at exactly the same spot, at the same distance from the door and from the corner. Do not flatten it, do not extend it to the ceiling and do not push the toilet back against the wall behind it. If instead the cistern sits inside a full-height wall, it stays there. In both cases no new free-standing module is added. The toilet is wall-hung, rimless, in ${v.sanitaryPrompt}, with seat and lid in the very same ${v.sanitaryPrompt}, never wood, never a contrasting colour, at exactly its existing position`;
 
   return [
     intro,
     `This is an edit of image 1, not a new picture. Keep image 1 and change only what the CHANGE list names. Everything else stays exactly as it is: the camera position, angle, lens and framing, the same crop and the same aspect ratio, the walls and where they stand, the ceiling including any sloping ceiling, the room proportions, every window, roof window and door at its exact size and position, and the radiators. Never zoom out, never widen the view, never show floor, wall or ceiling beyond the edges of image 1, never create extra floor area. ${windowRule}`,
-    `KEEP THE POSITIONS. Every fixture keeps the wall it stands against in image 1 and its place along that wall, measured against the corners, the door and the window next to it. The toilet keeps its wall and its place because its drain cannot be moved: under a sloping ceiling it stays under that sloping ceiling and is never moved to a straight or rear wall to gain headroom. The washbasin keeps its wall and its place. A bathtub that becomes a shower uses only the bathtub's own footprint, on the same wall.`,
+    `KEEP THE POSITIONS. A half-height wall, a low built wall or a boxed pre-wall that a fixture stands against is part of the room, not furniture: it keeps its place, its length, its height and its depth, and the fixture stays mounted on it. Every fixture keeps the wall or low wall it stands against in image 1 and its place along it, measured against the corners, the door and the window next to it. The toilet keeps its wall and its place because its drain cannot be moved: under a sloping ceiling it stays under that sloping ceiling and is never moved to a straight or rear wall to gain headroom. The washbasin keeps its wall and its place. A bathtub that becomes a shower uses only the bathtub's own footprint, on the same wall.`,
     `CHANGE this, and only this, in ${v.room === 'gaeste-wc' ? 'this guest WC' : 'this bathroom'} (style "${v.packageName}"):${look} ${surfaces}; ${fixtures}; if a toilet is visible in image 1, ${toilet}; ${vanity}; ${v.tapPrompt}.${accent}`,
     `TAKE AWAY. If image 1 shows a bidet, it is gone: this bathroom has none, and the wall and floor where it stood are finished like the rest, with nothing standing in its place. The old shower curtain and its rail are gone. Loose furniture, clutter, towels, bottles and rugs are gone. Every shower fitting — mixer, riser, shower head, hand shower — sits inside the shower area on the shower wall, never on a wall next to the toilet or the washbasin. Natural daylight, no people, no text.`,
   ].join('\n');
@@ -992,6 +992,7 @@ async function checkOpenings(
     'A fixture that is only partly in frame still counts. A slim pre-wall behind the toilet, tiled or clad, is normal building work and is not a wall of the room. ' +
     'Then list the fixtures of each image in the order you see them from left to right in the picture, using the same words, each fixture at most once and only the ones you can see. ' +
     'Then name, for each image, the one fixture that stands closest to the camera, or "none" when you cannot tell. ' +
+    'Then say, for each image, whether the toilet hangs on or stands against a half-height wall, a low built wall or a boxed pre-wall in front of the room wall, rather than directly against a full-height wall. ' +
     'Set extra_openings true only if image 2 has a window, roof window, door or outside opening that image 1 does not have, or lost one that image 1 has. ' +
     'Set view_changed true if camera position, angle, lens or framing changed, or if image 2 shows floor, wall or ceiling area that lies outside image 1. ' +
     'Answer with JSON only, no markdown and exactly these keys: ' +
@@ -999,6 +1000,7 @@ async function checkOpenings(
     '"after":{"toilet":"left","washbasin":"left","shower":"none","bathtub":"none","bidet":"none"},' +
     '"order_before":["washbasin","toilet"],"order_after":["washbasin","toilet"],' +
     '"nearest_before":"toilet","nearest_after":"toilet",' +
+    '"toilet_on_low_wall_before":false,"toilet_on_low_wall_after":false,' +
     '"extra_openings":false,"view_changed":false,"reason":"short English note, max 25 words"}';
   try {
     const r = await request(ctx, url, {
@@ -1021,10 +1023,10 @@ async function checkOpenings(
     const json = r.json;
     if (!r.ok) {
       console.error('[badplaner] Fensterprüfung fehlgeschlagen', r.status);
-      return { status: 'unavailable' };
+      return { status: 'unavailable', detail: `HTTP ${r.status}` };
     }
     const textOut: string = json?.candidates?.[0]?.content?.parts?.map((p: any) => p.text || '').join('') || '';
-    if (json?.candidates?.[0]?.finishReason !== 'STOP') return { status: 'unavailable' };
+    if (json?.candidates?.[0]?.finishReason !== 'STOP') return { status: 'unavailable', detail: `Abbruch: ${json?.candidates?.[0]?.finishReason || 'unbekannt'}` };
     const parsed = JSON.parse(textOut);
     const inventory = (value: any): Inventory | null => {
       if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
@@ -1040,7 +1042,8 @@ async function checkOpenings(
     };
     const nearest = (value: any): Fixture | 'none' | null =>
       value === 'none' || FIXTURES.includes(value) ? value : null;
-    const keys = ['before', 'after', 'order_before', 'order_after', 'nearest_before', 'nearest_after', 'extra_openings', 'view_changed', 'reason'];
+    const keys = ['before', 'after', 'order_before', 'order_after', 'nearest_before', 'nearest_after',
+      'toilet_on_low_wall_before', 'toilet_on_low_wall_after', 'extra_openings', 'view_changed', 'reason'];
     const before = inventory(parsed?.before);
     const after = inventory(parsed?.after);
     const orderBefore = order(parsed?.order_before);
@@ -1048,21 +1051,27 @@ async function checkOpenings(
     const nearestBefore = nearest(parsed?.nearest_before);
     const nearestAfter = nearest(parsed?.nearest_after);
     if (!parsed || Array.isArray(parsed) || !before || !after || !orderBefore || !orderAfter || !nearestBefore || !nearestAfter
+      || typeof parsed.toilet_on_low_wall_before !== 'boolean' || typeof parsed.toilet_on_low_wall_after !== 'boolean'
       || typeof parsed.extra_openings !== 'boolean' || typeof parsed.view_changed !== 'boolean'
       || typeof parsed.reason !== 'string' || !parsed.reason.trim() || parsed.reason.length > 200
-      || Object.keys(parsed).some((key) => !keys.includes(key))) return { status: 'unavailable' };
+      || Object.keys(parsed).some((key) => !keys.includes(key))) return { status: 'unavailable', detail: 'Antwort unlesbar' };
     const flags: CheckFlags = { extra_openings: parsed.extra_openings, view_changed: parsed.view_changed, before, after, orderBefore, orderAfter, nearestBefore, nearestAfter };
+    const lowWallLost = parsed.toilet_on_low_wall_before && !parsed.toilet_on_low_wall_after
+      ? 'the low wall the toilet stood against is gone, so the toilet no longer sits where it did'
+      : null;
     const fault = compareInventory(before, after, wanted)
       || compareOrder(orderBefore, orderAfter)
-      || compareDepth(before, after, nearestBefore, nearestAfter);
+      || compareDepth(before, after, nearestBefore, nearestAfter)
+      || lowWallLost;
     if (flags.extra_openings) return { status: 'rejected', reason: `an opening was added or lost (${parsed.reason.slice(0, 120)})`, flags };
     if (fault) return { status: 'rejected', reason: fault, flags };
     // Ein anderer Bildausschnitt allein ist kein Grund, dem Kunden nichts zu zeigen:
     // Fenster, WC, Wände und Ausstattung stimmen dann ja. Er wird nur vermerkt.
     return flags.view_changed ? { status: 'approved', note: parsed.reason.slice(0, 200) } : { status: 'approved' };
-  } catch {
-    console.error('[badplaner] Fensterprüfung nicht möglich');
-    return { status: 'unavailable' };
+  } catch (err: any) {
+    const detail = err && (err.name === 'AbortError' || err.name === 'TimeoutError') ? 'Timeout' : String(err?.message || err).slice(0, 120);
+    console.error('[badplaner] Fensterprüfung nicht möglich', detail);
+    return { status: 'unavailable', detail };
   }
 }
 
