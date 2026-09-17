@@ -59,7 +59,11 @@ export const config = { maxDuration: 120 };
 
 const MAX_FILE_BASE64 = MAX_PLAN_BASE64;
 const MAX_REQUEST_BYTES = 4 * 1024 * 1024;
-const MAX_RESPONSE_BASE64 = 3.5 * 1024 * 1024;
+// Ein 2K-Ideenbild ist ein Vielfaches eines 1K-Bildes. Diese drei Grenzen waren
+// auf 1K zugeschnitten und haben das erste Pro-Bild nach 25 s weggeworfen.
+const MAX_RESPONSE_BASE64 = 16 * 1024 * 1024;
+const MAX_MODEL_JSON_BYTES = 24 * 1024 * 1024;
+const GENERATED_IMAGE_LIMITS = { maxBytes: 12 * 1024 * 1024, maxPixels: 12_000_000, maxSide: 3000 };
 const MAX_SWATCH_BYTES = 5 * 1024 * 1024; // current catalog originals include files >4 MiB
 const TOTAL_TIMEOUT_MS = 105000; // 15 seconds below the platform limit
 const DELIVERY_RESERVE_MS = 15000;
@@ -225,7 +229,7 @@ async function request(ctx: RequestContext, url: string, init: RequestInit = {},
     const response = await dependencies.fetch(url, { ...init, signal, redirect: 'error' });
     // Keep the timeout active while consuming the response body, not only headers.
     if (signal.aborted) { void response.body?.cancel(); throw new TimeoutError(); }
-    const limit = bytes ? MAX_SWATCH_BYTES : 6 * 1024 * 1024;
+    const limit = bytes ? MAX_SWATCH_BYTES : MAX_MODEL_JSON_BYTES;
     const length = Number(response.headers.get('content-length'));
     if (length > limit) { void response.body?.cancel(); throw new Error('Provider response too large'); }
     const chunks: Uint8Array[] = [];
@@ -506,7 +510,7 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
 
   const passStarted = dependencies.clock.now();
   let gen = await generateImage(prompt, photo, swatch, moduleImage, ctx, photoRatio);
-  if (gen.ok === false) return res.status(502).json(await leadWithoutImage(`Bilddienst: ${gen.error}`));
+  if (gen.ok === false) return res.status(502).json(await leadWithoutImage(`Bilddienst: ${gen.detail}`));
   let checkNote = 'ok';
   const wantedFixtures = { room, shower: shower ? shower.id !== 'keine' : false, bathtub: bathtub ? bathtub.id !== 'keine' : false, cistern };
   const checkWithUnavailableRetry = async (image: { mime: string; data: string }): Promise<CheckResult> => {
@@ -528,7 +532,7 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
     // The rejected image never becomes a fallback if the retry/check fails.
     const retryPrompt = `${prompt}\nIMPORTANT: a previous attempt failed the structural and fixture check: ${check.reason}. Correct that exact issue. Keep the original layout, every opening and toilet position, and show exactly the requested shower and bathtub state.`;
     const second = await generateImage(retryPrompt, photo, swatch, moduleImage, ctx, photoRatio);
-    if (second.ok === false) return res.status(502).json(await leadWithoutImage(`1. Versuch verworfen (${check.reason}), 2. Versuch: ${second.error}`, gen));
+    if (second.ok === false) return res.status(502).json(await leadWithoutImage(`1. Versuch verworfen (${check.reason}), 2. Versuch: ${second.detail}`, gen));
     check = await checkWithUnavailableRetry(second);
     gen = second;
     checkAttempt = 2;
@@ -905,7 +909,7 @@ async function loadSwatch(image: string, src: string, ctx: RequestContext): Prom
 
 /* ---------- Gemini ---------- */
 
-type GenResult = { ok: true; mime: string; data: string } | { ok: false; error: string };
+type GenResult = { ok: true; mime: string; data: string } | { ok: false; error: string; detail: string };
 
 async function generateImage(prompt: string, photo: Photo, swatch: Photo | null, extra: Photo | null, ctx: RequestContext, aspectRatio = ''): Promise<GenResult> {
   // Das Ideenbild ist das Produkt: es soll das Bad des Kunden zeigen, nicht
@@ -928,30 +932,34 @@ async function generateImage(prompt: string, photo: Photo, swatch: Photo | null,
     }, Math.min(GEMINI_TIMEOUT_MS, Math.max(0, ctx.budget.remaining() - CHECK_TIMEOUT_MS - DELIVERY_RESERVE_MS)));
     const json = r.json;
     if (!r.ok) {
-      console.error('[badplaner] Gemini-Fehler', r.status);
-      if (r.status === 429) return { ok: false, error: 'Der Bilddienst ist gerade ausgelastet. Bitte in einer Minute noch einmal versuchen.' };
-      return { ok: false, error: 'Das Ideenbild konnte nicht erstellt werden. Bitte später noch einmal versuchen oder rufen Sie uns an.' };
+      const apiMessage = typeof json?.error?.message === 'string' ? json.error.message.slice(0, 160) : '';
+      console.error('[badplaner] Gemini-Fehler', r.status, apiMessage);
+      const detail = `HTTP ${r.status}${apiMessage ? ': ' + apiMessage : ''}`;
+      if (r.status === 429) return { ok: false, error: 'Der Bilddienst ist gerade ausgelastet. Bitte in einer Minute noch einmal versuchen.', detail };
+      return { ok: false, error: 'Das Ideenbild konnte nicht erstellt werden. Bitte später noch einmal versuchen oder rufen Sie uns an.', detail };
     }
     const candidate = json?.candidates?.[0];
     const imagePart = candidate?.content?.parts?.find((p: any) => p.inlineData?.data);
     if (!imagePart) {
       const reason = candidate?.finishReason || json?.promptFeedback?.blockReason || 'kein Bild';
       console.error('[badplaner] Gemini ohne Bild:', reason);
-      return { ok: false, error: 'Aus diesem Foto konnte kein Ideenbild erstellt werden. Bitte ein anderes Foto versuchen: von der Tür aus, das ganze Bad im Bild, Licht an.' };
+      return { ok: false, error: 'Aus diesem Foto konnte kein Ideenbild erstellt werden. Bitte ein anderes Foto versuchen: von der Tür aus, das ganze Bad im Bild, Licht an.', detail: `ohne Bild: ${String(reason).slice(0, 120)}` };
     }
     const mime = imagePart.inlineData.mimeType;
     if (mime !== 'image/png' && mime !== 'image/jpeg') throw new Error('Unsupported generated image');
     const data = normalizeBase64(imagePart.inlineData.data, MAX_RESPONSE_BASE64);
-    validateImageBytes(Buffer.from(data, 'base64'), mime);
+    validateImageBytes(Buffer.from(data, 'base64'), mime, GENERATED_IMAGE_LIMITS);
     return { ok: true, mime, data };
   } catch (err: any) {
     const timeout = err && (err.name === 'AbortError' || err.name === 'TimeoutError');
-    console.error('[badplaner] Gemini nicht erreichbar', timeout ? 'Timeout' : 'invalid response');
+    const detail = timeout ? 'Timeout' : String(err?.message || err).slice(0, 160);
+    console.error('[badplaner] Gemini nicht erreichbar', detail);
     return {
       ok: false,
       error: timeout
         ? 'Das hat zu lange gedauert. Bitte noch einmal versuchen.'
         : 'Der Bilddienst ist im Moment nicht erreichbar. Bitte später noch einmal versuchen.',
+      detail,
     };
   }
 }
