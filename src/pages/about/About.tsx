@@ -8,12 +8,13 @@ const cx = (...classes: Array<string | false | undefined>) =>
 
 const About: React.FC = () => {
   return (
-    <main className={styles.about}>
+    <main id="main-content" className={styles.about}>
       <Helmet>
         <title>Über uns | New Living Design GmbH</title>
+        <link rel="canonical" href="https://newlivingdesign.ch/ueber-uns" />
         <meta
           name="description"
-          content="Lernen Sie die New Living Design GmbH kennen – familiengeführt, mit Showroom in Zofingen (AG). Wir stehen für Qualität, persönliche Beratung und zuverlässige Innenausstattung."
+          content="New Living Design GmbH: Familienbetrieb mit Ausstellung in Zofingen AG. Bäder, Küchen und Platten – Beratung, Planung und Montage aus einer Hand."
         />
         <meta property="og:title" content="Über uns | New Living Design GmbH" />
         <meta
@@ -157,10 +158,10 @@ const About: React.FC = () => {
             </div>
 
             <div className={styles.fact}>
-              <div className={styles["fact-badge"]}>Leitung</div>
+              <div className={styles["fact-badge"]}>Kontakt</div>
               <div className={styles["fact-content"]}>
-                <h4>Diego Verdile</h4>
-                <p>Geschäftsführung.</p>
+                <h4>Emanuel Verdile</h4>
+                <p>Ihr Ansprechpartner für Beratung und Termine.</p>
               </div>
             </div>
 
