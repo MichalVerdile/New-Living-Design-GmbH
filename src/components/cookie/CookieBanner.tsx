@@ -17,11 +17,15 @@ const CookieBanner: React.FC = () => {
         window.location.href = '/datenschutz#cookie-settings';
     };
 
+    // ariaAcceptLabel und ariaDeclineLabel: ohne sie liest ein Screenreader die
+    // englischen Vorgaben der Bibliothek ("Accept cookies") statt der Beschriftung.
     return (
         <CookieConsent
             location="bottom"
             buttonText="Alle Cookies akzeptieren"
             declineButtonText="Nur notwendige"
+            ariaAcceptLabel="Alle Cookies akzeptieren"
+            ariaDeclineLabel="Nur notwendige Cookies"
             enableDeclineButton
             onAccept={handleAccept}
             onDecline={handleDecline}
