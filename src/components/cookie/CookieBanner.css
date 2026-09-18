@@ -10,7 +10,7 @@
 
 .cookie-banner-content {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 15px;
   width: 100%;
   min-width: 0;
@@ -38,8 +38,8 @@
 }
 
 .cookie-banner-text p {
-  margin: 0 0 15px 0;
-  line-height: 1.5;
+  margin: 0;
+  line-height: 1.4;
   color: #e5e7eb;
 }
 
@@ -62,7 +62,7 @@
 }
 
 .cookie-banner-buttons {
-  margin-top: 15px;
+  margin-top: 6px;
   display: flex;
   justify-content: flex-start;
 }
@@ -117,7 +117,7 @@
   .cookie-banner-content {
     flex-direction: column;
     text-align: center;
-    gap: 20px;
+    gap: 8px;
   }
   
   .cookie-banner-icon {
@@ -142,21 +142,21 @@
 
 @media (max-width: 480px) {
   .cookie-banner-container {
-    padding: 15px !important;
+    padding: 10px 12px !important;
   }
-  
-  .cookie-banner-text h4 {
-    font-size: 16px;
-  }
-  
+
   .cookie-banner-text p {
-    font-size: 13px;
+    font-size: 12px;
   }
-  
+
+  /* Knoepfe nebeneinander: so bleibt der Streifen unter 100 px und verdeckt
+     auf dem Telefon nicht mehr den halben Bildschirm. */
   .cookie-banner-accept,
   .cookie-banner-decline {
-    width: 100% !important;
-    margin: 10px 0 5px 0 !important;
+    width: auto !important;
+    margin: 0 !important;
+    padding: 8px 14px !important;
+    font-size: 13px !important;
     text-align: center;
   }
 }

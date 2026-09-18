@@ -12,11 +12,6 @@ const CookieBanner: React.FC = () => {
         saveConsent({ analytics: false, marketing: false });
     };
 
-    const handleSettings = () => {
-        // Scroll to cookie settings on data protection page
-        window.location.href = '/datenschutz#cookie-settings';
-    };
-
     // ariaAcceptLabel und ariaDeclineLabel: ohne sie liest ein Screenreader die
     // englischen Vorgaben der Bibliothek ("Accept cookies") statt der Beschriftung.
     return (
@@ -38,7 +33,8 @@ const CookieBanner: React.FC = () => {
                 boxShadow: "0 -8px 32px rgba(0, 0, 0, 0.4), 0 -2px 8px rgba(0, 0, 0, 0.3)",
                 backdropFilter: "blur(15px)",
                 borderTop: "2px solid rgba(255, 255, 255, 0.15)",
-                padding: "25px",
+                padding: "10px 16px",
+                alignItems: "center",
                 zIndex: 999999
             }}
             buttonStyle={{
@@ -79,26 +75,11 @@ const CookieBanner: React.FC = () => {
         >
             <div className="cookie-banner-content">
                 <div className="cookie-banner-text">
-                    <h4>Cookies und Datenschutz</h4>
                     <p>
-                        Wir verwenden Cookies, damit die Website funktioniert und um zu verstehen, wie sie genutzt wird.
-                        Statistik (Google Analytics) und Marketing (Meta Pixel) laden wir nur mit Ihrer Zustimmung.
-                        Sie können Ihre Wahl jederzeit in der <a href="/datenschutz#cookie-settings" style={{ color: "#ffffff", textDecoration: "underline" }}>Datenschutzerklärung</a> ändern.
+                        Statistik (Google Analytics) und Marketing (Meta Pixel) laden wir nur mit Ihrer
+                        Zustimmung. Mehr dazu in der{' '}
+                        <a href="/datenschutz#cookie-settings" style={{ color: "#ffffff", textDecoration: "underline" }}>Datenschutzerklärung</a>.
                     </p>
-                    <p style={{ fontSize: "12px", color: "#9ca3af", marginTop: "10px" }}>
-                        <strong style={{ color: "#ffffff" }}>Notwendig:</strong> immer aktiv ·{' '}
-                        <strong style={{ color: "#ffffff" }}>Statistik:</strong> Google Analytics ·{' '}
-                        <strong style={{ color: "#ffffff" }}>Marketing:</strong> Meta Pixel
-                    </p>
-                    <div className="cookie-banner-buttons">
-                        <button
-                            onClick={handleSettings}
-                            className="cookie-banner-settings-btn"
-                            type="button"
-                        >
-                            Einstellungen
-                        </button>
-                    </div>
                 </div>
             </div>
         </CookieConsent>
