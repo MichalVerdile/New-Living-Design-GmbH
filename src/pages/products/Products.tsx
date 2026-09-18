@@ -34,7 +34,7 @@ const Products: React.FC = () => {
   }, []);
 
   return (
-    <main className={styles['products-page']}>
+    <main id="main-content" className={styles['products-page']}>
       <SEOHead
         title="Bad, Küchen, Platten & Wellness | New Living Design Zofingen"
         description="Bad, Küchen, Keramikplatten und Wellness-Lösungen auswählen: Produkte, 3D-Planung und persönliche Beratung in Zofingen."
