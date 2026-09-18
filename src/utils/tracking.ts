@@ -44,6 +44,8 @@ const PIXEL_ID = business.metaPixelId;
 
 let gaLoaded = false;
 let pixelLoaded = false;
+let gtagScriptLoaded = false;
+let consentModeReady = false;
 
 export function readConsent(): ConsentState | null {
   const raw = Cookies.get(CONSENT_COOKIE);
@@ -82,36 +84,80 @@ export function applyConsent(state: ConsentState): void {
 
 /** Beim Laden der Seite aufrufen: stellt eine frühere Einwilligung wieder her. */
 export function initTrackingFromConsent(): void {
+  initConsentMode();
   const state = readConsent();
   if (state) applyConsent(state);
 }
 
 /* ---------- Google Analytics 4 ---------- */
 
-function enableGoogleAnalytics(): void {
-  window[`ga-disable-${GA_ID}`] = false;
-  if (gaLoaded) return;
-  gaLoaded = true;
-
+/** Legt window.gtag an, ohne etwas zu senden. */
+function ensureGtagStub(): void {
+  if (window.gtag) return;
   window.dataLayer = window.dataLayer || [];
   // gtag.js erkennt nur das echte `arguments`-Objekt als Befehl, kein Array.
   window.gtag = function gtag() {
     // eslint-disable-next-line prefer-rest-params
     window.dataLayer!.push(arguments);
   };
-  window.gtag('js', new Date());
-  window.gtag('config', GA_ID, {
+}
+
+/**
+ * Consent Mode v2. Muss laufen, BEVOR gtag.js geladen wird: alles auf "denied",
+ * also keine Cookies und keine Kennung. GA4 zaehlt dann nur anonyme Aufrufe,
+ * und wir sehen wenigstens, wie viele Leute die Seite ueberhaupt erreichen.
+ * Mit der Einwilligung wird auf "granted" umgestellt.
+ */
+export function initConsentMode(): void {
+  if (typeof window === 'undefined' || consentModeReady) return;
+  consentModeReady = true;
+  ensureGtagStub();
+  window.gtag!('consent', 'default', {
+    ad_storage: 'denied',
+    ad_user_data: 'denied',
+    ad_personalization: 'denied',
+    analytics_storage: 'denied',
+    wait_for_update: 500,
+  });
+  loadGtagScript();
+  window.gtag!('js', new Date());
+  window.gtag!('config', GA_ID, {
     anonymize_ip: true,
     cookie_flags: 'SameSite=None;Secure',
   });
+}
 
+function loadGtagScript(): void {
+  if (gtagScriptLoaded) return;
+  gtagScriptLoaded = true;
   const script = document.createElement('script');
   script.async = true;
   script.src = `https://www.googletagmanager.com/gtag/js?id=${GA_ID}`;
   document.head.appendChild(script);
 }
 
+function enableGoogleAnalytics(): void {
+  window[`ga-disable-${GA_ID}`] = false;
+  initConsentMode();
+  window.gtag!('consent', 'update', {
+    ad_storage: 'granted',
+    ad_user_data: 'granted',
+    ad_personalization: 'granted',
+    analytics_storage: 'granted',
+  });
+  gaLoaded = true;
+}
+
 function disableGoogleAnalytics(): void {
+  if (window.gtag) {
+    window.gtag('consent', 'update', {
+      ad_storage: 'denied',
+      ad_user_data: 'denied',
+      ad_personalization: 'denied',
+      analytics_storage: 'denied',
+    });
+  }
+  gaLoaded = false;
   window[`ga-disable-${GA_ID}`] = true;
   const idSuffix = GA_ID.replace('G-', '');
   ['_ga', `_ga_${idSuffix}`, '_gid', '_gat', `_gat_gtag_${GA_ID.replace('-', '_')}`].forEach((name) => {
@@ -182,6 +228,38 @@ export function trackLead(channel: LeadChannel, place: string): void {
       content_category: channel,
     });
   }
+}
+
+/**
+ * Schritte im Badplaner. Ohne diese Ereignisse sieht man in GA4 nur, dass
+ * jemand die Seite geoeffnet hat, nicht wo er stehen bleibt.
+ *
+ * badplaner_start      Klick auf "Jetzt starten"
+ * badplaner_raum       Badezimmer oder Gaeste-WC gewaehlt
+ * badplaner_paket      Paket oder Stilrichtung gewaehlt
+ * badplaner_foto       Foto geladen und angenommen
+ * badplaner_kontakt    Formular abgeschickt
+ * badplaner_ideenbild  Bild da und dem Kunden gezeigt
+ *
+ * Derselbe Name geht als eigenes Ereignis an den Meta Pixel, damit beide
+ * Seiten dieselbe Sprache sprechen.
+ */
+export type BadplanerStep =
+  | 'badplaner_start'
+  | 'badplaner_raum'
+  | 'badplaner_paket'
+  | 'badplaner_foto'
+  | 'badplaner_kontakt'
+  | 'badplaner_ideenbild';
+
+export function trackBadplaner(step: BadplanerStep, params: { raum?: string; paket?: string } = {}): void {
+  const payload = {
+    raum: params.raum || '',
+    paket: params.paket || '',
+    page_path: typeof window === 'undefined' ? '' : window.location.pathname,
+  };
+  if (window.gtag && gaLoaded) window.gtag('event', step, payload);
+  if (window.fbq && pixelLoaded) window.fbq('trackCustom', step, payload);
 }
 
 let clickTrackingInstalled = false;
