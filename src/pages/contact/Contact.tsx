@@ -56,10 +56,11 @@ const Contact: React.FC = () => {
   };
 
   return (
-    <main className={styles.contact}>
+    <main id="main-content" className={styles.contact}>
       {/* SEO Head */}
       <Helmet>
         <title>Kontakt | New Living Design GmbH</title>
+        <link rel="canonical" href="https://newlivingdesign.ch/kontakt" />
         <meta
           name="description"
           content="Kontaktieren Sie die New Living Design GmbH – Showroom in Zofingen (AG). Adresse, Telefon, E-Mail und Öffnungszeiten im Überblick."
