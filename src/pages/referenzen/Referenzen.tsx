@@ -99,10 +99,10 @@ const Referenzen: React.FC = () => {
   const currentPhoto = current && lightbox ? current.photos[lightbox.photoIndex] : null;
 
   return (
-    <main className={styles.page}>
+    <main id="main-content" className={styles.page}>
       <SEOHead
         title="Referenzen: Bäder und Küchen aus Zofingen | New Living Design"
-        description="Ausgeführte Badumbauten und Küchen von New Living Design in Zofingen und Umgebung: Marmoroptik, Zellige, Travertin, Messing und Schwarz. Fotos der fertigen Projekte."
+        description="Ausgeführte Badumbauten und Küchen von New Living Design in Zofingen und Umgebung: Marmoroptik, Zellige, Travertin, Messing. Fotos der Projekte."
         keywords="Referenzen Badumbau, Badezimmer Fotos, Küche Referenz Zofingen, Bad Marmoroptik, Badumbau Aargau Beispiele"
         url="/referenzen"
         type="website"
