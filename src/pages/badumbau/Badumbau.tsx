@@ -97,10 +97,10 @@ const Badumbau: React.FC = () => {
   };
 
   return (
-    <main className={styles.page}>
+    <main id="main-content" className={styles.page}>
       <SEOHead
         title="Badumbau Zofingen und Aargau, komplett aus einer Hand | New Living Design"
-        description={`Badumbau in Zofingen, Aarau, Olten, Sursee und Umgebung: Beratung in der Ausstellung, 3D-Planung, Fixpreis. Drei Badpakete ab CHF ${bathPackages[0].priceLabel} inkl. Material und Montage. Farbe ohne Aufpreis.`}
+        description={`Badumbau in Zofingen, Aarau, Olten und Umgebung: Beratung in der Ausstellung, 3D-Planung, drei Badpakete mit Fixpreis ab CHF ${bathPackages[0].priceLabel}.`}
         keywords="Badumbau Zofingen, Badsanierung Aargau, Badumbau Kosten Schweiz, Badezimmer renovieren Zofingen, Badplanung 3D, Badpaket Fixpreis, Bad umbauen Aarau Olten Sursee"
         url="/badumbau-zofingen"
         type="website"
@@ -187,7 +187,7 @@ const Badumbau: React.FC = () => {
             <div>
               <span className={styles.plannerEyebrow}>Neu</span>
               <h3>Badplaner – Ihr Bad als Ideenbild</h3>
-              <p>Paket wählen, Foto vom Bad machen, in 30 Sekunden ein Ideenbild mit den gewählten Platten und Farben erhalten. Kostenlos und unverbindlich.</p>
+              <p>Paket wählen, Foto vom Bad machen, in bis zu zwei Minuten ein Ideenbild mit den gewählten Platten und Farben erhalten. Kostenlos und unverbindlich.</p>
             </div>
             <Link to="/badplaner" className={styles.ctaDark}>Badplaner starten</Link>
           </aside>
