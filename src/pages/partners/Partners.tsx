@@ -41,9 +41,10 @@ const partners: Partner[] = [
 
 const Partners: React.FC = () => {
   return (
-    <main className={styles["partners-page"]}>
+    <main id="main-content" className={styles["partners-page"]}>
       <Helmet>
         <title>Partner & Marken – New Living Design GmbH</title>
+        <link rel="canonical" href="https://newlivingdesign.ch/partner" />
         <meta
           name="description"
           content="Exklusive Partner von New Living Design: Scarabeo, Fima, Rexa, Laminam, Roberto Cavalli Home Interiors, Lamborghini Surfaces und viele mehr."
