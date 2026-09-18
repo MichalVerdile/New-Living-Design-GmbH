@@ -1,7 +1,7 @@
 ---
 title: Badumbau von den Steuern abziehen: bis 2028 geht das noch
 seoTitle: Badumbau von den Steuern abziehen bis 2028
-description: Der Eigenmietwert fällt am 1. Januar 2029 weg, und mit ihm der Abzug für den Liegenschaftsunterhalt. Was das für ein neues Bad im Aargau bedeutet, welche Arbeiten als Unterhalt zählen und warum das Rechnungsdatum entscheidet.
+description: Der Eigenmietwert fällt 2029 weg, und mit ihm der Abzug für den Liegenschaftsunterhalt. Was das für ein neues Bad im Aargau bedeutet.
 date: 2026-09-12
 image: /referenzen/bad-marmor-beige-01.webp
 imageAlt: Fertiger Badumbau in Zofingen mit Doppelwaschtisch, Möbel und Platten in beiger Marmoroptik
