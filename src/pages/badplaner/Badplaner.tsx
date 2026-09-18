@@ -14,7 +14,7 @@ import {
 } from '../../data/badplaner';
 import { photoUrl } from '../../data/references';
 import { generateFAQStructuredData, generateBreadcrumbStructuredData } from '../../utils/structuredData';
-import { trackLead } from '../../utils/tracking';
+import { trackLead, trackBadplaner } from '../../utils/tracking';
 import { resizeImageFile, fileToBase64, type ResizedImage } from './resizeImage';
 import { MAX_PLAN_BASE64, MAX_SOURCE_IMAGE_BYTES } from './imageValidation';
 
@@ -365,6 +365,7 @@ const Badplaner: React.FC = () => {
 
   const choosePackage = (id: PackageId) => {
     if (!room) return;
+    trackBadplaner('badplaner_paket', { raum: room, paket: id });
     scrollRestoreRef.current = window.scrollY;
     setIndividuell(false);
     setPkg(id);
@@ -388,6 +389,7 @@ const Badplaner: React.FC = () => {
   };
 
   const chooseRoom = (next: RoomType) => {
+    trackBadplaner('badplaner_raum', { raum: next });
     setRoom(next);
     setPkg(null);
     setSel(null);
@@ -425,6 +427,7 @@ const Badplaner: React.FC = () => {
     try {
       const resized = await resizeImageFile(file, 1280, 0.82);
       setPhoto(resized);
+      trackBadplaner('badplaner_foto', { raum: room || '', paket: pkg || '' });
       setWindows(''); // neues Foto, Fenster neu angeben
       setCistern('');
     } catch (error) {
@@ -455,6 +458,7 @@ const Badplaner: React.FC = () => {
       return;
     }
     renderSubmittingRef.current = true;
+    trackBadplaner('badplaner_kontakt', { raum: room, paket: pkg });
     setStatus('sending');
     setErrorMsg('');
     const kombination = isAtelier && sel.accentMode === 'kombination';
@@ -522,6 +526,7 @@ const Badplaner: React.FC = () => {
         });
         setStatus('idle');
         trackLead('form', 'badplaner');
+        trackBadplaner('badplaner_ideenbild', { raum: room || '', paket: pkg || '' });
       } else {
         setStatus('error');
         setErrorMsg(json?.error || friendlyHttpError(res.status));
@@ -871,7 +876,7 @@ const Badplaner: React.FC = () => {
           <h1 className={styles.heroTitle}>Badezimmer und Gäste-WC als persönliches Ideenbild</h1>
           <p className={styles.heroText}>Raum wählen, Materialien zusammenstellen, Foto machen und Ideenbild erhalten. Kostenlos und unverbindlich aus Zofingen.</p>
           <div className={styles.heroActions}>
-            <a href="#planer" className={styles.ctaPrimary}>Jetzt starten</a>
+            <a href="#planer" className={styles.ctaPrimary} onClick={() => trackBadplaner('badplaner_start')}>Jetzt starten</a>
             <a href="#ablauf" className={styles.ctaSecondary}>So funktioniert's</a>
           </div>
           <p className={styles.heroNote}>
@@ -1313,7 +1318,7 @@ const Badplaner: React.FC = () => {
             ))}
           </ol>
           <div className={styles.center}>
-            <a href="#planer" className={styles.ctaPrimary}>Jetzt starten</a>
+            <a href="#planer" className={styles.ctaPrimary} onClick={() => trackBadplaner('badplaner_start')}>Jetzt starten</a>
           </div>
         </div>
       </section>
