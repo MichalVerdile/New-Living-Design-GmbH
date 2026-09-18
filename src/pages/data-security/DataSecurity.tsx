@@ -10,13 +10,14 @@ const DataSecurity: React.FC = () => {
   useEffect(() => setIsVisible(true), []);
 
   return (
-    <main className={styles.page}>
+    <main id="main-content" className={styles.page}>
       {/* SEO Head */}
       <Helmet>
         <title>Datenschutzerklärung | New Living Design GmbH</title>
+        <link rel="canonical" href="https://newlivingdesign.ch/datenschutz" />
         <meta
           name="description"
-          content="Datenschutzerklärung der New Living Design GmbH. Informationen zur Verarbeitung personenbezogener Daten bei Website-Nutzung, Kontaktaufnahme und Terminvereinbarung."
+          content="Datenschutzerklärung der New Living Design GmbH: Verarbeitung personenbezogener Daten bei Website-Nutzung, Kontakt und Terminvereinbarung."
         />
         <meta property="og:title" content="Datenschutzerklärung | New Living Design GmbH" />
         <meta
