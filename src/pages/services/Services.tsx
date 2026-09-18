@@ -27,9 +27,10 @@ const Services: React.FC = () => {
   }, []);
 
   return (
-    <main className={styles['services-page']}>
+    <main id="main-content" className={styles['services-page']}>
       <Helmet>
         <title>Dienstleistungen für Bad und Küchen | New Living Design Zofingen</title>
+        <link rel="canonical" href="https://newlivingdesign.ch/dienstleistungen" />
         <meta
           name="description"
           content="Beratung und 3D-Visualisierung für Bad und Küchen sowie Lieferung, Montage und Renovation aus einer Hand in Zofingen."

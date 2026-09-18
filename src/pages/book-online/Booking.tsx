@@ -23,11 +23,12 @@ const Booking: React.FC = () => {
   useEffect(() => setIsVisible(true), []);
 
   return (
-    <main className={styles.home}>
+    <main id="main-content" className={styles.home}>
       
       {/* SEO Head */}
       <Helmet>
         <title>Online Beratung & Showroom buchen | New Living Design GmbH</title>
+        <link rel="canonical" href="https://newlivingdesign.ch/booking" />
         <meta
           name="description"
           content="Buchen Sie jetzt Ihre persönliche Beratung – bei Ihnen zu Hause oder im Showroom in Zofingen. Kostenloser Ersttermin, exklusive Räume für Architekten."

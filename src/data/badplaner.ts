@@ -879,7 +879,7 @@ export const badplanerFaq: { question: string; answer: string }[] = [
   },
   {
     question: 'Kostet der Badplaner etwas?',
-    answer: 'Nein. Das Ideenbild ist kostenlos und unverbindlich. Pro Gerät sind drei Ideenbilder pro Tag möglich.',
+    answer: 'Nein. Das Ideenbild ist kostenlos und unverbindlich. Pro Gerät sind fünf Ideenbilder pro Tag möglich.',
   },
   {
     question: 'Wie genau ist das Ideenbild?',

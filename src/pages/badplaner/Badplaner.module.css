@@ -110,7 +110,8 @@
 .packageSelected { border-color: #111; box-shadow: 0 0 0 3px rgba(17,17,17,.12); }
 .package::before {
   content: ''; position: absolute; left: 1.15rem; top: 1.4rem; width: 20px; height: 20px; border-radius: 50%;
-  border: 2px solid #9ca3af; background: #fff;
+  /* 2.5:1 auf Weiss war zu schwach fuer ein Bedienelement (WCAG verlangt 3:1). */
+  border: 2px solid #6b7280; background: #fff;
 }
 .packageSelected::before { border-color: #111; background: radial-gradient(#111 0 45%, #fff 50%); }
 .packageBadge {

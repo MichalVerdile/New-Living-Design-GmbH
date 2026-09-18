@@ -41,10 +41,10 @@ const Blog: React.FC = () => {
   ];
 
   return (
-    <main className={styles.page}>
+    <main id="main-content" className={styles.page}>
       <SEOHead
         title="Blog: Badumbau, Kosten und Platten | New Living Design"
-        description="Was ein Badumbau im Aargau kostet, welche Platten sich bewähren, was steuerlich noch bis 2028 geht: Wissen aus den Baustellen von New Living Design in Zofingen."
+        description="Was ein Badumbau im Aargau kostet und welche Platten sich bewähren: Wissen aus den Baustellen von New Living Design in Zofingen."
         keywords="Badumbau Blog, Badumbau Kosten Aargau, Badezimmer Tipps, Platten Bad, Steuerabzug Badumbau, New Living Design Zofingen"
         url="/blog"
         type="website"

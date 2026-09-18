@@ -849,7 +849,7 @@ const Badplaner: React.FC = () => {
   );
 
   return (
-    <main className={styles.page}>
+    <main id="main-content" className={styles.page}>
       <SEOHead
         title="Badplaner für Badezimmer und Gäste-WC | New Living Design"
         description="Badezimmer oder Gäste-WC wählen, Materialien zusammenstellen und mit einem Foto ein persönliches Ideenbild anfragen. Aus Zofingen."
@@ -1255,7 +1255,7 @@ const Badplaner: React.FC = () => {
               <p className={styles.resultNote}>
                 Ihre Angaben wurden an uns weitergeleitet. Wir melden uns innerhalb eines Arbeitstages. Das Ideenbild zeigt eine Stimmung mit den gewählten Materialien;
                 Masse, Leitungen und Details klären wir vor Ort.{' '}
-                <button type="button" onClick={startOver}>Andere Farben oder ein anderes Paket probieren</button> (bis zu drei Ideenbilder pro Tag).
+                <button type="button" onClick={startOver}>Andere Farben oder ein anderes Paket probieren</button> (bis zu fünf Ideenbilder pro Tag).
               </p>
             </div>
 
