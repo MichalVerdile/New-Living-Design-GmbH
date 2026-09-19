@@ -42,7 +42,7 @@ const CISTERN_OPTIONS = [
 ];
 const API_URL = '/api/badplaner';
 const MAX_PLAN_PDF_BYTES = 3_000_000; // Base64 + JSON remains below the API request cap.
-const RENDER_TIMEOUT_MS = 130_000; // Server-Deadline 110 s plus Antwort (Ideenbild 2K, mehrere MB) auf dem Handy
+const RENDER_TIMEOUT_MS = 240_000; // Server-Deadline 220 s (zwei Durchgaenge) plus Antwort (Ideenbild 2K, mehrere MB) auf dem Handy
 const TILE_HINT = 'Nur eine kleine Auswahl. Alle Serien und Farben sehen Sie in unserer Ausstellung in Zofingen.';
 const NEWSLETTER_TEXT =
   'Ja, ich möchte gelegentlich Ideen und Neuigkeiten von New Living Design per E-Mail erhalten (jederzeit abbestellbar).';
@@ -1206,7 +1206,7 @@ const Badplaner: React.FC = () => {
                   {status === 'sending' && (
                     <div className={styles.progress} role="status" aria-live="polite">
                       <div className={styles.progressBar}><span /></div>
-                      <p className={styles.progressText}>Wir gestalten Ihr Bad und prüfen das Bild. Das dauert bis zu zwei Minuten; bitte lassen Sie die Seite offen.</p>
+                      <p className={styles.progressText}>Wir gestalten Ihr Bad und prüfen das Bild. Das dauert meist ein bis zwei Minuten, bei einem zweiten Anlauf bis zu vier; bitte lassen Sie die Seite offen.</p>
                     </div>
                   )}
                   {status === 'error' && (
