@@ -54,8 +54,8 @@ const inv = (changes = {}) => ({ toilet: 'left', washbasin: 'left', shower: 'non
 // Die sichtbare Reihenfolge von links nach rechts folgt dem Inventar, solange
 // ein Test nichts anderes sagt.
 const order = (state) => ['washbasin', 'toilet', 'bidet', 'shower', 'bathtub'].filter((key) => state[key] !== 'none');
-const checked = (extra = false, text) => response({ candidates: [{ content: { parts: [{ text: text ?? JSON.stringify({ before: inv(), after: inv(), order_before: order(inv()), order_after: order(inv()), nearest_before: 'toilet', nearest_after: 'toilet', toilet_on_low_wall_before: false, toilet_on_low_wall_after: false, foreground_object_before: false, foreground_object_after: false, window_much_bigger: false, extra_openings: extra, view_changed: false, reason: 'inventory' }) }] }, finishReason: 'STOP' }] });
-const checkedInv = (before, after, extra = {}) => response({ candidates: [{ content: { parts: [{ text: JSON.stringify({ before: inv(before), after: inv(after), order_before: order(inv(before)), order_after: order(inv(after)), nearest_before: 'toilet', nearest_after: 'toilet', toilet_on_low_wall_before: false, toilet_on_low_wall_after: false, foreground_object_before: false, foreground_object_after: false, window_much_bigger: false, extra_openings: false, view_changed: false, reason: 'inventory', ...extra }) }] }, finishReason: 'STOP' }] });
+const checked = (extra = false, text) => response({ candidates: [{ content: { parts: [{ text: text ?? JSON.stringify({ before: inv(), after: inv(), order_before: order(inv()), order_after: order(inv()), nearest_before: 'toilet', nearest_after: 'toilet', toilet_on_low_wall_before: false, toilet_on_low_wall_after: false, new_wall_element: false, foreground_object_before: false, foreground_object_after: false, window_much_bigger: false, extra_openings: extra, view_changed: false, reason: 'inventory' }) }] }, finishReason: 'STOP' }] });
+const checkedInv = (before, after, extra = {}) => response({ candidates: [{ content: { parts: [{ text: JSON.stringify({ before: inv(before), after: inv(after), order_before: order(inv(before)), order_after: order(inv(after)), nearest_before: 'toilet', nearest_after: 'toilet', toilet_on_low_wall_before: false, toilet_on_low_wall_after: false, new_wall_element: false, foreground_object_before: false, foreground_object_after: false, window_much_bigger: false, extra_openings: false, view_changed: false, reason: 'inventory', ...extra }) }] }, finishReason: 'STOP' }] });
 
 function harness(settings = {}) {
   const clock = fakeClock();
@@ -151,9 +151,9 @@ test('Aufputz and Unterputz produce explicit, exclusive toilet branches', async 
       // Ein Holzsitz auf weisser Keramik war einer der Befunde vom 16.09.
       assert.match(prompt, /its seat and lid are in the very same .*never wood, never a contrasting colour/);
       assert.match(prompt, /wall behind is neither moved nor opened/);
-      // Die Vorwand, die das Modul traegt, ist normale Bauarbeit: Diego baut sie
-      // und verkleidet sie. Die Pruefung darf sie nicht als neue Wand lesen.
-      assert.match(checkPrompt, /A slim pre-wall behind the toilet, tiled or clad, is normal building work and is not a wall of the room/);
+      // Das Modul steht an der Wand dahinter: die Pruefung darf es nicht als eigene Wand lesen.
+      assert.match(checkPrompt, /a pre-wall or a sanitary module directly behind the toilet belongs to the wall it stands in front of/);
+      assert.match(checkPrompt, /a flat glass sanitary module behind the toilet and the line where tiles end on a flat wall are not wall elements/);
     } else {
       assert.match(prompt, /the cistern stays hidden exactly where it already is/);
       assert.match(prompt, /no new free-standing module is added/);
@@ -161,6 +161,9 @@ test('Aufputz and Unterputz produce explicit, exclusive toilet branches', async 
       // traegt. Das Modell hat es eingeebnet und das WC an die Wand dahinter geschoben.
       assert.match(prompt, /that low wall is part of the room and stays: same place, same length, same height, same depth, only newly tiled/);
       assert.match(prompt, /do not push the toilet back against the wall behind it/);
+      // 19.09.: "often has a shelf on top" hat bei einer flachen Wand ein Muretto mit Ablage erzeugt.
+      assert.doesNotMatch(prompt, /shelf on top/);
+      assert.match(prompt, /that wall stays one flat, full-height wall, only newly tiled: nothing is built in front of it/);
     }
   }
 });
@@ -448,7 +451,7 @@ test('WC und Dusche duerfen an derselben Wand nicht die Plaetze tauschen', async
     before: inv({ shower: 'right', toilet: 'right' }), after: inv({ shower: 'right', toilet: 'right' }),
     order_before: ['washbasin', 'shower', 'toilet'], order_after: ['washbasin', 'toilet', 'shower'],
     nearest_before: 'toilet', nearest_after: 'toilet',
-    toilet_on_low_wall_before: false, toilet_on_low_wall_after: false,
+    toilet_on_low_wall_before: false, toilet_on_low_wall_after: false, new_wall_element: false,
     foreground_object_before: false, foreground_object_after: false, window_much_bigger: false,
     extra_openings: false, view_changed: false, reason: 'inventory',
   }) }] }, finishReason: 'STOP' }] });
@@ -466,7 +469,7 @@ test('ein weggeraeumtes Stueck aendert die Reihenfolge nicht', async () => {
     before: inv({ bidet: 'right', toilet: 'right' }), after: inv({ toilet: 'right' }),
     order_before: ['washbasin', 'toilet', 'bidet'], order_after: ['washbasin', 'toilet'],
     nearest_before: 'bidet', nearest_after: 'toilet',
-    toilet_on_low_wall_before: false, toilet_on_low_wall_after: false,
+    toilet_on_low_wall_before: false, toilet_on_low_wall_after: false, new_wall_element: false,
     foreground_object_before: false, foreground_object_after: false, window_much_bigger: false,
     extra_openings: false, view_changed: false, reason: 'inventory',
   }) }] }, finishReason: 'STOP' }] })] });
@@ -482,7 +485,7 @@ test('das WC darf an seiner Wand nicht nach hinten rutschen', async () => {
     before: inv({ toilet: 'right', shower: 'back' }), after: inv({ toilet: 'right', shower: 'back' }),
     order_before: ['washbasin', 'shower', 'toilet'], order_after: ['washbasin', 'shower', 'toilet'],
     nearest_before: 'toilet', nearest_after: 'washbasin',
-    toilet_on_low_wall_before: false, toilet_on_low_wall_after: false,
+    toilet_on_low_wall_before: false, toilet_on_low_wall_after: false, new_wall_element: false,
     foreground_object_before: false, foreground_object_after: false, window_much_bigger: false,
     extra_openings: false, view_changed: false, reason: 'inventory',
   }) }] }, finishReason: 'STOP' }] });
@@ -577,17 +580,40 @@ test('der Prompt haelt den Vordergrund und den Waschtischunterbau fest', async (
   assert.doesNotMatch(prompt, /Loose furniture, clutter/);
 });
 
-test('ein erhaltenes Muretto und ein neu gebautes sind kein Fehler', async () => {
-  // Steht das Mauerstueck weiter, ist alles in Ordnung. Und baut das Modell eines neu,
-  // wo vorher keines war, ist das genau die Vorwand, die Diego ohnehin mauert.
+test('ein erhaltenes Muretto ist kein Fehler', async () => {
+  const h = harness({ checks: [() => checkedInv({ toilet: 'right' }, { toilet: 'right' },
+    { toilet_on_low_wall_before: true, toilet_on_low_wall_after: true })] });
+  const res = await h.invoke();
+  assert.equal(res.statusCode, 200);
+});
+
+test('ein neues Muretto, eine Ablage oder eine Nische wird verworfen', async () => {
+  // Diegos Test vom 19.09.: flache, raumhoch geplattete Wand, Spuelplatte buendig, im
+  // Ideenbild ein halbhohes Muretto mit Ablage hinter Waschtisch, WC und Dusche.
   for (const flags of [
-    { toilet_on_low_wall_before: true, toilet_on_low_wall_after: true },
+    { new_wall_element: true },
     { toilet_on_low_wall_before: false, toilet_on_low_wall_after: true },
   ]) {
-    const h = harness({ checks: [() => checkedInv({ toilet: 'right' }, { toilet: 'right' }, flags)] });
+    const added = () => checkedInv({ toilet: 'right' }, { toilet: 'right' }, flags);
+    const h = harness({ checks: [added, added] });
     const res = await h.invoke();
-    assert.equal(res.statusCode, 200);
+    assert.equal(res.statusCode, 502);
+    assert.equal(res.body.code, 'RENDER_REJECTED');
+    const retry = h.calls.filter((call) => call.body?.generationConfig?.responseModalities)[1].body.contents[0].parts[0].text;
+    assert.match(retry, /a low wall, ledge, shelf or niche that is not in the photo was added/);
   }
+  const prompt = harness();
+  await prompt.invoke();
+  const text = prompt.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
+  assert.match(text, /NO NEW WALLS: never add a wall, a partition, a half-height wall, a boxed pre-wall, a ledge, a shelf or a niche that image 1 does not show/);
+  assert.match(text, /no ledge, no shelf, no capping and no step/);
+});
+
+test('das Glasmodul beim Aufputz-Spuelkasten ist kein neues Muretto', async () => {
+  const h = harness({ checks: [() => checkedInv({ toilet: 'right' }, { toilet: 'right' },
+    { toilet_on_low_wall_before: false, toilet_on_low_wall_after: true })] });
+  const res = await h.invoke(payload({ cistern: 'aufputz' }));
+  assert.equal(res.statusCode, 200);
 });
 
 test('fixture checker rejects a shower in a Gäste-WC', async () => {
