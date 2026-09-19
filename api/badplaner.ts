@@ -53,7 +53,9 @@ import { SANITARY_MODULE_PHOTO } from '../server/badplaner/sanitaermodul.js';
 declare const process: any;
 declare const Buffer: any;
 
-export const config = { maxDuration: 120 };
+// 230 s: zwei volle Durchgaenge (Bild 65 s + Pruefung 25 s) plus Vorpruefung und Mails.
+// Vercel erlaubt bis 300 s; vercel.json nennt denselben Wert.
+export const config = { maxDuration: 230 };
 
 /* ---------- Grenzen ---------- */
 
@@ -65,7 +67,11 @@ const MAX_RESPONSE_BASE64 = 16 * 1024 * 1024;
 const MAX_MODEL_JSON_BYTES = 24 * 1024 * 1024;
 const GENERATED_IMAGE_LIMITS = { maxBytes: 12 * 1024 * 1024, maxPixels: 12_000_000, maxSide: 3000 };
 const MAX_SWATCH_BYTES = 5 * 1024 * 1024; // current catalog originals include files >4 MiB
-const TOTAL_TIMEOUT_MS = 110000; // 10 seconds below the platform limit (vercel.json maxDuration 120)
+// Am 19.09. um 12:11 blieb bei 110 s kein Platz fuer den zweiten Versuch: der erste
+// Durchgang (Bild + Pruefung) dauert mit gemini-3-pro-image 33 bis 90 s, und der zweite
+// lief nur, wenn der erste unter rund 43 s blieb. Um 12:25 lief er und das Bild kam durch.
+// 220 s reichen fuer zwei Durchgaenge in der langsamsten Form (2 x 90 s) plus Mails.
+const TOTAL_TIMEOUT_MS = 220000; // 10 seconds below the platform limit (vercel.json maxDuration 230)
 const DELIVERY_RESERVE_MS = 10000; // Lead- und Kundenmail brauchen zusammen 2 bis 5 s (Logs 19.09.)
 const PER_DEVICE_PER_DAY = 5;                 // Cookie nldbp
 const PER_IP_PER_DAY = 10;                    // In-Memory, muss über dem Gerätelimit liegen
@@ -536,7 +542,9 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   let checkAttempt = 1;
   if (check.status === 'rejected') logRejectedCheck(check, checkAttempt);
   // Ein zweiter Durchgang dauert ungefähr so lange wie der erste. Die alte Schranke
-  // rechnete mit den Höchstwerten (95 s) und liess den zweiten Versuch nie zu.
+  // rechnete mit den Höchstwerten (95 s) und liess den zweiten Versuch nie zu; mit
+  // 110 s Budget lief er nur nach einem schnellen ersten Durchgang. Mit 220 s passt er
+  // auch nach dem langsamsten ersten Durchgang; die Schranke bleibt als Sicherung.
   // Auch die Bildgenerierung des zweiten Versuchs rechnet mit der gemessenen
   // Pruefdauer statt mit dem Hoechstwert: am 19.09. bekam sie so nur 25 s und
   // brach ab, obwohl bis zur Schranke noch 65 s frei waren.
@@ -859,6 +867,9 @@ function buildPrompt(v: {
       : v.windows
         ? `Image 1 shows exactly ${v.windows === '3' ? 'three or more' : v.windows} window(s) including roof windows: the result must show exactly the same window(s) at the same place and size and no additional window, roof window, glass opening or door anywhere; walls that are solid in image 1 stay solid.`
         : 'The number of windows, roof windows and doors must be identical to image 1: never add an opening that is not visible in image 1; walls that are solid in image 1 stay solid.';
+  // Diegos Foto vom 19.09.: rechts steht die alte Duschkabine mit satiniertem Glas. In drei von
+  // vier Versuchen zeichnete das Modell dort ein Fenster in die rechte Wand.
+  const glassRule = ' The glass of an old shower enclosure, a shower door or any frosted or misted pane in image 1 is not a window: behind it stands a solid wall of the room, and the result shows tiled wall there, never a window, a sill or outside light.';
 
   // Wand- und Bodenmaterial. Bei abweichendem Boden muss klar sein, dass sich
   // "the same tiles" in der Wandhöhen-Regel auf die Wandplatte bezieht.
@@ -888,7 +899,7 @@ function buildPrompt(v: {
     intro,
     layoutLine,
     `This is an edit of image 1, not a new picture. Keep image 1 and change only what the CHANGE list names. Everything else stays exactly as it is: the camera position, angle, lens and framing, the same crop and the same aspect ratio, the walls and where they stand, the ceiling including any sloping ceiling, the room proportions, every window, roof window and door at its exact size and position, and the radiators. Never zoom out, never widen the view, never show floor, wall or ceiling beyond the edges of image 1, never create extra floor area. "
-    + "Whatever stands in the immediate foreground at the edge of image 1 belongs to the picture and stays: an open door leaf, a door frame, the edge of a wall, a piece of furniture cut off by the border. It keeps its place and takes up the same part of the picture as before, and is never removed to show more of the room. Every window keeps the same share of the picture it has in image 1; do not move closer to it and do not make it larger. ${windowRule}`,
+    + "Whatever stands in the immediate foreground at the edge of image 1 belongs to the picture and stays: an open door leaf, a door frame, the edge of a wall, a piece of furniture cut off by the border. It keeps its place and takes up the same part of the picture as before, and is never removed to show more of the room. Every window keeps the same share of the picture it has in image 1; do not move closer to it and do not make it larger. ${windowRule}${glassRule}`,
     `KEEP THE POSITIONS. A half-height wall, a low built wall or a boxed pre-wall that a fixture stands against is part of the room, not furniture: it keeps its place, its length, its height and its depth, and the fixture stays mounted on it. Every fixture keeps the wall or low wall it stands against in image 1 and its place along it, measured against the corners, the door and the window next to it. The toilet keeps its wall and its place because its drain cannot be moved: under a sloping ceiling it stays under that sloping ceiling and is never moved to a straight or rear wall to gain headroom. The washbasin keeps its wall and its place. A bathtub that becomes a shower uses only the bathtub's own footprint, on the same wall.`,
     `CHANGE this, and only this, in ${v.room === 'gaeste-wc' ? 'this guest WC' : 'this bathroom'} (style "${v.packageName}"):${look} ${surfaces}; ${fixtures}; if a toilet is visible in image 1, ${toilet}; ${vanity}; ${v.tapPrompt}.${accent}`,
     `TAKE AWAY. If image 1 shows a bidet, it is gone: this bathroom has none, and the wall and floor where it stood are finished like the rest, with nothing standing in its place. The old shower curtain and its rail are gone. Clutter, towels, bottles and rugs are gone, and so is loose furniture that just stands around; the washbasin's own vanity unit is not loose furniture and is always there, as described above. Every shower fitting — mixer, riser, shower head, hand shower — sits inside the shower area on the shower wall, never on a wall next to the toilet or the washbasin. Natural daylight, no people, no text.`,
@@ -1041,7 +1052,9 @@ async function checkOpenings(
     'Then list the fixtures of each image in the order you see them from left to right in the picture, using the same words, each fixture at most once and only the ones you can see. ' +
     'Then name, for each image, the one fixture that stands closest to the camera, or "none" when you cannot tell. ' +
     'Then say, for each image, whether the toilet hangs on or stands against a half-height wall, a low built wall or a boxed pre-wall in front of the room wall, rather than directly against a full-height wall. ' +
-    'Then say, for each image, whether something large stands in the immediate foreground at the edge of the picture and is cut off by the border — an open door leaf, a door frame, the near edge of a wall, a piece of furniture — taking up roughly a fifth of the picture or more. ' +
+    // Nur das Verschwinden zaehlt (Ardesia, 17.09.: Tuerfluegel ganz weg). Am 19.09. wurde ein
+    // sonst treues Bild verworfen, weil die Tuer links nur noch ein schmaler Streifen war.
+    'Then say whether something large stands in the immediate foreground of image 1 at the edge of the picture, cut off by the border — an open door leaf, a door frame, the near edge of a wall, a piece of furniture — taking up roughly a fifth of the picture or more; and whether that same object is still visible at the edge of image 2 at any size, even as a narrow strip (foreground_object_after is false only when it is gone completely). ' +
     'Set window_much_bigger true only if a window that is visible in both images takes up a clearly larger part of image 2 than of image 1, about half again as large or more. ' +
     'Set extra_openings true only if image 2 has a window, roof window, door or outside opening that image 1 does not have, or lost one that image 1 has. ' +
     'Set view_changed true if camera position, angle, lens or framing changed, or if image 2 shows floor, wall or ceiling area that lies outside image 1. ' +
