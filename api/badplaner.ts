@@ -53,7 +53,9 @@ import { SANITARY_MODULE_PHOTO } from '../server/badplaner/sanitaermodul.js';
 declare const process: any;
 declare const Buffer: any;
 
-export const config = { maxDuration: 120 };
+// 230 s: zwei volle Durchgaenge (Bild 65 s + Pruefung 25 s) plus Vorpruefung und Mails.
+// Vercel erlaubt bis 300 s; vercel.json nennt denselben Wert.
+export const config = { maxDuration: 230 };
 
 /* ---------- Grenzen ---------- */
 
@@ -65,7 +67,11 @@ const MAX_RESPONSE_BASE64 = 16 * 1024 * 1024;
 const MAX_MODEL_JSON_BYTES = 24 * 1024 * 1024;
 const GENERATED_IMAGE_LIMITS = { maxBytes: 12 * 1024 * 1024, maxPixels: 12_000_000, maxSide: 3000 };
 const MAX_SWATCH_BYTES = 5 * 1024 * 1024; // current catalog originals include files >4 MiB
-const TOTAL_TIMEOUT_MS = 110000; // 10 seconds below the platform limit (vercel.json maxDuration 120)
+// Am 19.09. um 12:11 blieb bei 110 s kein Platz fuer den zweiten Versuch: der erste
+// Durchgang (Bild + Pruefung) dauert mit gemini-3-pro-image 33 bis 90 s, und der zweite
+// lief nur, wenn der erste unter rund 43 s blieb. Um 12:25 lief er und das Bild kam durch.
+// 220 s reichen fuer zwei Durchgaenge in der langsamsten Form (2 x 90 s) plus Mails.
+const TOTAL_TIMEOUT_MS = 220000; // 10 seconds below the platform limit (vercel.json maxDuration 230)
 const DELIVERY_RESERVE_MS = 10000; // Lead- und Kundenmail brauchen zusammen 2 bis 5 s (Logs 19.09.)
 const PER_DEVICE_PER_DAY = 5;                 // Cookie nldbp
 const PER_IP_PER_DAY = 10;                    // In-Memory, muss über dem Gerätelimit liegen
@@ -536,7 +542,9 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   let checkAttempt = 1;
   if (check.status === 'rejected') logRejectedCheck(check, checkAttempt);
   // Ein zweiter Durchgang dauert ungefähr so lange wie der erste. Die alte Schranke
-  // rechnete mit den Höchstwerten (95 s) und liess den zweiten Versuch nie zu.
+  // rechnete mit den Höchstwerten (95 s) und liess den zweiten Versuch nie zu; mit
+  // 110 s Budget lief er nur nach einem schnellen ersten Durchgang. Mit 220 s passt er
+  // auch nach dem langsamsten ersten Durchgang; die Schranke bleibt als Sicherung.
   // Auch die Bildgenerierung des zweiten Versuchs rechnet mit der gemessenen
   // Pruefdauer statt mit dem Hoechstwert: am 19.09. bekam sie so nur 25 s und
   // brach ab, obwohl bis zur Schranke noch 65 s frei waren.
