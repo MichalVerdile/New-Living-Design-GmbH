@@ -378,16 +378,28 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   // 6. Swatch (Materialprobe der Wandplatte) laden: zuerst unsere Kopie, sonst Lieferant, sonst ohne.
   //    Gleichzeitig die Vorpruefung des Fotos (zeigt es ein Bad, und wo steht was):
   //    beides sind Wartezeiten auf fremde Server, nacheinander kosten sie doppelt.
-  const [swatch, photoCheck] = await Promise.all([
+  //    Dazu die Muster von Waschtischplatte und Unterbau: nur mit dem Namen ("Stone Color
+  //    Diamante") kennt das Modell die Farbe nicht und nahm am 19.09. fuer die Platte den
+  //    Marmor der Wand. Teilen sich beide dieselbe Datei, geht sie nur einmal mit.
+  const vanityImages = [...new Set([top.image, base.image])];
+  const [swatch, photoCheck, ...vanitySwatches] = await Promise.all([
     loadSwatch(tile.image, tile.src || '', ctx),
     checkPhoto(photo, room, ctx),
+    ...vanityImages.map((image) => loadSwatch(image, (image === top.image ? top.src : base.src) || '', ctx)),
   ]);
+  const topSwatch = vanitySwatches[vanityImages.indexOf(top.image)];
+  const baseSwatch = vanitySwatches[vanityImages.indexOf(base.image)];
   if (photoCheck.status === 'ok') console.info('[badplaner] Grundriss laut Foto', photoCheck.layout ? JSON.stringify(photoCheck.layout) : 'nicht lesbar');
 
   // 6b. Nur bei Aufputz: Produktfoto des Sanitärmoduls als weitere Vorlage.
   // Beschreiben allein genügt dem Modell nicht, es baut sonst eine verkleidete
   // Vorwand. Das Bild liegt im Code, darum kann es weder fehlen noch Zeit kosten.
   const moduleImage = cistern === 'aufputz' ? SANITARY_MODULE_PHOTO : null;
+
+  // Bilder an Gemini, in dieser Reihenfolge: 1 Foto, dann Platte, Waschtischplatte,
+  // Unterbau (dieselbe Datei nur einmal), Modul. Die Nummern stehen so im Prompt.
+  const references = [swatch, topSwatch, baseSwatch === topSwatch ? null : baseSwatch, moduleImage];
+  const imageNumber = (image: Photo | null) => (image ? 2 + references.filter(Boolean).indexOf(image) : 0);
 
   // 7. Armaturen: Essenza Aufputz verchromt, Colore in der gewählten Serie und Oberfläche,
   //    Atelier Unterputz in der gewählten Oberfläche.
@@ -419,7 +431,9 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
     mirrorPrompt: mirror.prompt,
     tapPrompt: isGuestWc ? `washbasin tap in ${finish.prompt}; no shower mixer, bath filler or shower controls` : taps.prompt,
     withSwatch: !!swatch,
-    moduleImageNumber: moduleImage ? (swatch ? 3 : 2) : 0,
+    topImageNumber: imageNumber(topSwatch),
+    baseImageNumber: imageNumber(baseSwatch),
+    moduleImageNumber: imageNumber(moduleImage),
     windows,
     cistern,
     layout: photoCheck.status === 'ok' ? photoCheck.layout : undefined,
@@ -469,7 +483,7 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
     ['WC / Spülkasten', cistern === 'aufputz'
       ? 'Aufputz, ersetzt durch Sanitärmodul (im Fixpreis enthalten)'
       : 'Unterputz'],
-    ['Muster', swatch ? 'geladen' : 'nicht geladen'],
+    ['Muster', `Platte ${swatch ? 'geladen' : 'nicht geladen'}, Waschtisch ${topSwatch && baseSwatch ? 'geladen' : 'nicht geladen'}`],
     ...(cistern === 'aufputz' ? [['Sanitärmodul', 'OLI QR INOX Sospeso, Vorlagebild mitgeschickt'] as [string, string]] : []),
     ['Fensterprüfung', checkStatus],
     ...(imageStatus ? [['Ideenbild', imageStatus] as [string, string]] : []),
@@ -524,7 +538,7 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   };
 
   const passStarted = dependencies.clock.now();
-  let gen = await generateImage(prompt, photo, swatch, moduleImage, ctx, photoRatio);
+  let gen = await generateImage(prompt, photo, references, ctx, photoRatio);
   if (gen.ok === false) return res.status(502).json(await leadWithoutImage(`Bilddienst: ${gen.detail}`));
   const firstGenerationMs = dependencies.clock.now() - passStarted;
   let checkNote = 'ok';
@@ -555,7 +569,7 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
     // The rejected image never becomes a fallback if the retry/check fails.
     const firstReason = check.reason;
     const retryPrompt = `${prompt}\nIMPORTANT: a previous attempt failed the structural and fixture check: ${check.reason}. Start again from image 1 and correct that exact issue. Everything else from the instructions above still applies without exception: the same camera and framing, everything in the foreground at the edge of the picture, every opening, the toilet on its wall and its place, the washbasin on its own vanity unit with the mirror above it, and exactly the requested shower and bathtub state.`;
-    const second = await generateImage(retryPrompt, photo, swatch, moduleImage, ctx, photoRatio, secondCheckReserveMs);
+    const second = await generateImage(retryPrompt, photo, references, ctx, photoRatio, secondCheckReserveMs);
     if (second.ok === false) return res.status(502).json(await leadWithoutImage(`1. Versuch verworfen (${check.reason}), 2. Versuch: ${second.detail}`, gen));
     check = await checkWithUnavailableRetry(second);
     gen = second;
@@ -844,11 +858,17 @@ function buildPrompt(v: {
   mirrorPrompt: string;
   tapPrompt: string;
   withSwatch: boolean;
+  topImageNumber: number;
+  baseImageNumber: number;
   moduleImageNumber: number;
   windows: string;
   cistern: 'aufputz' | 'unterputz';
   layout?: Layout;
 }): string {
+  const vanityIntro = v.topImageNumber && v.topImageNumber === v.baseImageNumber
+    ? ` Image ${v.topImageNumber} is ONLY a small colour sample for the vanity unit: its front, its body and its countertop all have exactly this colour and finish.`
+    : (v.topImageNumber ? ` Image ${v.topImageNumber} is ONLY a small sample of the countertop material, colour and finish.` : '')
+      + (v.baseImageNumber ? ` Image ${v.baseImageNumber} is ONLY a small colour sample for the front and body of the vanity unit.` : '');
   const moduleIntro = v.moduleImageNumber
     ? ` Image ${v.moduleImageNumber} is ONLY a product photo of one sanitary module on a plain white background: a slim flat upright panel with a white tempered glass front in two parts, a one-piece brushed stainless steel edge framing it, a small flush button near the top, and near the bottom the toilet outlet and the two threaded rods the toilet hangs on. It shows the part to build in and nothing else: no room, no wall, no layout, no colour scheme.`
     : '';
@@ -858,6 +878,7 @@ function buildPrompt(v: {
   // Ergebnis IST (dasselbe Foto), und der Grundriss des Fotos wird ausdruecklich genannt.
   const intro = `PHOTO EDITING TASK, not a design task. Image 1 is a photograph of the customer's existing bathroom. The result is that same photograph after the renovation: the same picture from the same spot, with the same lens, the same crop and the same edges, in which only the surfaces and products named under CHANGE have been replaced, each one in its own place. Someone who knows this bathroom must recognise it at first glance. Do not design a new bathroom and do not show a showroom.`
     + (v.withSwatch ? ` Image 2 is ONLY a close-up material sample (tile texture and colour); ignore everything else about image 2, it contains no layout information.` : '')
+    + vanityIntro
     + moduleIntro;
   const layoutLine = v.layout ? layoutPrompt(v.layout) : '';
   const asSample = v.withSwatch ? ' as in image 2' : '';
@@ -884,7 +905,9 @@ function buildPrompt(v: {
   // Die gewaehlte Sanitaerkeramik gilt fuer WC und Waschbecken. Ohne das hier
   // blieb das Becken weiss, waehrend das WC farbig war: zwei Farben in einem Bad.
   const basinColour = v.basinIsCeramic ? ` in the same ${v.sanitaryPrompt} as the toilet, exactly the same colour and finish,` : '';
-  const vanity = `if a washbasin is visible in image 1, ${v.basinPrompt} at its existing place on a wall-hung vanity: front and body in ${v.basePrompt}, countertop in ${v.topPrompt}${v.basinTypePrompt ? `, ${v.basinTypePrompt}${basinColour}` : basinColour}, with ${v.mirrorPrompt} above it`;
+  const asBase = v.baseImageNumber ? `, exactly the colour and finish of image ${v.baseImageNumber}` : '';
+  const asTop = v.topImageNumber ? `, exactly the colour and finish of image ${v.topImageNumber}` : '';
+  const vanity = `if a washbasin is visible in image 1, ${v.basinPrompt} at its existing place on a wall-hung vanity: front and body in ${v.basePrompt}${asBase}, countertop in ${v.topPrompt}${asTop}${v.basinTypePrompt ? `, ${v.basinTypePrompt}${basinColour}` : basinColour}, with ${v.mirrorPrompt} above it; the countertop is its own material, never cut from the wall or floor tiles and never copying their pattern or veining`;
   const fixtures = v.room === 'gaeste-wc'
     ? 'This is a guest WC: the result must contain NO shower, shower tray, shower enclosure, shower controls, bathtub or bath filler. Do not convert any visible area into a shower or bathtub.'
     : [
@@ -959,15 +982,14 @@ async function loadSwatch(image: string, src: string, ctx: RequestContext): Prom
 
 type GenResult = { ok: true; mime: string; data: string } | { ok: false; error: string; detail: string };
 
-async function generateImage(prompt: string, photo: Photo, swatch: Photo | null, extra: Photo | null, ctx: RequestContext, aspectRatio = '', reserveMs = CHECK_TIMEOUT_MS + DELIVERY_RESERVE_MS): Promise<GenResult> {
+async function generateImage(prompt: string, photo: Photo, references: (Photo | null)[], ctx: RequestContext, aspectRatio = '', reserveMs = CHECK_TIMEOUT_MS + DELIVERY_RESERVE_MS): Promise<GenResult> {
   // Das Ideenbild ist das Produkt: es soll das Bad des Kunden zeigen, nicht
   // irgendein schoenes Bad. Darum das genaueste Modell, nicht das billigste.
   // 2K kostet bei diesem Modell gleich viel wie 1K, also 2K.
   const model = env.BADPLANER_MODEL || 'gemini-3-pro-image';
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
   const parts: any[] = [{ text: prompt }, { inlineData: { mimeType: photo.mime, data: photo.data } }];
-  if (swatch) parts.push({ inlineData: { mimeType: swatch.mime, data: swatch.data } });
-  if (extra) parts.push({ inlineData: { mimeType: extra.mime, data: extra.data } });
+  for (const image of references) if (image) parts.push({ inlineData: { mimeType: image.mime, data: image.data } });
 
   try {
     const r = await request(ctx, url, {
