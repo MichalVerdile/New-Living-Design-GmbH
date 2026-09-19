@@ -269,10 +269,10 @@ test('das Bidet wird weggeraeumt, und ein stehengebliebenes Bidet wird verworfen
 });
 
 test('nach einem schnellen ersten Durchgang bleibt Zeit fuer den zweiten', async () => {
-  // Mit gemini-3-pro-image dauert ein Durchgang 33 bis 46 s und die Pruefung
-  // liest ein 2K-Bild. Zwei volle Durchgaenge passen nur, wenn der erste
-  // schnell war; sonst bekommt der Kunde die ehrliche Absage statt eines
-  // zweiten Versuchs, und der Lead ist trotzdem bei uns.
+  // Mit gemini-3-pro-image dauert ein Durchgang 33 bis 90 s und die Pruefung
+  // liest ein 2K-Bild. Seit dem 220-s-Budget passen zwei volle Durchgaenge auch
+  // nach einem langsamen ersten; nur wenn die Schranke doch nicht reicht, bekommt
+  // der Kunde die ehrliche Absage, und der Lead ist trotzdem bei uns.
   const h = harness({ generateDelays: [25000, 25000], checkDelays: [8000, 8000], checks: [() => checked(true), () => checked(false)] });
   const res = await h.invoke();
   assert.equal(h.counts().generation, 2, 'der zweite Versuch muss laufen');
@@ -917,8 +917,25 @@ test('failed render attempts do not consume the IP counter', async () => {
 });
 
 test('retry is skipped when a second pass of the measured length cannot fit', async () => {
-  const h = harness({ generateDelays: [50000], checks: [() => checked(true)] }); const res = await h.invoke();
-  assert.equal(res.body.code, 'RENDER_REJECTED'); assert.deepEqual(h.counts(), { generation: 1, checks: 1, mail: 1 });
+  // Nur noch im Ausnahmefall: langsamstes Bild, Pruefung erst nach einem 503 lesbar (60 + 24 + 24 s).
+  const h = harness({ generateDelays: [60000], checkDelays: [24000, 24000], checks: [() => response({}, 503), () => checked(true)] });
+  const res = await h.invoke();
+  assert.equal(res.body.code, 'RENDER_REJECTED'); assert.deepEqual(h.counts(), { generation: 1, checks: 2, mail: 1 });
+});
+
+test('der zweite Versuch laeuft auch nach dem langsamsten ersten Durchgang', async () => {
+  // Diegos Lead bp-mu8875ki-ofjd5s vom 19.09., 12:11: erster Versuch verworfen (Fenster dazu,
+  // Kamera zurueck), kein zweiter Versuch, weil bei 110 s Budget die Zeit fehlte. Um 12:25
+  // lief der zweite Versuch und kam durch. Jetzt passt er auch nach 60 s Bild + 24 s Pruefung.
+  const h = harness({ swatchDelay: 700, photoCheckDelays: [2400], generateDelays: [60000, 60000], checkDelays: [24000, 24000],
+    mailDelays: [3000, 2000], checks: [() => checked(true), () => checked(false)] });
+  const start = h.clock.now();
+  const res = await h.invoke();
+  assert.equal(res.statusCode, 200, JSON.stringify(res.body));
+  assert.deepEqual(h.counts(), { generation: 2, checks: 2, mail: 2 });
+  assert.ok(h.clock.now() - start < 220000);
+  const leadMail = h.calls.find((call) => call.url === 'https://api.resend.com/emails');
+  assert.match(JSON.stringify(leadMail.body), /1\. Versuch verworfen \(an opening was added or lost.*2\. Versuch ok/);
 });
 
 test('retry runs when the first pass was fast enough to repeat', async () => {
