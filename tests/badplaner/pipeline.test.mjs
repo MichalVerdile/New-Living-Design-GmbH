@@ -285,6 +285,11 @@ test('der Prompt ist eine Bearbeitung, keine Neuzeichnung', async () => {
   const h = harness();
   await h.invoke();
   const prompt = h.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
+  // 19.09.: aus Diegos engem Bad wurde ein Ausstellungsbad mit anderer Kamera und
+  // einem Fenster. Zuerst steht, was das Ergebnis ist, zuletzt der Abgleich.
+  assert.match(prompt, /^PHOTO EDITING TASK, not a design task\. Image 1 is a photograph of the customer's existing bathroom\. The result is that same photograph after the renovation/);
+  assert.match(prompt, /BEFORE YOU DRAW, compare with image 1: the same viewpoint and framing, the same walls and ceiling, no window at all, the same door, every fixture where image 1 has it/);
+  assert.match(prompt, /never show more of the room than image 1 shows\.$/);
   assert.match(prompt, /This is an edit of image 1, not a new picture/);
   assert.match(prompt, /KEEP THE POSITIONS/);
   assert.match(prompt, /its place along it, measured against the corners, the door and the window/);
@@ -292,6 +297,59 @@ test('der Prompt ist eine Bearbeitung, keine Neuzeichnung', async () => {
   assert.match(prompt, /A half-height wall, a low built wall or a boxed pre-wall that a fixture stands against is part of the room, not furniture/);
   // Die Duscharmatur stand ueber dem WC statt in der Dusche.
   assert.match(prompt, /Every shower fitting[^.]*sits inside the shower area on the shower wall, never on a wall next to the toilet or the washbasin/);
+});
+
+test('der Grundriss aus der Vorpruefung steht im Prompt, was wo steht', async () => {
+  // Diegos Foto vom 19.09.: WC und Waschbecken an der Rueckwand, Dusche rechts.
+  // Allgemeine Regeln reichten nicht; das Bildmodell bekommt jetzt seinen Grundriss genannt.
+  const seen = { is_bathroom: true, reason: 'toilet, washbasin and shower cabin', walls: { toilet: 'back', washbasin: 'back', shower: 'right', bathtub: 'none', bidet: 'none' }, order: ['washbasin', 'toilet', 'shower'], nearest: 'washbasin' };
+  const h = harness({ photoChecks: [() => photoChecked(true, JSON.stringify(seen))] });
+  const res = await h.invoke();
+  assert.equal(res.statusCode, 200);
+  const photoCheck = h.calls.find((call) => call.url.includes('generativelanguage.googleapis.com')).body.contents[0].parts[0].text;
+  assert.match(photoCheck, /name the wall each sanitary fixture stands against/);
+  const prompt = h.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
+  assert.match(prompt, /WHAT IMAGE 1 SHOWS, seen from the camera: the toilet on the back wall facing the camera, the washbasin on the back wall facing the camera, the shower on the right wall; from left to right: washbasin, toilet, shower; closest to the camera: the washbasin\./);
+  assert.match(prompt, /nothing else moves\.\nThis is an edit of image 1/);
+});
+
+test('ohne lesbaren Grundriss wird ohne ihn gerendert, nicht abgewiesen', async () => {
+  const h = harness({ photoChecks: [() => photoChecked(true, JSON.stringify({ is_bathroom: true, reason: 'bathroom', walls: { toilet: 'somewhere' }, order: 'toilet', nearest: 'toilet' }))] });
+  const res = await h.invoke();
+  assert.equal(res.statusCode, 200);
+  const prompt = h.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
+  assert.doesNotMatch(prompt, /WHAT IMAGE 1 SHOWS/);
+  assert.equal(h.counts().generation, 1);
+});
+
+test('der zweite Versuch bekommt die Zeit, die der erste wirklich brauchte', async () => {
+  // Logs vom 19.09., 10:39: Muster 0.7 s, Fotopruefung 2.4 s, Bild rund 27 s,
+  // Pruefung rund 10 s. Der zweite Versuch startete mit 65 s Rest, bekam fuer das
+  // Bild aber nur 25 s (Rest minus Hoechstwerte) und brach ab: Bild bezahlt, nichts geliefert.
+  const h = harness({ swatchDelay: 700, photoCheckDelays: [2400], generateDelays: [27000, 27000], checkDelays: [10000, 10000],
+    checks: [() => checked(true), () => checked(false)] });
+  const start = h.clock.now();
+  const res = await h.invoke();
+  assert.equal(res.statusCode, 200, JSON.stringify(res.body));
+  assert.deepEqual(h.counts(), { generation: 2, checks: 2, mail: 2 });
+  assert.ok(h.clock.now() - start < 110000);
+});
+
+test('Muster und Fotopruefung warten nebeneinander, nicht nacheinander', async () => {
+  // Beide sind Wartezeiten auf fremde Server: das Muster darf die Fotopruefung nicht aufhalten.
+  let photoCheckStarted;
+  const started = new Promise((resolve) => { photoCheckStarted = resolve; });
+  let overlapped = false;
+  const h = harness({
+    swatch: async () => {
+      overlapped = await Promise.race([started.then(() => true), new Promise((resolve) => setTimeout(() => resolve(false), 300))]);
+      return response({}, 404);
+    },
+    photoChecks: [() => { photoCheckStarted(); return photoChecked(); }],
+  });
+  const res = await h.invoke();
+  assert.equal(res.statusCode, 200);
+  assert.equal(overlapped, true, 'die Fotopruefung muss starten, waehrend das Muster noch laedt');
 });
 
 test('die Dusche muss an die Wand, an der die Wanne stand', async () => {
@@ -859,7 +917,7 @@ test('failed render attempts do not consume the IP counter', async () => {
 });
 
 test('retry is skipped when a second pass of the measured length cannot fit', async () => {
-  const h = harness({ generateDelays: [45000], checks: [() => checked(true)] }); const res = await h.invoke();
+  const h = harness({ generateDelays: [50000], checks: [() => checked(true)] }); const res = await h.invoke();
   assert.equal(res.body.code, 'RENDER_REJECTED'); assert.deepEqual(h.counts(), { generation: 1, checks: 1, mail: 1 });
 });
 

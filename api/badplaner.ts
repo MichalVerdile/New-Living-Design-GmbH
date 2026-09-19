@@ -16,7 +16,7 @@
  *   5. Lead-Mail an NLD; bei eindeutigem HTTP-Fehler Formspree ohne Bilder.
  *      Ohne bestätigte Provider-Annahme kein Erfolg. Unklare Zustellung nicht blind wiederholen.
  *   6. Kundenmail/Newsletter mit separatem Zustellstatus, kein falsches Versandversprechen.
- *   Alle Netzwerkaufrufe einschliesslich Body-Lesen unter einer 105-Sekunden-Deadline.
+ *   Alle Netzwerkaufrufe einschliesslich Body-Lesen unter einer 110-Sekunden-Deadline.
  *
  * Umgebungsvariablen (Vercel > Settings > Environment Variables):
  *   GEMINI_API_KEY       Pflicht. API-Schlüssel von Google AI Studio (Bildmodell).
@@ -65,8 +65,8 @@ const MAX_RESPONSE_BASE64 = 16 * 1024 * 1024;
 const MAX_MODEL_JSON_BYTES = 24 * 1024 * 1024;
 const GENERATED_IMAGE_LIMITS = { maxBytes: 12 * 1024 * 1024, maxPixels: 12_000_000, maxSide: 3000 };
 const MAX_SWATCH_BYTES = 5 * 1024 * 1024; // current catalog originals include files >4 MiB
-const TOTAL_TIMEOUT_MS = 105000; // 15 seconds below the platform limit
-const DELIVERY_RESERVE_MS = 15000;
+const TOTAL_TIMEOUT_MS = 110000; // 10 seconds below the platform limit (vercel.json maxDuration 120)
+const DELIVERY_RESERVE_MS = 10000; // Lead- und Kundenmail brauchen zusammen 2 bis 5 s (Logs 19.09.)
 const PER_DEVICE_PER_DAY = 5;                 // Cookie nldbp
 const PER_IP_PER_DAY = 10;                    // In-Memory, muss über dem Gerätelimit liegen
 const GEMINI_TIMEOUT_MS = 65000;  // gemini-3-pro-image denkt mit und braucht laenger als Flash
@@ -369,8 +369,14 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   let delivered = false;
   try {
 
-  // 6. Swatch (Materialprobe der Wandplatte) laden: zuerst unsere Kopie, sonst Lieferant, sonst ohne
-  const swatch = await loadSwatch(tile.image, tile.src || '', ctx);
+  // 6. Swatch (Materialprobe der Wandplatte) laden: zuerst unsere Kopie, sonst Lieferant, sonst ohne.
+  //    Gleichzeitig die Vorpruefung des Fotos (zeigt es ein Bad, und wo steht was):
+  //    beides sind Wartezeiten auf fremde Server, nacheinander kosten sie doppelt.
+  const [swatch, photoCheck] = await Promise.all([
+    loadSwatch(tile.image, tile.src || '', ctx),
+    checkPhoto(photo, room, ctx),
+  ]);
+  if (photoCheck.status === 'ok') console.info('[badplaner] Grundriss laut Foto', photoCheck.layout ? JSON.stringify(photoCheck.layout) : 'nicht lesbar');
 
   // 6b. Nur bei Aufputz: Produktfoto des Sanitärmoduls als weitere Vorlage.
   // Beschreiben allein genügt dem Modell nicht, es baut sonst eine verkleidete
@@ -410,6 +416,7 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
     moduleImageNumber: moduleImage ? (swatch ? 3 : 2) : 0,
     windows,
     cistern,
+    layout: photoCheck.status === 'ok' ? photoCheck.layout : undefined,
   });
 
   // 9. Auswahl in Klartext: dieselben Zeilen für Lead- und Kundenmail. Sie
@@ -470,9 +477,6 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   // Durchgangs entschieden, nicht an den Höchstwerten.
   // 9b. Zeigt das Foto ueberhaupt ein Bad? Spart bei einem falschen Foto zwei
   // Generierungen und sagt dem Kunden, was wirklich fehlt.
-  const photoCheck: PhotoCheck = ctx.budget.remaining() >= CHECK_TIMEOUT_MS + DELIVERY_RESERVE_MS
-    ? await checkPhoto(photo, room, ctx)
-    : { status: 'unavailable' };
   if (photoCheck.status === 'wrong_room') {
     console.warn('[badplaner] Foto zeigt kein Bad', photoCheck.reason);
     const wrongRoomDelivery = await sendLeadMail({
@@ -516,6 +520,7 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   const passStarted = dependencies.clock.now();
   let gen = await generateImage(prompt, photo, swatch, moduleImage, ctx, photoRatio);
   if (gen.ok === false) return res.status(502).json(await leadWithoutImage(`Bilddienst: ${gen.detail}`));
+  const firstGenerationMs = dependencies.clock.now() - passStarted;
   let checkNote = 'ok';
   const wantedFixtures = { room, shower: shower ? shower.id !== 'keine' : false, bathtub: bathtub ? bathtub.id !== 'keine' : false, cistern };
   const checkWithUnavailableRetry = async (image: { mime: string; data: string }): Promise<CheckResult> => {
@@ -532,12 +537,17 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   if (check.status === 'rejected') logRejectedCheck(check, checkAttempt);
   // Ein zweiter Durchgang dauert ungefähr so lange wie der erste. Die alte Schranke
   // rechnete mit den Höchstwerten (95 s) und liess den zweiten Versuch nie zu.
-  const secondPassMs = Math.round((dependencies.clock.now() - passStarted) * 1.15) + DELIVERY_RESERVE_MS;
+  // Auch die Bildgenerierung des zweiten Versuchs rechnet mit der gemessenen
+  // Pruefdauer statt mit dem Hoechstwert: am 19.09. bekam sie so nur 25 s und
+  // brach ab, obwohl bis zur Schranke noch 65 s frei waren.
+  const firstPassMs = dependencies.clock.now() - passStarted;
+  const secondPassMs = Math.round(firstPassMs * 1.15) + DELIVERY_RESERVE_MS;
+  const secondCheckReserveMs = Math.round((firstPassMs - firstGenerationMs) * 1.15) + DELIVERY_RESERVE_MS;
   if (check.status === 'rejected' && ctx.budget.remaining() >= secondPassMs) {
     // The rejected image never becomes a fallback if the retry/check fails.
     const firstReason = check.reason;
-    const retryPrompt = `${prompt}\nIMPORTANT: a previous attempt failed the structural and fixture check: ${check.reason}. Correct that exact issue. Everything else from the instructions above still applies without exception: the same camera and framing, everything in the foreground at the edge of the picture, every opening, the toilet on its wall and its place, the washbasin on its own vanity unit with the mirror above it, and exactly the requested shower and bathtub state.`;
-    const second = await generateImage(retryPrompt, photo, swatch, moduleImage, ctx, photoRatio);
+    const retryPrompt = `${prompt}\nIMPORTANT: a previous attempt failed the structural and fixture check: ${check.reason}. Start again from image 1 and correct that exact issue. Everything else from the instructions above still applies without exception: the same camera and framing, everything in the foreground at the edge of the picture, every opening, the toilet on its wall and its place, the washbasin on its own vanity unit with the mirror above it, and exactly the requested shower and bathtub state.`;
+    const second = await generateImage(retryPrompt, photo, swatch, moduleImage, ctx, photoRatio, secondCheckReserveMs);
     if (second.ok === false) return res.status(502).json(await leadWithoutImage(`1. Versuch verworfen (${check.reason}), 2. Versuch: ${second.detail}`, gen));
     check = await checkWithUnavailableRetry(second);
     gen = second;
@@ -829,13 +839,19 @@ function buildPrompt(v: {
   moduleImageNumber: number;
   windows: string;
   cistern: 'aufputz' | 'unterputz';
+  layout?: Layout;
 }): string {
   const moduleIntro = v.moduleImageNumber
     ? ` Image ${v.moduleImageNumber} is ONLY a product photo of one sanitary module on a plain white background: a slim flat upright panel with a white tempered glass front in two parts, a one-piece brushed stainless steel edge framing it, a small flush button near the top, and near the bottom the toilet outlet and the two threaded rods the toilet hangs on. It shows the part to build in and nothing else: no room, no wall, no layout, no colour scheme.`
     : '';
-  const intro = (v.withSwatch
-    ? `Photo editing task. Image 1 is the customer's existing bathroom. Image 2 is ONLY a close-up material sample (tile texture and colour); ignore everything else about image 2, it contains no layout information.`
-    : `Photo editing task. Image 1 is the customer's existing bathroom.`) + moduleIntro;
+  // Am 19.09. zeichnete gemini-3-pro-image aus Diegos engem Bad ein Ausstellungsbad:
+  // andere Kamera, ein Fenster dazu, Dusche und WC vertauscht. Ein langer Katalog
+  // von Regeln liest sich wie eine Raumbeschreibung; darum steht zuerst, was das
+  // Ergebnis IST (dasselbe Foto), und der Grundriss des Fotos wird ausdruecklich genannt.
+  const intro = `PHOTO EDITING TASK, not a design task. Image 1 is a photograph of the customer's existing bathroom. The result is that same photograph after the renovation: the same picture from the same spot, with the same lens, the same crop and the same edges, in which only the surfaces and products named under CHANGE have been replaced, each one in its own place. Someone who knows this bathroom must recognise it at first glance. Do not design a new bathroom and do not show a showroom.`
+    + (v.withSwatch ? ` Image 2 is ONLY a close-up material sample (tile texture and colour); ignore everything else about image 2, it contains no layout information.` : '')
+    + moduleIntro;
+  const layoutLine = v.layout ? layoutPrompt(v.layout) : '';
   const asSample = v.withSwatch ? ' as in image 2' : '';
   const windowRule =
     v.windows === '0'
@@ -870,12 +886,26 @@ function buildPrompt(v: {
 
   return [
     intro,
+    layoutLine,
     `This is an edit of image 1, not a new picture. Keep image 1 and change only what the CHANGE list names. Everything else stays exactly as it is: the camera position, angle, lens and framing, the same crop and the same aspect ratio, the walls and where they stand, the ceiling including any sloping ceiling, the room proportions, every window, roof window and door at its exact size and position, and the radiators. Never zoom out, never widen the view, never show floor, wall or ceiling beyond the edges of image 1, never create extra floor area. "
     + "Whatever stands in the immediate foreground at the edge of image 1 belongs to the picture and stays: an open door leaf, a door frame, the edge of a wall, a piece of furniture cut off by the border. It keeps its place and takes up the same part of the picture as before, and is never removed to show more of the room. Every window keeps the same share of the picture it has in image 1; do not move closer to it and do not make it larger. ${windowRule}`,
     `KEEP THE POSITIONS. A half-height wall, a low built wall or a boxed pre-wall that a fixture stands against is part of the room, not furniture: it keeps its place, its length, its height and its depth, and the fixture stays mounted on it. Every fixture keeps the wall or low wall it stands against in image 1 and its place along it, measured against the corners, the door and the window next to it. The toilet keeps its wall and its place because its drain cannot be moved: under a sloping ceiling it stays under that sloping ceiling and is never moved to a straight or rear wall to gain headroom. The washbasin keeps its wall and its place. A bathtub that becomes a shower uses only the bathtub's own footprint, on the same wall.`,
     `CHANGE this, and only this, in ${v.room === 'gaeste-wc' ? 'this guest WC' : 'this bathroom'} (style "${v.packageName}"):${look} ${surfaces}; ${fixtures}; if a toilet is visible in image 1, ${toilet}; ${vanity}; ${v.tapPrompt}.${accent}`,
     `TAKE AWAY. If image 1 shows a bidet, it is gone: this bathroom has none, and the wall and floor where it stood are finished like the rest, with nothing standing in its place. The old shower curtain and its rail are gone. Clutter, towels, bottles and rugs are gone, and so is loose furniture that just stands around; the washbasin's own vanity unit is not loose furniture and is always there, as described above. Every shower fitting — mixer, riser, shower head, hand shower — sits inside the shower area on the shower wall, never on a wall next to the toilet or the washbasin. Natural daylight, no people, no text.`,
-  ].join('\n');
+    `BEFORE YOU DRAW, compare with image 1: the same viewpoint and framing, the same walls and ceiling, ${v.windows === '0' ? 'no window at all' : 'the same windows'}, the same door, every fixture where image 1 has it. A small, tight room stays small and tight: never show more of the room than image 1 shows.`,
+  ].filter(Boolean).join('\n');
+}
+
+/** Der Grundriss aus der Vorpruefung, als Satz fuer das Bildmodell: was wo steht, von der Kamera aus. */
+function layoutPrompt(l: Layout): string {
+  const wallName: Record<Wall, string> = {
+    left: 'on the left wall', right: 'on the right wall', back: 'on the back wall facing the camera', front: 'on the wall nearest the camera', none: '',
+  };
+  const places = FIXTURES.filter((f) => l.walls[f] !== 'none').map((f) => `the ${f} ${wallName[l.walls[f]]}`);
+  if (!places.length) return '';
+  const seen = l.order.length > 1 ? `; from left to right: ${l.order.join(', ')}` : '';
+  const near = l.nearest !== 'none' ? `; closest to the camera: the ${l.nearest}` : '';
+  return `WHAT IMAGE 1 SHOWS, seen from the camera: ${places.join(', ')}${seen}${near}. Whatever stays keeps exactly that wall, that order and that distance; what the CHANGE list removes or replaces leaves its place to its replacement, and nothing else moves.`;
 }
 
 /* ---------- Swatch laden ---------- */
@@ -918,7 +948,7 @@ async function loadSwatch(image: string, src: string, ctx: RequestContext): Prom
 
 type GenResult = { ok: true; mime: string; data: string } | { ok: false; error: string; detail: string };
 
-async function generateImage(prompt: string, photo: Photo, swatch: Photo | null, extra: Photo | null, ctx: RequestContext, aspectRatio = ''): Promise<GenResult> {
+async function generateImage(prompt: string, photo: Photo, swatch: Photo | null, extra: Photo | null, ctx: RequestContext, aspectRatio = '', reserveMs = CHECK_TIMEOUT_MS + DELIVERY_RESERVE_MS): Promise<GenResult> {
   // Das Ideenbild ist das Produkt: es soll das Bad des Kunden zeigen, nicht
   // irgendein schoenes Bad. Darum das genaueste Modell, nicht das billigste.
   // 2K kostet bei diesem Modell gleich viel wie 1K, also 2K.
@@ -936,7 +966,7 @@ async function generateImage(prompt: string, photo: Photo, swatch: Photo | null,
         contents: [{ role: 'user', parts }],
         generationConfig: { responseModalities: ['IMAGE'], imageConfig: aspectRatio ? { imageSize: '2K', aspectRatio } : { imageSize: '2K' } },
       }),
-    }, Math.min(GEMINI_TIMEOUT_MS, Math.max(0, ctx.budget.remaining() - CHECK_TIMEOUT_MS - DELIVERY_RESERVE_MS)));
+    }, Math.min(GEMINI_TIMEOUT_MS, Math.max(0, ctx.budget.remaining() - reserveMs)));
     const json = r.json;
     if (!r.ok) {
       const apiMessage = typeof json?.error?.message === 'string' ? json.error.message.slice(0, 160) : '';
@@ -972,6 +1002,22 @@ async function generateImage(prompt: string, photo: Photo, swatch: Photo | null,
 }
 
 /* ---------- Prüfung: dazuerfundene Fenster/Türen ---------- */
+
+// Inventar-Antworten der Modelle lesen; alles andere als die erwarteten Woerter ist unlesbar.
+const inventory = (value: any): Inventory | null => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  if (Object.keys(value).some((key) => !FIXTURES.includes(key as any))) return null;
+  if (FIXTURES.some((key) => !WALLS.includes(value[key]))) return null;
+  return value as Inventory;
+};
+const order = (value: any): Fixture[] | null => {
+  if (!Array.isArray(value) || value.length > FIXTURES.length) return null;
+  if (value.some((item) => !FIXTURES.includes(item))) return null;
+  if (new Set(value).size !== value.length) return null;
+  return value as Fixture[];
+};
+const nearest = (value: any): Fixture | 'none' | null =>
+  value === 'none' || FIXTURES.includes(value) ? value : null;
 
 /**
  * Fragt ein Gemini-Textmodell, ob das Ideenbild eine Öffnung (Fenster, Dachfenster,
@@ -1033,20 +1079,6 @@ async function checkOpenings(
     const textOut: string = json?.candidates?.[0]?.content?.parts?.map((p: any) => p.text || '').join('') || '';
     if (json?.candidates?.[0]?.finishReason !== 'STOP') return { status: 'unavailable', detail: `Abbruch: ${json?.candidates?.[0]?.finishReason || 'unbekannt'}` };
     const parsed = JSON.parse(textOut);
-    const inventory = (value: any): Inventory | null => {
-      if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
-      if (Object.keys(value).some((key) => !FIXTURES.includes(key as any))) return null;
-      if (FIXTURES.some((key) => !WALLS.includes(value[key]))) return null;
-      return value as Inventory;
-    };
-    const order = (value: any): Fixture[] | null => {
-      if (!Array.isArray(value) || value.length > FIXTURES.length) return null;
-      if (value.some((item) => !FIXTURES.includes(item))) return null;
-      if (new Set(value).size !== value.length) return null;
-      return value as Fixture[];
-    };
-    const nearest = (value: any): Fixture | 'none' | null =>
-      value === 'none' || FIXTURES.includes(value) ? value : null;
     const keys = ['before', 'after', 'order_before', 'order_after', 'nearest_before', 'nearest_after',
       'toilet_on_low_wall_before', 'toilet_on_low_wall_after', 'foreground_object_before', 'foreground_object_after',
       'window_much_bigger', 'extra_openings', 'view_changed', 'reason'];
@@ -1102,7 +1134,9 @@ async function checkOpenings(
  * Im Zweifel laesst diese Pruefung durch: ein ausgeraeumtes Bad soll nicht
  * abgewiesen werden.
  */
-type PhotoCheck = { status: 'ok' } | { status: 'wrong_room'; reason: string } | { status: 'unavailable' };
+/** Was die Vorpruefung im Kundenfoto sieht: dieselben Woerter wie die Pruefung nachher. */
+interface Layout { walls: Inventory; order: Fixture[]; nearest: Fixture | 'none' }
+type PhotoCheck = { status: 'ok'; layout?: Layout } | { status: 'wrong_room'; reason: string } | { status: 'unavailable' };
 
 async function checkPhoto(photo: Photo, room: 'badezimmer' | 'gaeste-wc', ctx: RequestContext): Promise<PhotoCheck> {
   const model = env.BADPLANER_CHECK_MODEL === undefined ? 'gemini-3.6-flash' : env.BADPLANER_CHECK_MODEL;
@@ -1113,7 +1147,10 @@ async function checkPhoto(photo: Photo, room: 'badezimmer' | 'gaeste-wc', ctx: R
     'Set is_bathroom true if it shows the inside of a bathroom or a WC, or a room being stripped or built as one: a toilet, a washbasin, a shower, a bathtub, a bidet, a tiled wet area or exposed sanitary pipes is enough. ' +
     'Set is_bathroom true as well whenever you are not sure. ' +
     'Set is_bathroom false only when the photo clearly shows something else, for example a living room, a bedroom, a kitchen, a balcony, a garden, an office, a car, a person, a document, a screenshot or a photo of a screen. ' +
-    'Answer with JSON only, no markdown and exactly these keys: {"is_bathroom":true,"reason":"short English reason, max 25 words"}';
+    'Then, if it is a bathroom, name the wall each sanitary fixture stands against, seen from the camera: "left", "right", "back", "front", or "none" when it is not visible; a fixture that is only partly in frame still counts. ' +
+    'List the visible fixtures in the order you see them from left to right, each at most once, and name the one closest to the camera, or "none" when you cannot tell. ' +
+    'Answer with JSON only, no markdown and exactly these keys: {"is_bathroom":true,"reason":"short English reason, max 25 words",' +
+    '"walls":{"toilet":"left","washbasin":"left","shower":"none","bathtub":"none","bidet":"none"},"order":["washbasin","toilet"],"nearest":"toilet"}';
   try {
     const r = await request(ctx, url, {
       method: 'POST',
@@ -1133,8 +1170,13 @@ async function checkPhoto(photo: Photo, room: 'badezimmer' | 'gaeste-wc', ctx: R
     const parsed = JSON.parse(textOut);
     if (!parsed || Array.isArray(parsed) || typeof parsed.is_bathroom !== 'boolean' || typeof parsed.reason !== 'string'
       || !parsed.reason.trim() || parsed.reason.length > 200
-      || Object.keys(parsed).some((key) => !['is_bathroom', 'reason'].includes(key))) return { status: 'unavailable' };
-    return parsed.is_bathroom ? { status: 'ok' } : { status: 'wrong_room', reason: parsed.reason.slice(0, 200) };
+      || Object.keys(parsed).some((key) => !['is_bathroom', 'reason', 'walls', 'order', 'nearest'].includes(key))) return { status: 'unavailable' };
+    if (!parsed.is_bathroom) return { status: 'wrong_room', reason: parsed.reason.slice(0, 200) };
+    // Der Grundriss ist eine Zugabe: fehlt er oder ist er unlesbar, wird ohne ihn gerendert.
+    const walls = inventory(parsed.walls);
+    const seen = order(parsed.order);
+    const near = nearest(parsed.nearest);
+    return walls && seen && near ? { status: 'ok', layout: { walls, order: seen, nearest: near } } : { status: 'ok' };
   } catch {
     console.error('[badplaner] Fotopruefung nicht moeglich');
     return { status: 'unavailable' };
