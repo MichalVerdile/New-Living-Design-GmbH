@@ -76,9 +76,8 @@ const CookieBanner: React.FC = () => {
             <div className="cookie-banner-content">
                 <div className="cookie-banner-text">
                     <p>
-                        Statistik (Google Analytics) und Marketing (Meta Pixel) laden wir nur mit Ihrer
-                        Zustimmung. Mehr dazu in der{' '}
-                        <a href="/datenschutz#cookie-settings" style={{ color: "#ffffff", textDecoration: "underline" }}>Datenschutzerklärung</a>.
+                        Statistik (Google Analytics) und Marketing (Meta Pixel) nur mit Ihrer Zustimmung.{' '}
+                        <a href="/datenschutz#cookie-settings" style={{ color: "#ffffff", textDecoration: "underline" }}>Datenschutz</a>
                     </p>
                 </div>
             </div>
