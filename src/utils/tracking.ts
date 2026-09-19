@@ -103,10 +103,14 @@ function ensureGtagStub(): void {
 }
 
 /**
- * Consent Mode v2. Muss laufen, BEVOR gtag.js geladen wird: alles auf "denied",
- * also keine Cookies und keine Kennung. GA4 zaehlt dann nur anonyme Aufrufe,
- * und wir sehen wenigstens, wie viele Leute die Seite ueberhaupt erreichen.
- * Mit der Einwilligung wird auf "granted" umgestellt.
+ * Consent Mode v2: Standard "denied" beim Laden, "granted" mit der Einwilligung.
+ * gtag.js und das config (= page_view mit session_start) kommen erst NACH der
+ * Einwilligung. Vorher lief config schon beim Laden: page_view und
+ * session_start gingen als anonymer Ping ohne Kennung raus, danach kam nur noch
+ * user_engagement, und GA4 fuehrte die Sitzung als "(not set)" / Unassigned
+ * statt utm_campaign=badplaner (19.09.2026: 32 Besucher aus Meta laut Vercel
+ * Analytics, 0 Sitzungen "badplaner" in GA4). Besucher ohne Einwilligung zaehlt
+ * Vercel Web Analytics ohne Cookies; GA4 zeigt anonyme Pings ohnehin nicht an.
  */
 export function initConsentMode(): void {
   if (typeof window === 'undefined' || consentModeReady) return;
@@ -119,17 +123,17 @@ export function initConsentMode(): void {
     analytics_storage: 'denied',
     wait_for_update: 500,
   });
-  loadGtagScript();
+}
+
+/** Einmal pro Seitenaufruf, nach der Einwilligung: laedt gtag.js und sendet den page_view mit der aktuellen URL (auf der Landingpage samt UTM). */
+function loadGtagScript(): void {
+  if (gtagScriptLoaded) return;
+  gtagScriptLoaded = true;
   window.gtag!('js', new Date());
   window.gtag!('config', GA_ID, {
     anonymize_ip: true,
     cookie_flags: 'SameSite=None;Secure',
   });
-}
-
-function loadGtagScript(): void {
-  if (gtagScriptLoaded) return;
-  gtagScriptLoaded = true;
   const script = document.createElement('script');
   script.async = true;
   script.src = `https://www.googletagmanager.com/gtag/js?id=${GA_ID}`;
@@ -145,6 +149,7 @@ function enableGoogleAnalytics(): void {
     ad_personalization: 'granted',
     analytics_storage: 'granted',
   });
+  loadGtagScript();
   gaLoaded = true;
 }
 
