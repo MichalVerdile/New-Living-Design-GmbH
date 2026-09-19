@@ -299,6 +299,15 @@ test('der Prompt ist eine Bearbeitung, keine Neuzeichnung', async () => {
   assert.match(prompt, /Every shower fitting[^.]*sits inside the shower area on the shower wall, never on a wall next to the toilet or the washbasin/);
 });
 
+test('das Glas der alten Duschkabine ist im Prompt kein Fenster', async () => {
+  // Diegos Foto vom 19.09.: rechts die alte Kabine mit satiniertem Glas, kein Fenster im Bad.
+  // Produktion 12:09 (beide Versuche) und 12:24 (erster Versuch): "a window on the right wall".
+  const h = harness();
+  await h.invoke();
+  const prompt = h.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
+  assert.match(prompt, /every wall stays a solid wall\. The glass of an old shower enclosure, a shower door or any frosted or misted pane in image 1 is not a window: behind it stands a solid wall of the room/);
+});
+
 test('der Grundriss aus der Vorpruefung steht im Prompt, was wo steht', async () => {
   // Diegos Foto vom 19.09.: WC und Waschbecken an der Rueckwand, Dusche rechts.
   // Allgemeine Regeln reichten nicht; das Bildmodell bekommt jetzt seinen Grundriss genannt.
