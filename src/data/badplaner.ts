@@ -410,7 +410,7 @@ export const accentModes: ChoiceOption[] = [
 
 export const accentPlacements: ChoiceOption[] = [
   { id: 'waschtischwand', label: 'Wand hinter dem Waschtisch', prompt: 'only the wall behind the washbasin is covered with the accent material', packages: ['atelier'] },
-  { id: 'duschnische', label: 'Duschnische', prompt: 'only the niche in the shower is covered with the accent material', packages: ['atelier'] },
+  { id: 'duschnische', label: 'Duschnische', prompt: 'only the niche in the shower is covered with the accent material if image 1 already has a niche there; if it has none, only the back wall of the shower is covered with it and no niche is built', packages: ['atelier'] },
 ];
 
 /* ---------- Akzentmaterialien ---------- */
@@ -775,7 +775,7 @@ export const wallOptions: ChoiceOption[] = [
     id: 'halbhoch',
     label: 'Im ganzen Dusch- und Wannenbereich raumhoch, übrige Wände bis ca. 120 cm',
     prompt:
-      'the walls tiled with the same tiles only up to about 120 cm height with a clean straight top edge, the wall above painted plain matte white; inside the shower, every wall surface around the entire perimeter of the shower tray or sloped tiled shower floor is continuously tiled with the same wall tiles all the way up to the ceiling, including every side wall and return; every wall surface in the bathtub wet area is also tiled all the way up to the ceiling',
+      'the walls tiled with the same tiles only up to about 120 cm height, the wall above painted plain matte white; the tiles simply end there in a straight line in the same plane as the wall, with no ledge, no shelf, no capping and no step, and the wall stays as flat as in image 1; inside the shower, every wall surface around the entire perimeter of the shower tray or sloped tiled shower floor is continuously tiled with the same wall tiles all the way up to the ceiling, including every side wall and return; every wall surface in the bathtub wet area is also tiled all the way up to the ceiling',
   },
   {
     id: 'raumhoch',
