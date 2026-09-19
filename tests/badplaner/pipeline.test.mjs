@@ -91,7 +91,8 @@ function harness(settings = {}) {
       return settings.formspree?.(init) ?? response({ ok: true });
     }
     if (url.includes('/audiences/')) return settings.newsletter?.(init) ?? response({ id: 'contact-fixture' });
-    if (url.startsWith('https://newlivingdesign.ch/badplaner/swatches/') || url.startsWith('https://www.energieker.it/')) {
+    // Muster: unsere Kopie oder das Original beim Lieferanten (Platte, Waschtischplatte, Unterbau).
+    if (url.startsWith('https://newlivingdesign.ch/badplaner/swatches/') || /^https:\/\/(www\.)?(energieker\.it|gbgroupe\.com|edonedesign\.it|rexadesign\.it)\//.test(url)) {
       clock.advance(settings.swatchDelay ?? 0);
       return settings.swatch?.(init) ?? response({}, 404);
     }
@@ -698,16 +699,20 @@ test('the sanitary module travels as its own reference image', async () => {
   assert.equal(res.statusCode, 200);
   const generation = h.calls.find((call) => call.body?.generationConfig?.responseModalities);
   const parts = generation.body.contents[0].parts;
-  // Foto, Plattenmuster, Sanitärmodul.
-  assert.equal(parts.filter((part) => part.inlineData).length, 2 + 1);
-  const module = parts.filter((part) => part.inlineData)[2].inlineData;
+  // Foto, Plattenmuster, Muster von Waschtischplatte und Unterbau (eine Datei, wenn beide
+  // dieselbe haben), Sanitärmodul: das Modul kommt zuletzt.
+  const options = optionsForPackage('essenza');
+  const vanity = new Set([options.tops[0].image, options.bases[0].image]).size;
+  const images = parts.filter((part) => part.inlineData);
+  assert.equal(images.length, 2 + vanity + 1);
+  const module = images[images.length - 1].inlineData;
   assert.equal(module.mimeType, 'image/jpeg');
   // Ein echtes JPEG, kein Platzhalter: Base64 eines Bildes von einigen Kilobyte.
   assert.ok(module.data.startsWith('/9j/'), 'module image is not a JPEG');
   assert.ok(module.data.length > 2000, `module image too small: ${module.data.length}`);
   const prompt = parts[0].text;
-  assert.match(prompt, /Image 3 is ONLY a product photo of one sanitary module/);
-  assert.match(prompt, /exactly the sanitary module of image 3, copied part for part/);
+  assert.match(prompt, new RegExp(`Image ${images.length} is ONLY a product photo of one sanitary module`));
+  assert.match(prompt, new RegExp(`exactly the sanitary module of image ${images.length}, copied part for part`));
   assert.match(prompt, /never tiled, never clad and never boxed in/);
   const leadMail = h.calls.find((call) => call.url === 'https://api.resend.com/emails');
   assert.match(JSON.stringify(leadMail.body), /OLI QR INOX Sospeso/);
@@ -752,6 +757,48 @@ test('the washbasin gets the same ceramic colour as the toilet', async () => {
   // Ein Bad mit farbigem WC und weissem Becken ist eine Farbe zu viel.
   assert.ok(prompt.includes(`in the same ${coloured.prompt} as the toilet, exactly the same colour and finish`),
     'washbasin does not carry the ceramic colour');
+});
+
+test('Waschtischplatte und Unterbau gehen als Muster mit, die Platte nimmt nie den Wandmarmor', async () => {
+  // Probe vom 19.09.: Colore, Calacatta Viola, Unterbau Diamante, Platte Stone Color Diamante.
+  // Nur mit dem Namen "Diamante" malte das Modell die Waschtischplatte im Marmor der Wand.
+  const options = optionsForPackage('colore');
+  const tile = options.tiles.find((entry) => entry.id === 'energieker-calacatta-viola-calacatta-viola');
+  const top = options.tops.find((entry) => entry.id === 'edone-stone-color-diamante');
+  const base = options.bases.find((entry) => entry.id === 'edone-laccato-diamante');
+  assert.ok(tile && top && base, 'Probe-Auswahl fehlt im Katalog');
+  assert.equal(top.image, base.image, 'Diamante: Platte und Unterbau teilen dasselbe Muster');
+  const image = () => new Response(Buffer.from(PNG, 'base64'), { status: 200, headers: { 'content-type': 'image/png' } });
+  const h = harness({ swatch: () => image() });
+  const res = await h.invoke(payload({
+    paket: 'colore', format: '60x120', platte: tile.id, unterbau: base.id, top: top.id, becken: 'aufsatz',
+    armaturenserie: 'treemme-up', finish: options.finishes[0].id, keramik: options.sanitary[0].id,
+    wall: options.walls[0].id, dusche: options.showers[0].id, badewanne: options.bathtubs[0].id,
+    waschtisch: options.basins[0].id, spiegel: options.mirrors[0].id,
+  }));
+  assert.equal(res.statusCode, 200);
+  // Dieselbe Datei wird einmal geladen und einmal mitgeschickt: Foto, Platte, Diamante.
+  assert.equal(h.calls.filter((call) => call.url.endsWith(top.image)).length, 1);
+  const generation = h.calls.find((call) => call.body?.generationConfig?.responseModalities);
+  assert.equal(generation.body.contents[0].parts.filter((part) => part.inlineData).length, 3);
+  const prompt = generation.body.contents[0].parts[0].text;
+  assert.match(prompt, /Image 3 is ONLY a small colour sample for the vanity unit: its front, its body and its countertop/);
+  assert.ok(prompt.includes(`countertop in ${top.prompt}, exactly the colour and finish of image 3`), 'Platte ohne Verweis auf ihr Muster');
+  assert.ok(prompt.includes(`front and body in ${base.prompt}, exactly the colour and finish of image 3`), 'Unterbau ohne Verweis auf sein Muster');
+  assert.match(prompt, /the countertop is its own material, never cut from the wall or floor tiles and never copying their pattern or veining/);
+  const leadMail = h.calls.find((call) => call.url === 'https://api.resend.com/emails');
+  assert.match(JSON.stringify(leadMail.body), /Platte geladen, Waschtisch geladen/);
+});
+
+test('ohne ladbares Muster bleibt es bei der Beschreibung, ohne Bildnummer', async () => {
+  const h = harness();
+  const res = await h.invoke();
+  assert.equal(res.statusCode, 200);
+  const generation = h.calls.find((call) => call.body?.generationConfig?.responseModalities);
+  assert.equal(generation.body.contents[0].parts.filter((part) => part.inlineData).length, 1);
+  const prompt = generation.body.contents[0].parts[0].text;
+  assert.doesNotMatch(prompt, /colour sample for|sample of the countertop/);
+  assert.match(prompt, /never cut from the wall or floor tiles/);
 });
 
 test('an integrated washbasin keeps the countertop material, not the ceramic colour', async () => {
@@ -1068,7 +1115,9 @@ test('current large catalog originals below 5 MiB retain their visual reference'
   const h = harness({ swatch: () => new Response(bytes, { headers: { 'content-type': 'image/png' } }) });
   const res = await h.invoke(); assert.equal(res.statusCode, 200);
   const generation = h.calls.find((call) => call.body?.generationConfig?.responseModalities);
-  assert.equal(generation.body.contents[0].parts.length, 3);
+  // Text, Foto, Plattenmuster, dann die Muster von Waschtischplatte und Unterbau (hier eine Datei).
+  const options = optionsForPackage('essenza');
+  assert.equal(generation.body.contents[0].parts.length, 3 + new Set([options.tops[0].image, options.bases[0].image]).size);
   assert.equal(Buffer.from(generation.body.contents[0].parts[2].inlineData.data, 'base64').length, bytes.length);
   const leadMail = h.calls.find((call) => call.url === 'https://api.resend.com/emails');
   assert.match(JSON.stringify(leadMail.body), /Muster/);
@@ -1090,7 +1139,9 @@ test('full slow pipeline including fallback stays within the overall deadline', 
     mailDelays: [7000, 5000], mails: [() => response({}, 500)], formspreeDelay: 7000 });
   const start = h.clock.now(); const res = await h.invoke();
   assert.equal(res.statusCode, 200); assert.equal(res.body.delivery.leadProvider, 'formspree');
-  assert.equal(h.clock.now() - start, 95000); assert.ok(h.clock.now() - start < 105000);
+  // Die Uhr im Test zaehlt parallele Abrufe nacheinander: das Muster von Waschtischplatte
+  // und Unterbau kommt mit 4000 ms dazu, in Wirklichkeit laeuft es neben dem Plattenmuster.
+  assert.equal(h.clock.now() - start, 99000); assert.ok(h.clock.now() - start < 105000);
 });
 
 test('exhausted deadline starts no further external call', async () => {
