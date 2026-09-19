@@ -1049,7 +1049,9 @@ async function checkOpenings(
     'Then list the fixtures of each image in the order you see them from left to right in the picture, using the same words, each fixture at most once and only the ones you can see. ' +
     'Then name, for each image, the one fixture that stands closest to the camera, or "none" when you cannot tell. ' +
     'Then say, for each image, whether the toilet hangs on or stands against a half-height wall, a low built wall or a boxed pre-wall in front of the room wall, rather than directly against a full-height wall. ' +
-    'Then say, for each image, whether something large stands in the immediate foreground at the edge of the picture and is cut off by the border — an open door leaf, a door frame, the near edge of a wall, a piece of furniture — taking up roughly a fifth of the picture or more. ' +
+    // Nur das Verschwinden zaehlt (Ardesia, 17.09.: Tuerfluegel ganz weg). Am 19.09. wurde ein
+    // sonst treues Bild verworfen, weil die Tuer links nur noch ein schmaler Streifen war.
+    'Then say whether something large stands in the immediate foreground of image 1 at the edge of the picture, cut off by the border — an open door leaf, a door frame, the near edge of a wall, a piece of furniture — taking up roughly a fifth of the picture or more; and whether that same object is still visible at the edge of image 2 at any size, even as a narrow strip (foreground_object_after is false only when it is gone completely). ' +
     'Set window_much_bigger true only if a window that is visible in both images takes up a clearly larger part of image 2 than of image 1, about half again as large or more. ' +
     'Set extra_openings true only if image 2 has a window, roof window, door or outside opening that image 1 does not have, or lost one that image 1 has. ' +
     'Set view_changed true if camera position, angle, lens or framing changed, or if image 2 shows floor, wall or ceiling area that lies outside image 1. ' +
