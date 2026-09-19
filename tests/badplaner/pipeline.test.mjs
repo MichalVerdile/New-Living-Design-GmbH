@@ -537,6 +537,17 @@ test('ein Fenster, das viel groesser wird, wird verworfen', async () => {
   assert.match(JSON.stringify(leadMail.body), /the window takes up much more of the result than of the photo/);
 });
 
+test('die Pruefung fragt nach dem Vordergrund, der ganz verschwindet, nicht nach dem, der kleiner wird', async () => {
+  // Preview der PR #42, 19.09. 12:53: Waende, Reihenfolge und Tiefe stimmten, die Tuer links
+  // war nur noch ein schmaler Streifen, und beide Versuche wurden dafuer verworfen.
+  const h = harness();
+  await h.invoke();
+  const question = h.calls.filter((call) => call.url.includes('generativelanguage.googleapis.com'))
+    .map((call) => call.body.contents[0].parts[0].text).find((text) => text.includes('foreground_object_after'));
+  assert.match(question, /still visible at the edge of image 2 at any size, even as a narrow strip/);
+  assert.match(question, /foreground_object_after is false only when it is gone completely/);
+});
+
 test('ein Vordergrund, der im Foto gar nicht da war, ist kein Fehler', async () => {
   // Nur das Verschwinden zaehlt. Taucht vorne etwas auf, wo im Foto nichts war,
   // ist das kein Grund, dem Kunden nichts zu zeigen.
