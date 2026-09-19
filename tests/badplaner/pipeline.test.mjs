@@ -370,8 +370,20 @@ test('die Dusche muss an die Wand, an der die Wanne stand', async () => {
   assert.match(JSON.stringify(leadMail.body), /the bathtub it replaces stood on the right wall/);
 });
 
+test('eine Dusche, die im Foto nicht zu sehen ist, darf im Ideenbild fehlen', async () => {
+  // Preview 19.09., 13:11: enges Bad, die Dusche nur als Glaskante am rechten Rand, die
+  // Vorpruefung sah keine. Das Ideenbild hielt den Bildausschnitt und wurde trotzdem
+  // zweimal fuer "the requested shower is missing" verworfen.
+  const kept = () => checkedInv({ shower: 'none', bathtub: 'none' }, { shower: 'none' });
+  const h = harness({ checks: [kept] });
+  const res = await h.invoke(payload({ dusche: 'walk-in', badewanne: 'keine' }));
+  assert.equal(res.statusCode, 200, JSON.stringify(res.body));
+  assert.equal(h.counts().generation, 1);
+});
+
 test('eine fehlende Dusche und ein verschobenes Waschbecken werden verworfen', async () => {
-  const missing = () => checkedInv({ bathtub: 'none' }, { shower: 'none' });
+  // Die alte Dusche stand rechts im Foto; im Ideenbild ist dort keine mehr.
+  const missing = () => checkedInv({ shower: 'right' }, { shower: 'none' });
   const first = harness({ checks: [missing, missing] });
   const a = await first.invoke(payload({ dusche: 'walk-in', badewanne: 'keine' }));
   assert.equal(a.statusCode, 502);
