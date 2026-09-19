@@ -64,7 +64,7 @@ export interface BathPackage {
   id: 'essenza' | 'colore' | 'atelier';
   name: string;
   price: number;        // CHF inkl. MwSt., Richtpreis
-  priceLabel: string;   // formatiert, z. B. "21'300"
+  priceLabel: string;   // formatiert, z. B. "21'500"
   claim: string;
   description: string;
   includes: string[];
@@ -81,8 +81,8 @@ export const bathPackages: BathPackage[] = [
   {
     id: 'essenza',
     name: 'Essenza',
-    price: 21300,
-    priceLabel: "21'300",
+    price: 21500,
+    priceLabel: "21'500",
     claim: 'Das saubere, solide Bad mit dem ersten Farbtupfer',
     description:
       'Alles, was ein neues Bad braucht, mit Markenprodukten aus unserer Ausstellung. Farbe der Platten, des Möbels und der Armaturen wählen Sie frei innerhalb der Serie.',
@@ -102,8 +102,8 @@ export const bathPackages: BathPackage[] = [
   {
     id: 'colore',
     name: 'Colore',
-    price: 27700,
-    priceLabel: "27'700",
+    price: 27500,
+    priceLabel: "27'500",
     claim: 'Grossformat, farbige Keramik und Armaturen in Ihrer Wunschoberfläche',
     description:
       'Unser meistgewähltes Bad: Platten 60×120 oder 120×120, WC und Duschwanne in Farbe, verchromte Armaturen in zwei Serien, Möbel matt lackiert. Farbe kostet bei uns nichts extra.',
@@ -125,8 +125,8 @@ export const bathPackages: BathPackage[] = [
   {
     id: 'atelier',
     name: 'Atelier',
-    price: 36800,
-    priceLabel: "36'800",
+    price: 36500,
+    priceLabel: "36'500",
     claim: 'Das Bad nach Mass: freistehend, edle Materialien, auf Zeichnung',
     description:
       'Für grössere Bäder und besondere Wünsche: Grossformate oder Steinoptik, freistehende Badewanne, Möbel nach Mass, Designarmaturen und Lichtkonzept. Bemusterung in der Ausstellung.',
@@ -182,7 +182,7 @@ export const localBusinessJsonLd = {
   email: business.email,
   image: `${business.siteUrl}/og-image.jpg`,
   logo: `${business.siteUrl}/logo.png`,
-  priceRange: "CHF 21'300 – 45'000",
+  priceRange: "CHF 21'500 – 45'000",
   address: {
     '@type': 'PostalAddress',
     streetAddress: business.address.street,
