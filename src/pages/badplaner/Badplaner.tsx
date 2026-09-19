@@ -81,12 +81,37 @@ interface Result {
   leadId: string;
   dataUrl: string;
   mime: string;
-  delivery: {
+  /** Vorschau: das Bild ist da, die Kontaktangaben noch nicht. Danach fehlt dieses Feld. */
+  preview?: { ticket: string; exp: number; auswahl: [string, string][]; paket: unknown; bytes: Blob };
+  delivery?: {
     lead: 'accepted';
     customer: 'accepted' | 'failed' | 'unknown' | 'skipped';
     newsletter?: 'accepted' | 'failed' | 'unknown' | 'skipped';
   };
 }
+
+/**
+ * Vorher/Nachher oben auf der Seite: Foto eines alten Bads und das Ideenbild daraus.
+ * Die zwei Dateien liefert NLD (echter Durchgang, mit Einwilligung des Kunden).
+ * Fehlt eine, zeigt die Seite nichts statt eines kaputten Bildes.
+ */
+const VORHER_NACHHER = { vorher: '/badplaner/vorher-nachher/vorher.jpg', nachher: '/badplaner/vorher-nachher/nachher.jpg' };
+
+const VorherNachher: React.FC = () => {
+  const [position, setPosition] = useState(50);
+  const [broken, setBroken] = useState(false);
+  if (broken) return null;
+  return (
+    <div className={styles.beforeAfter}>
+      <img src={VORHER_NACHHER.vorher} alt="Vorher: Foto des bestehenden Bads" onError={() => setBroken(true)} />
+      <img src={VORHER_NACHHER.nachher} alt="Nachher: Ideenbild aus dem Badplaner" style={{ clipPath: `inset(0 0 0 ${position}%)` }} onError={() => setBroken(true)} />
+      <span className={styles.beforeAfterLabel}>Vorher</span>
+      <span className={`${styles.beforeAfterLabel} ${styles.beforeAfterLabelRight}`}>Ideenbild</span>
+      <span className={styles.beforeAfterHandle} style={{ left: `${position}%` }} aria-hidden="true" />
+      <input type="range" min={0} max={100} value={position} onChange={(e) => setPosition(Number(e.target.value))} className={styles.beforeAfterRange} aria-label="Vorher und Ideenbild vergleichen" />
+    </div>
+  );
+};
 
 const firstId = (list: { id: string }[]): string => (list.length > 0 ? list[0].id : '');
 
@@ -139,7 +164,7 @@ function groupBy<T>(items: T[], key: (item: T) => string): { key: string; items:
 const howSteps = [
   { n: '1', title: 'Raum, Stil und Ausstattung wählen', text: 'Badezimmer oder Gäste-WC wählen. Danach Stil, Materialien und die passenden Positionen bestimmen oder direkt eine individuelle Beratung anfragen.' },
   { n: '2', title: 'Foto vom Raum machen', text: 'Am Handy neu aufnehmen oder ein Foto aus der Galerie wählen. Von der Tür aus, den ganzen Raum im Bild, Licht an. Das Foto wird vor dem Senden verkleinert.' },
-  { n: '3', title: 'Ideenbild erhalten und besprechen', text: 'Nach der automatischen Erstellung und Prüfung sehen Sie den Raum mit den gewählten Materialien. Wir melden uns und laden Sie in die Ausstellung ein.' },
+  { n: '3', title: 'Ideenbild ansehen, dann in voller Qualität erhalten', text: 'Nach ein bis zwei Minuten sehen Sie Ihr Bad mit den gewählten Materialien als Vorschau. Mit Ihren Kontaktangaben erhalten Sie es in voller Qualität per E-Mail, dazu den Fixpreis des Pakets und eine kostenlose Beratung.' },
 ];
 
 /** Musterbild; fehlt es (noch nicht geladen), zeigt es eine farbige Fläche. */
@@ -441,24 +466,20 @@ const Badplaner: React.FC = () => {
     }
   };
 
-  const submitRender = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  /** Schritt 3: das Ideenbild VOR den Kontaktangaben. Die Anfrage folgt im Ergebnis. */
+  const submitRender = async () => {
     if (renderSubmittingRef.current) return;
     if (!room || !pkg || !sel || !photo || !canOpenStep4) {
       setStatus('error');
       setErrorMsg('Bitte wählen Sie Raum, Stil oder Paket, Foto, Fensterzahl und Spülkastenart.');
       return;
     }
-    const form = new FormData(e.currentTarget);
-    const gotcha = (form.get('_gotcha') || '').toString();
-    if (gotcha.trim() !== '') return; // Honeypot
-    if (contact.phone.replace(/\D/g, '').length < 7) {
+    if (!contact.consent) {
       setStatus('error');
-      setErrorMsg('Bitte eine gültige Telefonnummer angeben.');
+      setErrorMsg('Bitte bestätigen Sie die Datenschutzerklärung.');
       return;
     }
     renderSubmittingRef.current = true;
-    trackBadplaner('badplaner_kontakt', { raum: room, paket: pkg });
     setStatus('sending');
     setErrorMsg('');
     const kombination = isAtelier && sel.accentMode === 'kombination';
@@ -472,6 +493,7 @@ const Badplaner: React.FC = () => {
         // Feldnamen nach Kapitel 10 der Spezifikation (Vertrag mit api/badplaner.ts)
         body: JSON.stringify({
           kind: 'render',
+          stage: 'vorschau',
           raum: room,
           paket: pkg,
           individuell,
@@ -496,36 +518,21 @@ const Badplaner: React.FC = () => {
           windows,
           cistern,
           foto: photo.dataUrl,
-          name: contact.name.trim(),
-          email: contact.email.trim(),
-          telefon: contact.phone.trim(),
-          place: contact.place.trim(),
-          newsletter: contact.newsletter,
           consent: contact.consent,
-          website: gotcha,
+          website: '',
         }),
       });
       const json = await res.json().catch(() => null);
-      if (res.ok && json?.ok && json.image?.data && json.delivery?.lead === 'accepted') {
+      if (res.ok && json?.ok && json.vorschau && json.image?.data && json.ticket) {
         const mime = json.image.mime || 'image/png';
-        const customerDelivery = ['accepted', 'failed', 'unknown', 'skipped'].includes(json.delivery?.customer)
-          ? json.delivery.customer
-          : 'unknown';
-        const newsletterDelivery = ['accepted', 'failed', 'unknown', 'skipped'].includes(json.delivery?.newsletter)
-          ? json.delivery.newsletter
-          : undefined;
+        const bytes = Uint8Array.from(atob(json.image.data), (c) => c.charCodeAt(0));
         setResult({
           leadId: json.leadId || '',
           mime,
           dataUrl: `data:${mime};base64,${json.image.data}`,
-          delivery: {
-            lead: 'accepted',
-            customer: customerDelivery,
-            newsletter: newsletterDelivery,
-          },
+          preview: { ticket: json.ticket, exp: json.exp, auswahl: json.auswahl || [], paket: json.paket, bytes: new Blob([bytes], { type: mime }) },
         });
         setStatus('idle');
-        trackLead('form', 'badplaner');
         trackBadplaner('badplaner_ideenbild', { raum: room || '', paket: pkg || '' });
       } else {
         setStatus('error');
@@ -541,6 +548,62 @@ const Badplaner: React.FC = () => {
     } finally {
       window.clearTimeout(timeout);
       renderSubmittingRef.current = false;
+    }
+  };
+
+  /**
+   * Kontakt nach der Vorschau: Laenge, JSON und die Bildbytes in einem Binaerkoerper.
+   * Als Base64 im JSON waere ein 2K-Bild zu gross fuer die Funktion (4.5 MB).
+   */
+  const submitAnfrage = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!result?.preview || status === 'sending') return;
+    const gotcha = (new FormData(e.currentTarget).get('_gotcha') || '').toString();
+    if (gotcha.trim() !== '') return; // Honeypot
+    if (contact.phone.replace(/\D/g, '').length < 7) {
+      setStatus('error');
+      setErrorMsg('Bitte eine gültige Telefonnummer angeben.');
+      return;
+    }
+    setStatus('sending');
+    setErrorMsg('');
+    const { ticket, exp, auswahl, paket, bytes } = result.preview;
+    const json = new TextEncoder().encode(JSON.stringify({
+      kind: 'anfrage', leadId: result.leadId, ticket, exp, auswahl, paket, mime: result.mime,
+      name: contact.name.trim(), email: contact.email.trim(), telefon: contact.phone.trim(), place: contact.place.trim(),
+      newsletter: contact.newsletter, consent: contact.consent, website: gotcha,
+    }));
+    const head = new Uint8Array(4);
+    new DataView(head.buffer).setUint32(0, json.length);
+    try {
+      const res = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'content-type': 'application/octet-stream', Accept: 'application/json' },
+        body: new Blob([head, json, bytes]),
+      });
+      const answer = await res.json().catch(() => null);
+      if (res.ok && answer?.ok && answer.delivery?.lead === 'accepted') {
+        const known = ['accepted', 'failed', 'unknown', 'skipped'];
+        setResult({
+          leadId: result.leadId,
+          mime: result.mime,
+          dataUrl: result.dataUrl,
+          delivery: {
+            lead: 'accepted',
+            customer: known.includes(answer.delivery.customer) ? answer.delivery.customer : 'unknown',
+            newsletter: known.includes(answer.delivery.newsletter) ? answer.delivery.newsletter : undefined,
+          },
+        });
+        setStatus('idle');
+        trackLead('form', 'badplaner');
+        trackBadplaner('badplaner_kontakt', { raum: room || '', paket: pkg || '' });
+      } else {
+        setStatus('error');
+        setErrorMsg(answer?.error || friendlyHttpError(res.status));
+      }
+    } catch {
+      setStatus('error');
+      setErrorMsg('Keine Verbindung. Bitte prüfen Sie Ihr Netz und versuchen Sie es noch einmal.');
     }
   };
 
@@ -720,12 +783,12 @@ const Badplaner: React.FC = () => {
       ? 'Wände bis ca. 120 cm, oberhalb weiss gestrichen'
       : chosen.wall.label
     : '';
-  const packageLabel = pkgInfo
-    ? room === 'gaeste-wc'
-      ? `${pkgInfo.name} · Individuelle Offerte`
-      : quoteOnly
-        ? `${pkgInfo.name} · Individuelle Offerte`
-        : `${pkgInfo.name}, ab CHF ${pkgInfo.priceLabel}`
+  // Der Preis steht erst unter dem Ideenbild (priceLine), nicht in der Auswahl.
+  const packageLabel = pkgInfo ? pkgInfo.name : '';
+  const priceLine = pkgInfo
+    ? quoteOnly
+      ? `${room === 'gaeste-wc' ? 'Gäste-WC' : 'Ihr Bad'} im Stil ${pkgInfo.name}: individuelle Offerte nach der Besichtigung.`
+      : `Ihr Bad im Paket ${pkgInfo.name}: Fixpreis ab CHF ${pkgInfo.priceLabel}, inklusive Material, Montage und 8.1 % MwSt.`
     : '';
 
   /** Nur die Zeilen, die wirklich gewählt wurden – mit den offiziellen Namen. */
@@ -837,17 +900,8 @@ const Badplaner: React.FC = () => {
         >
           {p.highlight && <span className={styles.packageBadge}>Meistgewählt</span>}
           <span className={styles.packageName}>{p.name}</span>
-          <span className={styles.packagePrice}>{room === 'gaeste-wc' ? 'Individuelle Offerte' : `ab CHF ${p.priceLabel}`}</span>
           <span className={styles.packageClaim}>{p.claim}</span>
-          {/* TODO: Kurztexte "enthalten / nicht enthalten" gehören später als eigene
-              Felder in src/config/business.ts; hier aus packageNote und extraPerSqm. */}
-          {room === 'badezimmer' ? (
-            <ul className={styles.packageFacts}>
-              <li>Enthalten: Material, Montage und 8.1 % MwSt.</li>
-              <li>Nicht enthalten: Platten über ca. 21 m² (CHF {p.extraPerSqm}.– pro m²)</li>
-              <li>Referenzfläche: Bad ca. 6 m², ca. 21 m² Platten</li>
-            </ul>
-          ) : <span className={styles.hint}>Die Stilwahl bestimmt Materialien und Farben, aber kein kommerzielles Badpaket.</span>}
+          {room === 'gaeste-wc' && <span className={styles.hint}>Die Stilwahl bestimmt Materialien und Farben, aber kein kommerzielles Badpaket.</span>}
         </button>
       ))}
     </div>
@@ -865,32 +919,30 @@ const Badplaner: React.FC = () => {
         image={`${business.siteUrl}${photoUrl('bad-travertin-gold-01.webp')}`}
       />
 
-      {/* Hero */}
-      <section className={styles.hero}>
-        <div className={styles.heroBackground}>
-          <div className={styles.heroOverlay} />
-          <img src={photoUrl('bad-travertin-gold-01.webp')} alt="Bad von New Living Design mit Platten in Travertin-Optik" className={styles.heroImage} fetchPriority="high" />
-        </div>
+      {/* Hero: zuerst das Ergebnis, dann der Weg dahin */}
+      <section className={`${styles.hero} ${styles.heroCompact}`}>
         <div className={`${styles.heroContent} ${isVisible ? styles.visible : ''}`}>
           <p className={styles.eyebrow}>Neu · Badplaner</p>
-          <h1 className={styles.heroTitle}>Badezimmer und Gäste-WC als persönliches Ideenbild</h1>
-          <p className={styles.heroText}>Raum wählen, Materialien zusammenstellen, Foto machen und Ideenbild erhalten. Kostenlos und unverbindlich aus Zofingen.</p>
+          <h1 className={styles.heroTitle}>Ihr Bad als Ideenbild, aus Ihrem eigenen Foto</h1>
+          <VorherNachher />
+          {/* Der Knopf gleich unter dem Bild: auf dem Telefon noch ueber dem Cookie-Streifen. */}
           <div className={styles.heroActions}>
             <a href="#planer" className={styles.ctaPrimary} onClick={() => trackBadplaner('badplaner_start')}>Jetzt starten</a>
             <a href="#ablauf" className={styles.ctaSecondary}>So funktioniert's</a>
           </div>
+          <p className={styles.heroText}>Materialien wählen, Foto vom Bad hochladen: nach ein bis zwei Minuten sehen Sie Ihr Bad neu. Kostenlos und unverbindlich, aus Zofingen.</p>
           <p className={styles.heroNote}>
             Ideenbild, kein Plan: Das Bild zeigt eine Stimmung mit den gewählten Materialien. Masse, Leitungen und Details klären wir vor Ort.
           </p>
         </div>
       </section>
 
-      {/* Planer: Schritte 1 bis 4 */}
+      {/* Planer: Schritte 1 bis 3, das Ideenbild kommt vor dem Kontakt */}
       <section id="planer" className={`${styles.section} ${styles.light}`}>
         <div className={styles.container}>
           <div className={styles.sectionHeader}>
             <span className={styles.sectionLabel}>Badplaner</span>
-            <h2 className={styles.sectionTitle}>Vier Schritte bis zum Ideenbild</h2>
+            <h2 className={styles.sectionTitle}>Drei Schritte bis zum Ideenbild</h2>
           </div>
 
           <div className={styles.steps}>
@@ -1051,7 +1103,7 @@ const Badplaner: React.FC = () => {
 
             {/* Schritt 3: Foto */}
             <article id="schritt-3" className={stepClass(3)} ref={(el) => { stepRefs.current[3] = el; }}>
-              {renderStepHead(3, 'Foto vom Raum', photo ? 'Foto bereit' : 'Aufnehmen oder aus der Galerie wählen')}
+              {renderStepHead(3, 'Foto und Ideenbild', result ? 'Ideenbild erstellt' : photo ? 'Foto bereit' : 'Aufnehmen oder aus der Galerie wählen')}
               {step === 3 && (
                 <div id="schritt-3-inhalt" className={styles.stepBody}>
                   {photo ? (
@@ -1114,10 +1166,30 @@ const Badplaner: React.FC = () => {
                         <ChipPicker name="cistern" items={CISTERN_OPTIONS} value={cistern} onChange={setCistern} />
                         <p className={styles.hint}>Aufputz: Der Spülkasten ist sichtbar, meist als Kasten über oder hinter dem WC. Unterputz: Das WC hängt an der Wand, sichtbar ist nur die Betätigungsplatte. Ein sichtbarer Spülkasten wird im Ideenbild durch das im Fixpreis enthaltene Sanitärmodul ersetzt.</p>
                       </fieldset>
+                      <label className={styles.consent} htmlFor="bp-consent">
+                        <input type="checkbox" id="bp-consent" name="consent" required checked={contact.consent} onChange={(e) => setContact({ ...contact, consent: e.target.checked })} />
+                        <span>
+                          Ich habe die <Link to="/datenschutz#badplaner" target="_blank" rel="noopener noreferrer">Datenschutzerklärung</Link> gelesen. Mein Foto wird zur
+                          Erstellung des Ideenbilds an Google (Gemini API) übermittelt und uns per E-Mail zugestellt.
+                        </span>
+                      </label>
                       <div className={styles.stepActions}>
-                        <button type="button" className={styles.ctaDark} onClick={() => goTo(4)} disabled={!windows || !cistern}>Weiter zu Kontakt</button>
+                        <button type="button" className={styles.ctaDark} onClick={submitRender} disabled={!windows || !cistern || !contact.consent || status === 'sending'}>
+                          {status === 'sending' ? 'Wird erstellt…' : 'Ideenbild erstellen'}
+                        </button>
                         {(!windows || !cistern) && <span className={styles.hint}>Bitte Fenster und Spülkasten angeben.</span>}
                       </div>
+                      {status === 'sending' && (
+                        <div className={styles.progress} role="status" aria-live="polite">
+                          <div className={styles.progressBar}><span /></div>
+                          <p className={styles.progressText}>Wir gestalten Ihr Bad und prüfen das Bild. Das dauert meist ein bis zwei Minuten, bei einem zweiten Anlauf bis zu vier; bitte lassen Sie die Seite offen.</p>
+                        </div>
+                      )}
+                      {status === 'error' && !result && (
+                        <p className={styles.error} role="alert">
+                          {errorMsg} Oder rufen Sie uns an: <a href={`tel:${business.phone.e164}`} data-lead="badplaner-fehler">{business.phone.display}</a>
+                        </p>
+                      )}
                       <div className={`${styles.uploadActions} ${styles.changePhoto}`}>
                         <span className={styles.uploadAction}>
                           <input
@@ -1150,22 +1222,27 @@ const Badplaner: React.FC = () => {
               )}
             </article>
 
-            {/* Schritt 4: Kontakt + Ideenbild */}
-            <article id="schritt-4" className={stepClass(4)} ref={(el) => { stepRefs.current[4] = el; }}>
-              {renderStepHead(4, 'Kontakt und Ideenbild', result ? 'Ideenbild erstellt' : 'Name, E-Mail und Telefon, dann Bild erstellen')}
-              {step === 4 && (
-                <form id="schritt-4-inhalt" className={styles.stepBody} onSubmit={submitRender}>
-                  {summaryRows.length > 0 && (
-                    <div className={styles.summaryBox}>
-                      <h3 className={styles.blockTitle}>Ihre Auswahl</h3>
-                      <ul className={`${styles.summary} ${styles.summaryLight}`}>
-                        {summaryRows.map((row) => (
-                          <li key={row.label}><span>{row.label}</span><span>{row.value}</span></li>
-                        ))}
-                      </ul>
-                      <button type="button" className={styles.linkButton} onClick={() => goTo(2)}>Auswahl ändern</button>
-                    </div>
-                  )}
+          </div>
+        </div>
+      </section>
+
+      {/* Ergebnis + Schritt 5 */}
+      {result && pkgInfo && (
+        <section id="ergebnis" className={`${styles.section} ${styles.dark}`}>
+          <div className={styles.container}>
+            <div className={styles.result} ref={resultRef}>
+              <div className={styles.sectionHeader}>
+                <span className={styles.sectionLabel}>Ihr Ideenbild</span>
+                <h2 className={styles.sectionTitle}>{result.preview ? 'Ihr Ideenbild ist fertig' : 'So könnte Ihr Bad aussehen'}</h2>
+              </div>
+              <div className={result.preview ? styles.watermark : undefined}>
+                <img src={result.dataUrl} alt={`Ideenbild Ihres Bads im Paket ${pkgInfo.name}`} className={styles.resultImage} />
+              </div>
+              <span className={styles.badge}>{result.preview ? 'Vorschau · Ideenbild, kein Plan' : 'Ideenbild, kein Plan'}</span>
+              {result.preview ? (
+                <form className={styles.extra} onSubmit={submitAnfrage}>
+                  <h3>In voller Qualität per E-Mail, dazu eine kostenlose Beratung</h3>
+                  <p>Wir schicken Ihnen das Ideenbild ohne Wasserzeichen, nennen den Fixpreis des Pakets und melden uns für ein kurzes Gespräch. Unverbindlich.</p>
                   <input type="text" name="_gotcha" tabIndex={-1} autoComplete="off" className={styles.honeypot} aria-hidden="true" />
                   <div className={styles.formRow}>
                     <label className={styles.field} htmlFor="bp-name">
@@ -1187,52 +1264,24 @@ const Badplaner: React.FC = () => {
                       <input type="text" id="bp-place" name="place" required autoComplete="postal-code" placeholder="z. B. 4800 Zofingen" value={contact.place} onChange={(e) => setContact({ ...contact, place: e.target.value })} />
                     </label>
                   </div>
-                  <label className={styles.consent} htmlFor="bp-consent">
-                    <input type="checkbox" id="bp-consent" name="consent" required checked={contact.consent} onChange={(e) => setContact({ ...contact, consent: e.target.checked })} />
-                    <span>
-                      Ich habe die <Link to="/datenschutz#badplaner" target="_blank" rel="noopener noreferrer">Datenschutzerklärung</Link> gelesen. Mein Foto wird zur
-                      Erstellung des Ideenbilds an Google (Gemini API) übermittelt und uns per E-Mail zugestellt.
-                    </span>
-                  </label>
                   <label className={styles.consent} htmlFor="bp-newsletter">
                     <input type="checkbox" id="bp-newsletter" name="newsletter" checked={contact.newsletter} onChange={(e) => setContact({ ...contact, newsletter: e.target.checked })} />
                     <span>{NEWSLETTER_TEXT}</span>
                   </label>
                   <div className={styles.stepActions}>
-                    <button type="submit" className={styles.ctaDark} disabled={status === 'sending' || !canOpenStep4}>
-                      {status === 'sending' ? 'Wird erstellt…' : 'Ideenbild erstellen'}
+                    <button type="submit" className={styles.ctaPrimary} disabled={status === 'sending'}>
+                      {status === 'sending' ? 'Wird gesendet…' : 'Ideenbild und Beratung erhalten'}
                     </button>
                   </div>
-                  {status === 'sending' && (
-                    <div className={styles.progress} role="status" aria-live="polite">
-                      <div className={styles.progressBar}><span /></div>
-                      <p className={styles.progressText}>Wir gestalten Ihr Bad und prüfen das Bild. Das dauert meist ein bis zwei Minuten, bei einem zweiten Anlauf bis zu vier; bitte lassen Sie die Seite offen.</p>
-                    </div>
-                  )}
                   {status === 'error' && (
                     <p className={styles.error} role="alert">
                       {errorMsg} Oder rufen Sie uns an: <a href={`tel:${business.phone.e164}`} data-lead="badplaner-fehler">{business.phone.display}</a>
                     </p>
                   )}
                 </form>
-              )}
-            </article>
-          </div>
-        </div>
-      </section>
-
-      {/* Ergebnis + Schritt 5 */}
-      {result && pkgInfo && (
-        <section id="ergebnis" className={`${styles.section} ${styles.dark}`}>
-          <div className={styles.container}>
-            <div className={styles.result} ref={resultRef}>
-              <div className={styles.sectionHeader}>
-                <span className={styles.sectionLabel}>Ihr Ideenbild</span>
-                <h2 className={styles.sectionTitle}>So könnte Ihr Bad aussehen</h2>
-              </div>
-              <img src={result.dataUrl} alt={`Ideenbild Ihres Bads im Paket ${pkgInfo.name}`} className={styles.resultImage} />
-              <span className={styles.badge}>Ideenbild, kein Plan</span>
-              {result.delivery.customer !== 'accepted' && (
+              ) : (<>
+              <p className={styles.priceLine}>{priceLine}</p>
+              {result.delivery && result.delivery.customer !== 'accepted' && (
                 <p className={styles.resultNote} role="status">
                   <strong>Hinweis:</strong> Ihre Anfrage wurde an uns weitergeleitet, aber Ihre E-Mail-Kopie konnte nicht bestätigt werden. Bitte speichern Sie das Ideenbild jetzt mit „Bild speichern“.
                 </p>
@@ -1262,10 +1311,11 @@ const Badplaner: React.FC = () => {
                 Masse, Leitungen und Details klären wir vor Ort.{' '}
                 <button type="button" onClick={startOver}>Andere Farben oder ein anderes Paket probieren</button> (bis zu fünf Ideenbilder pro Tag).
               </p>
+              </>)}
             </div>
 
-            {/* Schritt 5: Grundriss (optional) */}
-            <form className={styles.extra} onSubmit={submitPlan}>
+            {/* Schritt 5: Grundriss (optional), erst nach der Anfrage */}
+            {!result.preview && <form className={styles.extra} onSubmit={submitPlan}>
               <h3>Für eine genauere Einschätzung</h3>
               <p>Optional: Grundriss, Grösse und Wünsche. Damit können wir den Richtpreis vor der Besichtigung besser einschätzen.</p>
               {planStatus === 'ok' ? (
@@ -1294,7 +1344,7 @@ const Badplaner: React.FC = () => {
                   {planStatus === 'error' && <p className={styles.error} role="alert">{planError}</p>}
                 </>
               )}
-            </form>
+            </form>}
           </div>
         </section>
       )}
