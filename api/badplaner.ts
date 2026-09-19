@@ -1239,9 +1239,13 @@ function compareInventory(
 ): string | null {
   // Kein Paket enthaelt ein Bidet. Steht es noch da, hat das Modell nicht umgebaut.
   if (after.bidet !== 'none') return `the bidet is still there, on the ${after.bidet} wall`;
-  if (wanted.shower && after.shower === 'none') return 'the requested shower is missing';
+  // Fehlen darf nur heissen: die Nasszone war im Foto zu sehen und ist weg. Zeigt das Foto
+  // weder Dusche noch Wanne (Preview 19.09., enges Bad, Dusche nur als Glaskante rechts),
+  // kann das Bild sie nicht zeigen, ohne den Bildausschnitt zu aendern, und der geht vor.
+  const wetAreaVisible = before.shower !== 'none' || before.bathtub !== 'none';
+  if (wanted.shower && wetAreaVisible && after.shower === 'none') return 'the requested shower is missing';
   if (!wanted.shower && after.shower !== 'none') return `there is a shower on the ${after.shower} wall although none was ordered`;
-  if (wanted.bathtub && after.bathtub === 'none') return 'the requested bathtub is missing';
+  if (wanted.bathtub && wetAreaVisible && after.bathtub === 'none') return 'the requested bathtub is missing';
   if (!wanted.bathtub && after.bathtub !== 'none') return `there is a bathtub on the ${after.bathtub} wall although none was ordered`;
   if (before.toilet !== 'none' && after.toilet === 'none') return 'the toilet is missing';
   if (before.toilet !== 'none' && after.toilet !== before.toilet) {
