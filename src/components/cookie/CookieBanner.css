@@ -141,12 +141,23 @@
 }
 
 @media (max-width: 480px) {
+  /* Schmaler Streifen: auf dem Telefon rund 75 px statt 125, damit er "Jetzt starten"
+     nicht verdeckt, auch nicht im kleineren Fenster des Facebook- und Instagram-Browsers. */
   .cookie-banner-container {
-    padding: 10px 12px !important;
+    padding: 6px 10px !important;
+  }
+
+  .cookie-banner-content {
+    gap: 4px;
   }
 
   .cookie-banner-text p {
-    font-size: 12px;
+    font-size: 11.5px;
+    line-height: 1.3;
+  }
+
+  .cookie-banner-container > div:last-child {
+    margin-top: 2px;
   }
 
   /* Knoepfe nebeneinander: so bleibt der Streifen unter 100 px und verdeckt
@@ -155,8 +166,8 @@
   .cookie-banner-decline {
     width: auto !important;
     margin: 0 !important;
-    padding: 8px 14px !important;
-    font-size: 13px !important;
+    padding: 6px 12px !important;
+    font-size: 12px !important;
     text-align: center;
   }
 }
