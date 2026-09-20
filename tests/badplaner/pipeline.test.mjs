@@ -1331,6 +1331,7 @@ test('Walk-in: Duschrinne im Prompt, ein Punktablauf wird nur vermerkt', async (
   const prompt = h.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
   assert.match(prompt, /linear channel drain \(Duschrinne\) runs along the foot of that short end wall/);
   assert.match(prompt, /ALL shower fittings sit together on that same short end wall/);
+  assert.match(prompt, /the drain lies directly below the mixer and the hand shower, at the foot of the very wall they are mounted on/);
   assert.match(prompt, /flush with the bathroom floor, with no step, no kerb and no raised platform/);
   assert.match(prompt, /never a central point drain, never a round or square grate/);
   assert.match(JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails').body), /Punktablauf statt Duschrinne/);
