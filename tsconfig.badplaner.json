@@ -9,5 +9,5 @@
     "rootDir": ".",
     "noEmit": true
   },
-  "include": ["api/badplaner.ts", "server/badplaner/**/*.ts", "src/pages/badplaner/imageValidation.ts", "src/pages/badplaner/resizeImage.ts"]
+  "include": ["api/badplaner.ts", "server/badplaner/**/*.ts", "src/pages/badplaner/imageValidation.ts", "src/pages/badplaner/resizeImage.ts", "src/pages/badplaner/imagesLoad.ts"]
 }
