@@ -83,6 +83,27 @@ async function tryReadBytes(file: Blob, log: string[] = []): Promise<Uint8Array 
 }
 
 /**
+ * Wartezeiten zwischen den Leseversuchen: sofort, dann nach 0,5 / 1 / 2 s.
+ * Diego am 20.09. in Produktion: dasselbe Foto scheiterte zweimal und ging beim
+ * dritten Mal durch; die Fotoauswahl gibt die Datei manchmal erst verzoegert frei.
+ * (Als Objekt, damit die Tests die Wartezeiten verkuerzen koennen.)
+ */
+export const readRetry = { delaysMs: [500, 1000, 2000] };
+
+async function readBytesPatiently(file: Blob, log: string[]): Promise<Uint8Array | null> {
+  let bytes = await tryReadBytes(file, log);
+  let attempts = 1;
+  for (const ms of readRetry.delaysMs) {
+    if (bytes) break;
+    await new Promise((resolve) => setTimeout(resolve, ms));
+    bytes = await tryReadBytes(file, log);
+    attempts += 1;
+  }
+  if (!bytes) log.push(`leseversuche:${attempts}`);
+  return bytes;
+}
+
+/**
  * Jeder Weg, das Bild zu öffnen, wird der Reihe nach versucht: Die Wege gehen
  * im Browser durch verschiedene Leseroutinen, und ein Foto, das der eine nicht
  * hergibt, öffnet der nächste oft doch.
@@ -164,7 +185,7 @@ export async function resizeImageFile(
   // Lesen mit NotReadableError (crbug.com/40123366, crbug.com/41452449).
   // Dann prüfen, bevor der Browser decodiert: das hält ein riesiges Bild vom Decoder fern.
   const log: string[] = [];
-  const bytes = await tryReadBytes(file, log);
+  const bytes = await readBytesPatiently(file, log);
   if (bytes) {
     if (bytes.length < 1 || bytes.length > MAX_SOURCE_IMAGE_BYTES) throw new Error('Das Bild darf höchstens 20 MB gross sein.');
     validateImageBytes(bytes, declaredMime || sniffImageMime(bytes) || '', sourceLimits);
@@ -211,7 +232,7 @@ export async function resizeImageFile(
  */
 export async function readFileNow(file: File): Promise<File> {
   const log: string[] = [];
-  const bytes = await tryReadBytes(file, log);
+  const bytes = await readBytesPatiently(file, log);
   if (!bytes) throw new Error(UNREADABLE + failureCode(log, file));
   return new File([bytes], file.name, { type: file.type });
 }

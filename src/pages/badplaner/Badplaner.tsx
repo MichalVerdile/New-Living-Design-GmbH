@@ -298,6 +298,7 @@ const Badplaner: React.FC = () => {
   const [beratungFile, setBeratungFile] = useState<File | null>(null);
   const [beratungStatus, setBeratungStatus] = useState<'idle' | 'sending' | 'ok' | 'error'>('idle');
   const [beratungError, setBeratungError] = useState('');
+  const [beratungRetry, setBeratungRetry] = useState<File | null>(null);
 
   const [photo, setPhoto] = useState<ResizedImage | null>(null);
   const PHOTO_INPUTS = ['bp-foto-kamera', 'bp-foto-galerie', 'bp-foto-kamera-neu', 'bp-foto-galerie-neu', 'bp-foto-datei'];
@@ -311,6 +312,7 @@ const Badplaner: React.FC = () => {
     }
   };
   const [photoBusy, setPhotoBusy] = useState(false);
+  const [retryPhoto, setRetryPhoto] = useState<File | null>(null); // fuer «Nochmals versuchen»
   const [photoError, setPhotoError] = useState('');
   const [windows, setWindows] = useState(''); // Fenster auf dem Foto: '0' | '1' | '2' | '3'
   const [cistern, setCistern] = useState('');
@@ -324,6 +326,7 @@ const Badplaner: React.FC = () => {
   const [planFile, setPlanFile] = useState<File | null>(null);
   const [planStatus, setPlanStatus] = useState<'idle' | 'sending' | 'ok' | 'error'>('idle');
   const [planError, setPlanError] = useState('');
+  const [planRetry, setPlanRetry] = useState<File | null>(null);
 
   const resultRef = useRef<HTMLDivElement>(null);
   const stepRefs = useRef<Record<number, HTMLElement | null>>({});
@@ -443,14 +446,11 @@ const Badplaner: React.FC = () => {
     setSel((s) => (s ? { ...s, accentPlacement: id, accent: allowed.some((a) => a.id === s.accent) ? s.accent : firstId(allowed) } : s));
   };
 
-  const onPhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const input = e.target;
-    const file = input.files?.[0];
-    if (!file) return;
+  const loadPhoto = async (file: File) => {
     setPhotoError('');
+    setRetryPhoto(null);
     setPhotoBusy(true);
     try {
-      // Die Datei zuerst lesen, das Feld erst danach leeren (finally).
       const resized = await resizeImageFile(file, 1280, 0.82);
       setPhoto(resized);
       trackBadplaner('badplaner_foto', { raum: room || '', paket: pkg || '' });
@@ -458,14 +458,22 @@ const Badplaner: React.FC = () => {
       setCistern('');
     } catch (error) {
       setPhoto(null);
+      setRetryPhoto(file);
       // Nur unsere eigenen Meldungen sind deutsch und hilfreich. Eine DOMException
       // des Browsers (NotReadableError, SecurityError) darf nie beim Kunden landen.
       const own = error instanceof Error && error.name === 'Error' && error.message;
       setPhotoError(own || 'Dieses Foto konnte nicht geöffnet werden. Bitte ein anderes wählen oder es mit «Foto aufnehmen» neu aufnehmen.');
     } finally {
-      input.value = ''; // gleiche Datei darf erneut gewählt werden
       setPhotoBusy(false);
     }
+  };
+
+  const onPhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const input = e.target;
+    const file = input.files?.[0];
+    if (!file) return;
+    await loadPhoto(file); // die Datei zuerst lesen, das Feld erst danach leeren
+    input.value = ''; // gleiche Datei darf erneut gewählt werden
   };
 
   /** Schritt 3: das Ideenbild VOR den Kontaktangaben. Die Anfrage folgt im Ergebnis. */
@@ -662,23 +670,23 @@ const Badplaner: React.FC = () => {
     }
   };
 
-  const onBeratungFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const input = e.target;
-    const picked = input.files?.[0] || null;
+  const takeBeratungFile = async (picked: File | null, input?: HTMLInputElement) => {
     setBeratungError('');
     setBeratungStatus('idle');
-    const fail = (message: string) => {
+    setBeratungRetry(null);
+    const fail = (message: string, retry: File | null = null) => {
       setBeratungFile(null);
-      input.value = '';
+      if (input) input.value = '';
       setBeratungError(message);
       setBeratungStatus('error');
+      setBeratungRetry(retry);
     };
     // Sofort in den Speicher lesen, vor file.size (siehe resizeImageFile).
     let file: File | null = null;
     try {
       file = picked && await readFileNow(picked);
     } catch (error) {
-      return fail(error instanceof Error ? error.message : 'Datei konnte nicht gelesen werden');
+      return fail(error instanceof Error ? error.message : 'Datei konnte nicht gelesen werden', picked);
     }
     const isPdf = file?.type === 'application/pdf';
     if (file && file.size > (isPdf ? MAX_PLAN_PDF_BYTES : MAX_SOURCE_IMAGE_BYTES)) {
@@ -687,6 +695,7 @@ const Badplaner: React.FC = () => {
     if (beratung.imageWanted && isPdf) return fail('Für ein Ideenbild benötigen wir ein Foto des Raums.');
     setBeratungFile(file);
   };
+  const onBeratungFile = (e: React.ChangeEvent<HTMLInputElement>) => takeBeratungFile(e.target.files?.[0] || null, e.target);
 
   const submitPlan = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -742,23 +751,23 @@ const Badplaner: React.FC = () => {
     }
   };
 
-  const onPlanFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const input = e.target;
-    const picked = input.files?.[0] || null;
+  const takePlanFile = async (picked: File | null, input?: HTMLInputElement) => {
     setPlanError('');
     setPlanStatus('idle');
-    const fail = (message: string) => {
+    setPlanRetry(null);
+    const fail = (message: string, retry: File | null = null) => {
       setPlanFile(null);
-      input.value = '';
+      if (input) input.value = '';
       setPlanError(message);
       setPlanStatus('error');
+      setPlanRetry(retry);
     };
     // Sofort in den Speicher lesen, vor file.size (siehe resizeImageFile).
     let file: File | null = null;
     try {
       file = picked && await readFileNow(picked);
     } catch (error) {
-      return fail(error instanceof Error ? error.message : 'Datei konnte nicht gelesen werden');
+      return fail(error instanceof Error ? error.message : 'Datei konnte nicht gelesen werden', picked);
     }
     const isPdf = file?.type === 'application/pdf';
     if (file && file.size > (isPdf ? MAX_PLAN_PDF_BYTES : MAX_SOURCE_IMAGE_BYTES)) {
@@ -766,6 +775,7 @@ const Badplaner: React.FC = () => {
     }
     setPlanFile(file);
   };
+  const onPlanFile = (e: React.ChangeEvent<HTMLInputElement>) => takePlanFile(e.target.files?.[0] || null, e.target);
 
   const startOver = () => {
     setResult(null);
@@ -1040,7 +1050,7 @@ const Badplaner: React.FC = () => {
                       {beratung.imageWanted && !beratungFile && <p className={styles.hint}>Bitte ein Foto des Raums hinzufügen, wenn Sie ein Ideenbild wünschen.</p>}
                       {beratungStatus === 'ok' && <p className={styles.success}>Vielen Dank. Ihre Anfrage wurde übermittelt. Wir melden uns für die erste Beurteilung.</p>}
                       {beratungStatus === 'error' && <p className={styles.error} role="alert">{beratungError}</p>}
-                      {beratungStatus === 'error' && !beratungFile && <DateiWaehlen id="bp-beratung-datei" onChange={onBeratungFile} />}
+                      {beratungStatus === 'error' && !beratungFile && <DateiWaehlen id="bp-beratung-datei" onChange={onBeratungFile} onRetry={beratungRetry ? () => takeBeratungFile(beratungRetry) : undefined} />}
                     </form>
                   )}
                 </div>
@@ -1176,7 +1186,7 @@ const Badplaner: React.FC = () => {
                     </div>
                   )}
                   {photoError && <p className={styles.error} role="alert">{photoError}</p>}
-                  {photoError && <DateiWaehlen id="bp-foto-datei" onChange={onPhoto} disabled={photoBusy} />}
+                  {photoError && <DateiWaehlen id="bp-foto-datei" onChange={onPhoto} disabled={photoBusy} onRetry={retryPhoto ? () => loadPhoto(retryPhoto) : undefined} />}
                   {photo && (
                     <>
                       <p className={styles.hint}>Am besten von der Tür aus, das ganze Bad im Bild, Licht an. Das Foto wurde auf {photo.width}×{photo.height} Pixel verkleinert.</p>
@@ -1367,7 +1377,7 @@ const Badplaner: React.FC = () => {
                     </button>
                   </div>
                   {planStatus === 'error' && <p className={styles.error} role="alert">{planError}</p>}
-                  {planStatus === 'error' && !planFile && <DateiWaehlen id="bp-plan-datei" onChange={onPlanFile} />}
+                  {planStatus === 'error' && !planFile && <DateiWaehlen id="bp-plan-datei" onChange={onPlanFile} onRetry={planRetry ? () => takePlanFile(planRetry) : undefined} />}
                 </>
               )}
             </form>}
@@ -1435,11 +1445,12 @@ const Badplaner: React.FC = () => {
  * in Google Fotos, umgerechnetes Foto). Ohne accept="image/*" öffnet Chrome den
  * Dateimanager statt der Fotoauswahl; das Format prüft resizeImageFile.
  */
-function DateiWaehlen({ id, onChange, disabled }: { id: string; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void; disabled?: boolean }) {
+function DateiWaehlen({ id, onChange, disabled, onRetry }: { id: string; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void; disabled?: boolean; onRetry?: () => void }) {
   return (
     <>
       <p className={styles.hint}>Foto zuerst auf das Handy herunterladen oder einen Screenshot davon wählen.</p>
       <div className={`${styles.uploadActions} ${styles.changePhoto}`}>
+        {onRetry && <button type="button" className={styles.ctaLight} onClick={onRetry} disabled={disabled}>Nochmals versuchen</button>}
         <span className={styles.uploadAction}>
           <input type="file" id={id} className={styles.fileInput} onChange={onChange} disabled={disabled} />
           <label className={styles.ctaLight} htmlFor={id}>Datei wählen</label>
