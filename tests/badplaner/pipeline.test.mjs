@@ -1258,3 +1258,13 @@ test('Anfrage mit fremdem Bild, geaenderter Auswahl oder abgelaufenem Ticket wir
   assert.match(late.body.error, /abgelaufen/);
   assert.equal(h.calls.filter((call) => call.url === 'https://api.resend.com/emails').length, 1, 'nur die Entwurf-Mail');
 });
+
+test('the image prompt carries no leftover source code (quote, plus, indentation)', async () => {
+  const h = harness(); const res = await h.invoke();
+  assert.equal(res.statusCode, 200);
+  const gen = h.calls.find((call) => call.body?.generationConfig?.responseModalities);
+  const prompt = gen.body.contents[0].parts[0].text;
+  // Seit 637f03a stand mitten im Prompt woertlich: "\n    + " (aus einem Template-String).
+  assert.doesNotMatch(prompt, /"\s*\n\s*\+\s*"/);
+  assert.match(prompt, /never create extra floor area\. Whatever stands in the immediate foreground/);
+});
