@@ -1,6 +1,7 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import styles from './Badplaner.module.css';
+import { imagesLoad } from './imagesLoad';
 import { SEOHead } from '../../components';
 import { business, bathPackages, individualPackage } from '../../config/business';
 import {
@@ -93,18 +94,26 @@ interface Result {
 /**
  * Vorher/Nachher oben auf der Seite: Foto eines alten Bads und das Ideenbild daraus.
  * Die zwei Dateien liefert NLD (echter Durchgang, mit Einwilligung des Kunden).
- * Fehlt eine, zeigt die Seite nichts statt eines kaputten Bildes.
+ * Fehlt eine, zeigt die Seite nichts statt eines kaputten Bildes. Ein onError am
+ * <img> reicht dafuer nicht: die Seite ist vorgerendert, der Ladefehler faellt vor
+ * der Hydration und React bekommt ihn nie mit. Darum erscheint der Block erst,
+ * wenn beide Bilder nachweislich geladen sind.
  */
 const VORHER_NACHHER = { vorher: '/badplaner/vorher-nachher/vorher.jpg', nachher: '/badplaner/vorher-nachher/nachher.jpg' };
 
 const VorherNachher: React.FC = () => {
   const [position, setPosition] = useState(50);
-  const [broken, setBroken] = useState(false);
-  if (broken) return null;
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    imagesLoad([VORHER_NACHHER.vorher, VORHER_NACHHER.nachher]).then((ok) => { if (alive) setReady(ok); });
+    return () => { alive = false; };
+  }, []);
+  if (!ready) return null;
   return (
     <div className={styles.beforeAfter}>
-      <img src={VORHER_NACHHER.vorher} alt="Vorher: Foto des bestehenden Bads" onError={() => setBroken(true)} />
-      <img src={VORHER_NACHHER.nachher} alt="Nachher: Ideenbild aus dem Badplaner" style={{ clipPath: `inset(0 0 0 ${position}%)` }} onError={() => setBroken(true)} />
+      <img src={VORHER_NACHHER.vorher} alt="Vorher: Foto des bestehenden Bads" />
+      <img src={VORHER_NACHHER.nachher} alt="Nachher: Ideenbild aus dem Badplaner" style={{ clipPath: `inset(0 0 0 ${position}%)` }} />
       <span className={styles.beforeAfterLabel}>Vorher</span>
       <span className={`${styles.beforeAfterLabel} ${styles.beforeAfterLabelRight}`}>Ideenbild</span>
       <span className={styles.beforeAfterHandle} style={{ left: `${position}%` }} aria-hidden="true" />
