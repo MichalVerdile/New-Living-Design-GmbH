@@ -43,14 +43,14 @@ const Partners: React.FC = () => {
   return (
     <main id="main-content" className={styles["partners-page"]}>
       <Helmet>
-        <title>Partner & Marken – New Living Design GmbH</title>
+        <title>Marken & Partner | New Living Design Zofingen</title>
         <link rel="canonical" href="https://newlivingdesign.ch/partner" />
         <meta
           name="description"
-          content="Exklusive Partner von New Living Design: Scarabeo, Fima, Rexa, Laminam, Roberto Cavalli Home Interiors, Lamborghini Surfaces und viele mehr."
+          content="Ausgewählte Marken für Bad, Armaturen, Platten, Oberflächen und Interior Design. Verfügbarkeit und passende Produkte klären wir persönlich."
         />
-        <meta property="og:title" content="Unsere Partner & Marken – New Living Design GmbH" />
-        <meta property="og:description" content="Ausgewählte Premium-Marken für Innenarchitektur, Badezimmer, Küchen und Designmöbel." />
+        <meta property="og:title" content="Marken & Partner – New Living Design GmbH" />
+        <meta property="og:description" content="Marken und Sortimente, aus denen wir eine passende Auswahl für Ihr Projekt zusammenstellen." />
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://newlivingdesign.ch/partner" />
         <meta property="og:image" content={`https://newlivingdesign.ch${heroImg}`} />
@@ -69,11 +69,12 @@ const Partners: React.FC = () => {
 
         <div className={styles["partners-hero-container"]}>
           <h1 className={styles["partners-title"]}>
-            <span className={styles["title-line"]}>Vertrauen durch Zusammenarbeit</span>
-            <span className={styles["title-highlight"]}>Unsere Partner</span>
+            <span className={styles["title-line"]}>Marken, aus denen</span>
+            <span>eine stimmige Auswahl wird.</span>
           </h1>
           <p className={styles["partners-subtitle"]}>
-            Ausgewählte Marken für Qualität, Design und Langlebigkeit.
+            Nicht jedes Produkt passt zu jedem Raum. Wir stellen Materialien, Funktionen und Oberflächen passend
+            zu Ihrem Projekt zusammen. Welche Serien verfügbar oder in Zofingen zu sehen sind, klären wir persönlich.
           </p>
           <div className={styles["hero-scroll-indicator"]}>
             <div className={styles["scroll-dot"]}></div>

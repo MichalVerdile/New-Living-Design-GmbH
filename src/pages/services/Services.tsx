@@ -29,14 +29,14 @@ const Services: React.FC = () => {
   return (
     <main id="main-content" className={styles['services-page']}>
       <Helmet>
-        <title>Dienstleistungen für Bad und Küchen | New Living Design Zofingen</title>
+        <title>Beratung, 3D-Planung & Montage | New Living Design</title>
         <link rel="canonical" href="https://newlivingdesign.ch/dienstleistungen" />
         <meta
           name="description"
-          content="Beratung und 3D-Visualisierung für Bad und Küchen sowie Lieferung, Montage und Renovation aus einer Hand in Zofingen."
+          content="Persönliche Auswahlberatung in Zofingen, 3D-Visualisierung für Bad und Küche sowie koordinierte Lieferung, Montage und Renovation."
         />
         <meta property="og:title" content="Dienstleistungen – New Living Design GmbH" />
-        <meta property="og:description" content="Kostenlose Beratung, 3D-Visualisierung und professionelle Lieferung & Montage. Ihr Partner für hochwertige Bau- und Designprojekte." />
+        <meta property="og:description" content="Auswahlberatung, 3D-Visualisierung sowie koordinierte Lieferung und Montage für Ihr Projekt." />
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://newlivingdesign.ch/dienstleistungen" />
         <meta property="og:image" content={`https://newlivingdesign.ch${heroImage}`} />
@@ -55,13 +55,13 @@ const Services: React.FC = () => {
         <div className={styles['hero-container']}>
           <div className={`${styles['hero-content']} ${isVisible ? styles.visible : ''}`}>
             <h1 className={styles['hero-title']}>
-              <span className={styles['title-line']}>Unsere</span>
-              <span className={styles['title-highlight']}>Dienstleistungen</span>
+              <span className={styles['title-line']}>Von der Auswahl</span>
+              <span>bis zur Umsetzung.</span>
             </h1>
             <div className={styles['hero-description']}>
               <p>
-                Perfekte Lösungen für all Ihre Bedürfnisse –
-                von der ersten Beratung bis zur finalen Montage.
+                Wir beginnen mit Ihrem Raum, nicht mit einem Katalog. Danach begleiten wir die vereinbarten Schritte
+                bis zur Lieferung und Montage.
               </p>
             </div>
           </div>
@@ -76,18 +76,17 @@ const Services: React.FC = () => {
       <section className={`${styles.introduction} ${styles['scroll-reveal']}`}>
         <div className={styles['introduction-container']}>
           <div className={styles['section-header']}>
-            <span className={styles['section-label']}>Unser Service</span>
-            <h2 className={styles['section-title']}>Von der Idee zur Realität</h2>
+            <span className={styles['section-label']}>Was wir für Sie übernehmen</span>
+            <h2 className={styles['section-title']}>So viel Begleitung, wie Ihr Projekt braucht</h2>
           </div>
           <div className={styles['introduction-content']}>
             <p>
-              Dank der langjährigen Erfahrung unserer Mitarbeiter werden Sie individuell beraten und betreut.
-              Wir nehmen uns die Zeit, Ihre speziellen Anforderungen und Wünsche zu verstehen, und bieten
-              massgeschneiderte Empfehlungen, die genau auf Sie zugeschnitten sind.
+              Manche Kundinnen und Kunden suchen eine einzelne Platte oder Armatur. Andere möchten Bad oder Küche
+              vollständig planen und umsetzen. Wir beginnen dort, wo Ihr Projekt steht.
             </p>
             <p>
-              Von der Beratung und 3D-Visualisierung für Bad und Küchen bis zur professionellen Lieferung,
-              Montage und Renovation begleiten wir Sie durch jeden Schritt Ihres Projekts.
+              Sie erhalten klare nächste Schritte statt eines pauschalen Leistungspakets: Auswahlberatung, Offerte,
+              3D-Visualisierung sowie Lieferung, Montage oder Renovation nach vereinbartem Umfang.
             </p>
           </div>
         </div>
@@ -101,21 +100,19 @@ const Services: React.FC = () => {
           <div className={`${styles['service-section']} ${styles.light} ${styles['scroll-reveal']}`}>
             <div className={styles['service-content']}>
               <div className={styles['service-text']}>
-                <h3 className={styles['service-title']}>Beratung</h3>
+                <h3 className={styles['service-title']}>Auswahlberatung in der Ausstellung</h3>
                 <div className={styles['service-description']}>
                   <p>
-                    Dank der langjährigen Erfahrung unserer Mitarbeiter werden Sie individuell beraten und betreut.
-                    Wir nehmen uns die Zeit, Ihre speziellen Anforderungen und Wünsche zu verstehen, und bieten
-                    massgeschneiderte Empfehlungen, die genau auf Sie zugeschnitten sind.
+                    Bringen Sie Fotos, Grundriss, Masse oder vorhandene Muster mit. In unserer Ausstellung vergleichen
+                    wir Platten, Möbel, Armaturen und Farben direkt miteinander und stellen eine Kombination zusammen,
+                    die im Raum funktioniert.
                   </p>
                   <p>
-                    Wir freuen uns, Sie in unseren Ausstellungsraum einzuladen, wo Sie die Möglichkeit haben,
-                    unsere Produkte und Dienstleistungen hautnah zu erleben. Lassen Sie sich inspirieren und
-                    überzeugen Sie sich selbst von der Qualität und Vielfalt unseres Angebots.
+                    Wenn technische Fragen oder ein Umbau im Vordergrund stehen, vereinbaren wir anschliessend eine
+                    Besichtigung vor Ort.
                   </p>
                   <div className={styles['service-highlight']}>
-                    <strong>Die Beratung ist völlig kostenlos!</strong> Nutzen Sie diese Gelegenheit, um sich
-                    unverbindlich zu informieren und von unserem umfassenden Service zu profitieren.
+                    <strong>Kostenlos und unverbindlich:</strong> Das erste Gespräch in der Ausstellung.
                   </div>
                 </div>
               </div>
@@ -129,21 +126,19 @@ const Services: React.FC = () => {
           <div className={`${styles['service-section']} ${styles.dark} ${styles.reverse} ${styles['scroll-reveal']}`}>
             <div className={styles['service-content']}>
               <div className={styles['service-text']}>
-                <h3 className={styles['service-title']}>Offerte und 3D-Visualisierung</h3>
+                <h3 className={styles['service-title']}>Entscheiden, bevor bestellt wird</h3>
                 <div className={styles['service-description']}>
                   <p>
-                    Für Bäder und Küchen erhalten Sie eine sorgfältig ausgearbeitete Offerte und die Möglichkeit,
-                    eine 3D-Visualisierung Ihres Projekts anzufordern. So können Sie sich ein genaues Bild von Ihrer
-                    Auswahl machen und sehen, wie Ihre Ideen in die Realität umgesetzt werden.
+                    Sobald Produkte, Masse und Leistungsumfang geklärt sind, erhalten Sie eine nachvollziehbare Offerte.
+                    Für Bad und Küche zeigen wir Ihnen auf Wunsch in einer 3D-Visualisierung, wie Proportionen, Farben
+                    und Materialwechsel zusammenwirken.
                   </p>
                   <p>
-                    Unsere 3D-Visualisierungen bieten eine realistische Vorschau auf das Endergebnis, sodass Sie
-                    sicherstellen können, dass alle Details Ihren Vorstellungen entsprechen. Dies ermöglicht eine
-                    präzisere Planung und Umsetzung.
+                    Die Visualisierung ist eine Entscheidungshilfe. Verbindlich bleiben die bestätigten Produkte,
+                    Masse und Positionen der Offerte.
                   </p>
                   <div className={styles['service-highlight']}>
-                    <strong>Modernste Technologie:</strong> Mit dem Fachwissen unseres Teams liefern wir Ihnen
-                    beeindruckende und detailgetreue Darstellungen, die Ihre Vision greifbar machen.
+                    <strong>Gezielt eingesetzt:</strong> 3D dort, wo es eine Entscheidung wirklich erleichtert.
                   </div>
                 </div>
               </div>
@@ -157,21 +152,19 @@ const Services: React.FC = () => {
           <div className={`${styles['service-section']} ${styles.light} ${styles['scroll-reveal']}`}>
             <div className={styles['service-content']}>
               <div className={styles['service-text']}>
-                <h3 className={styles['service-title']}>Lieferung und Montage</h3>
+                <h3 className={styles['service-title']}>Abgestimmt statt einzeln organisiert</h3>
                 <div className={styles['service-description']}>
                   <p>
-                    Bis Sie das gesamte bestellte Material erhalten haben, gewährleisten wir eine umfassende und
-                    transparente Kommunikation. Sie werden regelmässig über den aktuellen Status Ihrer Bestellung
-                    informiert, sodass Sie stets auf dem neuesten Stand sind.
+                    Wir stimmen Liefertermine, Zugang und Montage auf Ihr Projekt ab. Benötigt die Umsetzung weitere
+                    Facharbeiten, koordinieren wir die vereinbarten Beteiligten und halten die Zuständigkeiten in der
+                    Offerte fest.
                   </p>
                   <p>
-                    Darüber hinaus koordinieren wir die Montage von Platten, Badprodukten und Küchen durch
-                    unsere vertrauenswürdigen Partner. Bei Renovationen stimmen wir die nötigen Arbeiten nach der
-                    persönlichen Beurteilung auf den bestehenden Raum ab.
+                    So wissen Sie vor dem Start, welche Leistungen New Living Design übernimmt, welche Partner beteiligt
+                    sind und welche Vorarbeiten erforderlich sind.
                   </p>
                   <div className={styles['service-highlight']}>
-                    <strong>Qualitätsgarantie:</strong> Unsere Partner arbeiten Hand in Hand mit uns, um sicherzustellen,
-                    dass Ihre Projekte termingerecht und nach höchsten Qualitätsstandards abgeschlossen werden.
+                    <strong>Klar vereinbart:</strong> Ein Ablauf und ein Ansprechpartner für die bestätigten Leistungen.
                   </div>
                 </div>
               </div>
@@ -188,29 +181,29 @@ const Services: React.FC = () => {
       <section className={`${styles['process-section']} ${styles['scroll-reveal']}`}>
         <div className={styles['process-container']}>
           <div className={styles['section-header']}>
-            <span className={styles['section-label']}>Unser Prozess</span>
-            <h2 className={styles['section-title']}>So arbeiten wir</h2>
+            <span className={styles['section-label']}>Der Ablauf</span>
+            <h2 className={styles['section-title']}>Drei Schritte bis zur Umsetzung</h2>
           </div>
           <div className={styles['process-steps']}>
             <div className={styles['process-step']}>
               <div className={styles['step-number']}>01</div>
-              <h4 className={styles['step-title']}>Kostenlose Beratung</h4>
+              <h4 className={styles['step-title']}>Projekt klären</h4>
               <p className={styles['step-description']}>
-                Persönliche Beratung in unserem Ausstellungsraum oder vor Ort bei Ihnen.
+                Wir besprechen Raum, Nutzung, Wünsche und Budget in der Ausstellung oder – wenn erforderlich – vor Ort.
               </p>
             </div>
             <div className={styles['process-step']}>
               <div className={styles['step-number']}>02</div>
-              <h4 className={styles['step-title']}>Offerte & 3D-Visualisierung</h4>
+              <h4 className={styles['step-title']}>Auswahl und Offerte</h4>
               <p className={styles['step-description']}>
-                Detaillierte Offerte mit realistischer 3D-Darstellung Ihres Projekts.
+                Wir kombinieren Produkte und Materialien, prüfen Masse und Anschlüsse und erstellen die Offerte.
               </p>
             </div>
             <div className={styles['process-step']}>
               <div className={styles['step-number']}>03</div>
-              <h4 className={styles['step-title']}>Lieferung & Montage</h4>
+              <h4 className={styles['step-title']}>Lieferung und Umsetzung</h4>
               <p className={styles['step-description']}>
-                Termingerechte Lieferung und professionelle Montage durch unsere Partner.
+                Nach Ihrer Freigabe bestellen wir die Produkte und koordinieren Termine und vereinbarte Arbeiten.
               </p>
             </div>
           </div>
@@ -221,20 +214,20 @@ const Services: React.FC = () => {
       <section className={`${styles['cta-section']} ${styles['scroll-reveal']}`}>
         <div className={styles['cta-container']}>
           <div className={styles['cta-content']}>
-            <h2 className={styles['cta-title']}>Bereit für Ihr Projekt?</h2>
+            <h2 className={styles['cta-title']}>Womit sollen wir beginnen?</h2>
             <p className={styles['cta-description']}>
-              Kontaktieren Sie uns für eine kostenlose Beratung und lassen Sie sich von unserer
-              Erfahrung und unserem umfassenden Service überzeugen.
+              Ein Foto, ein Grundriss oder eine erste Idee genügt. Sagen Sie uns, was Sie verändern möchten,
+              und wir schlagen den passenden ersten Termin vor.
             </p>
             <div className={styles['cta-buttons']}>
               <Link to="/kontakt" className={`${styles['cta-button']} ${styles.primary}`}>
-                <span>Termin vereinbaren</span>
+                <span>Beratung anfragen</span>
                 <svg className={styles['cta-arrow']} viewBox="0 0 24 24" fill="none">
                   <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </Link>
               <Link to="/produkte" className={`${styles['cta-button']} ${styles.secondary}`}>
-                <span>Unsere Produkte</span>
+                <span>Produkte ansehen</span>
                 <svg className={styles['cta-arrow']} viewBox="0 0 24 24" fill="none">
                   <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
@@ -262,7 +255,7 @@ const Services: React.FC = () => {
                 "itemOffered": {
                   "@type": "Service",
                   "name": "Beratung",
-                  "description": "Individuelle und kostenlose Beratung im Showroom oder vor Ort."
+              "description": "Kostenlose und unverbindliche Auswahlberatung in der Ausstellung in Zofingen."
                 }
               },
               {
@@ -270,7 +263,7 @@ const Services: React.FC = () => {
                 "itemOffered": {
                   "@type": "Service",
                   "name": "3D-Visualisierung",
-                  "description": "Realistische Vorschau Ihres Projekts mit moderner 3D-Technologie."
+                  "description": "3D-Visualisierung als Entscheidungshilfe für Bad und Küche."
                 }
               },
               {
@@ -278,7 +271,7 @@ const Services: React.FC = () => {
                 "itemOffered": {
                   "@type": "Service",
                   "name": "Lieferung & Montage",
-                  "description": "Termingerechte Lieferung und professionelle Montage durch Partner."
+                  "description": "Koordinierte Lieferung, Montage und vereinbarte Facharbeiten."
                 }
               }
             ]
