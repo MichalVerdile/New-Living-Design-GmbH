@@ -1335,6 +1335,29 @@ test('Walk-in: Duschrinne im Prompt, ein Punktablauf wird nur vermerkt', async (
   assert.doesNotMatch(JSON.stringify(tray.calls.find((call) => call.url === 'https://api.resend.com/emails').body), /Punktablauf/);
 });
 
+test('Armaturen: Atelier zeigt die Form von Treemme Aurelia in der gewaehlten Oberflaeche', async () => {
+  const options = optionsForPackage('atelier');
+  assert.equal(options.tapSeries, 'Treemme Aurelia, Unterputz');
+  const tile = options.tiles[0];
+  const h = harness();
+  const res = await h.invoke(payload({
+    paket: 'atelier', look: tile.look, format: tile.format, platte: tile.id, kombination: 'einheitlich',
+    unterbau: options.bases[0].id, top: options.tops[0].id, becken: options.basinTypes[0].id,
+    finish: 'treemme-ottone-spazzolato', keramik: options.sanitary[0].id,
+    wall: options.walls[0].id, dusche: options.showers[0].id, badewanne: options.bathtubs[0].id,
+    waschtisch: options.basins[0].id, spiegel: options.mirrors[0].id,
+  }));
+  assert.equal(res.statusCode, 200, `unexpected status ${res.statusCode}: ${JSON.stringify(res.body).slice(0, 200)}`);
+  const prompt = h.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
+  assert.match(prompt, /Treemme Aurelia fittings in brushed brass/);
+  assert.match(prompt, /rectangular wall plate .*spout with flat facets .*flat paddle lever hanging straight down/);
+  assert.match(prompt, /round overhead shower .*finely ribbed .*blade-shaped wall arm .*stick hand shower/);
+  // Lead und Kundenmail nennen die Serie.
+  const mails = h.calls.filter((call) => call.url === 'https://api.resend.com/emails');
+  assert.ok(mails.length >= 1);
+  for (const mail of mails) assert.match(JSON.stringify(mail.body), /Ottone Spazzolato \(Messing gebürstet\), Treemme Aurelia, Unterputz/);
+});
+
 test('Armaturen: Essenza zeigt die Form von Treemme Up+, nicht irgendeine Armatur', async () => {
   const h = harness(); await h.invoke();
   const prompt = h.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
