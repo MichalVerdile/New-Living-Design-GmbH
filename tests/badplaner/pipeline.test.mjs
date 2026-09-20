@@ -1218,6 +1218,89 @@ test('Vorschau braucht die Einwilligung, aber keinen Namen', async () => {
   assert.deepEqual(h.counts(), { generation: 0, checks: 0, mail: 0 });
 });
 
+test('Vorschau: falsches Foto verspricht keinen Rueckruf und meldet den Grund intern', async () => {
+  const h = harness({ photoChecks: [() => photoChecked(false)] });
+  const res = await h.invoke(previewPayload());
+  assert.equal(res.statusCode, 422);
+  assert.equal(res.body.code, 'PHOTO_NOT_A_BATHROOM');
+  assert.doesNotMatch(res.body.error, /Ihre Angaben sind bei uns|wir melden uns/i);
+  assert.match(res.body.error, /kein Bad und kein WC/);
+  assert.deepEqual(h.counts(), { generation: 0, checks: 0, mail: 1 });
+  const mail = h.calls.find((call) => call.url === 'https://api.resend.com/emails');
+  assert.match(mail.body.subject, /^Badplaner-Fehler ohne Kontakt/);
+  assert.match(JSON.stringify(mail.body), /Foto nicht als Bad oder Gäste-WC erkannt/);
+  assert.match(JSON.stringify(mail.body), /Paket.*Essenza/);
+  assert.deepEqual(mail.body.attachments.map(({ filename }) => filename), ['foto.png']);
+});
+
+test('Vorschau: Bildfehler nutzt den verbindlichen Text und verspricht keinen Rueckruf', async () => {
+  const h = harness({ generations: [() => response({ error: 'fixture' }, 503)] });
+  const res = await h.invoke(previewPayload());
+  assert.equal(res.statusCode, 502);
+  assert.equal(res.body.code, 'RENDER_FAILED');
+  assert.equal(res.body.error, 'Ihr Ideenbild konnte leider nicht erstellt werden. Hinterlassen Sie uns Ihre Kontaktdaten – wir besprechen Ihre Badideen gerne persönlich mit Ihnen.');
+  assert.doesNotMatch(res.body.error, /Ihre Angaben sind bei uns|wir melden uns|schicken es Ihnen nach/i);
+  assert.deepEqual(h.counts(), { generation: 1, checks: 0, mail: 1 });
+  const mail = h.calls.find((call) => call.url === 'https://api.resend.com/emails');
+  assert.match(mail.body.subject, /^Badplaner-Fehler ohne Kontakt/);
+  assert.match(JSON.stringify(mail.body), /Bildgenerierung fehlgeschlagen/);
+  assert.match(JSON.stringify(mail.body), /Paket.*Essenza/);
+  assert.deepEqual(mail.body.attachments.map(({ filename }) => filename), ['foto.png']);
+});
+
+test('Vorschau: verworfenes Bild verspricht keinen Rueckruf und bleibt intern sichtbar', async () => {
+  const h = harness({ checks: [() => checked(true), () => checked(true)] });
+  const res = await h.invoke(previewPayload());
+  assert.equal(res.statusCode, 502);
+  assert.equal(res.body.code, 'RENDER_REJECTED');
+  assert.doesNotMatch(res.body.error, /Ihre Angaben sind bei uns|wir melden uns/i);
+  assert.match(res.body.error, /Qualitätsprüfung/);
+  assert.deepEqual(h.counts(), { generation: 2, checks: 2, mail: 1 });
+  const mail = h.calls.find((call) => call.url === 'https://api.resend.com/emails');
+  assert.match(mail.body.subject, /^Badplaner-Fehler ohne Kontakt/);
+  assert.match(JSON.stringify(mail.body), /Qualitätsprüfung abgelehnt/);
+  assert.match(JSON.stringify(mail.body), /Paket.*Essenza/);
+  assert.deepEqual(mail.body.attachments.map(({ filename }) => filename), ['foto.png', 'verworfen.jpg']);
+});
+
+test('Beratung nach Bildfehler uebermittelt Foto und Auswahl ohne Gemini', async () => {
+  const h = harness();
+  const res = await h.invoke({
+    kind: 'beratung',
+    raum: 'badezimmer',
+    priorities: 'Ich wünsche eine persönliche Beratung zu meiner Auswahl im Badplaner.',
+    renderFailure: 'RENDER_FAILED',
+    auswahl: [['Paket', 'Essenza'], ['Dusche', 'Walk-in'], ['Platten', 'Fixture Beige']],
+    file: { name: 'badfoto.png', mime: 'image/png', data: PNG },
+    name: 'Fixture Person',
+    email: 'fixture@example.invalid',
+    telefon: '+41 00 000 00 00',
+    consent: true,
+  });
+  assert.equal(res.statusCode, 200);
+  assert.deepEqual(h.counts(), { generation: 0, checks: 0, mail: 1 });
+  assert.equal(h.photoCount(), 0);
+  const mail = h.calls.find((call) => call.url === 'https://api.resend.com/emails');
+  assert.match(mail.body.subject, /^Badplaner-Beratung:/);
+  assert.match(JSON.stringify(mail.body), /Bildgenerierung fehlgeschlagen/);
+  assert.match(JSON.stringify(mail.body), /Paket.*Essenza/);
+  assert.match(JSON.stringify(mail.body), /Dusche.*Walk-in/);
+  assert.deepEqual(mail.body.attachments.map(({ filename }) => filename), ['beratung.png']);
+});
+
+test('Beratung lehnt manipulierten Fehlerkontext vor jedem Provideraufruf ab', async () => {
+  for (const change of [{ renderFailure: 'toString' }, { renderFailure: 'RENDER_FAILED', auswahl: [['Paket']] }]) {
+    const h = harness();
+    const res = await h.invoke({
+      kind: 'beratung', raum: 'badezimmer', priorities: 'Persönliche Beratung',
+      name: 'Fixture Person', email: 'fixture@example.invalid', telefon: '+41 00 000 00 00', consent: true,
+      ...change,
+    });
+    assert.equal(res.statusCode, 400);
+    assert.equal(h.calls.length, 0);
+  }
+});
+
 test('Anfrage nach der Vorschau: Lead und Kundenmail mit genau dem Bild der Vorschau', async () => {
   const h = harness();
   const preview = (await h.invoke(previewPayload())).body;
