@@ -7,7 +7,7 @@ if (!process.env.BADPLANER_TEST_BUILD) throw new Error('BADPLANER_TEST_BUILD mus
 const buildRoot = resolve(process.env.BADPLANER_TEST_BUILD);
 const { MAX_PHOTO_BASE64, MAX_PLAN_BASE64, MAX_SOURCE_IMAGE_BYTES, normalizeBase64, sniffImageMime, validateImageBytes } =
   await import(pathToFileURL(resolve(buildRoot, 'src/pages/badplaner/imageValidation.js')).href);
-const { resizeImageFile } = await import(pathToFileURL(resolve(buildRoot, 'src/pages/badplaner/resizeImage.js')).href);
+const { resizeImageFile, readFileNow } = await import(pathToFileURL(resolve(buildRoot, 'src/pages/badplaner/resizeImage.js')).href);
 
 // Reale, lokal mit ImageMagick erzeugte weisse 1×1-Bilder. Keine Netzwerkfixtures.
 const realImages = {
@@ -207,8 +207,9 @@ test('client rejects file type/size and hostile dimensions before decoding', asy
   stubGlobal(t, 'createImageBitmap', async () => { decodes += 1; throw new Error('Must not decode'); });
   const fake = (type, size, bytes = pngHeader()) => ({ type, size, arrayBuffer: async () => { reads += 1; return bytes.buffer; } });
   await assert.rejects(resizeImageFile(fake('image/svg+xml', 100)), /JPEG/);
-  await assert.rejects(resizeImageFile(fake('image/png', MAX_SOURCE_IMAGE_BYTES + 1)), /20 MB/);
   assert.equal(reads, 0);
+  // Die Grösse zählt nach dem Lesen, an den echten Bytes.
+  await assert.rejects(resizeImageFile(fake('image/png', 1, new Uint8Array(MAX_SOURCE_IMAGE_BYTES + 1))), /20 MB/);
   await assert.rejects(resizeImageFile(fake('image/png', 33, pngHeader(10000, 5001))), /auflösung/);
   await assert.rejects(resizeImageFile(fake('image/jpeg', 33)), /stimmen nicht/);
   assert.equal(decodes, 0);
@@ -241,6 +242,40 @@ test('an unreadable file that no decoder opens reports it in German', async (t) 
   stubGlobal(t, 'Image', class { set src(_value) { setTimeout(() => this.onerror(), 0); } });
   const file = { type: 'image/jpeg', size: 4096, arrayBuffer: unreadable };
   await assert.rejects(resizeImageFile(file), (err) => err.name === 'Error' && /nicht lesen/.test(err.message));
+});
+
+test('bytes are read before file.size is touched (Android snapshot bug)', async (t) => {
+  // Chrome auf Android: wer zuerst size abfragt, bekommt danach bei jedem
+  // Lesen NotReadableError, wenn die Fotoauswahl andere Metadaten liefert.
+  const order = [];
+  stubGlobal(t, 'createImageBitmap', async () => ({ width: 10, height: 10, close() {} }));
+  const canvas = { width: 0, height: 0, getContext: () => ({ fillRect() {}, drawImage() {} }), toDataURL: () => `data:image/jpeg;base64,${realImages['image/jpeg']}` };
+  stubGlobal(t, 'document', { createElement: () => canvas });
+  const bytes = Buffer.from(realImages['image/jpeg'], 'base64');
+  const file = {
+    type: 'image/jpeg',
+    get size() { order.push('size'); return bytes.length; },
+    arrayBuffer: async () => { order.push('read'); return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.length); },
+  };
+  await resizeImageFile(file, 400);
+  assert.deepEqual(order.slice(0, 1), ['read']);
+  order.length = 0;
+  const copy = await readFileNow({ name: 'bad.JPG', type: 'image/jpeg', get size() { order.push('size'); return 1; }, arrayBuffer: file.arrayBuffer });
+  assert.deepEqual(order, ['read']);
+  assert.equal(copy.size, bytes.length);
+  assert.equal(copy.name, 'bad.JPG');
+});
+
+test('the failure code is complete and names type, size and extension', async (t) => {
+  const unreadable = () => { const err = new Error('The requested file could not be read'); err.name = 'NotReadableError'; throw err; };
+  stubGlobal(t, 'createImageBitmap', async () => { const err = new Error('x'); err.name = 'InvalidStateError'; throw err; });
+  stubGlobal(t, 'FileReader', class { readAsArrayBuffer() { this.error = Object.assign(new Error('x'), { name: 'NotReadableError' }); this.onerror(); } });
+  stubGlobal(t, 'URL', { createObjectURL: () => 'blob:fixture', revokeObjectURL() {} });
+  stubGlobal(t, 'Image', class { set src(_value) { setTimeout(() => this.onerror(), 0); } });
+  const file = { name: 'PXL_20260920.jpg', type: 'image/jpeg', size: 4096, arrayBuffer: unreadable };
+  const expected = /\(Code buf:NotReadableError\/fr:NotReadableError\/bmpX:InvalidStateError\/bmp:InvalidStateError\/img:Error\/lauf1:Error\/lauf2:Error · Typ image\/jpeg · 4096 B · \.jpg\)$/;
+  await assert.rejects(resizeImageFile(file), (err) => expected.test(err.message));
+  await assert.rejects(readFileNow(file), (err) => /nicht lesen\. \(Code buf:NotReadableError\/fr:NotReadableError · Typ image\/jpeg · 4096 B · \.jpg\)$/.test(err.message));
 });
 
 test('client sniffs missing MIME, returns oriented dimensions and always closes bitmap', async (t) => {
