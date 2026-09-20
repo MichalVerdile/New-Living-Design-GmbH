@@ -1177,3 +1177,84 @@ test('slow response body is timed out, not only response headers', async () => {
   const res = await pending;
   assert.equal(res.statusCode, 502); assert.equal(cancelCalled, true); assert.equal(h.counts().mail, 1);
 });
+
+/* ---------- Ideenbild vor dem Kontakt (stage 'vorschau' + kind 'anfrage') ---------- */
+
+const previewPayload = (changes = {}) => {
+  const body = payload({ stage: 'vorschau', ...changes });
+  for (const key of ['name', 'email', 'telefon', 'place']) delete body[key];
+  return body;
+};
+
+/** Wie die Seite die Anfrage schickt: Laenge, JSON, dann die Bildbytes. */
+function anfrageBody(fields, imageBytes) {
+  const json = Buffer.from(JSON.stringify({ kind: 'anfrage', ...fields }), 'utf8');
+  const length = Buffer.alloc(4); length.writeUInt32BE(json.length, 0);
+  return Buffer.concat([length, json, imageBytes]);
+}
+
+const contactFields = { name: 'Walter Test Vorschau (bitte ignorieren)', email: 'fixture@example.invalid', telefon: '+41 00 000 00 00', place: '4800 Zofingen', consent: true };
+
+test('Vorschau: Bild ohne Kontaktangaben, Entwurf-Mail mit Foto und Bild an NLD, keine Kundenmail', async () => {
+  const h = harness();
+  const res = await h.invoke(previewPayload());
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.body.vorschau, true);
+  assert.equal(res.body.image.data, PNG);
+  assert.equal(typeof res.body.ticket, 'string');
+  assert.ok(Array.isArray(res.body.auswahl) && res.body.auswahl.length > 3);
+  assert.deepEqual(h.counts(), { generation: 1, checks: 1, mail: 1 });
+  const draft = h.calls.find((call) => call.url === 'https://api.resend.com/emails');
+  assert.match(draft.body.subject, /^Badplaner-Entwurf ohne Kontakt/);
+  assert.equal(draft.body.attachments.length, 2);
+  assert.equal('reply_to' in draft.body, false);
+  assert.match(res.headers['Set-Cookie'], /nldbp=/);
+});
+
+test('Vorschau braucht die Einwilligung, aber keinen Namen', async () => {
+  const h = harness();
+  const res = await h.invoke(previewPayload({ consent: false }));
+  assert.equal(res.statusCode, 400);
+  assert.deepEqual(h.counts(), { generation: 0, checks: 0, mail: 0 });
+});
+
+test('Anfrage nach der Vorschau: Lead und Kundenmail mit genau dem Bild der Vorschau', async () => {
+  const h = harness();
+  const preview = (await h.invoke(previewPayload())).body;
+  const image = Buffer.from(preview.image.data, 'base64');
+  const res = await h.invoke(anfrageBody({ ...contactFields, leadId: preview.leadId, exp: preview.exp, ticket: preview.ticket, auswahl: preview.auswahl, paket: preview.paket, mime: preview.image.mime }, image));
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.body.delivery.lead, 'accepted');
+  assert.equal(res.body.delivery.customer, 'accepted');
+  assert.equal(h.counts().generation, 1, 'die Anfrage erzeugt kein zweites Bild');
+  const mails = h.calls.filter((call) => call.url === 'https://api.resend.com/emails');
+  const lead = mails.find((call) => /^Badplaner-Lead: Walter Test Vorschau/.test(call.body.subject));
+  assert.ok(lead, 'Lead-Mail fehlt');
+  assert.equal(lead.body.reply_to, 'fixture@example.invalid');
+  assert.match(JSON.stringify(lead.body), new RegExp(preview.leadId));
+  assert.equal(lead.body.attachments[0].content, preview.image.data);
+  const customer = mails.find((call) => call.body.to?.[0] === 'fixture@example.invalid');
+  assert.equal(customer.body.attachments[0].content, preview.image.data);
+});
+
+test('Anfrage mit fremdem Bild, geaenderter Auswahl oder abgelaufenem Ticket wird abgelehnt', async () => {
+  const h = harness();
+  const preview = (await h.invoke(previewPayload())).body;
+  const image = Buffer.from(preview.image.data, 'base64');
+  const base = { ...contactFields, leadId: preview.leadId, exp: preview.exp, ticket: preview.ticket, auswahl: preview.auswahl, paket: preview.paket, mime: preview.image.mime };
+  const other = Buffer.from(image); other[other.length - 5] ^= 0xff;
+  for (const [fields, bytes] of [
+    [base, other],
+    [{ ...base, auswahl: [['Platten', 'etwas anderes']] }, image],
+    [{ ...base, paket: { ...base.paket, id: 'atelier' } }, image],
+    [{ ...base, ticket: 'x' + base.ticket.slice(1) }, image],
+  ]) {
+    const res = await h.invoke(anfrageBody(fields, bytes));
+    assert.equal(res.statusCode, 400, JSON.stringify(res.body));
+  }
+  h.clock.advance(3 * 60 * 60 * 1000);
+  const late = await h.invoke(anfrageBody(base, image));
+  assert.equal(late.statusCode, 400);
+  assert.match(late.body.error, /abgelaufen/);
+  assert.equal(h.calls.filter((call) => call.url === 'https://api.resend.com/emails').length, 1, 'nur die Entwurf-Mail');
+});

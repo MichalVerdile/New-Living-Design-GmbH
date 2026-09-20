@@ -4,6 +4,13 @@
  * POST /api/badplaner mit JSON-Body:
  *   kind: 'render'     Foto + Ausstattung -> Ideenbild (Gemini); Lead-Mail an NLD,
  *                      Kundenmail mit dem Ideenbild, auf Wunsch Newsletter-Eintrag
+ *   kind: 'render' mit stage: 'vorschau'
+ *                      Ideenbild VOR den Kontaktangaben: nur Einwilligung, kein Name.
+ *                      Mail "Badplaner-Entwurf" mit Foto und Bild an NLD, Antwort mit
+ *                      Bild und Ticket (HMAC ueber Lead-ID, Auswahl und SHA-256 des Bildes).
+ *   kind: 'anfrage'    Kontakt nach der Vorschau, als Binaerkoerper (siehe handleAnfrage):
+ *                      Lead-Mail an NLD und Kundenmail mit demselben, vom Ticket
+ *                      bestaetigten Bild. Keine zweite Bilderzeugung, keine Speicherung.
  *   kind: 'grundriss'  Grundriss/m²/Bemerkung zu einem bestehenden Lead per E-Mail
  *
  * Ablauf bei kind: 'render'
@@ -43,7 +50,7 @@
  */
 /* eslint-disable @typescript-eslint/no-explicit-any -- keine @vercel/node-Typen im Projekt, req/res sind deshalb any */
 import { type PackageId } from '../src/data/badplaner.js';
-import { business, individualPackage, packageNote, type BathPackage } from '../src/config/business.js';
+import { bathPackages, business, individualPackage, packageNote, type BathPackage } from '../src/config/business.js';
 import { Budget, TimeoutError, type Clock } from '../server/badplaner/budget.js';
 import { normalizeSelection, ValidationError } from '../server/badplaner/validation.js';
 import { normalizeBase64, validateImageBytes, MAX_PHOTO_BASE64, MAX_PLAN_BASE64 } from '../src/pages/badplaner/imageValidation.js';
@@ -79,6 +86,8 @@ const GEMINI_TIMEOUT_MS = 65000;  // gemini-3-pro-image denkt mit und braucht la
 const CHECK_TIMEOUT_MS = 25000;   // sie liest jetzt ein 2K-Bild, 14 s waren zu knapp
 const CHECK_RETRY_DELAY_MS = 750;
 const COOKIE_NAME = 'nldbp';
+const TICKET_TTL_MS = 2 * 60 * 60 * 1000;     // so lange gilt die Vorschau fuer die Anfrage
+const MAX_ANFRAGE_BYTES = 4_400_000;          // unter der 4.5-MB-Grenze von Vercel fuer den Request
 
 /* ---------- Typen ---------- */
 
@@ -127,6 +136,7 @@ interface RenderBody {
   newsletter?: boolean;
   consent?: boolean;
   website?: string;             // Honeypot, muss leer sein
+  stage?: string;               // 'vorschau': Bild vor den Kontaktangaben
 }
 
 interface BeratungBody {
@@ -277,6 +287,15 @@ async function handler(req: any, res: any) {
   }
 
   let body: any = req.body;
+  if (Buffer.isBuffer(body)) {
+    if (body.length > MAX_ANFRAGE_BYTES) return res.status(413).json({ ok: false, code: 'INPUT_TOO_LARGE', error: 'Die Anfrage ist zu gross.' });
+    try { return await handleAnfrage(res, body, ctx); }
+    catch (err: any) {
+      if (err instanceof TimeoutError) return res.status(504).json({ ok: false, code: 'TIMEOUT', error: 'Das hat zu lange gedauert. Bitte versuchen Sie es noch einmal.' });
+      console.error('[badplaner] Anfrage: unerwarteter Fehler', err?.name || 'Error');
+      return res.status(500).json({ ok: false, error: 'Das hat nicht geklappt. Bitte versuchen Sie es später noch einmal.' });
+    }
+  }
   let rawSize: number;
   try { rawSize = typeof body === 'string' ? Buffer.byteLength(body, 'utf8') : Buffer.byteLength(JSON.stringify(body ?? null), 'utf8'); }
   catch { return res.status(400).json({ ok: false, error: 'Ungültige Anfrage.' }); }
@@ -319,15 +338,17 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   // 3. Fenster und Kontakt (Pflichtfelder)
   const windows = text(body.windows, 4);
   if (!/^[0-3]$/.test(windows)) return bad(res, 'Bitte geben Sie an, wie viele Fenster auf dem Foto zu sehen sind.');
-  const name = text(body.name, 120);
-  const phone = text(body.telefon ?? body.phone, 60);
-  const email = text(body.email, 120);
-  const place = text(body.place, 120);
-  const newsletter = body.newsletter === true;
-  if (!name || !phone) return bad(res, 'Bitte Name und Telefonnummer angeben.');
-  if (!email) return bad(res, 'Bitte E-Mail-Adresse angeben: wir schicken Ihnen das Ideenbild auch per Mail.');
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return bad(res, 'Die E-Mail-Adresse sieht nicht richtig aus.');
-  if (!place) return bad(res, 'Bitte PLZ und Ort angeben.');
+  // Vorschau: das Bild kommt vor den Kontaktangaben, die folgen mit kind 'anfrage'.
+  const preview = body.stage === 'vorschau';
+  const name = preview ? '(noch ohne Kontakt)' : text(body.name, 120);
+  const phone = preview ? '–' : text(body.telefon ?? body.phone, 60);
+  const email = preview ? '' : text(body.email, 120);
+  const place = preview ? '' : text(body.place, 120);
+  const newsletter = !preview && body.newsletter === true;
+  if (!preview) {
+    const contactError = contactProblem(name, phone, email, place);
+    if (contactError) return bad(res, contactError);
+  }
   if (body.consent !== true) return bad(res, 'Bitte bestätigen Sie die Datenschutzerklärung.');
 
   // 4. Foto: neu als data-URL im Feld `foto`, alt als { mime, data } im Feld `photo`
@@ -476,7 +497,7 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   const leadDetails = (checkStatus: string, imageStatus?: string): [string, string][] => [
     ['Name', name],
     ['Telefon / WhatsApp', phone],
-    ['E-Mail', email],
+    ['E-Mail', email || '–'],
     ['PLZ / Ort', place || '–'],
     ...auswahl,
     ['Fenster laut Kunde', windows === '0' ? 'keine' : windows === '3' ? '3 oder mehr' : windows],
@@ -501,7 +522,7 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
     console.warn('[badplaner] Foto zeigt kein Bad', photoCheck.reason);
     const wrongRoomDelivery = await sendLeadMail({
       subject: `Badplaner-Lead: ${name} - ${isGuestWc ? 'Gaeste-WC' : pkg.name} - Foto zeigt kein Bad`,
-      replyTo: email,
+      replyTo: email || undefined,
       intro: 'Neuer Lead aus dem Badplaner. Auf dem Foto ist kein Bad und kein WC zu erkennen, darum wurde gar kein Ideenbild erzeugt. Das Foto liegt bei.',
       details: leadDetails(`nicht noetig: Foto zeigt kein Bad (${photoCheck.reason})`, 'nicht erzeugt: Foto zeigt kein Bad'),
       attachments: [{ filename: photoName, content: photo.data }],
@@ -522,7 +543,7 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   const leadWithoutImage = async (note: string, discarded?: { mime: string; data: string }) => {
     const failDelivery = await sendLeadMail({
       subject: `Badplaner-Lead: ${name} - ${isGuestWc ? 'Gaeste-WC' : pkg.name} - kein Ideenbild erzeugt`,
-      replyTo: email,
+      replyTo: email || undefined,
       intro: 'Neuer Lead aus dem Badplaner. Der Bilddienst hat kein Ideenbild geliefert, der Kunde hat keines gesehen. Das Foto liegt bei, damit wir das Bild von Hand nachliefern koennen.',
       details: leadDetails(note, 'nicht erzeugt: Bilddienst hat nicht geliefert'),
       attachments: [
@@ -581,7 +602,7 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
     const rejectedNote = `abgelehnt: ${check.reason}`;
     const leadDelivery = await sendLeadMail({
       subject: `Badplaner-Lead: ${name} – ${isGuestWc ? 'Gäste-WC' : pkg.name} – Ideenbild abgelehnt`,
-      replyTo: email,
+      replyTo: email || undefined,
       intro: 'Neuer Lead aus dem Badplaner. Das Ideenbild wurde von der automatischen Prüfung abgelehnt und dem Kunden nicht angezeigt. Originalfoto und das verworfene Bild sind im Anhang — nur für uns, der Kunde hat es nie gesehen.',
       details: leadDetails(rejectedNote, 'abgelehnt (Prüfung), nicht angezeigt'),
       // Das verworfene Bild geht mit: ohne es können wir nicht beurteilen, ob die
@@ -614,6 +635,29 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   // 11. Lead-Mail an NLD (Resend mit Anhängen, sonst Formspree ohne Bilder)
   const imageName = gen.mime === 'image/png' ? 'ideenbild.png' : 'ideenbild.jpg';
   const details = leadDetails(checkNote);
+  if (preview) {
+    // Foto und Bild gehen jetzt an NLD: nur hier liegt das Foto, die Anfrage bringt
+    // spaeter nur noch Kontakt und Bild. Scheitert diese Mail, sieht der Besucher sein
+    // Bild trotzdem; die Anfrage-Mail traegt das Bild dann nach.
+    const draftDelivery = await sendLeadMail({
+      subject: `Badplaner-Entwurf ohne Kontakt – ${isGuestWc ? 'Gäste-WC' : pkg.name} (${leadId})`,
+      noCc: true,
+      intro: 'Ein Besucher hat im Badplaner ein Ideenbild erstellt und noch keine Kontaktangaben hinterlassen. Kommt die Anfrage, folgt eine Mail "Badplaner-Lead" mit derselben Lead-ID.',
+      details,
+      attachments: [
+        { filename: photoName, content: photo.data },
+        { filename: imageName, content: gen.data },
+      ],
+    }, ctx);
+    if (draftDelivery.status !== 'accepted') console.error('[badplaner] Entwurf-Mail nicht bestaetigt', draftDelivery.status);
+    const exp = dependencies.clock.now() + TICKET_TTL_MS;
+    const paket = { id: pkg.id, individuell, requiresQuote, guestWc: isGuestWc };
+    const ticket = await signTicket(leadId, exp, await sha256Hex(Buffer.from(gen.data, 'base64')), auswahl, paket);
+    res.setHeader('Set-Cookie', counterCookie(cookie + 1, today));
+    delivered = true;
+    return res.status(200).json({ ok: true, vorschau: true, leadId, image: { mime: gen.mime, data: gen.data },
+      ticket, exp, auswahl, paket, delivery: { draft: draftDelivery.status } });
+  }
   const leadDelivery = await sendLeadMail({
     subject: `Badplaner-Lead: ${name} – ${isGuestWc ? 'Gäste-WC' : pkg.name}`,
     replyTo: email,
@@ -659,6 +703,112 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
       if (globalCounter.date === today) globalCounter.count = Math.max(0, globalCounter.count - 1);
     }
   }
+}
+
+/** Dieselben Pruefungen fuer das Formular vor dem Bild (alt) und fuer die Anfrage danach. */
+function contactProblem(name: string, phone: string, email: string, place: string): string {
+  if (!name || !phone) return 'Bitte Name und Telefonnummer angeben.';
+  if (!email) return 'Bitte E-Mail-Adresse angeben: wir schicken Ihnen das Ideenbild auch per Mail.';
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return 'Die E-Mail-Adresse sieht nicht richtig aus.';
+  if (!place) return 'Bitte PLZ und Ort angeben.';
+  return '';
+}
+
+type TicketPackage = { id: string; individuell: boolean; requiresQuote: boolean; guestWc: boolean };
+
+async function sha256Hex(bytes: Uint8Array): Promise<string> {
+  const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', bytes));
+  return Array.from(digest, (b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+/**
+ * Ticket der Vorschau: HMAC-SHA256 ueber Lead-ID, Ablauf, Bild-Hash, Auswahlzeilen und Paket.
+ * Schluessel aus GEMINI_API_KEY abgeleitet: kein neues Geheimnis in Vercel noetig, und wer
+ * den Schluessel nicht hat, kann weder ein anderes Bild noch andere Zeilen unterschieben.
+ */
+async function signTicket(leadId: string, exp: number, imageHash: string, auswahl: [string, string][], paket: TicketPackage): Promise<string> {
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey('raw', encoder.encode(`badplaner-ticket-v1:${env.GEMINI_API_KEY || ''}`), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const message = JSON.stringify([leadId, exp, imageHash, auswahl, paket.id, paket.individuell, paket.requiresQuote, paket.guestWc]);
+  const signature = new Uint8Array(await crypto.subtle.sign('HMAC', key, encoder.encode(message)));
+  return Buffer.from(signature).toString('base64url');
+}
+
+/* ---------- kind: anfrage (Kontakt nach der Vorschau) ---------- */
+
+/**
+ * Body: 4 Byte Laenge des JSON (big endian), das JSON, danach die Bytes des Ideenbilds
+ * genau so, wie sie die Vorschau geliefert hat. Als Base64 im JSON laege ein 2K-Bild
+ * ueber der 4.5-MB-Grenze von Vercel. Das Ticket bindet Bild, Auswahl und Lead-ID.
+ */
+async function handleAnfrage(res: any, raw: Uint8Array, ctx: RequestContext) {
+  const buffer = Buffer.from(raw);
+  const jsonLength = buffer.length >= 4 ? buffer.readUInt32BE(0) : -1;
+  if (jsonLength < 2 || jsonLength > 20000 || buffer.length <= 4 + jsonLength) return bad(res, 'Ungültige Anfrage.');
+  let body: any;
+  try { body = JSON.parse(buffer.subarray(4, 4 + jsonLength).toString('utf8')); } catch { return bad(res, 'Ungültige Anfrage.'); }
+  if (!body || body.kind !== 'anfrage') return bad(res, 'Ungültige Anfrage.');
+  if (typeof body.website === 'string' && body.website.trim() !== '') return res.status(200).json({ ok: true, leadId: newId() });
+  const image = buffer.subarray(4 + jsonLength);
+
+  const leadId = text(body.leadId, 60);
+  const exp = Number(body.exp);
+  const paket = body.paket || {};
+  const auswahl: [string, string][] = Array.isArray(body.auswahl)
+    ? body.auswahl.filter((row: any) => Array.isArray(row) && row.length === 2 && row.every((cell: any) => typeof cell === 'string')).slice(0, 40)
+    : [];
+  const pkg = bathPackages.find((entry) => entry.id === paket.id);
+  const now = dependencies.clock.now();
+  if (!/^[a-z0-9-]{4,60}$/i.test(leadId) || !pkg || !Number.isFinite(exp)) return bad(res, 'Ungültige Anfrage.');
+  if (exp < now || exp > now + TICKET_TTL_MS) return bad(res, 'Die Vorschau ist abgelaufen. Bitte erstellen Sie das Ideenbild noch einmal.');
+  const mime = body.mime === 'image/png' ? 'image/png' : 'image/jpeg';
+  try { validateImageBytes(image, mime, GENERATED_IMAGE_LIMITS); } catch { return bad(res, 'Ungültige Anfrage.'); }
+  const ticketPackage: TicketPackage = { id: pkg.id, individuell: paket.individuell === true, requiresQuote: paket.requiresQuote === true, guestWc: paket.guestWc === true };
+  const expected = await signTicket(leadId, exp, await sha256Hex(image), auswahl, ticketPackage);
+  if (typeof body.ticket !== 'string' || body.ticket !== expected) {
+    console.warn('[badplaner] Anfrage mit ungueltigem Ticket', leadId);
+    return bad(res, 'Diese Vorschau können wir nicht zuordnen. Bitte erstellen Sie das Ideenbild noch einmal.');
+  }
+
+  const name = text(body.name, 120);
+  const phone = text(body.telefon ?? body.phone, 60);
+  const email = text(body.email, 120);
+  const place = text(body.place, 120);
+  const newsletter = body.newsletter === true;
+  const contactError = contactProblem(name, phone, email, place);
+  if (contactError) return bad(res, contactError);
+  if (body.consent !== true) return bad(res, 'Bitte bestätigen Sie die Datenschutzerklärung.');
+
+  const data = image.toString('base64');
+  const imageName = mime === 'image/png' ? 'ideenbild.png' : 'ideenbild.jpg';
+  const leadDelivery = await sendLeadMail({
+    subject: `Badplaner-Lead: ${name} – ${ticketPackage.guestWc ? 'Gäste-WC' : pkg.name}`,
+    replyTo: email,
+    intro: `Neuer Lead aus dem Badplaner: Kontakt nach dem Ideenbild. Ideenbild im Anhang; das Foto liegt in der Mail "Badplaner-Entwurf ohne Kontakt" mit derselben Lead-ID (${leadId}).`,
+    details: [
+      ['Name', name],
+      ['Telefon / WhatsApp', phone],
+      ['E-Mail', email],
+      ['PLZ / Ort', place],
+      ...auswahl,
+      ['Newsletter', newsletter ? 'ja' : 'nein'],
+      ['Zeitpunkt', swissTime()],
+      ['Lead-ID', leadId],
+    ],
+    attachments: [{ filename: imageName, content: data }],
+  }, ctx);
+  if (leadDelivery.status !== 'accepted') return res.status(502).json({
+    ok: false, code: 'LEAD_DELIVERY_FAILED', delivery: { lead: leadDelivery.status },
+    error: 'Ihre Anfrage konnte nicht bestätigt werden. Bitte kontaktieren Sie uns telefonisch; die Zustellung ist möglicherweise unklar.',
+  });
+  const customerDelivery = await sendCustomerMail({
+    to: email, name, pkg, individuell: ticketPackage.individuell, auswahl, image: { mime, data, filename: imageName },
+  }, ctx);
+  const newsletterDelivery = newsletter ? await subscribeNewsletter(email, name, ctx) : { status: 'skipped' as const };
+  return res.status(200).json({ ok: true, leadId, delivery: {
+    lead: leadDelivery.status, leadProvider: leadDelivery.provider, leadAttachments: leadDelivery.attachments,
+    customer: customerDelivery.status, newsletter: newsletterDelivery.status,
+  } });
 }
 
 /* ---------- kind: beratung ---------- */
@@ -1306,6 +1456,8 @@ interface LeadMail {
   details: [string, string][];
   attachments: { filename: string; content: string }[];
   replyTo?: string;
+  /** Nur an BADPLANER_TO, ohne Kopie (Entwurf ohne Kontakt: nur an Diego). */
+  noCc?: boolean;
 }
 
 /**
@@ -1323,7 +1475,7 @@ async function sendLeadMail(mail: LeadMail, ctx: RequestContext): Promise<MailRe
         body: JSON.stringify({
           from: mailFrom(),
           to: [env.BADPLANER_TO || business.email],
-          cc: [env.BADPLANER_CC || business.emailSecondary],
+          cc: mail.noCc ? undefined : [env.BADPLANER_CC || business.emailSecondary],
           reply_to: mail.replyTo,
           subject: mail.subject,
           html: leadHtml(mail),
