@@ -7,7 +7,10 @@ if (!process.env.BADPLANER_TEST_BUILD) throw new Error('BADPLANER_TEST_BUILD mus
 const buildRoot = resolve(process.env.BADPLANER_TEST_BUILD);
 const { MAX_PHOTO_BASE64, MAX_PLAN_BASE64, MAX_SOURCE_IMAGE_BYTES, normalizeBase64, sniffImageMime, validateImageBytes } =
   await import(pathToFileURL(resolve(buildRoot, 'src/pages/badplaner/imageValidation.js')).href);
-const { resizeImageFile, readFileNow } = await import(pathToFileURL(resolve(buildRoot, 'src/pages/badplaner/resizeImage.js')).href);
+const { resizeImageFile, readFileNow, readRetry } = await import(pathToFileURL(resolve(buildRoot, 'src/pages/badplaner/resizeImage.js')).href);
+// Die echten Wartezeiten (0,5 / 1 / 2 s) prueft ein eigener Test; hier kurz halten.
+const DEFAULT_READ_DELAYS = [...readRetry.delaysMs];
+readRetry.delaysMs = [1, 1, 1];
 
 // Reale, lokal mit ImageMagick erzeugte weisse 1×1-Bilder. Keine Netzwerkfixtures.
 const realImages = {
@@ -273,9 +276,32 @@ test('the failure code is complete and names type, size and extension', async (t
   stubGlobal(t, 'URL', { createObjectURL: () => 'blob:fixture', revokeObjectURL() {} });
   stubGlobal(t, 'Image', class { set src(_value) { setTimeout(() => this.onerror(), 0); } });
   const file = { name: 'PXL_20260920.jpg', type: 'image/jpeg', size: 4096, arrayBuffer: unreadable };
-  const expected = /\(Code buf:NotReadableError\/fr:NotReadableError\/bmpX:InvalidStateError\/bmp:InvalidStateError\/img:Error\/lauf1:Error\/lauf2:Error · Typ image\/jpeg · 4096 B · \.jpg\)$/;
+  const expected = /\(Code buf:NotReadableError\/fr:NotReadableError\/leseversuche:4\/bmpX:InvalidStateError\/bmp:InvalidStateError\/img:Error\/lauf1:Error\/lauf2:Error · Typ image\/jpeg · 4096 B · \.jpg\)$/;
   await assert.rejects(resizeImageFile(file), (err) => expected.test(err.message));
-  await assert.rejects(readFileNow(file), (err) => /nicht lesen\. \(Code buf:NotReadableError\/fr:NotReadableError · Typ image\/jpeg · 4096 B · \.jpg\)$/.test(err.message));
+  await assert.rejects(readFileNow(file), (err) => /nicht lesen\. \(Code buf:NotReadableError\/fr:NotReadableError\/leseversuche:4 · Typ image\/jpeg · 4096 B · \.jpg\)$/.test(err.message));
+});
+
+test('a photo that fails twice is read on the third attempt, before any error', async (t) => {
+  // Diego, 20.09. in Produktion: dasselbe Foto scheiterte zweimal und ging beim dritten Mal.
+  assert.deepEqual(DEFAULT_READ_DELAYS, [500, 1000, 2000]);
+  let reads = 0;
+  stubGlobal(t, 'createImageBitmap', async () => ({ width: 10, height: 10, close() {} }));
+  stubGlobal(t, 'FileReader', class { readAsArrayBuffer() { this.error = Object.assign(new Error('x'), { name: 'NotReadableError' }); this.onerror(); } });
+  const canvas = { width: 0, height: 0, getContext: () => ({ fillRect() {}, drawImage() {} }), toDataURL: () => `data:image/jpeg;base64,${realImages['image/jpeg']}` };
+  stubGlobal(t, 'document', { createElement: () => canvas });
+  const bytes = Buffer.from(realImages['image/jpeg'], 'base64');
+  const file = { name: 'a.jpg', type: 'image/jpeg', size: bytes.length, arrayBuffer: async () => {
+    reads += 1;
+    if (reads < 3) throw Object.assign(new Error('x'), { name: 'NotReadableError' });
+    return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.length);
+  } };
+  const image = await resizeImageFile(file, 400);
+  assert.equal(reads, 3);
+  assert.equal(image.base64, realImages['image/jpeg']);
+  reads = 0;
+  const copy = await readFileNow(file);
+  assert.equal(reads, 3);
+  assert.equal(copy.size, bytes.length);
 });
 
 test('client sniffs missing MIME, returns oriented dimensions and always closes bitmap', async (t) => {
