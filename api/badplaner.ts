@@ -980,10 +980,11 @@ function tapDescription(
   series: { label: string; prompt: string } | undefined,
   seriesText: string,
 ): { prompt: string; label: string } {
-  // Die Serie fuer Atelier ist nicht festgelegt (Daten: "Treemme, Unterputz"): die Teile ja, die Form nicht.
+  // Atelier = Treemme Aurelia (Diego, 20.09.). Form aus den Treemme-Zeichnungen, nur in Worten, keine Fotos:
+  // RWIT 2CA5 (Platte 200x75, Auslauf 187), RWIT 2CC2 (Rosetten 75), IT RTBR 380 (Kopfbrause 300, Arm 400), RWIT 2705.
   if (pkg === 'atelier') {
     return {
-      prompt: `concealed built-in (Unterputz) Treemme fittings in ${finish.prompt}, no exposed mixer body anywhere: at the washbasin a slim spout coming straight out of the wall above the basin with a small separate wall plate and lever; in a shower a flat wall plate with a single lever, an overhead shower on a straight wall arm and a hand shower on a small wall outlet with its holder`,
+      prompt: `concealed built-in (Unterputz) Treemme Aurelia fittings in ${finish.prompt}, classic forms in a modern cut, no exposed mixer body anywhere: at the washbasin a thin flat horizontal rectangular wall plate with sharp corners (about 20 × 7.5 cm) above the basin, from its left part a long slim spout with flat facets along its length that runs straight out of the wall and bends down in a smooth arc, and on its right part a short cylindrical handle with a fine engraved line and a flat paddle lever hanging straight down; in a shower small round wall rosettes (about 7.5 cm), one with the same short cylinder and hanging paddle lever and one above it with a round diverter knob, a large thin round overhead shower (about 30 cm) whose rim is finely ribbed with vertical grooves, on a flat wide blade-shaped wall arm with fine lengthwise grooves, and a slim straight cylindrical stick hand shower hanging in a small round wall holder with the hose outlet; never a cross handle, never an exposed wall mixer, the overhead shower is round, never square`,
       label: `${finish.label}, ${seriesText}`,
     };
   }
