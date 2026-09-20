@@ -60,7 +60,7 @@ import { SANITARY_MODULE_PHOTO } from '../server/badplaner/sanitaermodul.js';
 declare const process: any;
 declare const Buffer: any;
 
-// 230 s: zwei volle Durchgaenge (Bild 65 s + Pruefung 25 s) plus Vorpruefung und Mails.
+// 230 s: zwei volle Durchgaenge (Bild 65 s + Pruefung 20 s) plus Vorpruefung und Mails.
 // Vercel erlaubt bis 300 s; vercel.json nennt denselben Wert.
 export const config = { maxDuration: 230 };
 
@@ -83,8 +83,17 @@ const DELIVERY_RESERVE_MS = 10000; // Lead- und Kundenmail brauchen zusammen 2 b
 const PER_DEVICE_PER_DAY = 5;                 // Cookie nldbp
 const PER_IP_PER_DAY = 10;                    // In-Memory, muss über dem Gerätelimit liegen
 const GEMINI_TIMEOUT_MS = 65000;  // gemini-3-pro-image denkt mit und braucht laenger als Flash
-const CHECK_TIMEOUT_MS = 25000;   // sie liest jetzt ein 2K-Bild, 14 s waren zu knapp
+// 20.09., 09:25 (Preview, 87 s): Fotopruefung 16 s, Bild 28 s, Pruefung nach 25 s abgelaufen,
+// dieselbe Pruefung nochmals 17 s. Beide Pruefungen denken jetzt nur wenig (checkThinking),
+// darum reichen kuerzere Grenzen; die alten waren auf "medium" zugeschnitten.
+const CHECK_TIMEOUT_MS = 20000;       // liest ein 2K-Bild
+const QUICK_CHECK_TIMEOUT_MS = 10000; // zweiter Anlauf nach einem Timeout: kurz, nicht nochmals 20 s
+const PHOTO_CHECK_TIMEOUT_MS = 12000; // haelt das Bild auf; laeuft sie ab, wird ohne Grundriss gerendert
 const CHECK_RETRY_DELAY_MS = 750;
+// Die Pruefmodelle lesen nur ab und fuellen JSON aus. gemini-3.6-flash denkt ab Werk "medium";
+// "low" kennen alle Gemini-3-Modelle (ai.google.dev/gemini-api/docs/generate-content/thinking),
+// aeltere Modelle bekommen den Parameter nicht.
+const checkThinking = (model: string) => (/^gemini-3/.test(model) ? { thinkingConfig: { thinkingLevel: 'low' } } : {});
 const COOKIE_NAME = 'nldbp';
 const TICKET_TTL_MS = 2 * 60 * 60 * 1000;     // so lange gilt die Vorschau fuer die Anfrage
 const MAX_ANFRAGE_BYTES = 4_400_000;          // unter der 4.5-MB-Grenze von Vercel fuer den Request
@@ -229,7 +238,7 @@ interface CheckFlags {
   nearestBefore: Fixture | 'none';
   nearestAfter: Fixture | 'none';
 }
-type CheckResult = { status: 'approved'; note?: string } | { status: 'rejected'; reason: string; flags: CheckFlags } | { status: 'unavailable'; detail: string } | { status: 'disabled' };
+type CheckResult = { status: 'approved'; note?: string; pointDrain?: boolean } | { status: 'rejected'; reason: string; flags: CheckFlags } | { status: 'unavailable'; detail: string } | { status: 'disabled' };
 
 /** Each factory owns its best-effort counters. Tests inject HTTP, clock and IDs. */
 export function createHandler(overrides: Partial<BadplanerDependencies> = {}) {
@@ -563,13 +572,17 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   if (gen.ok === false) return res.status(502).json(await leadWithoutImage(`Bilddienst: ${gen.detail}`));
   const firstGenerationMs = dependencies.clock.now() - passStarted;
   let checkNote = 'ok';
-  const wantedFixtures = { room, shower: shower ? shower.id !== 'keine' : false, bathtub: bathtub ? bathtub.id !== 'keine' : false, cistern };
+  const wantedFixtures = { room, shower: shower ? shower.id !== 'keine' : false, bathtub: bathtub ? bathtub.id !== 'keine' : false, cistern,
+    linearDrain: shower?.id === 'walk-in' };
   const checkWithUnavailableRetry = async (image: { mime: string; data: string }): Promise<CheckResult> => {
     let result = await checkOpenings(photo, image, wantedFixtures, ctx);
     if (result.status === 'unavailable'
       && ctx.budget.remaining() >= CHECK_RETRY_DELAY_MS + CHECK_TIMEOUT_MS + DELIVERY_RESERVE_MS) {
-      await dependencies.sleep(CHECK_RETRY_DELAY_MS);
-      result = await checkOpenings(photo, image, wantedFixtures, ctx);
+      // Ein 503 kommt schnell, dann lohnt dieselbe Frage nochmals. Nach einem Timeout nicht
+      // wieder die volle Zeit (20.09.: 25 s abgelaufen, dann 17 s): ein kurzer zweiter Anlauf.
+      const afterTimeout = result.detail === 'Timeout';
+      if (!afterTimeout) await dependencies.sleep(CHECK_RETRY_DELAY_MS);
+      result = await checkOpenings(photo, image, wantedFixtures, ctx, afterTimeout ? QUICK_CHECK_TIMEOUT_MS : CHECK_TIMEOUT_MS);
     }
     return result;
   };
@@ -589,7 +602,7 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   if (check.status === 'rejected' && ctx.budget.remaining() >= secondPassMs) {
     // The rejected image never becomes a fallback if the retry/check fails.
     const firstReason = check.reason;
-    const retryPrompt = `${prompt}\nIMPORTANT: a previous attempt failed the structural and fixture check: ${check.reason}. Start again from image 1 and correct that exact issue. Everything else from the instructions above still applies without exception: the same camera and framing, everything in the foreground at the edge of the picture, every opening, the toilet on its wall and its place, the washbasin on its own vanity unit with the mirror above it, and exactly the requested shower and bathtub state.`;
+    const retryPrompt = `${prompt}\nIMPORTANT: a previous attempt failed the structural and fixture check: ${check.reason}. Start again from image 1 and correct that exact issue. Everything else from the instructions above still applies without exception: the same camera and framing, everything in the foreground at the edge of the picture, every opening, every recess and step of the walls, the toilet on its wall and its place, the washbasin on its own vanity unit with the mirror above it, and exactly the requested shower and bathtub state.`;
     const second = await generateImage(retryPrompt, photo, references, ctx, photoRatio, secondCheckReserveMs);
     if (second.ok === false) return res.status(502).json(await leadWithoutImage(`1. Versuch verworfen (${check.reason}), 2. Versuch: ${second.detail}`, gen));
     check = await checkWithUnavailableRetry(second);
@@ -627,6 +640,11 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   if (check.status === 'approved' && check.note) {
     checkNote = checkNote + ', Bildausschnitt verändert: ' + check.note;
     console.info('[badplaner] Bildausschnitt verändert, Ideenbild trotzdem geliefert:', check.note);
+  }
+  // Nur vermerkt, nicht verworfen: ein zweiter Durchgang kostet 30 s und ein zweites Bild.
+  if (check.status === 'approved' && check.pointDrain) {
+    checkNote = checkNote + ', Hinweis: Punktablauf statt Duschrinne gezeichnet';
+    console.info('[badplaner] Punktablauf statt Duschrinne gezeichnet');
   }
   if (check.status === 'unavailable') checkNote = `nicht möglich (${check.detail})`;
   if (check.status === 'disabled') checkNote = 'deaktiviert';
@@ -962,9 +980,10 @@ function tapDescription(
   series: { label: string; prompt: string } | undefined,
   seriesText: string,
 ): { prompt: string; label: string } {
+  // Die Serie fuer Atelier ist nicht festgelegt (Daten: "Treemme, Unterputz"): die Teile ja, die Form nicht.
   if (pkg === 'atelier') {
     return {
-      prompt: `concealed built-in (Unterputz) fittings in ${finish.prompt}: only the spout and a flat wall control plate are visible, no exposed mixer body`,
+      prompt: `concealed built-in (Unterputz) Treemme fittings in ${finish.prompt}, no exposed mixer body anywhere: at the washbasin a slim spout coming straight out of the wall above the basin with a small separate wall plate and lever; in a shower a flat wall plate with a single lever, an overhead shower on a straight wall arm and a hand shower on a small wall outlet with its holder`,
       label: `${finish.label}, ${seriesText}`,
     };
   }
@@ -977,7 +996,8 @@ function tapDescription(
     };
   }
   return {
-    prompt: 'exposed surface-mounted (Aufputz) Treemme Up+ fittings in polished chrome for the requested fixtures only',
+    // Form aus Treemmes Up+-Katalog (Diego, 13.09.): Zylinder mit Stick-Hebel, runde Rosetten, runder Kopfbrause.
+    prompt: 'exposed surface-mounted (Aufputz) Treemme Up+ fittings in polished chrome for the requested fixtures only, all round, slim and plain: at the washbasin a slim cylindrical single-lever mixer with a flat top, a thin stick lever on top and a round tube spout that bends down; in a shower an exposed wall mixer with a slim round body, the same thin stick lever and round wall rosettes, a thin round overhead shower on a straight wall arm and a slim round hand shower; never square shapes, never a thermostat tower or a shower panel',
     label: seriesText,
   };
 }
@@ -1072,10 +1092,10 @@ function buildPrompt(v: {
     intro,
     layoutLine,
     `This is an edit of image 1, not a new picture. Keep image 1 and change only what the CHANGE list names. Everything else stays exactly as it is: the camera position, angle, lens and framing, the same crop and the same aspect ratio, the walls and where they stand, with every niche, ledge, projection and step they have in image 1 and no others, the ceiling including any sloping ceiling and the room height, the room proportions, every window, roof window and door at its exact size and position, and the radiators. Never zoom out, never widen the view, never show floor, wall or ceiling beyond the edges of image 1, never create extra floor area. Whatever stands in the immediate foreground at the edge of image 1 belongs to the picture and stays: an open door leaf, a door frame, the edge of a wall, a piece of furniture cut off by the border. It keeps its place and takes up the same part of the picture as before, and is never removed to show more of the room. Every window keeps the same share of the picture it has in image 1; do not move closer to it and do not make it larger. ${windowRule}${glassRule}`,
-    `KEEP THE POSITIONS. A half-height wall, a low built wall or a boxed pre-wall that a fixture stands against is part of the room, not furniture: it keeps its place, its length, its height and its depth, and the fixture stays mounted on it. Every fixture keeps the wall or low wall it stands against in image 1 and its place along it, measured against the corners, the door and the window next to it. The toilet keeps its wall and its place because its drain cannot be moved: under a sloping ceiling it stays under that sloping ceiling and is never moved to a straight or rear wall to gain headroom. The washbasin keeps its wall and its place. A bathtub that becomes a shower uses only the bathtub's own footprint, on the same wall. NO NEW WALLS: never add a wall, a partition, a half-height wall, a boxed pre-wall, a ledge, a shelf or a niche that image 1 does not show, not behind the toilet, not behind the washbasin and not in the shower. Where image 1 shows one flat wall, the result shows that same flat wall with new tiles: it never steps forward and never gets a flat top at mid-height. Only surfaces, sanitary fixtures, taps, furniture and lights change.`,
+    `KEEP THE POSITIONS. A half-height wall, a low built wall or a boxed pre-wall that a fixture stands against is part of the room, not furniture: it keeps its place, its length, its height and its depth, and the fixture stays mounted on it. Every fixture keeps the wall or low wall it stands against in image 1 and its place along it, measured against the corners, the door and the window next to it. The toilet keeps its wall and its place because its drain cannot be moved: under a sloping ceiling it stays under that sloping ceiling and is never moved to a straight or rear wall to gain headroom. The washbasin keeps its wall and its place. A bathtub that becomes a shower uses only the bathtub's own footprint, on the same wall. NO NEW WALLS: never add a wall, a partition, a half-height wall, a boxed pre-wall, a ledge, a shelf or a niche that image 1 does not show, not behind the toilet, not behind the washbasin and not in the shower. Where image 1 shows one flat wall, the result shows that same flat wall with new tiles: it never steps forward and never gets a flat top at mid-height. NOTHING IS FILLED IN EITHER: every recess, alcove, niche, wall offset, corner step and wall projection that image 1 shows stays exactly where it is, with the same width, depth and height, above all in the shower area. A shower or bathtub that stands in a recess or alcove stays inside it, and the new tiles follow the wall into the recess and around its corners. Never fill a recess, never close an alcove, never tile a niche over flush and never straighten a stepped wall into one flat wall. Only surfaces, sanitary fixtures, taps, furniture and lights change.`,
     `CHANGE this, and only this, in ${v.room === 'gaeste-wc' ? 'this guest WC' : 'this bathroom'} (style "${v.packageName}"):${look} ${surfaces}; ${fixtures}; if a toilet is visible in image 1, ${toilet}; ${vanity}; ${v.tapPrompt}.${accent}`,
     `TAKE AWAY. If image 1 shows a bidet, it is gone: this bathroom has none, and the wall and floor where it stood are finished like the rest, with nothing standing in its place. The old shower curtain and its rail are gone. Clutter, towels, bottles and rugs are gone, and so is loose furniture that just stands around; the washbasin's own vanity unit is not loose furniture and is always there, as described above. Every shower fitting — mixer, riser, shower head, hand shower — sits inside the shower area on the shower wall, never on a wall next to the toilet or the washbasin. Natural daylight, no people, no text.`,
-    `BEFORE YOU DRAW, compare with image 1: the same viewpoint and framing, the same walls and ceiling, ${v.windows === '0' ? 'no window at all' : 'the same windows'}, the same door, every fixture where image 1 has it, and no low wall, ledge, shelf or niche that image 1 does not have. A small, tight room stays small and tight: never show more of the room than image 1 shows.`,
+    `BEFORE YOU DRAW, compare with image 1: the same viewpoint and framing, the same walls and ceiling, ${v.windows === '0' ? 'no window at all' : 'the same windows'}, the same door, every fixture where image 1 has it, every recess, alcove and step of the walls that image 1 has, and no low wall, ledge, shelf or niche that image 1 does not have. A small, tight room stays small and tight: never show more of the room than image 1 shows.`,
   ].filter(Boolean).join('\n');
 }
 
@@ -1210,8 +1230,9 @@ const nearest = (value: any): Fixture | 'none' | null =>
 async function checkOpenings(
   photo: Photo,
   gen: { mime: string; data: string },
-  wanted: { room: 'badezimmer' | 'gaeste-wc'; shower: boolean; bathtub: boolean; cistern: 'aufputz' | 'unterputz' },
+  wanted: { room: 'badezimmer' | 'gaeste-wc'; shower: boolean; bathtub: boolean; cistern: 'aufputz' | 'unterputz'; linearDrain?: boolean },
   ctx: RequestContext,
+  timeoutMs = CHECK_TIMEOUT_MS,
 ): Promise<CheckResult> {
   const model = env.BADPLANER_CHECK_MODEL === undefined ? 'gemini-3.6-flash' : env.BADPLANER_CHECK_MODEL;
   if (!model?.trim()) return { status: 'disabled' };
@@ -1228,6 +1249,9 @@ async function checkOpenings(
     // Diegos Test vom 19.09.: flache, raumhoch geplattete Wand, im Ideenbild ein Muretto mit Ablage
     // hinter Waschtisch, WC und Dusche. Neue Mauerteile gibt es im Umbau nicht.
     'Set new_wall_element true if image 2 has a built wall element anywhere in the room that image 1 does not have: a half-height wall, a low built wall, a boxed pre-wall, a ledge or shelf built onto a wall, a wall section that steps forward with a flat top, a niche or a partition, behind the toilet, behind the washbasin, in the shower or elsewhere. A glass shower panel, a vanity unit, a mirror or mirror cabinet, a radiator, a flat glass sanitary module behind the toilet and the line where tiles end on a flat wall are not wall elements. ' +
+    // Diegos Test vom 20.09., 09:56: der Ruecksprung in der Wand der Dusche war im Ideenbild zugemauert.
+    'Set wall_element_lost true if image 1 has a recess, alcove, niche, wall offset, corner step or wall projection anywhere in the room, in the shower area or elsewhere, that image 2 no longer has because it was filled in, closed or straightened into one flat wall. An old bathtub with its panel, an old shower tray or enclosure, a surface-mounted cistern with its casing, a bidet and loose furniture are not wall elements: removing them is no loss. ' +
+    'Set point_drain true only if image 2 has a floor-level tiled shower whose drain is a round or square point drain or grate in the shower floor, rather than a long narrow channel drain along one wall; false when there is no such shower or no drain is visible. ' +
     'Then say whether something large stands in the immediate foreground of image 1 at the edge of the picture, cut off by the border — an open door leaf, a door frame, the near edge of a wall, a piece of furniture — taking up roughly a fifth of the picture or more; and whether that same object is still visible at the edge of image 2 at any size, even as a narrow strip (foreground_object_after is false only when it is gone completely). ' +
     'Set window_much_bigger true only if a window that is visible in both images takes up a clearly larger part of image 2 than of image 1, about half again as large or more. ' +
     'Set extra_openings true only if image 2 has a window, roof window, door or outside opening that image 1 does not have, or lost one that image 1 has. ' +
@@ -1237,8 +1261,8 @@ async function checkOpenings(
     '"after":{"toilet":"left","washbasin":"left","shower":"none","bathtub":"none","bidet":"none"},' +
     '"order_before":["washbasin","toilet"],"order_after":["washbasin","toilet"],' +
     '"nearest_before":"toilet","nearest_after":"toilet",' +
-    '"toilet_on_low_wall_before":false,"toilet_on_low_wall_after":false,"new_wall_element":false,' +
-    '"foreground_object_before":false,"foreground_object_after":false,"window_much_bigger":false,' +
+    '"toilet_on_low_wall_before":false,"toilet_on_low_wall_after":false,"new_wall_element":false,"wall_element_lost":false,' +
+    '"foreground_object_before":false,"foreground_object_after":false,"window_much_bigger":false,"point_drain":false,' +
     '"extra_openings":false,"view_changed":false,"reason":"short English note, max 25 words"}';
   try {
     const r = await request(ctx, url, {
@@ -1255,9 +1279,9 @@ async function checkOpenings(
             ],
           },
         ],
-        generationConfig: { temperature: 0, responseMimeType: 'application/json' },
+        generationConfig: { temperature: 0, responseMimeType: 'application/json', ...checkThinking(model) },
       }),
-    }, Math.min(CHECK_TIMEOUT_MS, Math.max(0, ctx.budget.remaining() - DELIVERY_RESERVE_MS)));
+    }, Math.min(timeoutMs, Math.max(0, ctx.budget.remaining() - DELIVERY_RESERVE_MS)));
     const json = r.json;
     if (!r.ok) {
       console.error('[badplaner] Fensterprüfung fehlgeschlagen', r.status);
@@ -1267,8 +1291,8 @@ async function checkOpenings(
     if (json?.candidates?.[0]?.finishReason !== 'STOP') return { status: 'unavailable', detail: `Abbruch: ${json?.candidates?.[0]?.finishReason || 'unbekannt'}` };
     const parsed = JSON.parse(textOut);
     const keys = ['before', 'after', 'order_before', 'order_after', 'nearest_before', 'nearest_after',
-      'toilet_on_low_wall_before', 'toilet_on_low_wall_after', 'new_wall_element', 'foreground_object_before', 'foreground_object_after',
-      'window_much_bigger', 'extra_openings', 'view_changed', 'reason'];
+      'toilet_on_low_wall_before', 'toilet_on_low_wall_after', 'new_wall_element', 'wall_element_lost', 'foreground_object_before', 'foreground_object_after',
+      'window_much_bigger', 'point_drain', 'extra_openings', 'view_changed', 'reason'];
     const before = inventory(parsed?.before);
     const after = inventory(parsed?.after);
     const orderBefore = order(parsed?.order_before);
@@ -1277,7 +1301,7 @@ async function checkOpenings(
     const nearestAfter = nearest(parsed?.nearest_after);
     if (!parsed || Array.isArray(parsed) || !before || !after || !orderBefore || !orderAfter || !nearestBefore || !nearestAfter
       || typeof parsed.toilet_on_low_wall_before !== 'boolean' || typeof parsed.toilet_on_low_wall_after !== 'boolean'
-      || typeof parsed.new_wall_element !== 'boolean'
+      || typeof parsed.new_wall_element !== 'boolean' || typeof parsed.wall_element_lost !== 'boolean' || typeof parsed.point_drain !== 'boolean'
       || typeof parsed.foreground_object_before !== 'boolean' || typeof parsed.foreground_object_after !== 'boolean'
       || typeof parsed.window_much_bigger !== 'boolean'
       || typeof parsed.extra_openings !== 'boolean' || typeof parsed.view_changed !== 'boolean'
@@ -1292,6 +1316,9 @@ async function checkOpenings(
     const wallAdded = parsed.new_wall_element || (wanted.cistern === 'unterputz' && !parsed.toilet_on_low_wall_before && parsed.toilet_on_low_wall_after)
       ? 'a low wall, ledge, shelf or niche that is not in the photo was added; where the photo shows a flat wall, the result must show the same flat wall'
       : null;
+    const wallLost = parsed.wall_element_lost
+      ? 'a recess, alcove, niche or step of the wall that is in the photo was filled in or straightened; every recess and wall step of the photo must stay'
+      : null;
     // Steht im Foto vorne am Bildrand die offene Tuer und fehlt sie im Ideenbild,
     // hat das Modell den Blickwinkel gedreht: der Kunde erkennt sein Bad nicht wieder.
     const foregroundLost = parsed.foreground_object_before && !parsed.foreground_object_after
@@ -1305,13 +1332,16 @@ async function checkOpenings(
       || compareDepth(before, after, nearestBefore, nearestAfter)
       || lowWallLost
       || wallAdded
+      || wallLost
       || foregroundLost
       || zoomedIn;
     if (flags.extra_openings) return { status: 'rejected', reason: `an opening was added or lost (${parsed.reason.slice(0, 120)})`, flags };
     if (fault) return { status: 'rejected', reason: fault, flags };
     // Ein anderer Bildausschnitt allein ist kein Grund, dem Kunden nichts zu zeigen:
     // Fenster, WC, Wände und Ausstattung stimmen dann ja. Er wird nur vermerkt.
-    return flags.view_changed ? { status: 'approved', note: parsed.reason.slice(0, 200) } : { status: 'approved' };
+    // Die Duschrinne wird nur vermerkt (siehe handleRender).
+    const pointDrain = !!wanted.linearDrain && parsed.point_drain;
+    return flags.view_changed ? { status: 'approved', note: parsed.reason.slice(0, 200), pointDrain } : { status: 'approved', pointDrain };
   } catch (err: any) {
     const detail = err && (err.name === 'AbortError' || err.name === 'TimeoutError') ? 'Timeout' : String(err?.message || err).slice(0, 120);
     console.error('[badplaner] Fensterprüfung nicht möglich', detail);
@@ -1351,9 +1381,9 @@ async function checkPhoto(photo: Photo, room: 'badezimmer' | 'gaeste-wc', ctx: R
       headers: { 'x-goog-api-key': env.GEMINI_API_KEY || '', 'content-type': 'application/json' },
       body: JSON.stringify({
         contents: [{ role: 'user', parts: [{ text: question }, { inlineData: { mimeType: photo.mime, data: photo.data } }] }],
-        generationConfig: { temperature: 0, responseMimeType: 'application/json' },
+        generationConfig: { temperature: 0, responseMimeType: 'application/json', ...checkThinking(model) },
       }),
-    }, Math.min(CHECK_TIMEOUT_MS, Math.max(0, ctx.budget.remaining() - DELIVERY_RESERVE_MS)));
+    }, Math.min(PHOTO_CHECK_TIMEOUT_MS, Math.max(0, ctx.budget.remaining() - DELIVERY_RESERVE_MS)));
     if (!r.ok) {
       console.error('[badplaner] Fotopruefung fehlgeschlagen', r.status);
       return { status: 'unavailable' };

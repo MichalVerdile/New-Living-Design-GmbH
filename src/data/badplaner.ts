@@ -717,8 +717,8 @@ export const basinTypes: BasinTypeOption[] = [
 /* ---------- Armaturenserie mit Foto (Colore) ---------- */
 
 export const tapSeriesOptions: TapSeriesOption[] = [
-  { id: 'treemme-up', label: 'Treemme Up+', supplier: 'Treemme', shape: 'runde Formen', note: 'Bild zeigt die Formensprache der Serie.', packages: ['colore'], image: '/badplaner/armaturen/armatur-up-chrom.jpg', url: 'https://www.rubinetterie3m.it/it/moderno/up-up', prompt: 'Treemme Up+ tap in polished chrome, round soft shapes' },
-  { id: 'treemme-ran', label: 'Treemme Ran', supplier: 'Treemme', shape: 'eckige Formen', note: 'Bild zeigt die Formensprache der Serie.', packages: ['colore'], image: '/badplaner/armaturen/armatur-ran-chrom.jpg', url: 'https://www.rubinetterie3m.it/it/moderno/ran', prompt: 'Treemme Ran tap in polished chrome, square edged shapes' },
+  { id: 'treemme-up', label: 'Treemme Up+', supplier: 'Treemme', shape: 'runde Formen', note: 'Bild zeigt die Formensprache der Serie.', packages: ['colore'], image: '/badplaner/armaturen/armatur-up-chrom.jpg', url: 'https://www.rubinetterie3m.it/it/moderno/up-up', prompt: 'Treemme Up+ fittings in polished chrome, all round, slim and plain: at the washbasin a slim cylindrical single-lever mixer with a flat top, a thin stick lever on top and a round tube spout that bends down; in a shower a concealed mixer behind a round wall rosette with the same thin stick lever, a thin round overhead shower on a straight wall arm and a slim round hand shower; never square shapes' },
+  { id: 'treemme-ran', label: 'Treemme Ran', supplier: 'Treemme', shape: 'eckige Formen', note: 'Bild zeigt die Formensprache der Serie.', packages: ['colore'], image: '/badplaner/armaturen/armatur-ran-chrom.jpg', url: 'https://www.rubinetterie3m.it/it/moderno/ran', prompt: 'Treemme Ran fittings in polished chrome, flat and square-edged: at the washbasin a tall slender single-lever mixer with flat faces, a thin flat blade-shaped spout of rectangular section and a flat rectangular blade lever on top; in a shower a concealed mixer behind a flat rectangular wall plate with a flat blade lever, a thin square overhead shower on a straight wall arm and a slim square-edged hand shower; never round tube shapes' },
 ];
 
 /* ---------- Sanitärkeramik (WC, Waschtisch) ---------- */
@@ -787,7 +787,7 @@ export const wallOptions: ChoiceOption[] = [
 export const showerOptions: ChoiceOption[] = [
   { id: 'keine', label: 'Keine Dusche', prompt: 'no shower, shower tray, shower enclosure or shower controls' },
   { id: 'duschwanne', label: 'Dusche mit Duschwanne', prompt: 'shower with a low shower tray and a fixed glass panel; every wall around the entire shower-tray perimeter is tiled continuously to the ceiling' },
-  { id: 'walk-in', label: 'Gefälledusche / Walk-in, bodeneben gefliest', prompt: 'floor-level walk-in shower with a correctly sloped tiled shower floor, linear drain and a fixed glass panel; every wall around the entire shower-floor perimeter is tiled continuously to the ceiling' },
+  { id: 'walk-in', label: 'Gefälledusche / Walk-in, bodeneben gefliest', prompt: 'floor-level walk-in shower with a correctly sloped tiled shower floor that falls towards the back wall of the shower, where a linear channel drain (Duschrinne) runs along the foot of that wall over almost the whole width of the shower: one long narrow slot with a slim tiled-in or brushed stainless steel cover; never a central point drain, never a round or square grate in the shower floor; a fixed glass panel; every wall around the entire shower-floor perimeter is tiled continuously to the ceiling' },
 ];
 
 export const bathtubOptions: ChoiceOption[] = [

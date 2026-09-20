@@ -54,8 +54,8 @@ const inv = (changes = {}) => ({ toilet: 'left', washbasin: 'left', shower: 'non
 // Die sichtbare Reihenfolge von links nach rechts folgt dem Inventar, solange
 // ein Test nichts anderes sagt.
 const order = (state) => ['washbasin', 'toilet', 'bidet', 'shower', 'bathtub'].filter((key) => state[key] !== 'none');
-const checked = (extra = false, text) => response({ candidates: [{ content: { parts: [{ text: text ?? JSON.stringify({ before: inv(), after: inv(), order_before: order(inv()), order_after: order(inv()), nearest_before: 'toilet', nearest_after: 'toilet', toilet_on_low_wall_before: false, toilet_on_low_wall_after: false, new_wall_element: false, foreground_object_before: false, foreground_object_after: false, window_much_bigger: false, extra_openings: extra, view_changed: false, reason: 'inventory' }) }] }, finishReason: 'STOP' }] });
-const checkedInv = (before, after, extra = {}) => response({ candidates: [{ content: { parts: [{ text: JSON.stringify({ before: inv(before), after: inv(after), order_before: order(inv(before)), order_after: order(inv(after)), nearest_before: 'toilet', nearest_after: 'toilet', toilet_on_low_wall_before: false, toilet_on_low_wall_after: false, new_wall_element: false, foreground_object_before: false, foreground_object_after: false, window_much_bigger: false, extra_openings: false, view_changed: false, reason: 'inventory', ...extra }) }] }, finishReason: 'STOP' }] });
+const checked = (extra = false, text) => response({ candidates: [{ content: { parts: [{ text: text ?? JSON.stringify({ before: inv(), after: inv(), order_before: order(inv()), order_after: order(inv()), nearest_before: 'toilet', nearest_after: 'toilet', toilet_on_low_wall_before: false, toilet_on_low_wall_after: false, new_wall_element: false, wall_element_lost: false, point_drain: false, foreground_object_before: false, foreground_object_after: false, window_much_bigger: false, extra_openings: extra, view_changed: false, reason: 'inventory' }) }] }, finishReason: 'STOP' }] });
+const checkedInv = (before, after, extra = {}) => response({ candidates: [{ content: { parts: [{ text: JSON.stringify({ before: inv(before), after: inv(after), order_before: order(inv(before)), order_after: order(inv(after)), nearest_before: 'toilet', nearest_after: 'toilet', toilet_on_low_wall_before: false, toilet_on_low_wall_after: false, new_wall_element: false, wall_element_lost: false, point_drain: false, foreground_object_before: false, foreground_object_after: false, window_much_bigger: false, extra_openings: false, view_changed: false, reason: 'inventory', ...extra }) }] }, finishReason: 'STOP' }] });
 
 function harness(settings = {}) {
   const clock = fakeClock();
@@ -181,7 +181,7 @@ test('Colore uses the selected tap series and finish in prompt and lead mail', a
   }));
   assert.equal(res.statusCode, 200);
   const generation = h.calls.find((call) => call.body?.generationConfig?.responseModalities);
-  assert.match(generation.body.contents[0].parts[0].text, /Treemme Ran tap in matte black/);
+  assert.match(generation.body.contents[0].parts[0].text, /Treemme Ran fittings in matte black, flat and square-edged: at the washbasin .*flat blade-shaped spout/);
   const lead = JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails')?.body);
   assert.match(lead, /Treemme Ran, Nero Opaco/);
   assert.doesNotMatch(lead, /Armaturenserie/);
@@ -452,7 +452,7 @@ test('WC und Dusche duerfen an derselben Wand nicht die Plaetze tauschen', async
     before: inv({ shower: 'right', toilet: 'right' }), after: inv({ shower: 'right', toilet: 'right' }),
     order_before: ['washbasin', 'shower', 'toilet'], order_after: ['washbasin', 'toilet', 'shower'],
     nearest_before: 'toilet', nearest_after: 'toilet',
-    toilet_on_low_wall_before: false, toilet_on_low_wall_after: false, new_wall_element: false,
+    toilet_on_low_wall_before: false, toilet_on_low_wall_after: false, new_wall_element: false, wall_element_lost: false, point_drain: false,
     foreground_object_before: false, foreground_object_after: false, window_much_bigger: false,
     extra_openings: false, view_changed: false, reason: 'inventory',
   }) }] }, finishReason: 'STOP' }] });
@@ -470,7 +470,7 @@ test('ein weggeraeumtes Stueck aendert die Reihenfolge nicht', async () => {
     before: inv({ bidet: 'right', toilet: 'right' }), after: inv({ toilet: 'right' }),
     order_before: ['washbasin', 'toilet', 'bidet'], order_after: ['washbasin', 'toilet'],
     nearest_before: 'bidet', nearest_after: 'toilet',
-    toilet_on_low_wall_before: false, toilet_on_low_wall_after: false, new_wall_element: false,
+    toilet_on_low_wall_before: false, toilet_on_low_wall_after: false, new_wall_element: false, wall_element_lost: false, point_drain: false,
     foreground_object_before: false, foreground_object_after: false, window_much_bigger: false,
     extra_openings: false, view_changed: false, reason: 'inventory',
   }) }] }, finishReason: 'STOP' }] })] });
@@ -486,7 +486,7 @@ test('das WC darf an seiner Wand nicht nach hinten rutschen', async () => {
     before: inv({ toilet: 'right', shower: 'back' }), after: inv({ toilet: 'right', shower: 'back' }),
     order_before: ['washbasin', 'shower', 'toilet'], order_after: ['washbasin', 'shower', 'toilet'],
     nearest_before: 'toilet', nearest_after: 'washbasin',
-    toilet_on_low_wall_before: false, toilet_on_low_wall_after: false, new_wall_element: false,
+    toilet_on_low_wall_before: false, toilet_on_low_wall_after: false, new_wall_element: false, wall_element_lost: false, point_drain: false,
     foreground_object_before: false, foreground_object_after: false, window_much_bigger: false,
     extra_openings: false, view_changed: false, reason: 'inventory',
   }) }] }, finishReason: 'STOP' }] });
@@ -1010,8 +1010,8 @@ test('failed render attempts do not consume the IP counter', async () => {
 });
 
 test('retry is skipped when a second pass of the measured length cannot fit', async () => {
-  // Nur noch im Ausnahmefall: langsamstes Bild, Pruefung erst nach einem 503 lesbar (60 + 24 + 24 s).
-  const h = harness({ generateDelays: [60000], checkDelays: [24000, 24000], checks: [() => response({}, 503), () => checked(true)] });
+  // Nur noch im Ausnahmefall: langsamstes Bild, Pruefung erst nach einem 503 lesbar (60 + 19 + 19 s).
+  const h = harness({ generateDelays: [60000], checkDelays: [19000, 19000], checks: [() => response({}, 503), () => checked(true)] });
   const res = await h.invoke();
   assert.equal(res.body.code, 'RENDER_REJECTED'); assert.deepEqual(h.counts(), { generation: 1, checks: 2, mail: 1 });
 });
@@ -1019,8 +1019,8 @@ test('retry is skipped when a second pass of the measured length cannot fit', as
 test('der zweite Versuch laeuft auch nach dem langsamsten ersten Durchgang', async () => {
   // Diegos Lead bp-mu8875ki-ofjd5s vom 19.09., 12:11: erster Versuch verworfen (Fenster dazu,
   // Kamera zurueck), kein zweiter Versuch, weil bei 110 s Budget die Zeit fehlte. Um 12:25
-  // lief der zweite Versuch und kam durch. Jetzt passt er auch nach 60 s Bild + 24 s Pruefung.
-  const h = harness({ swatchDelay: 700, photoCheckDelays: [2400], generateDelays: [60000, 60000], checkDelays: [24000, 24000],
+  // lief der zweite Versuch und kam durch. Jetzt passt er auch nach 60 s Bild + 19 s Pruefung (Grenze 20 s).
+  const h = harness({ swatchDelay: 700, photoCheckDelays: [2400], generateDelays: [60000, 60000], checkDelays: [19000, 19000],
     mailDelays: [3000, 2000], checks: [() => checked(true), () => checked(false)] });
   const start = h.clock.now();
   const res = await h.invoke();
@@ -1267,4 +1267,76 @@ test('the image prompt carries no leftover source code (quote, plus, indentation
   // Seit 637f03a stand mitten im Prompt woertlich: "\n    + " (aus einem Template-String).
   assert.doesNotMatch(prompt, /"\s*\n\s*\+\s*"/);
   assert.match(prompt, /never create extra floor area\. Whatever stands in the immediate foreground/);
+});
+
+test('beide Pruefungen denken wenig, das Bildmodell bleibt unveraendert', async () => {
+  // 20.09., 09:25: Fotopruefung 16 s, Pruefung nach 25 s abgelaufen, Wiederholung 17 s.
+  const h = harness(); const res = await h.invoke();
+  assert.equal(res.statusCode, 200);
+  const gemini = h.calls.filter((call) => call.url.includes('generativelanguage.googleapis.com'));
+  const image = gemini.find((call) => call.body.generationConfig.responseModalities);
+  assert.equal(image.body.generationConfig.thinkingConfig, undefined);
+  assert.match(image.url, /gemini-3-pro-image:/);
+  const checks = gemini.filter((call) => call !== image);
+  assert.equal(checks.length, 2);
+  for (const call of checks) assert.deepEqual(call.body.generationConfig.thinkingConfig, { thinkingLevel: 'low' });
+  // Ein aelteres Pruefmodell kennt thinkingLevel nicht und bekommt es nicht.
+  const old = harness({ env: { BADPLANER_CHECK_MODEL: 'gemini-2.5-flash' } }); await old.invoke();
+  for (const call of old.calls.filter((c) => c.url.includes('gemini-2.5-flash'))) assert.equal(call.body.generationConfig.thinkingConfig, undefined);
+});
+
+test('eine langsame Fotopruefung haelt das Bild hoechstens 12 s auf', async () => {
+  const withLayout = () => photoChecked(true, JSON.stringify({ is_bathroom: true, reason: 'bathroom', walls: inv(), order: ['washbasin', 'toilet'], nearest: 'toilet' }));
+  const slow = harness({ photoCheckDelays: [13000], photoChecks: [withLayout] }); const res = await slow.invoke();
+  assert.equal(res.statusCode, 200);
+  assert.equal(slow.counts().generation, 1);
+  const prompt = slow.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
+  assert.doesNotMatch(prompt, /WHAT IMAGE 1 SHOWS/);
+  const inTime = harness({ photoCheckDelays: [11000], photoChecks: [withLayout] });
+  await inTime.invoke();
+  assert.match(inTime.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text, /WHAT IMAGE 1 SHOWS/);
+});
+
+test('nach einem Timeout der Pruefung folgt ein kurzer zweiter Anlauf von hoechstens 10 s', async () => {
+  const quick = harness({ checkDelays: [21000, 9000] }); const ok = await quick.invoke();
+  assert.equal(ok.statusCode, 200); assert.equal(quick.counts().checks, 2);
+  assert.match(JSON.stringify(quick.calls.find((call) => call.url === 'https://api.resend.com/emails').body), /Fensterprüfung.*ok/);
+  const slow = harness({ checkDelays: [21000, 11000] }); const late = await slow.invoke();
+  assert.equal(late.statusCode, 200); assert.equal(slow.counts().checks, 2);
+  assert.match(JSON.stringify(slow.calls.find((call) => call.url === 'https://api.resend.com/emails').body), /Fensterprüfung.*nicht möglich \(Timeout\)/);
+});
+
+test('ein zugemauerter Ruecksprung in der Wand wird verworfen', async () => {
+  // Diegos Test vom 20.09., 09:56 (bp-mu9iv1yy-bdzji9): die Nische bei der Dusche war weg.
+  const lost = () => checkedInv({ shower: 'back' }, { shower: 'back' }, { wall_element_lost: true });
+  const h = harness({ checks: [lost, () => checkedInv({ shower: 'back' }, { shower: 'back' })] });
+  const res = await h.invoke(payload({ dusche: 'walk-in', badewanne: 'keine' }));
+  assert.equal(res.statusCode, 200);
+  const gens = h.calls.filter((call) => call.body?.generationConfig?.responseModalities);
+  assert.equal(gens.length, 2);
+  assert.match(gens[1].body.contents[0].parts[0].text, /a recess, alcove, niche or step of the wall that is in the photo was filled in/);
+  assert.match(gens[0].body.contents[0].parts[0].text, /Never fill a recess, never close an alcove, never tile a niche over flush/);
+  const question = h.calls.find((call) => /wall_element_lost/.test(call.body?.contents?.[0]?.parts?.[0]?.text || '')).body.contents[0].parts[0].text;
+  assert.match(question, /no longer has because it was filled in/);
+});
+
+test('Walk-in: Duschrinne im Prompt, ein Punktablauf wird nur vermerkt', async () => {
+  const drain = () => checkedInv({ shower: 'back' }, { shower: 'back' }, { point_drain: true });
+  const h = harness({ checks: [drain] });
+  const res = await h.invoke(payload({ dusche: 'walk-in', badewanne: 'keine' }));
+  assert.equal(res.statusCode, 200); assert.equal(h.counts().generation, 1, 'kein zweites Bild wegen des Ablaufs');
+  const prompt = h.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
+  assert.match(prompt, /linear channel drain \(Duschrinne\) runs along the foot of that wall/);
+  assert.match(prompt, /never a central point drain, never a round or square grate/);
+  assert.match(JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails').body), /Punktablauf statt Duschrinne/);
+  // Mit Duschwanne gibt es keine Rinne: kein Vermerk.
+  const tray = harness({ checks: [drain] });
+  await tray.invoke(payload({ dusche: 'duschwanne', badewanne: 'keine' }));
+  assert.doesNotMatch(JSON.stringify(tray.calls.find((call) => call.url === 'https://api.resend.com/emails').body), /Punktablauf/);
+});
+
+test('Armaturen: Essenza zeigt die Form von Treemme Up+, nicht irgendeine Armatur', async () => {
+  const h = harness(); await h.invoke();
+  const prompt = h.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
+  assert.match(prompt, /Treemme Up\+ fittings in polished chrome .*thin stick lever on top and a round tube spout/);
 });
