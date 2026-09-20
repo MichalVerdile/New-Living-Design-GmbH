@@ -1329,9 +1329,11 @@ test('Walk-in: Duschrinne im Prompt, ein Punktablauf wird nur vermerkt', async (
   const res = await h.invoke(payload({ dusche: 'walk-in', badewanne: 'keine' }));
   assert.equal(res.statusCode, 200); assert.equal(h.counts().generation, 1, 'kein zweites Bild wegen des Ablaufs');
   const prompt = h.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
-  assert.match(prompt, /linear channel drain \(Duschrinne\) runs along the foot of that short end wall/);
-  assert.match(prompt, /ALL shower fittings sit together on that same short end wall/);
-  assert.match(prompt, /the drain lies directly below the mixer and the hand shower, at the foot of the very wall they are mounted on/);
+  assert.match(prompt, /ALL shower fittings sit together on that short end wall/);
+  // Diego, 20.09.: die Rinne wird von den Armaturen aus beschrieben, bei breiter Dusche nie entlang der Rueckwand.
+  assert.match(prompt, /The drain starts from the fittings: a linear channel drain \(Duschrinne\) lies in the floor at the foot of the very wall that carries the mixer and the hand shower/);
+  assert.match(prompt, /When the shower is wider than it is deep, this drain runs through the full depth of the shower, from the back wall towards the glass panel, that is towards the camera: it is perpendicular to the back wall and never runs along it/);
+  assert.doesNotMatch(prompt, /side walls on its left and right/, 'a3: der Satz schob die Armaturen an die Rueckwand');
   assert.match(prompt, /flush with the bathroom floor, with no step, no kerb and no raised platform/);
   assert.match(prompt, /never a central point drain, never a round or square grate/);
   assert.match(JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails').body), /Punktablauf statt Duschrinne/);
@@ -1342,6 +1344,15 @@ test('Walk-in: Duschrinne im Prompt, ein Punktablauf wird nur vermerkt', async (
   const sideMail = JSON.stringify(side.calls.find((call) => call.url === 'https://api.resend.com/emails').body);
   assert.match(sideMail, /Duschrinne an der Längsseite statt an der Schmalseite/);
   assert.match(sideMail, /Duscharmaturen an zwei Wänden statt alle an der Schmalseite/);
+  // Die Pruefung nennt nur die Waende (a1: Armaturen links, Rinne hinten), der Code vermerkt die Laengsseite.
+  for (const walls of [{ drain_wall: 'back', fittings_wall: 'left' }, { drain_wall: 'back', fittings_wall: 'back', shower_wider_than_deep: true }]) {
+    const w = harness({ checks: [() => checkedInv({ shower: 'back' }, { shower: 'back' }, walls)] });
+    assert.equal((await w.invoke(payload({ dusche: 'walk-in', badewanne: 'keine' }))).statusCode, 200);
+    assert.match(JSON.stringify(w.calls.find((call) => call.url === 'https://api.resend.com/emails').body), /Duschrinne an der L.ngsseite/);
+  }
+  const right = harness({ checks: [() => checkedInv({ shower: 'back' }, { shower: 'back' }, { drain_wall: 'left', fittings_wall: 'left', shower_wider_than_deep: true })] });
+  await right.invoke(payload({ dusche: 'walk-in', badewanne: 'keine' }));
+  assert.doesNotMatch(JSON.stringify(right.calls.find((call) => call.url === 'https://api.resend.com/emails').body), /L.ngsseite/);
   // Mit Duschwanne gibt es keine Rinne: kein Vermerk.
   const tray = harness({ checks: [drain] });
   await tray.invoke(payload({ dusche: 'duschwanne', badewanne: 'keine' }));
