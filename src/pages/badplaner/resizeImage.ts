@@ -17,17 +17,22 @@ export interface ResizedImage {
 
 type Drawable = ImageBitmap | HTMLImageElement;
 
-const UNREADABLE = 'Dieses Foto konnte der Browser nicht lesen. Bitte ein anderes Foto wählen oder es mit «Foto aufnehmen» neu aufnehmen.';
+const UNREADABLE = 'Dieses Foto konnte der Browser nicht lesen.';
 
 /**
- * Kurzcode am Ende der Meldung: welche Leseversuche woran gescheitert sind.
- * Für den Kunden belanglos, für uns der einzige Hinweis, warum ein Foto auf
- * einem fremden Gerät nicht aufgeht — ein Screenshot der Meldung genügt dann.
+ * Code am Ende der Meldung: welche Leseversuche woran gescheitert sind, dazu
+ * Typ, Grösse und Endung der Datei. Für den Kunden belanglos, für uns der
+ * einzige Hinweis, warum ein Foto auf einem fremden Gerät nicht aufgeht — ein
+ * Screenshot der Meldung genügt dann. Nicht kürzen.
  */
-function failureCode(log: string[]): string {
+function failureCode(log: string[], file?: Blob & { name?: string }): string {
   const seen: string[] = [];
   for (const entry of log) if (entry && !seen.includes(entry)) seen.push(entry);
-  return seen.length ? ` (Code ${seen.join('/').slice(0, 60)})` : '';
+  if (!seen.length) return '';
+  // file.size erst hier: alle Leseversuche sind schon vorbei (siehe resizeImageFile).
+  const ext = /\.([a-z0-9]{1,8})$/i.exec(file?.name || '')?.[1]?.toLowerCase();
+  const info = file ? ` · Typ ${file.type || '-'} · ${file.size} B · .${ext || '-'}` : '';
+  return ` (Code ${seen.join('/')}${info})`;
 }
 
 function noteFailure(log: string[], step: string, error: unknown): void {
@@ -75,6 +80,27 @@ async function tryReadBytes(file: Blob, log: string[] = []): Promise<Uint8Array 
   } catch {
     return null;
   }
+}
+
+/**
+ * Wartezeiten zwischen den Leseversuchen: sofort, dann nach 0,5 / 1 / 2 s.
+ * Diego am 20.09. in Produktion: dasselbe Foto scheiterte zweimal und ging beim
+ * dritten Mal durch; die Fotoauswahl gibt die Datei manchmal erst verzoegert frei.
+ * (Als Objekt, damit die Tests die Wartezeiten verkuerzen koennen.)
+ */
+export const readRetry = { delaysMs: [500, 1000, 2000] };
+
+async function readBytesPatiently(file: Blob, log: string[]): Promise<Uint8Array | null> {
+  let bytes = await tryReadBytes(file, log);
+  let attempts = 1;
+  for (const ms of readRetry.delaysMs) {
+    if (bytes) break;
+    await new Promise((resolve) => setTimeout(resolve, ms));
+    bytes = await tryReadBytes(file, log);
+    attempts += 1;
+  }
+  if (!bytes) log.push(`leseversuche:${attempts}`);
+  return bytes;
 }
 
 /**
@@ -132,7 +158,7 @@ async function decode(file: File, known: Uint8Array | null, log: string[]): Prom
       return await decodeOnce(file, known, log);
     } catch (second) {
       noteFailure(log, 'lauf2', second);
-      throw new Error(UNREADABLE + failureCode(log));
+      throw new Error(UNREADABLE + failureCode(log, file));
     }
   }
 }
@@ -151,14 +177,19 @@ export async function resizeImageFile(
   if (declaredMime && !['image/jpeg', 'image/png', 'image/webp'].includes(declaredMime)) {
     throw new Error('Dieses Bildformat können wir nicht lesen (zum Beispiel HEIC vom iPhone). Bitte ein JPEG, PNG oder WebP wählen oder das Foto direkt mit der Kamera aufnehmen.');
   }
-  if (file.size < 1 || file.size > MAX_SOURCE_IMAGE_BYTES) throw new Error('Das Bild darf höchstens 20 MB gross sein.');
 
   const sourceLimits = { maxBytes: MAX_SOURCE_IMAGE_BYTES, maxPixels: 50_000_000, maxSide: 12_000 };
-  // Normalfall: Bytes lesen und prüfen, bevor der Browser überhaupt decodiert.
-  // Das hält ein absichtlich riesiges Bild vom Decoder fern.
+  // Zuerst die Bytes lesen, file.size erst danach: Chrome auf Android hält beim
+  // ersten Zugriff auf size die Metadaten der Datei fest. Liefert die Fotoauswahl
+  // (Google Fotos, umgerechnete Fotos) danach andere Werte, scheitert jedes
+  // Lesen mit NotReadableError (crbug.com/40123366, crbug.com/41452449).
+  // Dann prüfen, bevor der Browser decodiert: das hält ein riesiges Bild vom Decoder fern.
   const log: string[] = [];
-  const bytes = await tryReadBytes(file, log);
-  if (bytes) validateImageBytes(bytes, declaredMime || sniffImageMime(bytes) || '', sourceLimits);
+  const bytes = await readBytesPatiently(file, log);
+  if (bytes) {
+    if (bytes.length < 1 || bytes.length > MAX_SOURCE_IMAGE_BYTES) throw new Error('Das Bild darf höchstens 20 MB gross sein.');
+    validateImageBytes(bytes, declaredMime || sniffImageMime(bytes) || '', sourceLimits);
+  }
 
   let source: Drawable | undefined;
   try {
@@ -168,7 +199,7 @@ export async function resizeImageFile(
     source = await decode(file, bytes, log);
     const srcW = 'naturalWidth' in source ? source.naturalWidth : source.width;
     const srcH = 'naturalHeight' in source ? source.naturalHeight : source.height;
-    if (!Number.isSafeInteger(srcW) || !Number.isSafeInteger(srcH) || srcW < 1 || srcH < 1) throw new Error(UNREADABLE + failureCode([...log, 'masse:0']));
+    if (!Number.isSafeInteger(srcW) || !Number.isSafeInteger(srcH) || srcW < 1 || srcH < 1) throw new Error(UNREADABLE + failureCode([...log, 'masse:0'], file));
     if (srcW > sourceLimits.maxSide || srcH > sourceLimits.maxSide || srcW * srcH > sourceLimits.maxPixels) {
       throw new Error('Die Bildauflösung ist zu gross. Bitte wählen Sie ein kleineres Bild.');
     }
@@ -193,6 +224,17 @@ export async function resizeImageFile(
     // Insbesondere bei Canvas-/Grössenfehlern keine ImageBitmap-Ressourcen behalten.
     if (source && 'close' in source) source.close();
   }
+}
+
+/**
+ * Liest eine gewählte Datei sofort in den Speicher, bevor irgendwer file.size
+ * anfasst (siehe resizeImageFile). Die Kopie lässt sich später beliebig oft lesen.
+ */
+export async function readFileNow(file: File): Promise<File> {
+  const log: string[] = [];
+  const bytes = await readBytesPatiently(file, log);
+  if (!bytes) throw new Error(UNREADABLE + failureCode(log, file));
+  return new File([bytes], file.name, { type: file.type });
 }
 
 /** Liest eine Datei (z. B. PDF) als Base64 ohne data:-Prefix. */

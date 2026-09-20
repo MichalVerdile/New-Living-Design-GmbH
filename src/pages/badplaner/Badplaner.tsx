@@ -16,7 +16,7 @@ import {
 import { photoUrl } from '../../data/references';
 import { generateFAQStructuredData, generateBreadcrumbStructuredData } from '../../utils/structuredData';
 import { trackLead, trackBadplaner } from '../../utils/tracking';
-import { resizeImageFile, fileToBase64, type ResizedImage } from './resizeImage';
+import { resizeImageFile, fileToBase64, readFileNow, type ResizedImage } from './resizeImage';
 import { MAX_PLAN_BASE64, MAX_SOURCE_IMAGE_BYTES } from './imageValidation';
 
 /*
@@ -307,9 +307,10 @@ const Badplaner: React.FC = () => {
   const [beratungFile, setBeratungFile] = useState<File | null>(null);
   const [beratungStatus, setBeratungStatus] = useState<'idle' | 'sending' | 'ok' | 'error'>('idle');
   const [beratungError, setBeratungError] = useState('');
+  const [beratungRetry, setBeratungRetry] = useState<File | null>(null);
 
   const [photo, setPhoto] = useState<ResizedImage | null>(null);
-  const PHOTO_INPUTS = ['bp-foto-kamera', 'bp-foto-galerie', 'bp-foto-kamera-neu', 'bp-foto-galerie-neu'];
+  const PHOTO_INPUTS = ['bp-foto-kamera', 'bp-foto-galerie', 'bp-foto-kamera-neu', 'bp-foto-galerie-neu', 'bp-foto-datei'];
   const removePhoto = () => {
     setPhoto(null);
     setPhotoError('');
@@ -320,6 +321,7 @@ const Badplaner: React.FC = () => {
     }
   };
   const [photoBusy, setPhotoBusy] = useState(false);
+  const [retryPhoto, setRetryPhoto] = useState<File | null>(null); // fuer «Nochmals versuchen»
   const [photoError, setPhotoError] = useState('');
   const [windows, setWindows] = useState(''); // Fenster auf dem Foto: '0' | '1' | '2' | '3'
   const [cistern, setCistern] = useState('');
@@ -333,6 +335,7 @@ const Badplaner: React.FC = () => {
   const [planFile, setPlanFile] = useState<File | null>(null);
   const [planStatus, setPlanStatus] = useState<'idle' | 'sending' | 'ok' | 'error'>('idle');
   const [planError, setPlanError] = useState('');
+  const [planRetry, setPlanRetry] = useState<File | null>(null);
 
   const resultRef = useRef<HTMLDivElement>(null);
   const stepRefs = useRef<Record<number, HTMLElement | null>>({});
@@ -452,11 +455,9 @@ const Badplaner: React.FC = () => {
     setSel((s) => (s ? { ...s, accentPlacement: id, accent: allowed.some((a) => a.id === s.accent) ? s.accent : firstId(allowed) } : s));
   };
 
-  const onPhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = ''; // gleiche Datei darf erneut gewählt werden
-    if (!file) return;
+  const loadPhoto = async (file: File) => {
     setPhotoError('');
+    setRetryPhoto(null);
     setPhotoBusy(true);
     try {
       const resized = await resizeImageFile(file, 1280, 0.82);
@@ -466,6 +467,7 @@ const Badplaner: React.FC = () => {
       setCistern('');
     } catch (error) {
       setPhoto(null);
+      setRetryPhoto(file);
       // Nur unsere eigenen Meldungen sind deutsch und hilfreich. Eine DOMException
       // des Browsers (NotReadableError, SecurityError) darf nie beim Kunden landen.
       const own = error instanceof Error && error.name === 'Error' && error.message;
@@ -473,6 +475,14 @@ const Badplaner: React.FC = () => {
     } finally {
       setPhotoBusy(false);
     }
+  };
+
+  const onPhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const input = e.target;
+    const file = input.files?.[0];
+    if (!file) return;
+    await loadPhoto(file); // die Datei zuerst lesen, das Feld erst danach leeren
+    input.value = ''; // gleiche Datei darf erneut gewählt werden
   };
 
   /** Schritt 3: das Ideenbild VOR den Kontaktangaben. Die Anfrage folgt im Ergebnis. */
@@ -669,24 +679,32 @@ const Badplaner: React.FC = () => {
     }
   };
 
-  const onBeratungFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] || null;
+  const takeBeratungFile = async (picked: File | null, input?: HTMLInputElement) => {
     setBeratungError('');
+    setBeratungStatus('idle');
+    setBeratungRetry(null);
+    const fail = (message: string, retry: File | null = null) => {
+      setBeratungFile(null);
+      if (input) input.value = '';
+      setBeratungError(message);
+      setBeratungStatus('error');
+      setBeratungRetry(retry);
+    };
+    // Sofort in den Speicher lesen, vor file.size (siehe resizeImageFile).
+    let file: File | null = null;
+    try {
+      file = picked && await readFileNow(picked);
+    } catch (error) {
+      return fail(error instanceof Error ? error.message : 'Datei konnte nicht gelesen werden', picked);
+    }
     const isPdf = file?.type === 'application/pdf';
     if (file && file.size > (isPdf ? MAX_PLAN_PDF_BYTES : MAX_SOURCE_IMAGE_BYTES)) {
-      setBeratungFile(null);
-      e.target.value = '';
-      setBeratungError(isPdf ? 'Das PDF ist zu gross (max. 3 MB).' : 'Das Bild ist zu gross (max. 20 MB).');
-      return;
+      return fail(isPdf ? 'Das PDF ist zu gross (max. 3 MB).' : 'Das Bild ist zu gross (max. 20 MB).');
     }
-    if (beratung.imageWanted && file?.type === 'application/pdf') {
-      setBeratungFile(null);
-      e.target.value = '';
-      setBeratungError('Für ein Ideenbild benötigen wir ein Foto des Raums.');
-      return;
-    }
+    if (beratung.imageWanted && isPdf) return fail('Für ein Ideenbild benötigen wir ein Foto des Raums.');
     setBeratungFile(file);
   };
+  const onBeratungFile = (e: React.ChangeEvent<HTMLInputElement>) => takeBeratungFile(e.target.files?.[0] || null, e.target);
 
   const submitPlan = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -742,18 +760,31 @@ const Badplaner: React.FC = () => {
     }
   };
 
-  const onPlanFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] || null;
+  const takePlanFile = async (picked: File | null, input?: HTMLInputElement) => {
     setPlanError('');
+    setPlanStatus('idle');
+    setPlanRetry(null);
+    const fail = (message: string, retry: File | null = null) => {
+      setPlanFile(null);
+      if (input) input.value = '';
+      setPlanError(message);
+      setPlanStatus('error');
+      setPlanRetry(retry);
+    };
+    // Sofort in den Speicher lesen, vor file.size (siehe resizeImageFile).
+    let file: File | null = null;
+    try {
+      file = picked && await readFileNow(picked);
+    } catch (error) {
+      return fail(error instanceof Error ? error.message : 'Datei konnte nicht gelesen werden', picked);
+    }
     const isPdf = file?.type === 'application/pdf';
     if (file && file.size > (isPdf ? MAX_PLAN_PDF_BYTES : MAX_SOURCE_IMAGE_BYTES)) {
-      setPlanFile(null);
-      e.target.value = '';
-      setPlanError(isPdf ? 'Das PDF ist zu gross (max. 3 MB).' : 'Das Bild ist zu gross (max. 20 MB).');
-      return;
+      return fail(isPdf ? 'Das PDF ist zu gross (max. 3 MB).' : 'Das Bild ist zu gross (max. 20 MB).');
     }
     setPlanFile(file);
   };
+  const onPlanFile = (e: React.ChangeEvent<HTMLInputElement>) => takePlanFile(e.target.files?.[0] || null, e.target);
 
   const startOver = () => {
     setResult(null);
@@ -1006,7 +1037,8 @@ const Badplaner: React.FC = () => {
                       </div>
                       <label className={styles.field} htmlFor="bp-beratung-file">
                         <span>{beratung.imageWanted ? 'Foto des Raums (erforderlich für ein Ideenbild)' : 'Foto, Masse oder Plan (optional)'}</span>
-                        <input id="bp-beratung-file" type="file" accept={beratung.imageWanted ? 'image/jpeg,image/png,image/webp' : 'image/jpeg,image/png,image/webp,application/pdf'} required={beratung.imageWanted} onChange={onBeratungFile} />
+                        <input id="bp-beratung-file" type="file" accept={beratung.imageWanted ? 'image/jpeg,image/png,image/webp' : 'image/jpeg,image/png,image/webp,application/pdf'} required={beratung.imageWanted && !beratungFile} onChange={onBeratungFile} />
+                        {beratungFile && <span className={styles.hint}>Gewählt: {beratungFile.name}</span>}
                       </label>
                       <label className={styles.consent} htmlFor="bp-image-wanted">
                         <input id="bp-image-wanted" type="checkbox" checked={beratung.imageWanted} onChange={(e) => {
@@ -1027,6 +1059,7 @@ const Badplaner: React.FC = () => {
                       {beratung.imageWanted && !beratungFile && <p className={styles.hint}>Bitte ein Foto des Raums hinzufügen, wenn Sie ein Ideenbild wünschen.</p>}
                       {beratungStatus === 'ok' && <p className={styles.success}>Vielen Dank. Ihre Anfrage wurde übermittelt. Wir melden uns für die erste Beurteilung.</p>}
                       {beratungStatus === 'error' && <p className={styles.error} role="alert">{beratungError}</p>}
+                      {beratungStatus === 'error' && !beratungFile && <DateiWaehlen id="bp-beratung-datei" onChange={onBeratungFile} onRetry={beratungRetry ? () => takeBeratungFile(beratungRetry) : undefined} />}
                     </form>
                   )}
                 </div>
@@ -1161,7 +1194,8 @@ const Badplaner: React.FC = () => {
                       </span>
                     </div>
                   )}
-                  {photoError && <p className={styles.error}>{photoError}</p>}
+                  {photoError && <p className={styles.error} role="alert">{photoError}</p>}
+                  {photoError && <DateiWaehlen id="bp-foto-datei" onChange={onPhoto} disabled={photoBusy} onRetry={retryPhoto ? () => loadPhoto(retryPhoto) : undefined} />}
                   {photo && (
                     <>
                       <p className={styles.hint}>Am besten von der Tür aus, das ganze Bad im Bild, Licht an. Das Foto wurde auf {photo.width}×{photo.height} Pixel verkleinert.</p>
@@ -1335,6 +1369,7 @@ const Badplaner: React.FC = () => {
                     <label className={styles.field} htmlFor="bp-plan-file">
                       <span>Grundriss (JPEG, PNG, WebP bis 20 MB; PDF bis 3 MB)</span>
                       <input type="file" id="bp-plan-file" accept="image/jpeg,image/png,image/webp,application/pdf" onChange={onPlanFile} />
+                      {planFile && <span className={styles.hint}>Gewählt: {planFile.name}</span>}
                     </label>
                     <label className={styles.field} htmlFor="bp-plan-sqm">
                       <span>Bad-Grösse in m²</span>
@@ -1351,6 +1386,7 @@ const Badplaner: React.FC = () => {
                     </button>
                   </div>
                   {planStatus === 'error' && <p className={styles.error} role="alert">{planError}</p>}
+                  {planStatus === 'error' && !planFile && <DateiWaehlen id="bp-plan-datei" onChange={onPlanFile} onRetry={planRetry ? () => takePlanFile(planRetry) : undefined} />}
                 </>
               )}
             </form>}
@@ -1413,6 +1449,26 @@ const Badplaner: React.FC = () => {
 };
 
 /** Verständliche Meldung, wenn die API keinen Text liefert. */
+/**
+ * Ausweg, wenn die Fotoauswahl von Android eine Datei nicht hergibt (Foto nur
+ * in Google Fotos, umgerechnetes Foto). Ohne accept="image/*" öffnet Chrome den
+ * Dateimanager statt der Fotoauswahl; das Format prüft resizeImageFile.
+ */
+function DateiWaehlen({ id, onChange, disabled, onRetry }: { id: string; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void; disabled?: boolean; onRetry?: () => void }) {
+  return (
+    <>
+      <p className={styles.hint}>Foto zuerst auf das Handy herunterladen oder einen Screenshot davon wählen.</p>
+      <div className={`${styles.uploadActions} ${styles.changePhoto}`}>
+        {onRetry && <button type="button" className={styles.ctaLight} onClick={onRetry} disabled={disabled}>Nochmals versuchen</button>}
+        <span className={styles.uploadAction}>
+          <input type="file" id={id} className={styles.fileInput} onChange={onChange} disabled={disabled} />
+          <label className={styles.ctaLight} htmlFor={id}>Datei wählen</label>
+        </span>
+      </div>
+    </>
+  );
+}
+
 function friendlyHttpError(status: number): string {
   if (status === 413) return 'Das Bild ist zu gross für den Upload. Bitte ein kleineres Foto wählen.';
   if (status === 429) return 'Tageslimit erreicht (3 Ideenbilder). Rufen Sie uns an oder kommen Sie in die Ausstellung.';

@@ -328,7 +328,7 @@
 .consent input { margin-top: .25rem; width: 18px; height: 18px; }
 .consent a { color: #111; font-weight: 600; }
 .honeypot { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
-.error { margin: .75rem 0 0; color: #b91c1c; font-weight: 600; line-height: 1.5; }
+.error { margin: .75rem 0 0; color: #b91c1c; font-weight: 600; line-height: 1.5; overflow-wrap: anywhere; }
 .error a { color: #7f1d1d; }
 .success { margin: .75rem 0 0; color: #166534; font-weight: 600; }
 
