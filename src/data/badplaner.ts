@@ -764,7 +764,7 @@ export const tapFinishes: FinishOption[] = [
 export const tapSeries: Record<PackageId, string> = {
   essenza: 'Treemme Up+, Aufputz, verchromt',
   colore: 'Treemme',
-  atelier: 'Treemme, Unterputz',
+  atelier: 'Treemme Aurelia, Unterputz',
 };
 
 /* ---------- Wandhöhe, Dusche / Badewanne, Waschtisch, Spiegel ---------- */
