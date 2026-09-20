@@ -55,6 +55,12 @@ const PLACEMENT_FIELD: Record<AccentPlacementId, string> = {
 };
 
 type Step = 1 | 2 | 3 | 4;
+type RenderFailureCode = 'PHOTO_NOT_A_BATHROOM' | 'RENDER_FAILED' | 'RENDER_REJECTED';
+
+function renderFailureCode(code: unknown, status: number): RenderFailureCode | null {
+  if (code === 'PHOTO_NOT_A_BATHROOM' || code === 'RENDER_FAILED' || code === 'RENDER_REJECTED') return code;
+  return status >= 500 ? 'RENDER_FAILED' : null;
+}
 
 interface Selection {
   format: string;               // Plattenformat (leer bei Atelier)
@@ -308,6 +314,8 @@ const Badplaner: React.FC = () => {
   const [beratungStatus, setBeratungStatus] = useState<'idle' | 'sending' | 'ok' | 'error'>('idle');
   const [beratungError, setBeratungError] = useState('');
   const [beratungRetry, setBeratungRetry] = useState<File | null>(null);
+  const [renderFailure, setRenderFailure] = useState<RenderFailureCode | null>(null);
+  const [showFailureConsultation, setShowFailureConsultation] = useState(false);
 
   const [photo, setPhoto] = useState<ResizedImage | null>(null);
   const PHOTO_INPUTS = ['bp-foto-kamera', 'bp-foto-galerie', 'bp-foto-kamera-neu', 'bp-foto-galerie-neu', 'bp-foto-datei'];
@@ -340,6 +348,7 @@ const Badplaner: React.FC = () => {
   const resultRef = useRef<HTMLDivElement>(null);
   const stepRefs = useRef<Record<number, HTMLElement | null>>({});
   const renderSubmittingRef = useRef(false);
+  const beratungSubmittingRef = useRef(false);
   const planSubmittingRef = useRef(false);
   const scrollRestoreRef = useRef<number | null>(null);
   const panelAnchorRef = useRef<{ trigger: HTMLButtonElement; top: number } | null>(null);
@@ -408,6 +417,10 @@ const Badplaner: React.FC = () => {
     setPkg(id);
     setSel(defaultSelection(id, room));
     setOpenPanel(null);
+    setRenderFailure(null);
+    setShowFailureConsultation(false);
+    setStatus('idle');
+    setErrorMsg('');
     goTo(2, false);
   };
 
@@ -423,6 +436,10 @@ const Badplaner: React.FC = () => {
     setSel(null);
     setOpenPanel(null);
     setStep(1);
+    setRenderFailure(null);
+    setShowFailureConsultation(false);
+    setStatus('idle');
+    setErrorMsg('');
   };
 
   const chooseRoom = (next: RoomType) => {
@@ -437,6 +454,8 @@ const Badplaner: React.FC = () => {
     setResult(null);
     setStatus('idle');
     setErrorMsg('');
+    setRenderFailure(null);
+    setShowFailureConsultation(false);
   };
 
   const choose = <K extends keyof Selection>(key: K, value: Selection[K]) =>
@@ -465,6 +484,12 @@ const Badplaner: React.FC = () => {
       trackBadplaner('badplaner_foto', { raum: room || '', paket: pkg || '' });
       setWindows(''); // neues Foto, Fenster neu angeben
       setCistern('');
+      setStatus('idle');
+      setErrorMsg('');
+      setRenderFailure(null);
+      setShowFailureConsultation(false);
+      setBeratungStatus('idle');
+      setBeratungError('');
     } catch (error) {
       setPhoto(null);
       setRetryPhoto(file);
@@ -485,6 +510,19 @@ const Badplaner: React.FC = () => {
     input.value = ''; // gleiche Datei darf erneut gewählt werden
   };
 
+  const prepareFailureConsultation = (failure: RenderFailureCode | null) => {
+    setRenderFailure(failure);
+    setShowFailureConsultation(false);
+    if (!failure) return;
+    setBeratung((current) => ({
+      ...current,
+      priorities: current.priorities || 'Ich wünsche eine persönliche Beratung zu meiner Auswahl im Badplaner.',
+      imageWanted: false,
+    }));
+    setBeratungStatus('idle');
+    setBeratungError('');
+  };
+
   /** Schritt 3: das Ideenbild VOR den Kontaktangaben. Die Anfrage folgt im Ergebnis. */
   const submitRender = async () => {
     if (renderSubmittingRef.current) return;
@@ -501,6 +539,7 @@ const Badplaner: React.FC = () => {
     renderSubmittingRef.current = true;
     setStatus('sending');
     setErrorMsg('');
+    prepareFailureConsultation(null);
     const kombination = isAtelier && sel.accentMode === 'kombination';
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), RENDER_TIMEOUT_MS);
@@ -552,10 +591,12 @@ const Badplaner: React.FC = () => {
           preview: { ticket: json.ticket, exp: json.exp, auswahl: json.auswahl || [], paket: json.paket, bytes: new Blob([bytes], { type: mime }) },
         });
         setStatus('idle');
+        prepareFailureConsultation(null);
         trackBadplaner('badplaner_ideenbild', { raum: room || '', paket: pkg || '' });
       } else {
         setStatus('error');
         setErrorMsg(json?.error || friendlyHttpError(res.status));
+        prepareFailureConsultation(renderFailureCode(json?.code, res.status));
       }
     } catch (error) {
       setStatus('error');
@@ -564,6 +605,7 @@ const Badplaner: React.FC = () => {
           ? 'Die Erstellung hat zu lange gedauert und wurde abgebrochen. Bitte versuchen Sie es noch einmal.'
           : 'Keine Verbindung. Bitte prüfen Sie Ihr Netz und versuchen Sie es noch einmal.',
       );
+      prepareFailureConsultation('RENDER_FAILED');
     } finally {
       window.clearTimeout(timeout);
       renderSubmittingRef.current = false;
@@ -628,17 +670,20 @@ const Badplaner: React.FC = () => {
 
   const submitBeratung = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!room || beratungStatus === 'sending') return;
+    if (!room || beratungSubmittingRef.current) return;
     setBeratungError('');
     if (contact.phone.replace(/\D/g, '').length < 7) {
       setBeratungStatus('error');
       setBeratungError('Bitte eine gültige Telefonnummer angeben.');
       return;
     }
+    beratungSubmittingRef.current = true;
     setBeratungStatus('sending');
     try {
       let file: { name: string; mime: string; data: string } | undefined;
-      if (beratungFile) {
+      if (renderFailure && photo) {
+        file = { name: 'badfoto.jpg', mime: photo.mime, data: photo.base64 };
+      } else if (beratungFile) {
         if (beratungFile.type === 'application/pdf') {
           file = { name: beratungFile.name, mime: 'application/pdf', data: await fileToBase64(beratungFile) };
         } else {
@@ -656,7 +701,9 @@ const Badplaner: React.FC = () => {
           measurements: beratung.measurements.trim(),
           style: beratung.style.trim(),
           budget: beratung.budget.trim(),
-          imageWanted: beratung.imageWanted,
+          imageWanted: renderFailure ? false : beratung.imageWanted,
+          renderFailure: renderFailure || undefined,
+          auswahl: renderFailure ? summaryRows.map((row) => [row.label, row.value]) : undefined,
           file,
           name: contact.name.trim(),
           email: contact.email.trim(),
@@ -676,6 +723,8 @@ const Badplaner: React.FC = () => {
     } catch {
       setBeratungStatus('error');
       setBeratungError('Keine Verbindung. Bitte prüfen Sie Ihr Netz und versuchen Sie es noch einmal.');
+    } finally {
+      beratungSubmittingRef.current = false;
     }
   };
 
@@ -789,6 +838,8 @@ const Badplaner: React.FC = () => {
   const startOver = () => {
     setResult(null);
     setStatus('idle');
+    setRenderFailure(null);
+    setShowFailureConsultation(false);
     setPlanStatus('idle');
     setPlanFile(null);
     goTo(2);
@@ -1232,6 +1283,33 @@ const Badplaner: React.FC = () => {
                         <p className={styles.error} role="alert">
                           {errorMsg} Oder rufen Sie uns an: <a href={`tel:${business.phone.e164}`} data-lead="badplaner-fehler">{business.phone.display}</a>
                         </p>
+                      )}
+                      {status === 'error' && renderFailure && !showFailureConsultation && (
+                        <div className={styles.stepActions}>
+                          <button type="button" className={styles.ctaDark} onClick={() => setShowFailureConsultation(true)}>Persönliche Beratung anfragen</button>
+                        </div>
+                      )}
+                      {status === 'error' && renderFailure && showFailureConsultation && (
+                        <form className={styles.consultationForm} onSubmit={submitBeratung}>
+                          <div className={styles.processNote}>
+                            <strong>Persönliche Beratung statt eines neuen Versuchs</strong>
+                            <span>Wir verwenden Ihr bereits hochgeladenes Foto und Ihre gewählte Ausstattung für diese Beratungsanfrage. Es wird kein neues Ideenbild erzeugt.</span>
+                          </div>
+                          <label className={styles.field} htmlFor="bp-failure-priorities">
+                            <span>Was ist Ihnen bei Ihrem Bad wichtig?</span>
+                            <textarea id="bp-failure-priorities" required rows={3} autoFocus value={beratung.priorities} onChange={(e) => setBeratung({ ...beratung, priorities: e.target.value })} />
+                          </label>
+                          <div className={styles.formRow}>
+                            <label className={styles.field} htmlFor="bp-failure-name"><span>Vorname und Name</span><input id="bp-failure-name" required autoComplete="name" value={contact.name} onChange={(e) => setContact({ ...contact, name: e.target.value })} /></label>
+                            <label className={styles.field} htmlFor="bp-failure-email"><span>E-Mail</span><input id="bp-failure-email" type="email" required autoComplete="email" value={contact.email} onChange={(e) => setContact({ ...contact, email: e.target.value })} /></label>
+                          </div>
+                          <label className={styles.field} htmlFor="bp-failure-phone"><span>Telefon oder WhatsApp</span><input id="bp-failure-phone" type="tel" required autoComplete="tel" value={contact.phone} onChange={(e) => setContact({ ...contact, phone: e.target.value })} /></label>
+                          <label className={styles.consent} htmlFor="bp-failure-consent"><input id="bp-failure-consent" type="checkbox" required checked={contact.consent} onChange={(e) => setContact({ ...contact, consent: e.target.checked })} /><span>Ich habe die <Link to="/datenschutz#badplaner" target="_blank" rel="noopener noreferrer">Datenschutzerklärung</Link> gelesen und stimme der Bearbeitung meiner Anfrage zu.</span></label>
+                          <label className={styles.consent} htmlFor="bp-failure-news"><input id="bp-failure-news" type="checkbox" checked={contact.newsletter} onChange={(e) => setContact({ ...contact, newsletter: e.target.checked })} /><span>{NEWSLETTER_TEXT}</span></label>
+                          <button type="submit" className={styles.ctaDark} disabled={beratungStatus === 'sending'}>{beratungStatus === 'sending' ? 'Wird gesendet…' : 'Persönliche Beratung anfragen'}</button>
+                          {beratungStatus === 'ok' && <p className={styles.success}>Vielen Dank. Ihre Anfrage wurde übermittelt. Wir melden uns bei Ihnen.</p>}
+                          {beratungStatus === 'error' && <p className={styles.error} role="alert">{beratungError}</p>}
+                        </form>
                       )}
                       <div className={`${styles.uploadActions} ${styles.changePhoto}`}>
                         <span className={styles.uploadAction}>
