@@ -1109,7 +1109,7 @@ function buildPrompt(v: {
     `This is an edit of image 1, not a new picture. Keep image 1 and change only what the CHANGE list names. Everything else stays exactly as it is: the camera position, angle, lens and framing, the same crop and the same aspect ratio, the walls and where they stand, with every niche, ledge, projection and step they have in image 1 and no others, the ceiling including any sloping ceiling and the room height, the room proportions, every window, roof window and door at its exact size and position, and the radiators. Never zoom out, never widen the view, never show floor, wall or ceiling beyond the edges of image 1, never create extra floor area. Whatever stands in the immediate foreground at the edge of image 1 belongs to the picture and stays: an open door leaf, a door frame, the edge of a wall, a piece of furniture cut off by the border. It keeps its place and takes up the same part of the picture as before, and is never removed to show more of the room. Every window keeps the same share of the picture it has in image 1; do not move closer to it and do not make it larger. ${windowRule}${glassRule}`,
     `KEEP THE POSITIONS. A half-height wall, a low built wall or a boxed pre-wall that a fixture stands against is part of the room, not furniture: it keeps its place, its length, its height and its depth, and the fixture stays mounted on it. Every fixture keeps the wall or low wall it stands against in image 1 and its place along it, measured against the corners, the door and the window next to it. The toilet keeps its wall and its place because its drain cannot be moved: under a sloping ceiling it stays under that sloping ceiling and is never moved to a straight or rear wall to gain headroom. The washbasin keeps its wall and its place. A bathtub that becomes a shower uses only the bathtub's own footprint, on the same wall. NO NEW WALLS: never add a wall, a partition, a half-height wall, a boxed pre-wall, a ledge, a shelf or a niche that image 1 does not show, not behind the toilet, not behind the washbasin and not in the shower. Where image 1 shows one flat wall, the result shows that same flat wall with new tiles: it never steps forward and never gets a flat top at mid-height. NOTHING IS FILLED IN EITHER: every recess, alcove, niche, wall offset, corner step and wall projection that image 1 shows stays exactly where it is, with the same width, depth and height, above all in the shower area. A shower or bathtub that stands in a recess or alcove stays inside it, and the new tiles follow the wall into the recess and around its corners. Never fill a recess, never close an alcove, never tile a niche over flush and never straighten a stepped wall into one flat wall. Only surfaces, sanitary fixtures, taps, furniture and lights change.`,
     `CHANGE this, and only this, in ${v.room === 'gaeste-wc' ? 'this guest WC' : 'this bathroom'} (style "${v.packageName}"):${look} ${surfaces}; ${fixtures}; if a toilet is visible in image 1, ${toilet}; ${vanity}; ${v.tapPrompt}.${accent}`,
-    `TAKE AWAY. If image 1 shows a bidet, it is gone: this bathroom has none, and the wall and floor where it stood are finished like the rest, with nothing standing in its place. The old shower curtain and its rail are gone. Clutter, towels, bottles and rugs are gone, and so is loose furniture that just stands around; the washbasin's own vanity unit is not loose furniture and is always there, as described above. Every shower fitting — mixer, riser, overhead shower with its arm, hand shower with its holder — sits inside the shower area, all together on one and the same wall of the shower (in a floor-level shower the short end wall above the drain), never split over two walls and never on a wall next to the toilet or the washbasin. Natural daylight, no people, no text.`,
+    `TAKE AWAY. If image 1 shows a bidet, it is gone: this bathroom has none, and the wall and floor where it stood are finished like the rest, with nothing standing in its place. The old shower curtain and its rail are gone. Clutter, towels, bottles and rugs are gone, and so is loose furniture that just stands around; the washbasin's own vanity unit is not loose furniture and is always there, as described above. Every shower fitting — mixer, riser, overhead shower with its arm, hand shower with its holder — sits inside the shower area, all together on one and the same wall of the shower (in a floor-level shower the short end wall, with the drain at its foot), never split over two walls and never on a wall next to the toilet or the washbasin. Natural daylight, no people, no text.`,
     `BEFORE YOU DRAW, compare with image 1: the same viewpoint and framing, the same walls and ceiling, ${v.windows === '0' ? 'no window at all' : 'the same windows'}, the same door, every fixture where image 1 has it, every recess, alcove and step of the walls that image 1 has, and no low wall, ledge, shelf or niche that image 1 does not have. A small, tight room stays small and tight: never show more of the room than image 1 shows.`,
   ].filter(Boolean).join('\n');
 }
@@ -1270,7 +1270,9 @@ async function checkOpenings(
     // Diegos Test vom 20.09., 09:56: der Ruecksprung in der Wand der Dusche war im Ideenbild zugemauert.
     'Set wall_element_lost true if image 1 has a recess, alcove, niche, wall offset, corner step or wall projection anywhere in the room, in the shower area or elsewhere, that image 2 no longer has because it was filled in, closed or straightened into one flat wall. An old bathtub with its panel, an old shower tray or enclosure, a surface-mounted cistern with its casing, a bidet and loose furniture are not wall elements: removing them is no loss. ' +
     'Set point_drain true only if image 2 has a floor-level tiled shower whose drain is a round or square point drain or grate in the shower floor, rather than a long narrow channel drain along one wall; false when there is no such shower or no drain is visible. ' +
-    'For that floor-level shower in image 2, set drain_on_long_side true only if its channel drain runs parallel to the longer dimension of the shower floor, along a long side, rather than across its narrow width at a short end, and set shower_fittings_split true only if its fittings (mixer, overhead shower arm, hand shower holder) are mounted on two or more different walls rather than all on one wall; false when there is no such shower or you cannot see it. ' +
+    // Rinne an der Laengsseite sah die Pruefung am 20.09. nur 1 von 5 Mal: sie beschreibt jetzt die Waende, der Code entscheidet.
+    'For that floor-level shower in image 2, look at its floor: set drain_wall to the wall, seen from the camera, at whose foot its channel drain lies ("left", "right", "back", "front", or "none" when there is no channel drain or you cannot see it), set fittings_wall to the wall that carries its mixer and hand shower (same words), and set shower_wider_than_deep true if its floor measures more from left to right than from the back wall towards the camera. ' +
+    'Set drain_on_long_side true if its channel drain runs parallel to the longer dimension of the shower floor, along a long side, rather than across its narrow width at a short end; a drain along the back wall of a shower that is wider than deep runs along a long side. Set shower_fittings_split true only if its fittings (mixer, overhead shower arm, hand shower holder) are mounted on two or more different walls rather than all on one wall; false when there is no such shower or you cannot see it. ' +
     'Then say whether something large stands in the immediate foreground of image 1 at the edge of the picture, cut off by the border — an open door leaf, a door frame, the near edge of a wall, a piece of furniture — taking up roughly a fifth of the picture or more; and whether that same object is still visible at the edge of image 2 at any size, even as a narrow strip (foreground_object_after is false only when it is gone completely). ' +
     'Set window_much_bigger true only if a window that is visible in both images takes up a clearly larger part of image 2 than of image 1, about half again as large or more. ' +
     'Set extra_openings true only if image 2 has a window, roof window, door or outside opening that image 1 does not have, or lost one that image 1 has. ' +
@@ -1281,7 +1283,7 @@ async function checkOpenings(
     '"order_before":["washbasin","toilet"],"order_after":["washbasin","toilet"],' +
     '"nearest_before":"toilet","nearest_after":"toilet",' +
     '"toilet_on_low_wall_before":false,"toilet_on_low_wall_after":false,"new_wall_element":false,"wall_element_lost":false,' +
-    '"foreground_object_before":false,"foreground_object_after":false,"window_much_bigger":false,"point_drain":false,"drain_on_long_side":false,"shower_fittings_split":false,' +
+    '"foreground_object_before":false,"foreground_object_after":false,"window_much_bigger":false,"point_drain":false,"drain_on_long_side":false,"shower_fittings_split":false,"drain_wall":"none","fittings_wall":"none","shower_wider_than_deep":false,' +
     '"extra_openings":false,"view_changed":false,"reason":"short English note, max 25 words"}';
   try {
     const r = await request(ctx, url, {
@@ -1311,9 +1313,11 @@ async function checkOpenings(
     const parsed = JSON.parse(textOut);
     const keys = ['before', 'after', 'order_before', 'order_after', 'nearest_before', 'nearest_after',
       'toilet_on_low_wall_before', 'toilet_on_low_wall_after', 'new_wall_element', 'wall_element_lost', 'foreground_object_before', 'foreground_object_after',
-      'window_much_bigger', 'point_drain', 'drain_on_long_side', 'shower_fittings_split', 'extra_openings', 'view_changed', 'reason'];
+      'window_much_bigger', 'point_drain', 'drain_on_long_side', 'shower_fittings_split', 'drain_wall', 'fittings_wall', 'shower_wider_than_deep',
+      'extra_openings', 'view_changed', 'reason'];
     // Die zwei Vermerke zur Rinne und zu den Armaturen sind neu; fehlen sie, gilt "nein".
     const optionalFlag = (key: string) => parsed?.[key] === undefined || typeof parsed[key] === 'boolean';
+    const optionalWall = (key: string) => parsed?.[key] === undefined || WALLS.includes(parsed[key]);
     const before = inventory(parsed?.before);
     const after = inventory(parsed?.after);
     const orderBefore = order(parsed?.order_before);
@@ -1325,6 +1329,7 @@ async function checkOpenings(
       || typeof parsed.new_wall_element !== 'boolean' || typeof parsed.wall_element_lost !== 'boolean' || typeof parsed.point_drain !== 'boolean'
       || typeof parsed.foreground_object_before !== 'boolean' || typeof parsed.foreground_object_after !== 'boolean'
       || typeof parsed.window_much_bigger !== 'boolean' || !optionalFlag('drain_on_long_side') || !optionalFlag('shower_fittings_split')
+      || !optionalFlag('shower_wider_than_deep') || !optionalWall('drain_wall') || !optionalWall('fittings_wall')
       || typeof parsed.extra_openings !== 'boolean' || typeof parsed.view_changed !== 'boolean'
       || typeof parsed.reason !== 'string' || !parsed.reason.trim() || parsed.reason.length > 200
       || Object.keys(parsed).some((key) => !keys.includes(key))) return { status: 'unavailable', detail: 'Antwort unlesbar' };
@@ -1363,9 +1368,16 @@ async function checkOpenings(
     // Ein anderer Bildausschnitt allein ist kein Grund, dem Kunden nichts zu zeigen:
     // Fenster, WC, Wände und Ausstattung stimmen dann ja. Er wird nur vermerkt.
     // Rinne und Armaturen der Walk-in-Dusche werden nur vermerkt (siehe handleRender).
+    // Die Rinne gehoert an den Fuss der Armaturenwand; bei einer Dusche breiter als tief nie an die Rueckwand.
+    const drainWall: Wall | undefined = parsed.drain_wall;
+    const fittingsWall: Wall | undefined = parsed.fittings_wall;
+    const drainOnLongSide = parsed.drain_on_long_side === true
+      || (!!drainWall && drainWall !== 'none' && !!fittingsWall && fittingsWall !== 'none' && drainWall !== fittingsWall)
+      || (parsed.shower_wider_than_deep === true && drainWall === 'back');
+    if (wanted.linearDrain) console.info('[badplaner] Walk-in:', `Rinne ${drainWall ?? '-'}, Armaturen ${fittingsWall ?? '-'}, breiter als tief ${parsed.shower_wider_than_deep ?? '-'}`);
     const hints = wanted.linearDrain ? [
       parsed.point_drain && 'Punktablauf statt Duschrinne gezeichnet',
-      parsed.drain_on_long_side === true && 'Duschrinne an der Längsseite statt an der Schmalseite',
+      drainOnLongSide && 'Duschrinne an der Längsseite statt an der Schmalseite',
       parsed.shower_fittings_split === true && 'Duscharmaturen an zwei Wänden statt alle an der Schmalseite',
     ].filter((hint): hint is string => !!hint) : [];
     return flags.view_changed ? { status: 'approved', note: parsed.reason.slice(0, 200), hints } : { status: 'approved', hints };
