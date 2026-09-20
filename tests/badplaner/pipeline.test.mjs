@@ -300,7 +300,7 @@ test('der Prompt ist eine Bearbeitung, keine Neuzeichnung', async () => {
   // Ein Muretto ist Raum, keine Einrichtung: es bleibt stehen.
   assert.match(prompt, /A half-height wall, a low built wall or a boxed pre-wall that a fixture stands against is part of the room, not furniture/);
   // Die Duscharmatur stand ueber dem WC statt in der Dusche.
-  assert.match(prompt, /Every shower fitting[^.]*sits inside the shower area on the shower wall, never on a wall next to the toilet or the washbasin/);
+  assert.match(prompt, /Every shower fitting[^.]*sits inside the shower area, all together on one and the same wall of the shower[^.]*never split over two walls and never on a wall next to the toilet or the washbasin/);
 });
 
 test('das Glas der alten Duschkabine ist im Prompt kein Fenster', async () => {
@@ -857,13 +857,13 @@ test('kein Auswahlname traegt italienischen Katalogtext oder ein doppeltes Wort'
 });
 
 test('every tap finish carries a German name, not only the Italian one', () => {
-  const german = /\((Chrom|Schwarz matt|Weiss matt|Gold gebürstet|Nickel gebürstet|Edelstahl gebürstet|Roségold gebürstet|Messing gebürstet|Anthrazit)\)/;
+  const german = /\((Chrom|Schwarz matt|Weiss matt|Gold gebürstet|Nickel gebürstet|Edelstahl gebürstet|Roségold gebürstet|Messing gebürstet|Anthrazit|Nickel poliert|Gold 24 Karat|Schwarzchrom poliert|Schwarzchrom gebürstet)\)/;
   for (const id of ['essenza', 'colore', 'atelier']) {
     for (const finish of optionsForPackage(id).finishes) {
       // Der Kunde in Zofingen liest "Cromo" nicht als Chrom.
       const italian = /^(Cromo|Nero Opaco|Bianco Opaco|Oro Spazzolato|Nichel Spazzolato|Inox Spazzolato|Oro Rosa Spazzolato|Ottone Spazzolato|Gun Metal-PVD)$/;
       assert.ok(!italian.test(finish.label), `${finish.label} has no German name`);
-      if (/Spazzolato|Opaco|^Cromo|Gun Metal/.test(finish.label)) {
+      if (/Spazzolato|Opaco|Lucido|^Cromo|^Oro|Gun Metal/.test(finish.label)) {
         assert.match(finish.label, german, `${finish.label} is missing its German name`);
       }
     }
@@ -1401,6 +1401,9 @@ test('ein zugemauerter Ruecksprung in der Wand wird verworfen', async () => {
   assert.match(gens[0].body.contents[0].parts[0].text, /Never fill a recess, never close an alcove, never tile a niche over flush/);
   const question = h.calls.find((call) => /wall_element_lost/.test(call.body?.contents?.[0]?.parts?.[0]?.text || '')).body.contents[0].parts[0].text;
   assert.match(question, /no longer has because it was filled in/);
+  // Colore 20.09., 13:01: der erhaltene Ruecksprung darf nicht als neue Nische gelten.
+  assert.match(question, /every wall step that image 1 already has are not new/);
+  assert.match(question, /tiles simply end at mid-height with paint above is still a full-height wall/);
 });
 
 test('Walk-in: Duschrinne im Prompt, ein Punktablauf wird nur vermerkt', async () => {
@@ -1409,17 +1412,71 @@ test('Walk-in: Duschrinne im Prompt, ein Punktablauf wird nur vermerkt', async (
   const res = await h.invoke(payload({ dusche: 'walk-in', badewanne: 'keine' }));
   assert.equal(res.statusCode, 200); assert.equal(h.counts().generation, 1, 'kein zweites Bild wegen des Ablaufs');
   const prompt = h.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
-  assert.match(prompt, /linear channel drain \(Duschrinne\) runs along the foot of that wall/);
+  assert.match(prompt, /ALL shower fittings sit together on that short end wall/);
+  // Diego, 20.09.: die Rinne wird von den Armaturen aus beschrieben, bei breiter Dusche nie entlang der Rueckwand.
+  assert.match(prompt, /The drain starts from the fittings: a linear channel drain \(Duschrinne\) lies in the floor at the foot of the very wall that carries the mixer and the hand shower/);
+  assert.match(prompt, /When the shower is wider than it is deep, this drain runs through the full depth of the shower, from the back wall towards the glass panel, that is towards the camera: it is perpendicular to the back wall and never runs along it/);
+  assert.doesNotMatch(prompt, /side walls on its left and right/, 'a3: der Satz schob die Armaturen an die Rueckwand');
+  assert.match(prompt, /flush with the bathroom floor, with no step, no kerb and no raised platform/);
   assert.match(prompt, /never a central point drain, never a round or square grate/);
   assert.match(JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails').body), /Punktablauf statt Duschrinne/);
+  // Rinne an der Laengsseite und Armaturen an zwei Waenden: ebenfalls nur Vermerke (Diego, 20.09.).
+  const side = harness({ checks: [() => checkedInv({ shower: 'back' }, { shower: 'back' }, { drain_on_long_side: true, shower_fittings_split: true })] });
+  const sideRes = await side.invoke(payload({ dusche: 'walk-in', badewanne: 'keine' }));
+  assert.equal(sideRes.statusCode, 200); assert.equal(side.counts().generation, 1);
+  const sideMail = JSON.stringify(side.calls.find((call) => call.url === 'https://api.resend.com/emails').body);
+  assert.match(sideMail, /Duschrinne an der Längsseite statt an der Schmalseite/);
+  assert.match(sideMail, /Duscharmaturen an zwei Wänden statt alle an der Schmalseite/);
+  // Die Pruefung nennt nur die Waende (a1: Armaturen links, Rinne hinten), der Code vermerkt die Laengsseite.
+  for (const walls of [{ drain_wall: 'back', fittings_wall: 'left' }, { drain_wall: 'back', fittings_wall: 'back', shower_wider_than_deep: true }]) {
+    const w = harness({ checks: [() => checkedInv({ shower: 'back' }, { shower: 'back' }, walls)] });
+    assert.equal((await w.invoke(payload({ dusche: 'walk-in', badewanne: 'keine' }))).statusCode, 200);
+    assert.match(JSON.stringify(w.calls.find((call) => call.url === 'https://api.resend.com/emails').body), /Duschrinne an der L.ngsseite/);
+  }
+  const right = harness({ checks: [() => checkedInv({ shower: 'back' }, { shower: 'back' }, { drain_wall: 'left', fittings_wall: 'left', shower_wider_than_deep: true })] });
+  await right.invoke(payload({ dusche: 'walk-in', badewanne: 'keine' }));
+  assert.doesNotMatch(JSON.stringify(right.calls.find((call) => call.url === 'https://api.resend.com/emails').body), /L.ngsseite/);
   // Mit Duschwanne gibt es keine Rinne: kein Vermerk.
   const tray = harness({ checks: [drain] });
   await tray.invoke(payload({ dusche: 'duschwanne', badewanne: 'keine' }));
   assert.doesNotMatch(JSON.stringify(tray.calls.find((call) => call.url === 'https://api.resend.com/emails').body), /Punktablauf/);
 });
 
+test('Armaturen: Atelier zeigt die Form von Treemme Aurelia in der gewaehlten Oberflaeche', async () => {
+  const options = optionsForPackage('atelier');
+  assert.equal(options.tapSeries, 'Treemme Aurelia, Unterputz');
+  const tile = options.tiles[0];
+  const h = harness();
+  const res = await h.invoke(payload({
+    paket: 'atelier', look: tile.look, format: tile.format, platte: tile.id, kombination: 'einheitlich',
+    unterbau: options.bases[0].id, top: options.tops[0].id, becken: options.basinTypes[0].id,
+    finish: 'treemme-ottone-spazzolato', keramik: options.sanitary[0].id,
+    wall: options.walls[0].id, dusche: options.showers[0].id, badewanne: options.bathtubs[0].id,
+    waschtisch: options.basins[0].id, spiegel: options.mirrors[0].id,
+  }));
+  assert.equal(res.statusCode, 200, `unexpected status ${res.statusCode}: ${JSON.stringify(res.body).slice(0, 200)}`);
+  const prompt = h.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
+  assert.match(prompt, /Treemme Aurelia fittings in brushed brass/);
+  assert.match(prompt, /rectangular wall plate .*spout with flat facets .*flat paddle lever hanging straight down/);
+  assert.match(prompt, /round overhead shower .*finely ribbed .*blade-shaped wall arm .*stick hand shower/);
+  // Die Treemme-Produktfotos gehen als letzte Vorlage mit, nur fuer die Form.
+  const parts = h.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts;
+  const tapsImage = parts.filter((part) => part.inlineData).length;
+  assert.match(prompt, new RegExp(`Image ${tapsImage} is ONLY a product photo of the tap fittings`));
+  assert.deepEqual(options.finishes.map((finish) => finish.id), ['treemme-cromo', 'treemme-nero-opaco', 'treemme-oro-spazzolato', 'treemme-nichel-spazzolato',
+    'treemme-oro-rosa-spazzolato', 'treemme-nichel-lucido', 'treemme-oro', 'treemme-nero-cromo-lucido', 'treemme-nero-cromo-spazzolato', 'treemme-ottone-spazzolato']);
+  // Lead und Kundenmail nennen die Serie.
+  const mails = h.calls.filter((call) => call.url === 'https://api.resend.com/emails');
+  assert.ok(mails.length >= 1);
+  for (const mail of mails) assert.match(JSON.stringify(mail.body), /Ottone Spazzolato \(Messing gebürstet\), Treemme Aurelia, Unterputz/);
+});
+
 test('Armaturen: Essenza zeigt die Form von Treemme Up+, nicht irgendeine Armatur', async () => {
   const h = harness(); await h.invoke();
   const prompt = h.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
   assert.match(prompt, /Treemme Up\+ fittings in polished chrome .*thin stick lever on top and a round tube spout/);
+  // Aufputz: am Waschtisch die Standarmatur, in der Dusche der sichtbare Mischer (Diego, 20.09.).
+  assert.match(prompt, /mixer standing on the washbasin or its countertop/);
+  assert.match(prompt, /exposed wall mixer that stands clearly out from the tiles.*never a flat concealed plate/);
+  assert.doesNotMatch(prompt, /product photo of the tap fittings/);
 });

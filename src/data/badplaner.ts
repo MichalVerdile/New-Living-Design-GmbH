@@ -112,7 +112,7 @@ export interface BasinTypeOption {
   prompt: string;
 }
 
-/** Armaturenserie mit Foto (Colore). */
+/** Armaturenserie mit Foto (Colore zur Wahl, Atelier nur zum Ansehen). */
 export interface TapSeriesOption {
   id: string;
   label: string;
@@ -714,11 +714,14 @@ export const basinTypes: BasinTypeOption[] = [
   { id: 'integriert', label: 'Integriertes Waschbecken', supplier: '', example: 'Platte und Becken aus einem Stück', packages: ['atelier'], image: '/badplaner/swatches/becken-integriert.png', src: '', url: '', prompt: 'washbasin moulded into the top itself, monolithic, no separate bowl' },
 ];
 
-/* ---------- Armaturenserie mit Foto (Colore) ---------- */
+/* ---------- Armaturenserie mit Foto (Colore zur Wahl, Atelier nur zum Ansehen) ---------- */
 
 export const tapSeriesOptions: TapSeriesOption[] = [
   { id: 'treemme-up', label: 'Treemme Up+', supplier: 'Treemme', shape: 'runde Formen', note: 'Bild zeigt die Formensprache der Serie.', packages: ['colore'], image: '/badplaner/armaturen/armatur-up-chrom.jpg', url: 'https://www.rubinetterie3m.it/it/moderno/up-up', prompt: 'Treemme Up+ fittings in polished chrome, all round, slim and plain: at the washbasin a slim cylindrical single-lever mixer with a flat top, a thin stick lever on top and a round tube spout that bends down; in a shower a concealed mixer behind a round wall rosette with the same thin stick lever, a thin round overhead shower on a straight wall arm and a slim round hand shower; never square shapes' },
   { id: 'treemme-ran', label: 'Treemme Ran', supplier: 'Treemme', shape: 'eckige Formen', note: 'Bild zeigt die Formensprache der Serie.', packages: ['colore'], image: '/badplaner/armaturen/armatur-ran-chrom.jpg', url: 'https://www.rubinetterie3m.it/it/moderno/ran', prompt: 'Treemme Ran fittings in polished chrome, flat and square-edged: at the washbasin a tall slender single-lever mixer with flat faces, a thin flat blade-shaped spout of rectangular section and a flat rectangular blade lever on top; in a shower a concealed mixer behind a flat rectangular wall plate with a flat blade lever, a thin square overhead shower on a straight wall arm and a slim square-edged hand shower; never round tube shapes' },
+  // Atelier: keine Wahl, nur die Form von Treemme Aurelia (Produktfotos von rubinetterie3m.it, verchromt).
+  { id: 'treemme-aurelia-waschtisch', label: 'Aurelia Waschtisch', supplier: 'Treemme', shape: 'Wandarmatur mit Platte, Unterputz', note: 'Bild zeigt die Formensprache der Serie.', packages: ['atelier'], image: '/badplaner/armaturen/armatur-aurelia-waschtisch.jpg', url: 'https://www.rubinetterie3m.it/en/design/aurelia', prompt: '' },
+  { id: 'treemme-aurelia-dusche', label: 'Aurelia Dusche', supplier: 'Treemme', shape: 'Mischer, Kopf- und Handbrause, Unterputz', note: 'Bild zeigt die Formensprache der Serie.', packages: ['atelier'], image: '/badplaner/armaturen/armatur-aurelia-dusche.jpg', url: 'https://www.rubinetterie3m.it/en/design/aurelia', prompt: '' },
 ];
 
 /* ---------- Sanitärkeramik (WC, Waschtisch) ---------- */
@@ -752,10 +755,15 @@ export const tapFinishes: FinishOption[] = [
   { id: 'treemme-bianco-opaco', label: 'Bianco Opaco (Weiss matt)', supplier: 'Treemme', image: '/badplaner/swatches/treemme-bianco-opaco.png', src: 'https://cdn.rubinetterie3m.it/storage/finiture/619cb0879e006.png', prompt: 'matte white', packages: ['essenza', 'colore'] },
   { id: 'treemme-oro-spazzolato', label: 'Oro Spazzolato (Gold gebürstet)', supplier: 'Treemme', image: '/badplaner/swatches/treemme-oro-spazzolato.png', src: 'https://cdn.rubinetterie3m.it/storage/finiture/619cb1b1a4c2b.png', prompt: 'brushed gold', packages: ['essenza', 'colore', 'atelier'] },
   { id: 'treemme-nichel-spazzolato', label: 'Nichel Spazzolato (Nickel gebürstet)', supplier: 'Treemme', image: '/badplaner/swatches/treemme-nichel-spazzolato.png', src: 'https://cdn.rubinetterie3m.it/storage/finiture/619cb2fb9ea8a.png', prompt: 'brushed nickel', packages: ['essenza', 'colore', 'atelier'] },
-  { id: 'treemme-inox-spazzolato', label: 'Inox Spazzolato (Edelstahl gebürstet)', supplier: 'Treemme', image: '/badplaner/swatches/treemme-inox-spazzolato.png', src: 'https://cdn.rubinetterie3m.it/storage/finiture/619cb200a25ff.png', prompt: 'brushed stainless steel', packages: ['colore', 'atelier'] },
-  { id: 'treemme-gun-metal-pvd', label: 'Gun Metal-PVD (Anthrazit)', supplier: 'Treemme', image: '/badplaner/swatches/treemme-gun-metal-pvd.png', src: 'https://cdn.rubinetterie3m.it/storage/finiture/619cb81778620.png', prompt: 'gun metal PVD', packages: ['colore', 'atelier'] },
-  { id: 'treemme-bronze-pvd', label: 'Bronze-PVD', supplier: 'Treemme', image: '/badplaner/swatches/treemme-bronze-pvd.png', src: 'https://cdn.rubinetterie3m.it/storage/finiture/619cb8ce565c0.png', prompt: 'bronze PVD', packages: ['atelier'] },
+  { id: 'treemme-inox-spazzolato', label: 'Inox Spazzolato (Edelstahl gebürstet)', supplier: 'Treemme', image: '/badplaner/swatches/treemme-inox-spazzolato.png', src: 'https://cdn.rubinetterie3m.it/storage/finiture/619cb200a25ff.png', prompt: 'brushed stainless steel', packages: ['colore'] },
+  { id: 'treemme-gun-metal-pvd', label: 'Gun Metal-PVD (Anthrazit)', supplier: 'Treemme', image: '/badplaner/swatches/treemme-gun-metal-pvd.png', src: 'https://cdn.rubinetterie3m.it/storage/finiture/619cb81778620.png', prompt: 'gun metal PVD', packages: ['colore'] },
   { id: 'treemme-oro-rosa-spazzolato', label: 'Oro Rosa Spazzolato (Roségold gebürstet)', supplier: 'Treemme', image: '/badplaner/swatches/treemme-oro-rosa-spazzolato.png', src: 'https://cdn.rubinetterie3m.it/storage/finiture/619cb914c110f.png', prompt: 'brushed rose gold', packages: ['atelier'] },
+  // Atelier = Treemme Aurelia: nur die Oberflaechen, die Treemme fuer Aurelia anbietet (Konfigurator
+  // rubinetterie3m.it, 20.09.): CC, NL, NF, DD, DZ, SZ, HH, CZ, UZ, NN. Namen wie bei Treemme.
+  { id: 'treemme-nichel-lucido', label: 'Nichel Lucido (Nickel poliert)', supplier: 'Treemme', image: '/badplaner/swatches/treemme-nichel-lucido.png', src: 'https://cdn.rubinetterie3m.it/storage/finiture/619cb3428928f.png', prompt: 'polished nickel', packages: ['atelier'] },
+  { id: 'treemme-oro', label: 'Oro (Gold 24 Karat)', supplier: 'Treemme', image: '/badplaner/swatches/treemme-oro.png', src: 'https://cdn.rubinetterie3m.it/storage/finiture/619cb18d765cc.png', prompt: 'polished 24 carat gold', packages: ['atelier'] },
+  { id: 'treemme-nero-cromo-lucido', label: 'Nero Cromo Lucido (Schwarzchrom poliert)', supplier: 'Treemme', image: '/badplaner/swatches/treemme-nero-cromo-lucido.png', src: 'https://cdn.rubinetterie3m.it/storage/finiture/619cb1dba81f5.png', prompt: 'polished black chrome', packages: ['atelier'] },
+  { id: 'treemme-nero-cromo-spazzolato', label: 'Nero Cromo Spazzolato (Schwarzchrom gebürstet)', supplier: 'Treemme', image: '/badplaner/swatches/treemme-nero-cromo-spazzolato.png', src: 'https://cdn.rubinetterie3m.it/storage/finiture/619cb0ffed4a5.png', prompt: 'brushed black chrome', packages: ['atelier'] },
   { id: 'treemme-ottone-spazzolato', label: 'Ottone Spazzolato (Messing gebürstet)', supplier: 'Treemme', image: '/badplaner/swatches/treemme-ottone-spazzolato.png', src: 'https://cdn.rubinetterie3m.it/storage/finiture/651151fb24349.png', prompt: 'brushed brass', packages: ['colore', 'atelier'] },
 ];
 
@@ -764,7 +772,7 @@ export const tapFinishes: FinishOption[] = [
 export const tapSeries: Record<PackageId, string> = {
   essenza: 'Treemme Up+, Aufputz, verchromt',
   colore: 'Treemme',
-  atelier: 'Treemme, Unterputz',
+  atelier: 'Treemme Aurelia, Unterputz',
 };
 
 /* ---------- Wandhöhe, Dusche / Badewanne, Waschtisch, Spiegel ---------- */
@@ -787,7 +795,10 @@ export const wallOptions: ChoiceOption[] = [
 export const showerOptions: ChoiceOption[] = [
   { id: 'keine', label: 'Keine Dusche', prompt: 'no shower, shower tray, shower enclosure or shower controls' },
   { id: 'duschwanne', label: 'Dusche mit Duschwanne', prompt: 'shower with a low shower tray and a fixed glass panel; every wall around the entire shower-tray perimeter is tiled continuously to the ceiling' },
-  { id: 'walk-in', label: 'Gefälledusche / Walk-in, bodeneben gefliest', prompt: 'floor-level walk-in shower with a correctly sloped tiled shower floor that falls towards the back wall of the shower, where a linear channel drain (Duschrinne) runs along the foot of that wall over almost the whole width of the shower: one long narrow slot with a slim tiled-in or brushed stainless steel cover; never a central point drain, never a round or square grate in the shower floor; a fixed glass panel; every wall around the entire shower-floor perimeter is tiled continuously to the ceiling' },
+  // Regel von Diego (20.09.): Rinne an der Schmalseite, am Fuss der Wand, und alle Duscharmaturen an
+  // derselben Schmalseite. Die Armaturen setzt das Modell richtig (a1, 14:38), die Rinne lag an der Rueckwand:
+  // darum wird die Rinne von den Armaturen aus beschrieben. Der Satz ueber die Seitenwaende (a3) schob die Armaturen an die Rueckwand.
+  { id: 'walk-in', label: 'Gefälledusche / Walk-in, bodeneben gefliest', prompt: 'floor-level walk-in shower whose tiled floor is flush with the bathroom floor, with no step, no kerb and no raised platform. The shower area is a rectangle; one of its two SHORT ends is a solid wall, the end wall. ALL shower fittings sit together on that short end wall: the mixer, the overhead shower with its wall arm and the hand shower in its holder; the long wall of the shower carries no fitting at all, only tiles. The drain starts from the fittings: a linear channel drain (Duschrinne) lies in the floor at the foot of the very wall that carries the mixer and the hand shower, directly below them, and runs along the foot of that same wall for its whole length inside the shower: one long narrow slot with a slim tiled-in or brushed stainless steel cover, and the tiled shower floor slopes towards it. When the shower is wider than it is deep, this drain runs through the full depth of the shower, from the back wall towards the glass panel, that is towards the camera: it is perpendicular to the back wall and never runs along it; never a central point drain, never a round or square grate in the shower floor, never a drain along the long wall or at the foot of any wall without fittings. A fixed glass panel; every wall around the entire shower-floor perimeter is tiled continuously to the ceiling' },
 ];
 
 export const bathtubOptions: ChoiceOption[] = [
