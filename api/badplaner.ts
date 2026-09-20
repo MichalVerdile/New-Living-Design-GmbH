@@ -156,6 +156,8 @@ interface BeratungBody {
   style?: string;
   budget?: string;
   imageWanted?: boolean;
+  renderFailure?: string;
+  auswahl?: unknown;
   file?: { name: string; mime: string; data: string };
   name?: string;
   email?: string;
@@ -165,6 +167,13 @@ interface BeratungBody {
   consent?: boolean;
   website?: string;
 }
+
+type RenderFailureCode = 'PHOTO_NOT_A_BATHROOM' | 'RENDER_FAILED' | 'RENDER_REJECTED';
+const RENDER_FAILURE_LABELS: Record<RenderFailureCode, string> = {
+  PHOTO_NOT_A_BATHROOM: 'Foto nicht als Bad oder Gäste-WC erkannt – kein Ideenbild erzeugt',
+  RENDER_FAILED: 'Bildgenerierung fehlgeschlagen – kein Ideenbild erzeugt',
+  RENDER_REJECTED: 'Ideenbild von der Qualitätsprüfung abgelehnt – nicht angezeigt',
+};
 
 interface GrundrissBody {
   kind: 'grundriss';
@@ -530,10 +539,17 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   if (photoCheck.status === 'wrong_room') {
     console.warn('[badplaner] Foto zeigt kein Bad', photoCheck.reason);
     const wrongRoomDelivery = await sendLeadMail({
-      subject: `Badplaner-Lead: ${name} - ${isGuestWc ? 'Gaeste-WC' : pkg.name} - Foto zeigt kein Bad`,
+      subject: preview
+        ? `Badplaner-Fehler ohne Kontakt – ${isGuestWc ? 'Gäste-WC' : pkg.name} – Foto nicht erkannt`
+        : `Badplaner-Lead: ${name} - ${isGuestWc ? 'Gaeste-WC' : pkg.name} - Foto zeigt kein Bad`,
       replyTo: email || undefined,
-      intro: 'Neuer Lead aus dem Badplaner. Auf dem Foto ist kein Bad und kein WC zu erkennen, darum wurde gar kein Ideenbild erzeugt. Das Foto liegt bei.',
-      details: leadDetails(`nicht noetig: Foto zeigt kein Bad (${photoCheck.reason})`, 'nicht erzeugt: Foto zeigt kein Bad'),
+      intro: preview
+        ? 'Anonymer Badplaner-Versuch ohne Kontaktdaten. Das Foto wurde nicht als Bad oder Gäste-WC erkannt; deshalb wurde kein Ideenbild erzeugt. Foto und Auswahl liegen bei.'
+        : 'Auf dem Foto ist kein Bad und kein WC zu erkennen, darum wurde kein Ideenbild erzeugt. Das Foto und die Auswahl liegen bei.',
+      details: leadDetails(
+        `nicht nötig: Foto zeigt kein Bad (${photoCheck.reason})`,
+        preview ? RENDER_FAILURE_LABELS.PHOTO_NOT_A_BATHROOM : 'nicht erzeugt: Foto zeigt kein Bad',
+      ),
       attachments: [{ filename: photoName, content: photo.data }],
     }, ctx);
     // Wie bei einem verworfenen Ideenbild: sein Tageslimit bleibt unberuehrt,
@@ -542,7 +558,9 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
     return res.status(422).json({
       ok: false, code: 'PHOTO_NOT_A_BATHROOM',
       delivery: { lead: wrongRoomDelivery.status, leadProvider: wrongRoomDelivery.provider, leadAttachments: wrongRoomDelivery.attachments },
-      error: 'Auf Ihrem Foto erkennen wir kein Bad und kein WC. Stellen Sie sich bitte in den Türrahmen und fotografieren Sie den ganzen Raum, mit WC und Waschbecken im Bild. Ihre Angaben sind bei uns, wir melden uns.',
+      error: preview || wrongRoomDelivery.status !== 'accepted'
+        ? 'Auf Ihrem Foto erkennen wir kein Bad und kein WC. Bitte wählen Sie ein Foto, auf dem der ganze Raum mit WC und Waschbecken zu sehen ist. Sie können ein anderes Foto verwenden oder eine persönliche Beratung anfragen.'
+        : 'Auf Ihrem Foto erkennen wir kein Bad und kein WC. Ihre Angaben und Ihr Foto sind bei uns. Wir melden uns persönlich bei Ihnen.',
     });
   }
 
@@ -551,10 +569,14 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   // und Foto sind das Wertvolle. Frueher ging bei einem Fehler alles verloren.
   const leadWithoutImage = async (note: string, discarded?: { mime: string; data: string }) => {
     const failDelivery = await sendLeadMail({
-      subject: `Badplaner-Lead: ${name} - ${isGuestWc ? 'Gaeste-WC' : pkg.name} - kein Ideenbild erzeugt`,
+      subject: preview
+        ? `Badplaner-Fehler ohne Kontakt – ${isGuestWc ? 'Gäste-WC' : pkg.name} – kein Ideenbild`
+        : `Badplaner-Lead: ${name} - ${isGuestWc ? 'Gaeste-WC' : pkg.name} - kein Ideenbild erzeugt`,
       replyTo: email || undefined,
-      intro: 'Neuer Lead aus dem Badplaner. Der Bilddienst hat kein Ideenbild geliefert, der Kunde hat keines gesehen. Das Foto liegt bei, damit wir das Bild von Hand nachliefern koennen.',
-      details: leadDetails(note, 'nicht erzeugt: Bilddienst hat nicht geliefert'),
+      intro: preview
+        ? 'Anonymer Badplaner-Versuch ohne Kontaktdaten. Die Bildgenerierung ist fehlgeschlagen; der Besucher hat kein Ideenbild gesehen. Foto und Auswahl liegen bei.'
+        : 'Die Bildgenerierung ist fehlgeschlagen; der Kunde hat kein Ideenbild gesehen. Foto und Auswahl liegen bei.',
+      details: leadDetails(note, preview ? RENDER_FAILURE_LABELS.RENDER_FAILED : 'nicht erzeugt: Bilddienst hat nicht geliefert'),
       attachments: [
         { filename: photoName, content: photo.data },
         ...(discarded ? [{ filename: 'verworfen.jpg', content: discarded.data }] : []),
@@ -563,7 +585,11 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
     return {
       ok: false as const, code: 'RENDER_FAILED',
       delivery: { lead: failDelivery.status, leadProvider: failDelivery.provider, leadAttachments: failDelivery.attachments },
-      error: 'Das Ideenbild konnte gerade nicht erzeugt werden. Ihre Angaben und Ihr Foto sind bei uns, wir melden uns und schicken es Ihnen nach. Sie koennen es auch gleich nochmals versuchen.',
+      error: preview
+        ? 'Ihr Ideenbild konnte leider nicht erstellt werden. Hinterlassen Sie uns Ihre Kontaktdaten – wir besprechen Ihre Badideen gerne persönlich mit Ihnen.'
+        : failDelivery.status === 'accepted'
+          ? 'Ihr Ideenbild konnte leider nicht erstellt werden. Ihre Angaben und Ihr Foto sind bei uns. Wir melden uns persönlich bei Ihnen.'
+          : 'Ihr Ideenbild konnte leider nicht erstellt werden. Die Übermittlung Ihrer Anfrage konnte nicht bestätigt werden. Bitte kontaktieren Sie uns telefonisch.',
     };
   };
 
@@ -614,10 +640,14 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   if (check.status === 'rejected') {
     const rejectedNote = `abgelehnt: ${check.reason}`;
     const leadDelivery = await sendLeadMail({
-      subject: `Badplaner-Lead: ${name} – ${isGuestWc ? 'Gäste-WC' : pkg.name} – Ideenbild abgelehnt`,
+      subject: preview
+        ? `Badplaner-Fehler ohne Kontakt – ${isGuestWc ? 'Gäste-WC' : pkg.name} – Ideenbild abgelehnt`
+        : `Badplaner-Lead: ${name} – ${isGuestWc ? 'Gäste-WC' : pkg.name} – Ideenbild abgelehnt`,
       replyTo: email || undefined,
-      intro: 'Neuer Lead aus dem Badplaner. Das Ideenbild wurde von der automatischen Prüfung abgelehnt und dem Kunden nicht angezeigt. Originalfoto und das verworfene Bild sind im Anhang — nur für uns, der Kunde hat es nie gesehen.',
-      details: leadDetails(rejectedNote, 'abgelehnt (Prüfung), nicht angezeigt'),
+      intro: preview
+        ? 'Anonymer Badplaner-Versuch ohne Kontaktdaten. Das Ideenbild wurde von der Qualitätsprüfung abgelehnt und nicht angezeigt. Originalfoto, Auswahl und verworfenes Bild liegen bei.'
+        : 'Das Ideenbild wurde von der Qualitätsprüfung abgelehnt und dem Kunden nicht angezeigt. Originalfoto, Auswahl und verworfenes Bild liegen bei.',
+      details: leadDetails(rejectedNote, preview ? RENDER_FAILURE_LABELS.RENDER_REJECTED : 'abgelehnt (Prüfung), nicht angezeigt'),
       // Das verworfene Bild geht mit: ohne es können wir nicht beurteilen, ob die
       // Prüfung recht hatte oder ein brauchbares Bild unnötig verworfen wurde.
       attachments: [
@@ -634,7 +664,9 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
       delivery: { lead: leadDelivery.status, leadProvider: leadDelivery.provider, leadAttachments: leadDelivery.attachments },
       // "Später erneut versuchen" war der falsche Rat: mit demselben Foto scheitert
       // es wieder. Ein weiter gefasstes Foto hilft dem Modell, den Grundriss zu halten.
-      error: 'Das Ideenbild hat unsere Kontrolle nicht bestanden: Der Grundriss stimmte nicht mit Ihrem Foto überein, darum zeigen wir es Ihnen nicht. Am besten gleich nochmals mit einem Foto vom Türrahmen aus, auf dem das ganze Bad zu sehen ist. Ihre Angaben sind bei uns, wir melden uns.',
+      error: preview || leadDelivery.status !== 'accepted'
+        ? 'Ihr Ideenbild hat unsere Qualitätsprüfung nicht bestanden und wird deshalb nicht angezeigt. Sie können ein anderes Foto verwenden oder eine persönliche Beratung anfragen.'
+        : 'Ihr Ideenbild hat unsere Qualitätsprüfung nicht bestanden und wird deshalb nicht angezeigt. Ihre Angaben und Ihr Foto sind bei uns. Wir melden uns persönlich bei Ihnen.',
     });
   }
   if (check.status === 'approved' && check.note) {
@@ -834,6 +866,21 @@ async function handleAnfrage(res: any, raw: Uint8Array, ctx: RequestContext) {
 async function handleBeratung(req: any, res: any, body: BeratungBody, ctx: RequestContext) {
   const room = text(body.raum, 20);
   if (room !== 'badezimmer' && room !== 'gaeste-wc') return bad(res, 'Bitte Badezimmer oder Gäste-WC wählen.');
+  const renderFailure = typeof body.renderFailure === 'string' && Object.prototype.hasOwnProperty.call(RENDER_FAILURE_LABELS, body.renderFailure)
+    ? body.renderFailure as RenderFailureCode
+    : null;
+  if (body.renderFailure !== undefined && !renderFailure) return bad(res, 'Ungültiger Grund für die Beratungsanfrage.');
+  const auswahl: [string, string][] = [];
+  if (body.auswahl !== undefined) {
+    if (!Array.isArray(body.auswahl) || body.auswahl.length > 40) return bad(res, 'Die Auswahl ist ungültig.');
+    for (const row of body.auswahl) {
+      if (!Array.isArray(row) || row.length !== 2 || typeof row[0] !== 'string' || typeof row[1] !== 'string') return bad(res, 'Die Auswahl ist ungültig.');
+      const label = text(row[0], 80);
+      const value = text(row[1], 300);
+      if (!label || !value) return bad(res, 'Die Auswahl ist ungültig.');
+      auswahl.push([label, value]);
+    }
+  }
   const priorities = text(body.priorities, 3000);
   const measurements = text(body.measurements, 1000);
   const style = text(body.style, 120);
@@ -874,6 +921,8 @@ async function handleBeratung(req: any, res: any, body: BeratungBody, ctx: Reque
     ['Telefon / WhatsApp', phone],
     ['E-Mail', email],
     ['Raum', room === 'gaeste-wc' ? 'Gäste-WC' : 'Badezimmer'],
+    ...(renderFailure ? [['Grund ohne Ideenbild', RENDER_FAILURE_LABELS[renderFailure]] as [string, string]] : []),
+    ...auswahl,
     ['Wünsche und Prioritäten', priorities],
     ['Masse oder Angaben zum Raum', measurements || 'nicht angegeben'],
     ['Stilpräferenz', style || 'offen'],
@@ -886,9 +935,13 @@ async function handleBeratung(req: any, res: any, body: BeratungBody, ctx: Reque
     ['Lead-ID', leadId],
   ];
   const delivery = await sendLeadMail({
-    subject: `Individuelle Beratung: ${name} – ${room === 'gaeste-wc' ? 'Gäste-WC' : 'Badezimmer'}`,
+    subject: renderFailure
+      ? `Badplaner-Beratung: ${name} – ${room === 'gaeste-wc' ? 'Gäste-WC' : 'Badezimmer'}`
+      : `Individuelle Beratung: ${name} – ${room === 'gaeste-wc' ? 'Gäste-WC' : 'Badezimmer'}`,
     replyTo: email,
-    intro: 'Neue Anfrage für eine individuelle Beratung oder Besichtigung. Bitte zuerst anhand der Angaben, der Datei oder telefonisch beurteilen und danach bei Bedarf einen Besichtigungstermin vereinbaren.',
+    intro: renderFailure
+      ? `Neue Beratungsanfrage nach einem fehlgeschlagenen Ideenbild. ${RENDER_FAILURE_LABELS[renderFailure]}. Das Kundenfoto und die Auswahl sind beigefügt.`
+      : 'Neue Anfrage für eine individuelle Beratung oder Besichtigung. Bitte zuerst anhand der Angaben, der Datei oder telefonisch beurteilen und danach bei Bedarf einen Besichtigungstermin vereinbaren.',
     details,
     attachments,
   }, ctx);
