@@ -3,6 +3,7 @@ title: Badumbau von den Steuern abziehen: bis 2028 geht das noch
 seoTitle: Badumbau von den Steuern abziehen bis 2028
 description: Der Eigenmietwert fällt 2029 weg, und mit ihm der Abzug für den Liegenschaftsunterhalt. Was das für ein neues Bad im Aargau bedeutet.
 date: 2026-09-12
+updated: 2026-09-20
 image: /referenzen/bad-marmor-beige-01.webp
 imageAlt: Fertiger Badumbau in Zofingen mit Doppelwaschtisch, Möbel und Platten in beiger Marmoroptik
 category: Steuern
@@ -54,7 +55,7 @@ Zum Vergleich: Ohne Umbau zieht man die Pauschale ab, im Aargau 20 Prozent des E
 
 Massgebend ist das Rechnungsdatum oder das Zahlungsdatum. Wer bisher nach Rechnungsdatum abgezogen hat, bleibt dabei; das Steueramt erwartet eine gleichbleibende Methode. Akontozahlungen werden nur im Umfang des Baufortschritts anerkannt.
 
-Für das Steuerjahr 2028 heisst das: Das Bad muss 2028 gebaut und verrechnet sein. Ein Badumbau dauert bei uns [drei bis fünf Wochen auf der Baustelle](/badumbau-zofingen). Davor kommen Beratung in der Ausstellung, Besichtigung, 3D-Planung und die Lieferfristen der Produkte; ab der Unterschrift sind es acht bis zwölf Wochen bis zum ersten Arbeitstag. Wer im Herbst 2028 anruft, wird knapp. Wir gehen davon aus, dass 2027 und 2028 viele Eigentümer dieselbe Idee haben und die Handwerker in der Region ausgebucht sind.
+Für das Steuerjahr 2028 heisst das: Das Bad muss 2028 ausgeführt und nach der von Ihnen verwendeten Methode steuerlich berücksichtigt werden können. Für die reine Ausführung eines Standardbads rechnen wir in der Regel mit [zwei bis drei Wochen](/badumbau-zofingen). Planung, Produktauswahl und Lieferzeit liegen davor und werden separat berücksichtigt. Klären Sie den massgebenden Zeitpunkt frühzeitig mit Ihrer Steuerbehörde oder Treuhandstelle.
 
 Wer zwei Projekte plant, etwa Bad und Küche, verteilt sie besser auf zwei Steuerjahre. Der Abzug wirkt dort am stärksten, wo der Steuersatz am höchsten ist. Ein einzelnes Jahr mit 60'000 Franken Abzug drückt das Einkommen unter Umständen in eine Zone, in der jeder weitere Franken Abzug weniger bringt.
 

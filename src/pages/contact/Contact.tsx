@@ -46,12 +46,12 @@ const Contact: React.FC = () => {
         setStatus("error");
         setErrorMsg(
           data?.errors?.[0]?.message ??
-          "Senden fehlgeschlagen. Bitte versuchen Sie es später erneut."
+          "Die Nachricht konnte nicht gesendet werden. Versuchen Sie es später erneut oder rufen Sie uns an."
         );
       }
     } catch {
       setStatus("error");
-      setErrorMsg("Netzwerkfehler. Bitte prüfen Sie Ihre Verbindung und versuchen Sie es erneut.");
+      setErrorMsg("Die Nachricht konnte nicht gesendet werden. Prüfen Sie Ihre Verbindung oder schreiben Sie uns direkt.");
     }
   };
 
@@ -59,16 +59,16 @@ const Contact: React.FC = () => {
     <main id="main-content" className={styles.contact}>
       {/* SEO Head */}
       <Helmet>
-        <title>Kontakt | New Living Design GmbH</title>
+        <title>Kontakt & Ausstellung | New Living Design Zofingen</title>
         <link rel="canonical" href="https://newlivingdesign.ch/kontakt" />
         <meta
           name="description"
-          content="Kontaktieren Sie die New Living Design GmbH – Showroom in Zofingen (AG). Adresse, Telefon, E-Mail und Öffnungszeiten im Überblick."
+          content="Beratung für Bad, Küchen, Platten und Wellness anfragen. New Living Design, Im Römerquartier 4A in Zofingen – Telefon, E-Mail und Öffnungszeiten."
         />
         <meta property="og:title" content="Kontakt | New Living Design GmbH" />
         <meta
           property="og:description"
-          content="Adresse, Telefonnummer und Öffnungszeiten der New Living Design GmbH. Wir beraten Sie gerne persönlich oder telefonisch."
+          content="Erzählen Sie uns von Ihrem Projekt und fragen Sie eine persönliche Beratung in Zofingen an."
         />
         <meta property="og:image" content={`https://newlivingdesign.ch${heroImg}`} />
         <meta property="og:type" content="website" />
@@ -77,7 +77,7 @@ const Contact: React.FC = () => {
         <meta name="twitter:title" content="Kontakt | New Living Design GmbH" />
         <meta
           name="twitter:description"
-          content="Jetzt Kontakt aufnehmen: Adresse, Telefonnummer, Showroom und Öffnungszeiten der New Living Design GmbH."
+          content="Beratung anfragen oder die Ausstellung von New Living Design in Zofingen besuchen."
         />
         <meta name="twitter:image" content={heroImg} />
 
@@ -90,7 +90,7 @@ const Contact: React.FC = () => {
             "image": "https://newlivingdesign.ch" + heroImg,
             "url": "https://newlivingdesign.ch/kontakt",
             "telephone": "+41625445854",
-            "email": "diego.verdile@newlivingdesign.ch",
+            "email": "emanuel.verdile@newlivingdesign.ch",
             "address": {
               "@type": "PostalAddress",
               "streetAddress": "Im Römerquartier 4A",
@@ -135,11 +135,11 @@ const Contact: React.FC = () => {
         <div className={styles["hero-container"]}>
           <div className={styles["hero-content"]}>
             <h1 className={styles["hero-title"]}>
-              <span className={styles["title-highlight"]}>Kontakt</span>
+              <span>Erzählen Sie uns, was Sie verändern möchten.</span>
             </h1>
             <p className={styles["hero-subtitle"]}>
-              Wir beraten Sie persönlich, im Showroom oder telefonisch. Schreiben Sie uns
-              eine Nachricht oder rufen Sie an.
+              Fotos, Grundriss oder ungefähre Masse helfen uns beim Einstieg. Wenn Sie noch nichts davon haben,
+              genügt auch eine erste Idee. Wir klären den passenden nächsten Schritt.
             </p>
           </div>
 
@@ -154,8 +154,8 @@ const Contact: React.FC = () => {
       <section className={`${styles.section} ${styles.dark}`}>
         <div className={styles.container}>
           <div className={`${styles["section-header"]} ${styles.centered}`}>
-            <span className={styles["section-label"]}>Schreiben Sie uns</span>
-            <h2 className={styles["section-title"]}>Nachricht senden</h2>
+            <span className={styles["section-label"]}>Ihre Anfrage</span>
+            <h2 className={styles["section-title"]}>Womit können wir Ihnen helfen?</h2>
           </div>
 
           <div className={styles["form-grid"]}>
@@ -194,7 +194,7 @@ const Contact: React.FC = () => {
 
               <div className={styles["form-field"]}>
                 <label>Nachricht</label>
-                <textarea name="message" placeholder="Wie können wir helfen?" rows={6} required />
+                <textarea name="message" placeholder="Zum Beispiel: Badberatung, neue Küche, Plattenauswahl oder Wellnesslösung" rows={6} required />
               </div>
 
               <div className={styles["form-actions"]}>
@@ -204,7 +204,7 @@ const Contact: React.FC = () => {
                   disabled={status === "loading"}
                   aria-busy={status === "loading"}
                 >
-                  <span>{status === "loading" ? "Senden..." : "Senden"}</span>
+                  <span>{status === "loading" ? "Wird gesendet …" : "Anfrage senden"}</span>
                   <svg className={styles["cta-arrow"]} viewBox="0 0 24 24" fill="none">
                     <path
                       d="M5 12h14M12 5l7 7-7 7"
@@ -218,7 +218,7 @@ const Contact: React.FC = () => {
 
                 {status === "success" && (
                   <span className={styles.success}>
-                    Danke für Ihre Nachricht! Wir melden uns innerhalb von 24 Stunden.
+                    Danke. Ihre Nachricht ist bei uns angekommen. Wir melden uns persönlich bei Ihnen.
                   </span>
                 )}
                 {status === "error" && (
@@ -238,7 +238,7 @@ const Contact: React.FC = () => {
                 </svg>
               </div>
               <p>
-                Sie können auch direkt eine E-Mail senden an{" "}
+                Sie möchten lieber direkt schreiben?{" "}
                 <a href="mailto:emanuel.verdile@newlivingdesign.ch">
                   emanuel.verdile@newlivingdesign.ch
                 </a>.
@@ -252,7 +252,7 @@ const Contact: React.FC = () => {
         <div className={styles.container}>
           <div className={`${styles["section-header"]} ${styles.centered}`}>
             <span className={styles["section-label"]}>So erreichen Sie uns</span>
-            <h2 className={styles["section-title"]}>Adresse, Kontakt & Öffnungszeiten</h2>
+            <h2 className={styles["section-title"]}>Ausstellung, Kontakt und Öffnungszeiten</h2>
           </div>
 
           <div className={styles["info-grid"]}>
@@ -315,16 +315,6 @@ const Contact: React.FC = () => {
                     </svg>
                   </div>
                   <span>WhatsApp +41 76 743 84 30</span>
-                </a>
-
-                <a href="mailto:diego.verdile@newlivingdesign.ch" className={styles["contact-item"]}>
-                  <div className={styles["contact-icon"]}>
-                    <svg viewBox="0 0 24 24" fill="none">
-                      <path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" stroke="currentColor" strokeWidth="1" />
-                      <path d="M22 6l-10 7L2 6" stroke="currentColor" strokeWidth="1" />
-                    </svg>
-                  </div>
-                  <span>diego.verdile@newlivingdesign.ch</span>
                 </a>
 
                 <a href="mailto:emanuel.verdile@newlivingdesign.ch" className={styles["contact-item"]}>

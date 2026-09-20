@@ -27,25 +27,25 @@ const Booking: React.FC = () => {
       
       {/* SEO Head */}
       <Helmet>
-        <title>Online Beratung & Showroom buchen | New Living Design GmbH</title>
+        <title>Beratung & Ausstellung in Zofingen | New Living Design</title>
         <link rel="canonical" href="https://newlivingdesign.ch/booking" />
         <meta
           name="description"
-          content="Buchen Sie jetzt Ihre persönliche Beratung – bei Ihnen zu Hause oder im Showroom in Zofingen. Kostenloser Ersttermin, exklusive Räume für Architekten."
+          content="Ausstellungsberatung in Zofingen oder Besichtigung vor Ort anfragen. Für Architekturbüros steht der Showroom auch für Kundentermine zur Verfügung."
         />
-        <meta property="og:title" content="Beratung & Showroom buchen | New Living Design GmbH" />
+        <meta property="og:title" content="Beratung & Ausstellung | New Living Design GmbH" />
         <meta
           property="og:description"
-          content="Individuelle Beratung bei Ihnen zu Hause oder im Showroom. Jetzt Termin sichern – kostenloser Ersttermin."
+          content="Produkte in der Ausstellung auswählen oder die bestehende Raumsituation bei Ihnen vor Ort klären."
         />
         <meta property="og:image" content={`https://newlivingdesign.ch${heroImage}`} />
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://newlivingdesign.ch/booking" />
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="Beratung & Showroom buchen | New Living Design GmbH" />
+        <meta name="twitter:title" content="Beratung & Ausstellung | New Living Design GmbH" />
         <meta
           name="twitter:description"
-          content="Persönliche Beratung buchen oder exklusiven Showroom in Zofingen reservieren."
+          content="Ausstellungsberatung, Besichtigung vor Ort oder Showroom-Termin für Architekturbüros anfragen."
         />
         <meta name="twitter:image" content={heroImage} />
 
@@ -69,16 +69,7 @@ const Booking: React.FC = () => {
                 "addressCountry": "CH"
               }
             },
-            "offers": {
-              "@type": "Offer",
-              "url": "https://newlivingdesign.ch/booking",
-              "price": "0",
-              "priceCurrency": "CHF",
-              "eligibleRegion": {
-                "@type": "Place",
-                "address": { "@type": "PostalAddress", "addressCountry": "CH" }
-              }
-            }
+            "areaServed": { "@type": "Country", "name": "Schweiz" }
           })}
         </script>
       </Helmet>
@@ -96,11 +87,12 @@ const Booking: React.FC = () => {
         <div className={styles['hero-container']}>
           <div className={`${styles['hero-content']} ${isVisible ? styles.visible : ''}`}>
             <h1 className={styles['hero-title']}>
-              <span className={styles['title-highlight']}>Beratung & Showroom</span>
+              <span>Der passende Termin für Ihre nächste Entscheidung.</span>
             </h1>
             <div className={styles['hero-description']}>
               <p>
-                Individuelle Beratung, wo es am wichtigsten ist, bei Ihnen daheim oder in unserem Showroom.
+                Für die Produktauswahl treffen wir uns in der Ausstellung. Wenn Masse, Anschlüsse oder der Zustand
+                des Raums entscheidend sind, kommen wir zu Ihnen vor Ort.
               </p>
             </div>
           </div>
@@ -115,8 +107,8 @@ const Booking: React.FC = () => {
       <section className={styles.services}>
         <div className={styles['services-container']}>
           <div className={styles['section-header']}>
-            <span className={styles['section-label']}>Individuelle Beratung</span>
-            <h2 className={styles['section-title']}>Besichtigungstermin bei Ihnen vor Ort</h2>
+            <span className={styles['section-label']}>Wenn der bestehende Raum zählt</span>
+            <h2 className={styles['section-title']}>Besichtigung bei Ihnen vor Ort</h2>
           </div>
 
           <div className={styles['services-grid']}>
@@ -133,8 +125,8 @@ const Booking: React.FC = () => {
                       </svg>
                     </div>
                     <div className={styles['feature-content']}>
-                      <h4>1&nbsp;Std.</h4>
-                      <p>Dauer des Ersttermins</p>
+                      <h4>Ca. 1&nbsp;Std.</h4>
+                      <p>Richtwert für den ersten Termin</p>
                     </div>
                   </div>
 
@@ -146,8 +138,8 @@ const Booking: React.FC = () => {
                       </svg>
                     </div>
                     <div className={styles['feature-content']}>
-                      <h4>Beim Kunden</h4>
-                      <p>Beratung direkt bei Ihnen zu Hause</p>
+                      <h4>Bei Ihnen zu Hause</h4>
+                      <p>Im vereinbarten Ausführungsgebiet</p>
                     </div>
                   </div>
                 </div>
@@ -164,14 +156,13 @@ const Booking: React.FC = () => {
                     <div className={styles['feature-content']}>
                       <h4>Beschreibung</h4>
                       <p>
-                        Wenn Sie planen, Ihr Bad, Ihre Küche oder ein Zimmer umzubauen, können Sie sich gerne hier anmelden. Wir
-                        besuchen Sie zu einem ersten Beratungstermin direkt bei Ihnen zu Hause, um Ihre Ideen gemeinsam
-                        anzuschauen und zu besprechen. Diese Beratung bei Ihnen vor Ort ist selbstverständlich kostenlos. Je
-                        nach Bedarf kann anschliessend ein weiterer Termin in unserem Ausstellungsraum in Zofingen vereinbart
-                        werden.
+                        Eine Besichtigung ist sinnvoll, wenn Sie Bad, Küche oder einen weiteren Raum umbauen möchten. Wir sehen
+                        uns die Raumsituation an, nehmen die nötigen Masse auf und klären Anschlüsse, Zugänglichkeit und den
+                        gewünschten Leistungsumfang.
                       </p>
                       <p style={{ marginTop: '0.75rem' }}>
-                        Melden Sie sich jetzt und sichern Sie sich Ihre persönliche Beratung vor Ort.
+                        Danach wissen wir, welche Auswahl Sie in der Ausstellung treffen können und welche Angaben für eine
+                        Offerte noch fehlen. Die Konditionen bestätigen wir vor dem Termin.
                       </p>
                     </div>
                   </div>
@@ -180,7 +171,7 @@ const Booking: React.FC = () => {
                 {/* CTA */}
                 <div className={styles['services-cta-container']}>
                   <Link to="/kontakt" className={styles['services-cta']}>
-                    <span>Kontakt aufnehmen</span>
+                    <span>Besichtigung anfragen</span>
                     <svg className={styles['cta-arrow']} viewBox="0 0 24 24" fill="none" aria-hidden>
                       <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
@@ -194,8 +185,8 @@ const Booking: React.FC = () => {
                   <img src={beratungImage} alt="Beratung bei Ihnen zu Hause" className={styles['services-img']} />
                   <div className={styles['image-overlay']}>
                     <div className={styles['overlay-content']}>
-                      <h3>Vor-Ort-Beratung</h3>
-                      <p>Individuell, persönlich, kostenlos</p>
+                      <h3>Besichtigung vor Ort</h3>
+                      <p>Klären, was der Raum wirklich braucht</p>
                     </div>
                   </div>
                 </div>
@@ -209,8 +200,8 @@ const Booking: React.FC = () => {
       <section className={styles.products}>
         <div className={styles['products-container']}>
           <div className={styles['section-header']}>
-            <span className={styles['section-label']}>Exklusiver Showroom für Architekten – kostenlos nutzen</span>
-            <h2 className={styles['section-title']}>Ausstellungsraum mieten</h2>
+            <span className={styles['section-label']}>Für Architektinnen und Architekten</span>
+            <h2 className={styles['section-title']}>Showroom für Ihr Kundengespräch reservieren</h2>
           </div>
 
           <div className={styles['products-content']}>
@@ -239,7 +230,7 @@ const Booking: React.FC = () => {
                   </div>
                   <div className={styles['feature-content']}>
                     <h4>Zofingen</h4>
-                    <p>Zentrale Lage, optimal erreichbar</p>
+                    <p>Im Römerquartier 4A</p>
                   </div>
                 </div>
               </div>
@@ -256,9 +247,9 @@ const Booking: React.FC = () => {
                   <div className={styles['feature-content']}>
                     <h4>Beschreibung</h4>
                     <p>
-                      Ab dem <strong>01.01.2026</strong> öffnen wir unseren Showroom in Zofingen exklusiv für ausgewählte
-                      Architekten. Nutzen Sie die Möglichkeit, Ihre Kunden nicht nur anhand von Katalogen, sondern direkt in
-                      einem vollständig ausgestatteten Ausstellungsraum zu beraten.
+                      Nutzen Sie unsere Ausstellung, um mit Ihren Kundinnen und Kunden Materialien, Farben und Produkte direkt
+                      am Muster zu besprechen. Der Showroom bietet Platz für das Gespräch und für den Vergleich unterschiedlicher
+                      Kombinationen.
                     </p>
                   </div>
                 </div>
@@ -273,10 +264,10 @@ const Booking: React.FC = () => {
                     </div>
                     <div className={styles['feature-content']}>
                       <h4>Vorteile</h4>
-                      <p>- Persönliche Beratung in stilvollem Ambiente</p>
-                      <p>- Materialien und Designlösungen zum Anfassen</p>
-                      <p>- Kostenloser Zugang zu Sitzungsraum, Bildschirmprojektion, Musik und Getränken</p>
-                      <p>- Zentrale Lage in Zofingen, für Ihre Kunden optimal erreichbar</p>
+                      <p>- Sitzungsbereich für Ihr Kundengespräch</p>
+                      <p>- Material- und Produktmuster aus der Ausstellung</p>
+                      <p>- Bildschirm für Pläne und Präsentationen</p>
+                      <p>- Musik und Getränke</p>
                     </div>
                   </div>
 
@@ -289,16 +280,16 @@ const Booking: React.FC = () => {
                   <div className={styles['feature-content']}>
                     <h4>Hinweis</h4>
                     <p>
-                      Die ausgewählten Materialien müssen direkt über uns bezogen werden. Auf Wunsch begleiten wir Sie während
-                      der Beratung und unterstützen mit unserem Fachwissen – oder überlassen Ihnen den Showroom ganz exklusiv
-                      für Ihr Kundengespräch. Dieses Angebot richtet sich ausschliesslich an ausgewählte Architekten.
+                      Die Nutzung ist für ausgewählte Architekturbüros kostenlos und erfolgt nach bestätigter Anfrage.
+                      Materialien und Produkte aus dem Termin werden über New Living Design bezogen. Details und Verfügbarkeit
+                      klären wir vor der Reservation.
                     </p>
                   </div>
                 </div>
 
                 <div className={styles['products-cta-container']}>
                   <Link to="/kontakt" className={styles['products-cta']}>
-                    <span>Showroom-Termín reservieren</span>
+                    <span>Showroom-Termin anfragen</span>
                     <svg className={styles['cta-arrow']} viewBox="0 0 24 24" fill="none" aria-hidden>
                       <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
@@ -322,7 +313,7 @@ const Booking: React.FC = () => {
                     <div className={styles['image-overlay']}>
                       <div className={styles['overlay-content']}>
                         <h3>Showroom</h3>
-                        <p>Materialien & Designlösungen live</p>
+                        <p>Bemusterung und Kundengespräche</p>
                       </div>
                     </div>
                   </div>
