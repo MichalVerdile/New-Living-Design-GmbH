@@ -4,6 +4,12 @@
  * - Google Analytics 4 (Statistik)  -> Kategorie "analytics"
  * - Meta Pixel (Marketing)          -> Kategorie "marketing"
  *
+ * Die beiden Kategorien sind getrennt. Google Consent Mode v2:
+ *   Statistik -> analytics_storage
+ *   Marketing -> ad_storage, ad_user_data, ad_personalization
+ * Wer nur der Statistik zustimmt, bekommt ausschliesslich die Messung; alle
+ * Werbesignale bleiben auf "denied".
+ *
  * Kein Script wird geladen, bevor der Besucher im Cookie-Banner oder in den
  * Cookie-Einstellungen zugestimmt hat. Die Einwilligung liegt im Cookie
  * "nldConsent" als JSON {"analytics":bool,"marketing":bool,"ts":ms}.
@@ -11,7 +17,7 @@
  * ob der Banner angezeigt wird.
  */
 import { Cookies } from 'react-cookie-consent';
-import { business } from '../config/business';
+import { business } from '../config/business.js';
 
 export interface ConsentState {
   analytics: boolean;
@@ -43,7 +49,8 @@ const GA_ID = business.ga4MeasurementId;
 const PIXEL_ID = business.metaPixelId;
 
 let gaLoaded = false;
-let pixelLoaded = false;
+let pixelBootstrapped = false; // fbevents.js liegt im DOM
+let pixelLoaded = false; // Marketing eingewilligt und Pixel aktiv
 let gtagScriptLoaded = false;
 let consentModeReady = false;
 
@@ -75,11 +82,29 @@ export function saveConsent(state: ConsentState): void {
 
 /** Lädt oder deaktiviert die Dienste gemäss Einwilligung. */
 export function applyConsent(state: ConsentState): void {
+  updateGoogleConsent(state);
+
   if (state.analytics) enableGoogleAnalytics();
   else disableGoogleAnalytics();
 
   if (state.marketing) enableMetaPixel();
   else disableMetaPixel();
+}
+
+/**
+ * Setzt die vier Google-Signale aus den zwei Kategorien: die Messung haengt an
+ * der Statistik, die drei Werbesignale haengen am Marketing. Widerruf laeuft
+ * ueber denselben Weg und wirkt ohne Neuladen der Seite.
+ */
+function updateGoogleConsent(state: ConsentState): void {
+  initConsentMode();
+  const ads = state.marketing ? 'granted' : 'denied';
+  window.gtag!('consent', 'update', {
+    ad_storage: ads,
+    ad_user_data: ads,
+    ad_personalization: ads,
+    analytics_storage: state.analytics ? 'granted' : 'denied',
+  });
 }
 
 /** Beim Laden der Seite aufrufen: stellt eine frühere Einwilligung wieder her. */
@@ -142,26 +167,11 @@ function loadGtagScript(): void {
 
 function enableGoogleAnalytics(): void {
   window[`ga-disable-${GA_ID}`] = false;
-  initConsentMode();
-  window.gtag!('consent', 'update', {
-    ad_storage: 'granted',
-    ad_user_data: 'granted',
-    ad_personalization: 'granted',
-    analytics_storage: 'granted',
-  });
   loadGtagScript();
   gaLoaded = true;
 }
 
 function disableGoogleAnalytics(): void {
-  if (window.gtag) {
-    window.gtag('consent', 'update', {
-      ad_storage: 'denied',
-      ad_user_data: 'denied',
-      ad_personalization: 'denied',
-      analytics_storage: 'denied',
-    });
-  }
   gaLoaded = false;
   window[`ga-disable-${GA_ID}`] = true;
   const idSuffix = GA_ID.replace('G-', '');
@@ -173,11 +183,12 @@ function disableGoogleAnalytics(): void {
 /* ---------- Meta Pixel ---------- */
 
 function enableMetaPixel(): void {
-  if (pixelLoaded) {
+  pixelLoaded = true;
+  if (pixelBootstrapped) {
     window.fbq?.('consent', 'grant');
     return;
   }
-  pixelLoaded = true;
+  pixelBootstrapped = true;
 
   // Standard-Bootstrap des Meta Pixel (fbevents.js), ohne eval.
   if (!window.fbq) {
@@ -203,7 +214,10 @@ function enableMetaPixel(): void {
 }
 
 function disableMetaPixel(): void {
-  if (pixelLoaded) window.fbq?.('consent', 'revoke');
+  // pixelLoaded steuert auch trackLead/trackBadplaner/trackPageView: ohne das
+  // Zuruecksetzen wuerde fbq nach dem Widerruf weiter Ereignisse sammeln.
+  pixelLoaded = false;
+  if (pixelBootstrapped) window.fbq?.('consent', 'revoke');
   ['_fbp', '_fbc'].forEach(removeCookieEverywhere);
 }
 
