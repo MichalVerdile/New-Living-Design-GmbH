@@ -23,8 +23,8 @@ const Footer: React.FC<FooterProps> = ({ className = '' }) => {
                 <h3 className="footer-brand-name">New Living Design</h3>
               </div>
               <p className="footer-tagline">
-                Bad, Küchen, Platten und Wellness. Produkte entdecken und persönlich beraten lassen –
-                in unserer Ausstellung in Zofingen.
+                Bad, Küchen, Platten und Wellness. Materialien vergleichen, persönlich auswählen und
+                passend zum Raum zusammenstellen – in unserer Ausstellung in Zofingen.
               </p>
               <nav className="footer-quicklinks" aria-label="Wichtige Seiten">
                 <Link to="/badplaner" className="footer-quicklink">Badplaner</Link>
