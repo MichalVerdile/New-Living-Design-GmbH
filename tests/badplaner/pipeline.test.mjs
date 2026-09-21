@@ -1446,29 +1446,46 @@ test('Armaturen: Atelier zeigt die Form von Treemme Aurelia in der gewaehlten Ob
   const options = optionsForPackage('atelier');
   assert.equal(options.tapSeries, 'Treemme Aurelia, Unterputz');
   const tile = options.tiles[0];
-  const h = harness();
-  const res = await h.invoke(payload({
+  const selection = {
     paket: 'atelier', look: tile.look, format: tile.format, platte: tile.id, kombination: 'einheitlich',
     unterbau: options.bases[0].id, top: options.tops[0].id, becken: options.basinTypes[0].id,
     finish: 'treemme-ottone-spazzolato', keramik: options.sanitary[0].id,
     wall: options.walls[0].id, dusche: options.showers[0].id, badewanne: options.bathtubs[0].id,
     waschtisch: options.basins[0].id, spiegel: options.mirrors[0].id,
-  }));
+  };
+  const h = harness();
+  const res = await h.invoke(payload(selection));
   assert.equal(res.statusCode, 200, `unexpected status ${res.statusCode}: ${JSON.stringify(res.body).slice(0, 200)}`);
   const prompt = h.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
   assert.match(prompt, /Treemme Aurelia fittings in brushed brass/);
   assert.match(prompt, /rectangular wall plate .*spout with flat facets .*flat paddle lever hanging straight down/);
   assert.match(prompt, /round overhead shower .*finely ribbed .*blade-shaped wall arm .*stick hand shower/);
-  // Die Treemme-Produktfotos gehen als letzte Vorlage mit, nur fuer die Form.
+  assert.match(prompt, /all fittings for the requested fixtures are from the same Treemme Aurelia series and in the same brushed brass finish/);
+  // Die beiden verschiedenen Treemme-Produktfotos gehen als letzte Vorlagen mit, nur fuer die Form.
   const parts = h.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts;
-  const tapsImage = parts.filter((part) => part.inlineData).length;
-  assert.match(prompt, new RegExp(`Image ${tapsImage} is ONLY a product photo of the tap fittings`));
+  const images = parts.filter((part) => part.inlineData);
+  const washbasinTapsImage = images.length - 1;
+  const showerTapsImage = images.length;
+  assert.notEqual(images[images.length - 2].inlineData.data, images[images.length - 1].inlineData.data);
+  assert.match(prompt, new RegExp(`Image ${washbasinTapsImage} is ONLY a product photo of the Treemme Aurelia washbasin wall mixer`));
+  assert.match(prompt, new RegExp(`Image ${showerTapsImage} is ONLY a product photo of the Treemme Aurelia shower set`));
+  const change = prompt.split('\n').find((line) => line.startsWith('CHANGE this'));
+  assert.match(change, new RegExp(`washbasin mixer is exactly the fitting of image ${washbasinTapsImage}, copied part for part`));
+  assert.match(change, new RegExp(`shower fittings are exactly those of image ${showerTapsImage}, copied part for part`));
   assert.deepEqual(options.finishes.map((finish) => finish.id), ['treemme-cromo', 'treemme-nero-opaco', 'treemme-oro-spazzolato', 'treemme-nichel-spazzolato',
     'treemme-oro-rosa-spazzolato', 'treemme-nichel-lucido', 'treemme-oro', 'treemme-nero-cromo-lucido', 'treemme-nero-cromo-spazzolato', 'treemme-ottone-spazzolato']);
   // Lead und Kundenmail nennen die Serie.
   const mails = h.calls.filter((call) => call.url === 'https://api.resend.com/emails');
   assert.ok(mails.length >= 1);
   for (const mail of mails) assert.match(JSON.stringify(mail.body), /Ottone Spazzolato \(Messing gebürstet\), Treemme Aurelia, Unterputz/);
+
+  // Im Gäste-WC werden keine Aurelia-Vorlagen gesendet: dort gibt es keine Dusche.
+  const guest = harness();
+  const guestRes = await guest.invoke(payload({ ...selection, raum: 'gaeste-wc', dusche: '', badewanne: '', waschtisch: 'einzel' }));
+  assert.equal(guestRes.statusCode, 200);
+  const guestGeneration = guest.calls.find((call) => call.body?.generationConfig?.responseModalities);
+  assert.equal(guestGeneration.body.contents[0].parts.filter((part) => part.inlineData).length, 1);
+  assert.doesNotMatch(guestGeneration.body.contents[0].parts[0].text, /product photo of the Treemme Aurelia/);
 });
 
 test('Armaturen: Essenza zeigt die Form von Treemme Up+, nicht irgendeine Armatur', async () => {
