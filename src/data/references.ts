@@ -23,10 +23,10 @@ export interface Reference {
 }
 
 export const categoryLabels: Record<ReferenceCategory, string> = {
-  bad: 'Badumbau',
-  kueche: 'Küche',
+  bad: 'Bäder',
+  kueche: 'Küchen',
   'gaeste-wc': 'Gäste-WC',
-  wohnraum: 'Wohnraum',
+  wohnraum: 'Wohnräume',
   ausstellung: 'Ausstellung',
 };
 
