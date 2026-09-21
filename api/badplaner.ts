@@ -55,7 +55,7 @@ import { Budget, TimeoutError, type Clock } from '../server/badplaner/budget.js'
 import { normalizeSelection, ValidationError } from '../server/badplaner/validation.js';
 import { normalizeBase64, validateImageBytes, MAX_PHOTO_BASE64, MAX_PLAN_BASE64 } from '../src/pages/badplaner/imageValidation.js';
 import { SANITARY_MODULE_PHOTO } from '../server/badplaner/sanitaermodul.js';
-import { AURELIA_TAPS_PHOTO } from '../server/badplaner/aurelia.js';
+import { AURELIA_SHOWER_PHOTO, AURELIA_WASHBASIN_PHOTO } from '../server/badplaner/aurelia.js';
 
 // Node-Globals ohne @types/node (api/tsconfig.json ist auf Edge ausgelegt)
 declare const process: any;
@@ -437,13 +437,15 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   // Beschreiben allein genügt dem Modell nicht, es baut sonst eine verkleidete
   // Vorwand. Das Bild liegt im Code, darum kann es weder fehlen noch Zeit kosten.
   const moduleImage = cistern === 'aufputz' ? SANITARY_MODULE_PHOTO : null;
-  // 6c. Atelier: Treemme Aurelia als Produktfoto, weil die Worte allein am 20.09. nur
-  // allgemeine Armaturen ergaben. Nur Armaturen auf weissem Grund, kein Raum.
-  const tapsImage = isAtelier && !isGuestWc ? AURELIA_TAPS_PHOTO : null;
+  // 6c. Atelier: Treemme Aurelia als zwei getrennte Produktfotos, weil die Worte allein am
+  // 20.09. nur allgemeine Armaturen ergaben. Nur Armaturen auf weissem Grund, kein Raum.
+  const washbasinTapsImage = isAtelier && !isGuestWc ? AURELIA_WASHBASIN_PHOTO : null;
+  const showerTapsImage = isAtelier && !isGuestWc ? AURELIA_SHOWER_PHOTO : null;
 
   // Bilder an Gemini, in dieser Reihenfolge: 1 Foto, dann Platte, Waschtischplatte,
-  // Unterbau (dieselbe Datei nur einmal), Modul, Armaturen. Die Nummern stehen so im Prompt.
-  const references = [swatch, topSwatch, baseSwatch === topSwatch ? null : baseSwatch, moduleImage, tapsImage];
+  // Unterbau (dieselbe Datei nur einmal), Modul, Waschtisch- und Duscharmaturen. Die beiden
+  // Armaturenbilder bleiben am Ende, damit sich die Nummern der anderen Vorlagen nicht verschieben.
+  const references = [swatch, topSwatch, baseSwatch === topSwatch ? null : baseSwatch, moduleImage, washbasinTapsImage, showerTapsImage];
   const imageNumber = (image: Photo | null) => (image ? 2 + references.filter(Boolean).indexOf(image) : 0);
 
   // 7. Armaturen: Essenza Aufputz verchromt, Colore in der gewählten Serie und Oberfläche,
@@ -479,7 +481,8 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
     topImageNumber: imageNumber(topSwatch),
     baseImageNumber: imageNumber(baseSwatch),
     moduleImageNumber: imageNumber(moduleImage),
-    tapsImageNumber: imageNumber(tapsImage),
+    washbasinTapsImageNumber: imageNumber(washbasinTapsImage),
+    showerTapsImageNumber: imageNumber(showerTapsImage),
     windows,
     cistern,
     layout: photoCheck.status === 'ok' ? photoCheck.layout : undefined,
@@ -1040,11 +1043,11 @@ function tapDescription(
   series: { label: string; prompt: string } | undefined,
   seriesText: string,
 ): { prompt: string; label: string } {
-  // Atelier = Treemme Aurelia (Diego, 20.09.). Form aus den Treemme-Zeichnungen, nur in Worten, keine Fotos:
+  // Atelier = Treemme Aurelia (Diego, 20.09.). Form aus den Treemme-Zeichnungen und Produktfotos:
   // RWIT 2CA5 (Platte 200x75, Auslauf 187), RWIT 2CC2 (Rosetten 75), IT RTBR 380 (Kopfbrause 300, Arm 400), RWIT 2705.
   if (pkg === 'atelier') {
     return {
-      prompt: `concealed built-in (Unterputz) Treemme Aurelia fittings in ${finish.prompt}, classic forms in a modern cut, no exposed mixer body anywhere: at the washbasin a thin flat horizontal rectangular wall plate with sharp corners (about 20 × 7.5 cm) above the basin, from its left part a long slim spout with flat facets along its length that runs straight out of the wall and bends down in a smooth arc, and on its right part a short cylindrical handle with a fine engraved line and a flat paddle lever hanging straight down; in a shower small round wall rosettes (about 7.5 cm), one with the same short cylinder and hanging paddle lever and one above it with a round diverter knob, a large thin round overhead shower (about 30 cm) whose rim is finely ribbed with vertical grooves, on a flat wide blade-shaped wall arm with fine lengthwise grooves, and a slim straight cylindrical stick hand shower hanging in a small round wall holder with the hose outlet; never a cross handle, never an exposed wall mixer, the overhead shower is round, never square`,
+      prompt: `concealed built-in (Unterputz) Treemme Aurelia fittings in ${finish.prompt}, classic forms in a modern cut, no exposed mixer body anywhere: at the washbasin a thin flat horizontal rectangular wall plate with sharp corners (about 20 × 7.5 cm) above the basin, from its left part a long slim spout with flat facets along its length that runs straight out of the wall and bends down in a smooth arc, and on its right part a short cylindrical handle with a fine engraved line and a flat paddle lever hanging straight down; in a shower small round wall rosettes (about 7.5 cm), one with the same short cylinder and hanging paddle lever and one above it with a round diverter knob, a large thin round overhead shower (about 30 cm) whose rim is finely ribbed with vertical grooves, on a flat wide blade-shaped wall arm with fine lengthwise grooves, and a slim straight cylindrical stick hand shower hanging in a small round wall holder with the hose outlet; never a cross handle, never an exposed wall mixer, the overhead shower is round, never square; all fittings for the requested fixtures are from the same Treemme Aurelia series and in the same ${finish.prompt} finish`,
       label: `${finish.label}, ${seriesText}`,
     };
   }
@@ -1094,7 +1097,8 @@ function buildPrompt(v: {
   topImageNumber: number;
   baseImageNumber: number;
   moduleImageNumber: number;
-  tapsImageNumber?: number;
+  washbasinTapsImageNumber: number;
+  showerTapsImageNumber: number;
   windows: string;
   cistern: 'aufputz' | 'unterputz';
   layout?: Layout;
@@ -1106,8 +1110,11 @@ function buildPrompt(v: {
   const moduleIntro = v.moduleImageNumber
     ? ` Image ${v.moduleImageNumber} is ONLY a product photo of one sanitary module on a plain white background: a slim flat upright panel with a white tempered glass front in two parts, a one-piece brushed stainless steel edge framing it, a small flush button near the top, and near the bottom the toilet outlet and the two threaded rods the toilet hangs on. It shows the part to build in and nothing else: no room, no wall, no layout, no colour scheme.`
     : '';
-  const tapsIntro = v.tapsImageNumber
-    ? ` Image ${v.tapsImageNumber} is ONLY a product photo of the tap fittings on a plain white background, in chrome: at the top the washbasin wall mixer with its flat rectangular wall plate, below it the shower set (the round mixer and diverter rosettes, the stick hand shower in its holder, the round overhead shower on its flat wall arm). Copy their exact shapes for the taps and nothing else from it: their finish in the result is the one named under CHANGE, and the image contains no room, no wall and no layout.`
+  const washbasinTapsIntro = v.washbasinTapsImageNumber
+    ? ` Image ${v.washbasinTapsImageNumber} is ONLY a product photo of the Treemme Aurelia washbasin wall mixer on a plain white background, in chrome. Copy its exact shape for the washbasin mixer and nothing else from it; in the result its finish is the one named under CHANGE next to image ${v.washbasinTapsImageNumber}, not necessarily chrome. The image contains no room, no wall and no layout.`
+    : '';
+  const showerTapsIntro = v.showerTapsImageNumber
+    ? ` Image ${v.showerTapsImageNumber} is ONLY a product photo of the Treemme Aurelia shower set on a plain white background, in chrome: the round mixer and diverter rosettes, the stick hand shower in its holder, and the round overhead shower on its flat wall arm. Copy their exact shapes for the shower fittings and nothing else from it; in the result their finish is the one named under CHANGE next to image ${v.showerTapsImageNumber}, not necessarily chrome. The image contains no room, no wall and no layout.`
     : '';
   // Am 19.09. zeichnete gemini-3-pro-image aus Diegos engem Bad ein Ausstellungsbad:
   // andere Kamera, ein Fenster dazu, Dusche und WC vertauscht. Ein langer Katalog
@@ -1117,7 +1124,8 @@ function buildPrompt(v: {
     + (v.withSwatch ? ` Image 2 is ONLY a close-up material sample (tile texture and colour); ignore everything else about image 2, it contains no layout information.` : '')
     + vanityIntro
     + moduleIntro
-    + tapsIntro;
+    + washbasinTapsIntro
+    + showerTapsIntro;
   const layoutLine = v.layout ? layoutPrompt(v.layout) : '';
   const asSample = v.withSwatch ? ' as in image 2' : '';
   const windowRule =
@@ -1145,6 +1153,10 @@ function buildPrompt(v: {
   const basinColour = v.basinIsCeramic ? ` in the same ${v.sanitaryPrompt} as the toilet, exactly the same colour and finish,` : '';
   const asBase = v.baseImageNumber ? `, exactly the colour and finish of image ${v.baseImageNumber}` : '';
   const asTop = v.topImageNumber ? `, exactly the colour and finish of image ${v.topImageNumber}` : '';
+  const tapReferences = [
+    v.washbasinTapsImageNumber ? `the washbasin mixer is exactly the fitting of image ${v.washbasinTapsImageNumber}, copied part for part in the finish named in this CHANGE list` : '',
+    v.showerTapsImageNumber ? `the shower fittings are exactly those of image ${v.showerTapsImageNumber}, copied part for part in that same finish` : '',
+  ].filter(Boolean).join('; ');
   const vanity = `if a washbasin is visible in image 1, ${v.basinPrompt} at its existing place on a wall-hung vanity: front and body in ${v.basePrompt}${asBase}, countertop in ${v.topPrompt}${asTop}${v.basinTypePrompt ? `, ${v.basinTypePrompt}${basinColour}` : basinColour}, with ${v.mirrorPrompt} above it; the countertop is its own material, never cut from the wall or floor tiles and never copying their pattern or veining`;
   const fixtures = v.room === 'gaeste-wc'
     ? 'This is a guest WC: the result must contain NO shower, shower tray, shower enclosure, shower controls, bathtub or bath filler. Do not convert any visible area into a shower or bathtub.'
@@ -1161,7 +1173,7 @@ function buildPrompt(v: {
     layoutLine,
     `This is an edit of image 1, not a new picture. Keep image 1 and change only what the CHANGE list names. Everything else stays exactly as it is: the camera position, angle, lens and framing, the same crop and the same aspect ratio, the walls and where they stand, with every niche, ledge, projection and step they have in image 1 and no others, the ceiling including any sloping ceiling and the room height, the room proportions, every window, roof window and door at its exact size and position, and the radiators. Never zoom out, never widen the view, never show floor, wall or ceiling beyond the edges of image 1, never create extra floor area. Whatever stands in the immediate foreground at the edge of image 1 belongs to the picture and stays: an open door leaf, a door frame, the edge of a wall, a piece of furniture cut off by the border. It keeps its place and takes up the same part of the picture as before, and is never removed to show more of the room. Every window keeps the same share of the picture it has in image 1; do not move closer to it and do not make it larger. ${windowRule}${glassRule}`,
     `KEEP THE POSITIONS. A half-height wall, a low built wall or a boxed pre-wall that a fixture stands against is part of the room, not furniture: it keeps its place, its length, its height and its depth, and the fixture stays mounted on it. Every fixture keeps the wall or low wall it stands against in image 1 and its place along it, measured against the corners, the door and the window next to it. The toilet keeps its wall and its place because its drain cannot be moved: under a sloping ceiling it stays under that sloping ceiling and is never moved to a straight or rear wall to gain headroom. The washbasin keeps its wall and its place. A bathtub that becomes a shower uses only the bathtub's own footprint, on the same wall. NO NEW WALLS: never add a wall, a partition, a half-height wall, a boxed pre-wall, a ledge, a shelf or a niche that image 1 does not show, not behind the toilet, not behind the washbasin and not in the shower. Where image 1 shows one flat wall, the result shows that same flat wall with new tiles: it never steps forward and never gets a flat top at mid-height. NOTHING IS FILLED IN EITHER: every recess, alcove, niche, wall offset, corner step and wall projection that image 1 shows stays exactly where it is, with the same width, depth and height, above all in the shower area. A shower or bathtub that stands in a recess or alcove stays inside it, and the new tiles follow the wall into the recess and around its corners. Never fill a recess, never close an alcove, never tile a niche over flush and never straighten a stepped wall into one flat wall. Only surfaces, sanitary fixtures, taps, furniture and lights change.`,
-    `CHANGE this, and only this, in ${v.room === 'gaeste-wc' ? 'this guest WC' : 'this bathroom'} (style "${v.packageName}"):${look} ${surfaces}; ${fixtures}; if a toilet is visible in image 1, ${toilet}; ${vanity}; ${v.tapPrompt}.${accent}`,
+    `CHANGE this, and only this, in ${v.room === 'gaeste-wc' ? 'this guest WC' : 'this bathroom'} (style "${v.packageName}"):${look} ${surfaces}; ${fixtures}; if a toilet is visible in image 1, ${toilet}; ${vanity}; ${v.tapPrompt}${tapReferences ? `; ${tapReferences}` : ''}.${accent}`,
     `TAKE AWAY. If image 1 shows a bidet, it is gone: this bathroom has none, and the wall and floor where it stood are finished like the rest, with nothing standing in its place. The old shower curtain and its rail are gone. Clutter, towels, bottles and rugs are gone, and so is loose furniture that just stands around; the washbasin's own vanity unit is not loose furniture and is always there, as described above. Every shower fitting — mixer, riser, overhead shower with its arm, hand shower with its holder — sits inside the shower area, all together on one and the same wall of the shower (in a floor-level shower the short end wall, with the drain at its foot), never split over two walls and never on a wall next to the toilet or the washbasin. Natural daylight, no people, no text.`,
     `BEFORE YOU DRAW, compare with image 1: the same viewpoint and framing, the same walls and ceiling, ${v.windows === '0' ? 'no window at all' : 'the same windows'}, the same door, every fixture where image 1 has it, every recess, alcove and step of the walls that image 1 has, and no low wall, ledge, shelf or niche that image 1 does not have. A small, tight room stays small and tight: never show more of the room than image 1 shows.`,
   ].filter(Boolean).join('\n');
