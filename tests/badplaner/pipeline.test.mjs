@@ -327,6 +327,23 @@ test('das Glas der alten Duschkabine ist kein Fenster, aber nur wenn die Fotopru
   assert.doesNotMatch(windowPrompt, /is not a window/);
   assert.match(windowPrompt, /Image 1 shows exactly 1 window\(s\) including roof windows: the result must show exactly the same window\(s\) at the same place and size/);
 
+  // KONFLIKT (Codex, 22.09.): der Kunde gibt 1 Fenster an UND die Fotopruefung meldet ein
+  // mattes Duschglas. Die Angabe des Kunden gewinnt immer: kein Zumauern, Fenster bleibt.
+  const konflikt = { is_bathroom: true, reason: 'frosted pane on the right', walls: { toilet: 'left', washbasin: 'left', shower: 'none', bathtub: 'none', bidet: 'none' }, order: ['washbasin', 'toilet'], nearest: 'toilet', frosted_shower_panel: true };
+  const k = harness({ photoChecks: [() => photoChecked(true, JSON.stringify(konflikt))] });
+  await k.invoke(payload({ windows: '1' }));
+  const konfliktPrompt = k.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
+  assert.doesNotMatch(konfliktPrompt, /is not a window/, 'ein angegebenes Fenster darf nie zur Wand werden');
+  assert.doesNotMatch(konfliktPrompt, /the result shows tiled wall there/);
+  assert.match(konfliktPrompt, /Image 1 shows exactly 1 window\(s\)/);
+
+  // Die Fensterzahl ist immer angegeben: die API nimmt nur 0 bis 3 an. Damit heisst
+  // die Bedingung der Glasregel genau "der Kunde hat null Fenster angegeben".
+  const ohne = harness();
+  const ohneRes = await ohne.invoke(payload({ windows: '' }));
+  assert.equal(ohneRes.statusCode, 400);
+  assert.match(JSON.stringify(ohneRes.body), /wie viele Fenster/);
+
   // Fehlt das Feld ganz, gilt "keine Kabine": die angegebenen Oeffnungen bleiben.
   const alt = harness();
   await alt.invoke(payload({ windows: '1' }));
@@ -1575,19 +1592,33 @@ function atelierPayload(changes = {}) {
   });
 }
 
-test('Ein erfundener Heizkoerper wird verworfen', async () => {
-  const h = twice(() => checkedInv({}, {}, { radiator_added: true }));
+test('Heizkoerper: genau so viele nachher wie vorher, sonst verworfen', async () => {
+  // Diegos Foto vom 22.09. zeigt KEINEN Heizkoerper, das Ideenbild erfand einen.
+  // Geprueft wird die Erhaltung, nicht eine freie Einschaetzung.
+  const h = twice(() => checkedInv({}, {}, { radiators_before: 0, radiators_after: 1 }));
   const res = await h.invoke(payload());
   assert.equal(res.statusCode, 502);
   assert.equal(res.body.code, 'RENDER_REJECTED');
   assert.equal(h.counts().generation, 2, 'nie mehr als zwei Versuche');
-  assert.match(leadMailOf(h), /radiator, towel warmer or heater was added/);
-  // Ein Heizkoerper, den schon das Foto hat, ist kein Fehler.
-  const kept = harness({ checks: [() => checkedInv({}, {}, { radiator_added: false })] });
+  assert.match(leadMailOf(h), /1 radiator, towel warmer or heater was added that image 1 does not have/);
+
+  // Auch das Verschwinden eines vorhandenen Heizkoerpers ist ein Fehler.
+  const lost = twice(() => checkedInv({}, {}, { radiators_before: 1, radiators_after: 0 }));
+  assert.equal((await lost.invoke(payload())).statusCode, 502);
+  assert.match(leadMailOf(lost), /1 radiator, towel warmer or heater of image 1 is missing/);
+
+  // Gleich viele: kein Fehler, egal ob null oder zwei.
+  for (const count of [0, 2]) {
+    const kept = harness({ checks: [() => checkedInv({}, {}, { radiators_before: count, radiators_after: count })] });
+    assert.equal((await kept.invoke(payload())).statusCode, 200, `${count} Heizkoerper vorher und nachher`);
+  }
+  const kept = harness({ checks: [() => checkedInv({}, {}, { radiators_before: 0, radiators_after: 0 })] });
   assert.equal((await kept.invoke(payload())).statusCode, 200);
   // Und der Prompt verbietet es ausdruecklich, ohne Fenster und Tueren zu wiederholen.
   const prompt = kept.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
-  assert.match(prompt, /NOTHING PERMANENT IS ADDED EITHER: never add a radiator, a towel warmer or a heater at a place where image 1 has none/);
+  assert.match(prompt, /NOTHING PERMANENT IS ADDED EITHER: the heating elements of image 1 stay exactly as they are/);
+  assert.match(prompt, /never add a radiator, a towel warmer or a heater where image 1 has none, and never remove or move one that image 1 does show/);
+  // Fenster und Tueren stehen hier nicht nochmal: dafuer gibt es die Fensterregel.
   assert.doesNotMatch(prompt, /never add a radiator, a towel warmer, a heater, a window, a door or a skylight/);
 });
 
@@ -1612,15 +1643,20 @@ test('Der falsche und der alte Spiegel werden verworfen', async () => {
   assert.equal((await wrong.invoke(payload())).statusCode, 502);
   assert.match(leadMailOf(wrong), /plain mirror instead of the chosen mirror cabinet/);
 
-  const old = twice(() => checkedInv({}, {}, { mirror_kind: 'cabinet', mirror_unchanged: true }));
+  // Strukturiertes Enum statt eines Urteils in Worten (Codex, 22.09.).
+  const old = twice(() => checkedInv({}, {}, { mirror_kind: 'cabinet', mirror_state: 'old_or_missing' }));
   assert.equal((await old.invoke(payload())).statusCode, 502);
-  assert.match(leadMailOf(old), /old mirror or mirror cabinet of the photo was left in place/);
+  assert.match(leadMailOf(old), /still the old mirror or mirror cabinet of the photo, or nothing at all/);
+  assert.match(checkQuestionOf(old), /Set mirror_state to "selected_new" when what hangs above the washbasin in image 2 is a different, newly fitted object/);
+  // "unknown" verwirft nicht.
+  const unsureMirror = harness({ checks: [() => checkedInv({}, {}, { mirror_kind: 'cabinet', mirror_state: 'unknown' })] });
+  assert.equal((await unsureMirror.invoke(payload())).statusCode, 200);
 
   const empty = twice(() => checkedInv({}, {}, { mirror_kind: 'none' }));
   assert.equal((await empty.invoke(payload())).statusCode, 502);
   assert.match(leadMailOf(empty), /nothing was drawn above the washbasin although a mirror was chosen/);
 
-  const good = harness({ checks: [() => checkedInv({}, {}, { mirror_kind: 'cabinet', mirror_unchanged: false })] });
+  const good = harness({ checks: [() => checkedInv({}, {}, { mirror_kind: 'cabinet', mirror_state: 'selected_new' })] });
   assert.equal((await good.invoke(payload())).statusCode, 200);
   // Der Prompt sagt jetzt, dass der alte ersetzt wird.
   assert.match(good.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text,
@@ -1714,13 +1750,13 @@ test('Die Armaturen werden gegen die Form der Treemme Aurelia gehalten', async (
 });
 
 test('Der zweite Versuch und die interne Mail bekommen alle Gruende, nicht nur den ersten', async () => {
-  const many = () => checkedInv({}, {}, { radiator_added: true, mirror_unchanged: true, washbasin_count: 2 });
+  const many = () => checkedInv({}, {}, { radiators_before: 0, radiators_after: 1, mirror_state: 'old_or_missing', washbasin_count: 2 });
   const h = twice(many);
   assert.equal((await h.invoke(payload())).statusCode, 502);
   const generations = h.calls.filter((call) => call.body?.generationConfig?.responseModalities);
   assert.equal(generations.length, 2);
   const retry = generations[1].body.contents[0].parts[0].text;
-  const reasons = [/radiator, towel warmer or heater was added/, /old mirror or mirror cabinet of the photo was left in place/, /2 washbasins were drawn although 1 was chosen/];
+  const reasons = [/radiator, towel warmer or heater was added that image 1 does not have/, /still the old mirror or mirror cabinet of the photo/, /2 washbasins were drawn although 1 was chosen/];
   for (const reason of reasons) assert.match(retry, reason, 'der zweite Versuch kennt jeden Grund');
   const mail = leadMailOf(h);
   for (const reason of reasons) assert.match(mail, reason, 'die interne Mail nennt jeden Grund');
@@ -1737,6 +1773,6 @@ test('Gaeste-WC: keine Rinnen-, Glas- oder Armaturenfragen in der Pruefung', asy
   assert.doesNotMatch(question, /Set shower_glass/);
   assert.doesNotMatch(question, /washbasin_tap_plate/);
   // Was immer gilt, steht trotzdem da.
-  assert.match(question, /Set radiator_added true only if image 2 shows a radiator/);
+  assert.match(question, /set radiators_before to the number in image 1 and radiators_after to the number in image 2/);
   assert.match(question, /Set washbasin_count to the number of separate washbasins/);
 });
