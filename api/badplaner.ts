@@ -596,7 +596,7 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
       details: leadDetails(note, preview ? RENDER_FAILURE_LABELS.RENDER_FAILED : 'nicht erzeugt: Bilddienst hat nicht geliefert'),
       attachments: [
         { filename: photoName, content: photo.data },
-        ...(discarded ? [{ filename: 'verworfen.jpg', content: discarded.data }] : []),
+        ...(discarded ? [{ filename: 'verworfen-1.jpg', content: discarded.data }] : []),
       ],
     }, ctx);
     return {
@@ -638,6 +638,10 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   };
   let check = await checkWithUnavailableRetry(gen);
   let checkAttempt = 1;
+  // Bei zwei Anlaeufen ging der erste bisher verloren: die Mail zeigte nur den Grund des
+  // zweiten, gekuerzt, und nur dessen Bild. Beides bleibt jetzt erhalten und wird getrennt
+  // berichtet - sonst laesst sich nicht beurteilen, ob der zweite Versuch besser war.
+  let firstRejected: { reason: string; image: { mime: string; data: string } } | null = null;
   if (check.status === 'rejected') logRejectedCheck(check, checkAttempt);
   // Ein zweiter Durchgang dauert ungefähr so lange wie der erste. Die alte Schranke
   // rechnete mit den Höchstwerten (95 s) und liess den zweiten Versuch nie zu; mit
@@ -652,6 +656,7 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   if (check.status === 'rejected' && ctx.budget.remaining() >= secondPassMs) {
     // The rejected image never becomes a fallback if the retry/check fails.
     const firstReason = check.reason;
+    firstRejected = { reason: firstReason, image: gen };
     const retryPrompt = `${prompt}\nIMPORTANT: a previous attempt failed the structural and fixture check: ${check.reason}. Start again from image 1 and correct that exact issue. Everything else from the instructions above still applies without exception: the same camera and framing, everything in the foreground at the edge of the picture, every opening, every recess and step of the walls, the toilet on its wall and its place, the washbasin on its own vanity unit with the mirror above it, and exactly the requested shower and bathtub state.`;
     const second = await generateImage(retryPrompt, photo, references, ctx, photoRatio, secondCheckReserveMs);
     if (second.ok === false) return res.status(502).json(await leadWithoutImage(`1. Versuch verworfen (${check.reason}), 2. Versuch: ${second.detail}`, gen));
@@ -662,21 +667,26 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
     if (check.status === 'approved') checkNote = `1. Versuch verworfen (${firstReason}), 2. Versuch ok`;
   }
   if (check.status === 'rejected') {
-    const rejectedNote = `abgelehnt: ${check.reason}`;
+    // Getrennt, nicht zusammengezogen: wer die Mail liest, muss sehen, was der zweite Versuch
+    // korrigiert hat und was er neu kaputt gemacht hat.
+    const rejectedNote = firstRejected
+      ? `abgelehnt in beiden Versuchen | 1. Versuch: ${firstRejected.reason} | 2. Versuch: ${check.reason}`
+      : `abgelehnt: ${check.reason}`;
     const leadDelivery = await sendLeadMail({
       subject: preview
         ? `Badplaner-Fehler ohne Kontakt – ${isGuestWc ? 'Gäste-WC' : pkg.name} – Ideenbild abgelehnt`
         : `Badplaner-Lead: ${name} – ${isGuestWc ? 'Gäste-WC' : pkg.name} – Ideenbild abgelehnt`,
       replyTo: email || undefined,
       intro: preview
-        ? 'Anonymer Badplaner-Versuch ohne Kontaktdaten. Das Ideenbild wurde von der Qualitätsprüfung abgelehnt und nicht angezeigt. Originalfoto, Auswahl und verworfenes Bild liegen bei.'
-        : 'Das Ideenbild wurde von der Qualitätsprüfung abgelehnt und dem Kunden nicht angezeigt. Originalfoto, Auswahl und verworfenes Bild liegen bei.',
+        ? `Anonymer Badplaner-Versuch ohne Kontaktdaten. Das Ideenbild wurde von der Qualitätsprüfung abgelehnt und nicht angezeigt. Originalfoto, Auswahl und ${firstRejected ? 'beide verworfenen Bilder' : 'das verworfene Bild'} liegen bei.`
+        : `Das Ideenbild wurde von der Qualitätsprüfung abgelehnt und dem Kunden nicht angezeigt. Originalfoto, Auswahl und ${firstRejected ? 'beide verworfenen Bilder' : 'das verworfene Bild'} liegen bei.`,
       details: leadDetails(rejectedNote, preview ? RENDER_FAILURE_LABELS.RENDER_REJECTED : 'abgelehnt (Prüfung), nicht angezeigt'),
       // Das verworfene Bild geht mit: ohne es können wir nicht beurteilen, ob die
       // Prüfung recht hatte oder ein brauchbares Bild unnötig verworfen wurde.
       attachments: [
         { filename: photoName, content: photo.data },
-        { filename: 'verworfen.jpg', content: gen.data },
+        ...(firstRejected ? [{ filename: 'verworfen-1.jpg', content: firstRejected.image.data }] : []),
+        { filename: firstRejected ? 'verworfen-2.jpg' : 'verworfen-1.jpg', content: gen.data },
       ],
     }, ctx);
     // Ein abgelehntes Ideenbild kostet den Kunden keinen Geräteversuch: das Cookie wird
@@ -713,12 +723,17 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
         : `Badplaner-Lead: ${name} – ${isGuestWc ? 'Gäste-WC' : pkg.name} – Prüfung nicht möglich`,
       replyTo: email || undefined,
       intro: preview
-        ? 'Anonymer Badplaner-Versuch ohne Kontaktdaten. Die Qualitätsprüfung war nicht möglich, darum wurde das Ideenbild nicht angezeigt. Originalfoto, Auswahl und das ungeprüfte Bild liegen bei.'
-        : 'Die Qualitätsprüfung war nicht möglich, darum wurde das Ideenbild dem Kunden nicht angezeigt. Originalfoto, Auswahl und das ungeprüfte Bild liegen bei.',
-      details: leadDetails(`Prüfung ${uncheckable}`, RENDER_FAILURE_LABELS.RENDER_CHECK_UNAVAILABLE),
+        ? `Anonymer Badplaner-Versuch ohne Kontaktdaten. Die Qualitätsprüfung war nicht möglich, darum wurde das Ideenbild nicht angezeigt. Originalfoto, Auswahl${firstRejected ? ', das im 1. Versuch verworfene Bild' : ''} und das ungeprüfte Bild liegen bei.`
+        : `Die Qualitätsprüfung war nicht möglich, darum wurde das Ideenbild dem Kunden nicht angezeigt. Originalfoto, Auswahl${firstRejected ? ', das im 1. Versuch verworfene Bild' : ''} und das ungeprüfte Bild liegen bei.`,
+      details: leadDetails(
+        firstRejected
+          ? `Prüfung ${uncheckable} | 1. Versuch abgelehnt: ${firstRejected.reason}`
+          : `Prüfung ${uncheckable}`,
+        RENDER_FAILURE_LABELS.RENDER_CHECK_UNAVAILABLE),
       // Das ungeprüfte Bild geht mit: nur so sehen wir hinterher, ob es brauchbar gewesen wäre.
       attachments: [
         { filename: photoName, content: photo.data },
+        ...(firstRejected ? [{ filename: 'verworfen-1.jpg', content: firstRejected.image.data }] : []),
         { filename: 'ungeprueft.jpg', content: gen.data },
       ],
     }, ctx);
@@ -1707,7 +1722,7 @@ async function checkOpenings(
 
     // Alle Gruende zusammen, nicht nur der erste: sonst behebt jeder Durchgang nur einen Fehler.
     const faults = [
-      flags.extra_openings ? `an opening was added or lost (${parsed.reason.slice(0, 120)})` : null,
+      flags.extra_openings ? `an opening was added or lost (${parsed.reason})` : null,
       compareInventory(before, after, wanted),
       compareOrder(orderBefore, orderAfter),
       compareDepth(before, after, nearestBefore, nearestAfter),
@@ -1726,7 +1741,10 @@ async function checkOpenings(
       ...vanityFaults,
       ...tapFaults,
     ].filter((entry): entry is string => !!entry);
-    if (faults.length) return { status: 'rejected', reason: faults.join('; ').slice(0, 600), flags };
+    // Kein Kuerzen mehr: am 22.09. brach der Grund mitten im Satz ab ("the hand shower handle")
+    // und die interne Mail sagte nicht mehr, was sonst noch falsch war. Die Diagnose ist fuer uns,
+    // nicht fuer den Kunden - sie darf lang sein.
+    if (faults.length) return { status: 'rejected', reason: faults.join('; '), flags };
     const hints: string[] = [];
     return { status: 'approved', hints };
   } catch (err: any) {
