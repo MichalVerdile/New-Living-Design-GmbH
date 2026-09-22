@@ -54,8 +54,8 @@ const inv = (changes = {}) => ({ toilet: 'left', washbasin: 'left', shower: 'non
 // Die sichtbare Reihenfolge von links nach rechts folgt dem Inventar, solange
 // ein Test nichts anderes sagt.
 const order = (state) => ['washbasin', 'toilet', 'bidet', 'shower', 'bathtub'].filter((key) => state[key] !== 'none');
-const checked = (extra = false, text) => response({ candidates: [{ content: { parts: [{ text: text ?? JSON.stringify({ before: inv(), after: inv(), order_before: order(inv()), order_after: order(inv()), nearest_before: 'toilet', nearest_after: 'toilet', toilet_on_low_wall_before: false, toilet_on_low_wall_after: false, new_wall_element: false, wall_element_lost: false, point_drain: false, foreground_object_before: false, foreground_object_after: false, window_much_bigger: false, extra_openings: extra, view_changed: false, radiators_before: 0, radiators_after: 0, mirror_kind: 'cabinet', mirror_state: 'selected_new', washbasin_count: 1, drain_side: 'short', shower_fittings_split: false, shower_glass: 'yes', vanity_material: 'wood', vanity_texture: 'flat', vanity_tone: 'light', washbasin_tap_plate: 'rectangular', washbasin_tap_lever: 'flat-paddle', shower_rosette_count: 2, shower_overhead_shape: 'round', shower_handset_grip: 'ribbed', reason: 'inventory' }) }] }, finishReason: 'STOP' }] });
-const checkedInv = (before, after, extra = {}) => response({ candidates: [{ content: { parts: [{ text: JSON.stringify({ before: inv(before), after: inv(after), order_before: order(inv(before)), order_after: order(inv(after)), nearest_before: 'toilet', nearest_after: 'toilet', toilet_on_low_wall_before: false, toilet_on_low_wall_after: false, new_wall_element: false, wall_element_lost: false, point_drain: false, foreground_object_before: false, foreground_object_after: false, window_much_bigger: false, extra_openings: false, view_changed: false, radiators_before: 0, radiators_after: 0, mirror_kind: 'cabinet', mirror_state: 'selected_new', washbasin_count: 1, drain_side: 'short', shower_fittings_split: false, shower_glass: 'yes', vanity_material: 'wood', vanity_texture: 'flat', vanity_tone: 'light', washbasin_tap_plate: 'rectangular', washbasin_tap_lever: 'flat-paddle', shower_rosette_count: 2, shower_overhead_shape: 'round', shower_handset_grip: 'ribbed', reason: 'inventory', ...extra }) }] }, finishReason: 'STOP' }] });
+const checked = (extra = false, text) => response({ candidates: [{ content: { parts: [{ text: text ?? JSON.stringify({ before: inv(), after: inv(), order_before: order(inv()), order_after: order(inv()), nearest_before: 'toilet', nearest_after: 'toilet', toilet_on_low_wall_before: false, toilet_on_low_wall_after: false, new_wall_element: false, wall_element_lost: false, point_drain: false, foreground_object_before: false, foreground_object_after: false, window_much_bigger: false, extra_openings: extra, view_changed: false, radiators_before: 0, radiators_after: 0, mirror_kind: 'cabinet', mirror_state: 'selected_new', washbasin_count: 1, drain_side: 'short', shower_fittings_split: false, shower_glass: 'yes', shower_footprint_grown: false, vanity_material: 'wood', vanity_texture: 'flat', vanity_tone: 'light', washbasin_tap_plate: 'rectangular', washbasin_tap_lever: 'flat-paddle', shower_rosette_count: 2, shower_overhead_shape: 'round', shower_handset_grip: 'ribbed', reason: 'inventory' }) }] }, finishReason: 'STOP' }] });
+const checkedInv = (before, after, extra = {}) => response({ candidates: [{ content: { parts: [{ text: JSON.stringify({ before: inv(before), after: inv(after), order_before: order(inv(before)), order_after: order(inv(after)), nearest_before: 'toilet', nearest_after: 'toilet', toilet_on_low_wall_before: false, toilet_on_low_wall_after: false, new_wall_element: false, wall_element_lost: false, point_drain: false, foreground_object_before: false, foreground_object_after: false, window_much_bigger: false, extra_openings: false, view_changed: false, radiators_before: 0, radiators_after: 0, mirror_kind: 'cabinet', mirror_state: 'selected_new', washbasin_count: 1, drain_side: 'short', shower_fittings_split: false, shower_glass: 'yes', shower_footprint_grown: false, vanity_material: 'wood', vanity_texture: 'flat', vanity_tone: 'light', washbasin_tap_plate: 'rectangular', washbasin_tap_lever: 'flat-paddle', shower_rosette_count: 2, shower_overhead_shape: 'round', shower_handset_grip: 'ribbed', reason: 'inventory', ...extra }) }] }, finishReason: 'STOP' }] });
 
 function harness(settings = {}) {
   const clock = fakeClock();
@@ -207,6 +207,13 @@ test('shower prompt tiles the full tray or sloped-floor perimeter to the ceiling
   const generation = h.calls.find((call) => call.body?.generationConfig?.responseModalities);
   assert.match(generation.body.contents[0].parts[0].text, /entire perimeter of the shower tray or sloped tiled shower floor/);
   assert.match(generation.body.contents[0].parts[0].text, /every wall around the entire shower-floor perimeter is tiled continuously to the ceiling/);
+  // 22.09.: im TAKE-AWAY-Satz stand noch "with the drain at its foot" und band die Rinne
+  // wieder an die Armaturenwand. Die Regel "Armaturen zusammen auf einer Wand" bleibt.
+  const prompt = generation.body.contents[0].parts[0].text;
+  assert.match(prompt, /all together on one and the same wall of the shower \(in a floor-level shower one of the two short end walls\), never split over two walls/);
+  assert.doesNotMatch(prompt, /with the drain at its foot/);
+  assert.doesNotMatch(prompt, /at the foot of any wall without fittings/);
+  assert.doesNotMatch(prompt, /The drain starts from the fittings/);
 });
 
 test('ein Foto ohne Bad wird gar nicht erst gerendert', async () => {
@@ -709,14 +716,24 @@ test('after a rejection the next attempt still counts as the first', async () =>
   assert.match(ok.headers['Set-Cookie'], /nldbp=1:2026-09-13/);
 });
 
-test('a changed field of view is noted for us but the customer still gets the image', async () => {
-  const h = harness({ checks: [() => checkedInv({}, {}, { view_changed: true, reason: 'camera and visible room bounds changed' })] });
+test('ein veraenderter Bildausschnitt wird verworfen, nicht mehr nur vermerkt', async () => {
+  // 22.09.: bis heute wurde das Bild trotzdem geliefert. Das widerspricht der ersten Regel
+  // des Prompts und ist genau der Fall, in dem der Kunde sein Bad nicht wiedererkennt.
+  const changed = () => checkedInv({}, {}, { view_changed: true, reason: 'camera and visible room bounds changed' });
+  const h = harness({ checks: [changed, changed] });
   const res = await h.invoke(payload({ dusche: 'keine', badewanne: 'keine' }));
-  assert.equal(res.statusCode, 200);
-  assert.equal(res.body.ok, true);
-  assert.deepEqual(h.counts(), { generation: 1, checks: 1, mail: 2 });
-  const leadMail = h.calls.find((call) => call.url === 'https://api.resend.com/emails');
-  assert.match(JSON.stringify(leadMail.body), /Bildausschnitt ver/);
+  assert.equal(res.statusCode, 502);
+  assert.equal(res.body.code, 'RENDER_REJECTED');
+  assert.equal(res.body.image, undefined);
+  assert.deepEqual(h.counts(), { generation: 2, checks: 2, mail: 1 });
+  assert.match(JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails').body), /camera position, angle, lens or framing changed/);
+
+  // Unveraendert: das Bild geht raus.
+  const held = harness({ checks: [() => checkedInv({}, {}, { view_changed: false })] });
+  const heldRes = await held.invoke(payload({ dusche: 'keine', badewanne: 'keine' }));
+  assert.equal(heldRes.statusCode, 200);
+  assert.equal(heldRes.body.ok, true);
+  assert.deepEqual(held.counts(), { generation: 1, checks: 1, mail: 2 });
 });
 
 test('a moved toilet is still rejected even when the field of view held', async () => {
@@ -1952,4 +1969,28 @@ test('Die zwei Fehlerwege bleiben getrennt: verworfen ist nicht dasselbe wie ung
     assert.equal(mail.body.attachments.length, 2, 'Foto und Bild liegen der internen Mail bei');
   }
   assert.doesNotMatch(brokenRes.body.error, /HTTP|JSON|Timeout|500/);
+});
+
+test('Der Duschgrundriss wird nur mit Dusche verlangt, dann aber verbindlich', async () => {
+  // Mit gewaehlter Dusche: fehlt die Antwort, geht kein Bild raus (Codex, 22.09.).
+  const ohne = twice(shower({ shower_footprint_grown: undefined }));
+  const res = await ohne.invoke(showerPayload());
+  assert.equal(res.statusCode, 502);
+  assert.equal(res.body.code, 'RENDER_REJECTED');
+  assert.equal(res.body.image, undefined);
+  assert.match(leadMailOf(ohne), /the check did not answer shower_footprint_grown/);
+
+  // false ist konform, true verwirft.
+  const ok = harness({ checks: [shower({ shower_footprint_grown: false })] });
+  assert.equal((await ok.invoke(showerPayload())).statusCode, 200);
+  const grown = twice(shower({ shower_footprint_grown: true }));
+  assert.equal((await grown.invoke(showerPayload())).statusCode, 502);
+  assert.match(leadMailOf(grown), /takes clearly more floor than the wet area the photo already has/);
+
+  // Ohne Dusche wird nicht danach gefragt und nichts verlangt.
+  const keine = harness({ checks: [() => checkedInv({}, {}, { shower_footprint_grown: undefined })] });
+  const keineRes = await keine.invoke(payload({ dusche: 'keine', badewanne: 'keine' }));
+  assert.equal(keineRes.statusCode, 200, 'ohne Dusche darf das fehlende Feld nicht blockieren');
+  assert.doesNotMatch(checkQuestionOf(keine), /shower_footprint_grown/);
+  assert.match(checkQuestionOf(ok), /Set shower_footprint_grown true only if the shower in image 2 takes clearly more floor/);
 });
