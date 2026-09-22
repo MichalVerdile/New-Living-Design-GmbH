@@ -33,7 +33,7 @@ const Footer: React.FC<FooterProps> = ({ className = '' }) => {
                 <Link to="/partner" className="footer-quicklink">Partner</Link>
                 <Link to="/referenzen" className="footer-quicklink">Referenzen</Link>
                 <Link to="/blog" className="footer-quicklink">Blog</Link>
-                <Link to="/booking" className="footer-quicklink">Beratung & Ausstellung</Link>
+                <Link to="/booking" className="footer-quicklink">Termin anfragen</Link>
                 <Link to="/kontakt" className="footer-quicklink">Kontakt</Link>
               </nav>
               <div className="footer-social-links">
@@ -84,6 +84,9 @@ const Footer: React.FC<FooterProps> = ({ className = '' }) => {
                     <a href={`tel:${business.phone.e164}`} className="footer-contact-link">
                       {business.phone.display}
                     </a>
+                    <a href={`tel:${business.phoneSecondary.e164}`} className="footer-contact-link">
+                      {business.phoneSecondary.display}
+                    </a>
                   </div>
                 </div>
 
@@ -119,6 +122,7 @@ const Footer: React.FC<FooterProps> = ({ className = '' }) => {
                   <span className="footer-hours-days">Sonntag</span>
                   <span className="footer-hours-time">Geschlossen</span>
                 </div>
+                <p className="footer-hours-note">{business.openingHoursNote}</p>
               </div>
             </div>
           </div>
