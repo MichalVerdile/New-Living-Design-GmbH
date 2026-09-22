@@ -1517,8 +1517,8 @@ async function checkOpenings(
       || typeof parsed.extra_openings !== 'boolean' || typeof parsed.view_changed !== 'boolean'
       || !optionalFlag('shower_footprint_grown')
       || !optionalCount('radiators_before') || !optionalCount('radiators_after')
-      || !optionalChoice('shower_glass', ['yes', 'no', 'no_shower'])
-      || !optionalChoice('mirror_kind', ['cabinet', 'mirror', 'none'])
+      || !optionalChoice('shower_glass', ['yes', 'no', 'no_shower', 'unknown'])
+      || !optionalChoice('mirror_kind', ['cabinet', 'mirror', 'none', 'unknown'])
       || !optionalChoice('mirror_state', ['selected_new', 'old_or_missing', 'unknown'])
       || !optionalCount('washbasin_count')
       || !optionalChoice('vanity_material', ['wood', 'lacquer', 'stone', 'other', 'unknown'])
@@ -1553,49 +1553,72 @@ async function checkOpenings(
     const zoomedIn = parsed.window_much_bigger
       ? 'the window takes up much more of the result than of the photo, so the camera moved closer'
       : null;
+    // FAIL CLOSED (Codex, 22.09.): was die Auswahl verlangt, muss die Pruefung beantwortet
+    // haben. Fehlt der Schluessel oder ist die Antwort unverbindlich, wird verworfen statt
+    // geliefert. Ein fehlendes Feld ist kein Freibrief.
+    const unanswered = (key: string) => `the check did not answer ${key}, so what was chosen cannot be confirmed`;
+    const vague = (key: string, value: unknown) => `${key} was answered "${String(value)}", so what was chosen cannot be confirmed`;
+    const mustBe = (key: string, value: unknown, allowed: readonly unknown[], wrong: (value: unknown) => string): string | null => {
+      if (value === undefined || value === null) return unanswered(key);
+      if (value === 'unknown') return vague(key, value);
+      return allowed.includes(value) ? null : wrong(value);
+    };
+
     // Rinne: eine direkte Antwort auf die Schmalseite, keine Ableitung ueber Kamera oder
-    // Armaturenwand (Diego, 22.09.). Seit heute ein Grund zum Verwerfen, kein blosser Vermerk:
-    // vorher stand der Hinweis in der Mail und das falsche Bild ging trotzdem an den Kunden.
+    // Armaturenwand. Seit dem 22.09. ein Grund zum Verwerfen, kein blosser Vermerk.
     if (wanted.linearDrain) {
       console.info('[badplaner] Walk-in:', `Rinne ${parsed.drain_side ?? '-'}, Armaturen geteilt ${parsed.shower_fittings_split ?? '-'}, Punktablauf ${parsed.point_drain ?? '-'}`);
     }
     const drainFaults = wanted.linearDrain ? [
-      parsed.point_drain
-        ? 'the shower has a round or square point drain instead of the linear channel drain that was chosen'
-        : null,
-      parsed.drain_side === 'long'
-        ? 'the channel drain runs along a long side of the shower floor instead of across the selected short end (Schmalseite)'
-        : null,
-      parsed.shower_fittings_split === true
-        ? 'the shower fittings are spread over two walls instead of sitting together on one wall'
-        : null,
+      mustBe('point_drain', parsed.point_drain, [false],
+        () => 'the shower has a round or square point drain instead of the linear channel drain that was chosen'),
+      mustBe('shower_fittings_split', parsed.shower_fittings_split, [false],
+        () => 'the shower fittings are spread over two walls instead of sitting together on one wall'),
+      mustBe('drain_side', parsed.drain_side, ['short'],
+        (value) => value === 'long'
+          ? 'the channel drain runs along a long side of the shower floor instead of across one of the two short ends (Schmalseite)'
+          : `the channel drain was not confirmed on a short end of the shower floor (drain_side: ${String(value)})`),
     ] : [];
 
-    // Was das Foto nicht zeigt, darf nicht dazukommen; was gewaehlt wurde, muss da sein.
-    // Erhaltung, nicht "wurde einer dazugestellt": gleich viele vorher wie nachher.
+    // Heizkoerper: Erhaltung, und die Zahlen muessen da sein.
     const radiatorsBefore = typeof parsed.radiators_before === 'number' ? parsed.radiators_before : null;
     const radiatorsAfter = typeof parsed.radiators_after === 'number' ? parsed.radiators_after : null;
-    const radiatorMismatch = radiatorsBefore !== null && radiatorsAfter !== null && radiatorsBefore !== radiatorsAfter
-      ? (radiatorsAfter > radiatorsBefore
-        ? `${radiatorsAfter - radiatorsBefore} radiator, towel warmer or heater was added that image 1 does not have; the heating elements of image 1 must stay exactly as they are, no more and no fewer`
-        : `${radiatorsBefore - radiatorsAfter} radiator, towel warmer or heater of image 1 is missing; the heating elements of image 1 must stay exactly as they are, no more and no fewer`)
+    const radiatorFault = radiatorsBefore === null || radiatorsAfter === null
+      ? unanswered('radiators_before and radiators_after')
+      : radiatorsBefore === radiatorsAfter
+        ? null
+        : (radiatorsAfter > radiatorsBefore
+          ? `${radiatorsAfter - radiatorsBefore} radiator, towel warmer or heater was added that image 1 does not have; the heating elements of image 1 must stay exactly as they are, no more and no fewer`
+          : `${radiatorsBefore - radiatorsAfter} radiator, towel warmer or heater of image 1 is missing; the heating elements of image 1 must stay exactly as they are, no more and no fewer`);
+
+    const glassFault = wanted.showerGlass
+      ? mustBe('shower_glass', parsed.shower_glass, ['yes'],
+        (value) => value === 'no'
+          ? 'the shower was drawn without the fixed glass panel that belongs to the chosen shower'
+          : `the fixed glass panel of the chosen shower was not confirmed (shower_glass: ${String(value)})`)
       : null;
-    const glassMissing = wanted.showerGlass && parsed.shower_glass === 'no'
-      ? 'the shower was drawn without the fixed glass panel that belongs to the chosen shower'
-      : null;
+
     const mirrorWanted = wanted.mirror === 'spiegelschrank' ? 'cabinet' : wanted.mirror === 'spiegel' ? 'mirror' : null;
-    const mirrorMissing = mirrorWanted && parsed.mirror_kind === 'none'
-      ? 'nothing was drawn above the washbasin although a mirror was chosen'
+    const mirrorLabel = mirrorWanted === 'cabinet' ? 'mirror cabinet' : 'mirror with integrated light';
+    const mirrorFaults = mirrorWanted ? [
+      mustBe('mirror_state', parsed.mirror_state, ['selected_new'],
+        (value) => value === 'old_or_missing'
+          ? 'above the washbasin there is still the old mirror or mirror cabinet of the photo, or nothing at all, instead of the chosen new one'
+          : `it was not confirmed that the chosen mirror was fitted (mirror_state: ${String(value)})`),
+      mustBe('mirror_kind', parsed.mirror_kind, [mirrorWanted],
+        (value) => value === 'none'
+          ? `nothing was drawn above the washbasin although a ${mirrorLabel} was chosen`
+          : `above the washbasin there is a ${value === 'cabinet' ? 'mirror cabinet' : 'plain mirror'} instead of the chosen ${mirrorLabel}`),
+    ] : [];
+
+    const basinCountWrong = typeof wanted.basins === 'number'
+      ? (typeof parsed.washbasin_count !== 'number'
+        ? unanswered('washbasin_count')
+        : parsed.washbasin_count !== wanted.basins
+          ? `${parsed.washbasin_count} washbasins were drawn although ${wanted.basins} was chosen`
+          : null)
       : null;
-    const mirrorWrongKind = mirrorWanted && (parsed.mirror_kind === 'cabinet' || parsed.mirror_kind === 'mirror') && parsed.mirror_kind !== mirrorWanted
-      ? `above the washbasin there is a ${parsed.mirror_kind === 'cabinet' ? 'mirror cabinet' : 'plain mirror'} instead of the chosen ${mirrorWanted === 'cabinet' ? 'mirror cabinet' : 'mirror with integrated light'}`
-      : null;
-    const mirrorOld = parsed.mirror_state === 'old_or_missing'
-      ? 'above the washbasin there is still the old mirror or mirror cabinet of the photo, or nothing at all, instead of the chosen new one'
-      : null;
-    const basinCountWrong = typeof wanted.basins === 'number' && typeof parsed.washbasin_count === 'number' && parsed.washbasin_count !== wanted.basins
-      ? `${parsed.washbasin_count} washbasins were drawn although ${wanted.basins} was chosen`
-      : null;
+
     const footprintGrown = parsed.shower_footprint_grown === true
       ? 'the shower takes clearly more floor than the wet area the photo already has, so its footprint was enlarged'
       : null;
@@ -1604,33 +1627,29 @@ async function checkOpenings(
     // Mit zwei Bildern ist das ein Filter gegen grobe Abweichungen, kein Beweis, dass das
     // gezeichnete Produkt dem bestellten gleicht - dafuer muesste die Vorlage mitgehen.
     const vanityFaults = wanted.vanity ? [
-      parsed.vanity_material && parsed.vanity_material !== 'unknown' && parsed.vanity_material !== wanted.vanity.material
-        ? `the vanity front is ${parsed.vanity_material} where the selection is ${wanted.vanity.material}`
-        : null,
-      parsed.vanity_texture && parsed.vanity_texture !== 'unknown' && parsed.vanity_texture !== wanted.vanity.texture
-        ? `the vanity front is ${parsed.vanity_texture} where the selection is ${wanted.vanity.texture}`
-        : null,
-      parsed.vanity_tone && parsed.vanity_tone !== 'unknown' && !(TONE_NEIGHBOURS[wanted.vanity.tone] || []).includes(parsed.vanity_tone)
-        ? `the vanity front is ${parsed.vanity_tone} where the selection is ${wanted.vanity.tone}`
-        : null,
+      mustBe('vanity_material', parsed.vanity_material, [wanted.vanity.material],
+        (value) => `the vanity front is ${String(value)} where the selection is ${wanted.vanity!.material}`),
+      mustBe('vanity_texture', parsed.vanity_texture, [wanted.vanity.texture],
+        (value) => `the vanity front is ${String(value)} where the selection is ${wanted.vanity!.texture}`),
+      mustBe('vanity_tone', parsed.vanity_tone, TONE_NEIGHBOURS[wanted.vanity.tone] || [],
+        (value) => `the vanity front is ${String(value)} where the selection is ${wanted.vanity!.tone}`),
     ] : [];
 
     const tapFaults = wanted.taps === 'aurelia' ? [
-      parsed.washbasin_tap_plate && parsed.washbasin_tap_plate !== 'unknown' && parsed.washbasin_tap_plate !== 'none' && parsed.washbasin_tap_plate !== AURELIA_LOOK.plate
-        ? `the washbasin mixer sits on a ${parsed.washbasin_tap_plate} wall plate where the Treemme Aurelia has a ${AURELIA_LOOK.plate} one`
-        : null,
-      parsed.washbasin_tap_lever && parsed.washbasin_tap_lever !== 'unknown' && parsed.washbasin_tap_lever !== AURELIA_LOOK.lever
-        ? `the washbasin mixer has a ${parsed.washbasin_tap_lever} handle where the Treemme Aurelia has a ${AURELIA_LOOK.lever} lever`
-        : null,
-      wanted.shower && typeof parsed.shower_rosette_count === 'number' && parsed.shower_rosette_count !== AURELIA_LOOK.rosettes
-        ? `the shower controls sit on ${parsed.shower_rosette_count} round wall plates where the Treemme Aurelia set has ${AURELIA_LOOK.rosettes}`
-        : null,
-      wanted.shower && parsed.shower_overhead_shape && parsed.shower_overhead_shape !== 'unknown' && parsed.shower_overhead_shape !== AURELIA_LOOK.overhead
-        ? `the overhead shower is ${parsed.shower_overhead_shape} where the Treemme Aurelia is ${AURELIA_LOOK.overhead}`
-        : null,
-      wanted.shower && parsed.shower_handset_grip && parsed.shower_handset_grip !== 'unknown' && parsed.shower_handset_grip !== AURELIA_LOOK.grip
-        ? `the hand shower handle is ${parsed.shower_handset_grip} where the Treemme Aurelia handle is ${AURELIA_LOOK.grip}`
-        : null,
+      mustBe('washbasin_tap_plate', parsed.washbasin_tap_plate, [AURELIA_LOOK.plate],
+        (value) => value === 'none'
+          ? 'no washbasin mixer is visible although the Treemme Aurelia was chosen'
+          : `the washbasin mixer sits on a ${String(value)} wall plate where the Treemme Aurelia has a ${AURELIA_LOOK.plate} one`),
+      mustBe('washbasin_tap_lever', parsed.washbasin_tap_lever, [AURELIA_LOOK.lever],
+        (value) => `the washbasin mixer has a ${String(value)} handle where the Treemme Aurelia has a ${AURELIA_LOOK.lever} lever`),
+      ...(wanted.shower ? [
+        mustBe('shower_rosette_count', parsed.shower_rosette_count, [AURELIA_LOOK.rosettes],
+          (value) => `the shower controls sit on ${String(value)} round wall plates where the Treemme Aurelia set has ${AURELIA_LOOK.rosettes}`),
+        mustBe('shower_overhead_shape', parsed.shower_overhead_shape, [AURELIA_LOOK.overhead],
+          (value) => `the overhead shower is ${String(value)} where the Treemme Aurelia is ${AURELIA_LOOK.overhead}`),
+        mustBe('shower_handset_grip', parsed.shower_handset_grip, [AURELIA_LOOK.grip],
+          (value) => `the hand shower handle is ${String(value)} where the Treemme Aurelia handle is ${AURELIA_LOOK.grip}`),
+      ] : []),
     ] : [];
 
     // Alle Gruende zusammen, nicht nur der erste: sonst behebt jeder Durchgang nur einen Fehler.
@@ -1644,13 +1663,11 @@ async function checkOpenings(
       wallLost,
       foregroundLost,
       zoomedIn,
-      radiatorMismatch,
-      glassMissing,
-      mirrorMissing,
-      mirrorWrongKind,
-      mirrorOld,
+      radiatorFault,
+      glassFault,
       basinCountWrong,
       footprintGrown,
+      ...mirrorFaults,
       ...drainFaults,
       ...vanityFaults,
       ...tapFaults,
