@@ -799,13 +799,13 @@ export const showerOptions: ChoiceOption[] = [
   // 22.09., nach der Gegenpruefung: Diego hat NUR die Schmalseite bestaetigt. Die Rinne wird
   // darum nicht mehr von den Armaturen abgeleitet ("am Fuss der Armaturenwand") - beide Regeln
   // stehen fuer sich. Der Satz ueber die Seitenwaende (a3) schob die Armaturen an die Rueckwand.
-  { id: 'walk-in', label: 'Gefälledusche / Walk-in, bodeneben gefliest', prompt: 'floor-level walk-in shower whose tiled floor is flush with the bathroom floor, with no step, no kerb and no raised platform. The shower area is a rectangle; one of its two SHORT ends is a solid wall, the end wall. ALL shower fittings sit together on that short end wall: the mixer, the overhead shower with its wall arm and the hand shower in its holder; the long wall of the shower carries no fitting at all, only tiles. A linear channel drain (Duschrinne) lies in the floor across one of the two SHORT ends of that rectangle, at the foot of that short end wall and running its whole width: one long narrow slot with a slim tiled-in or brushed stainless steel cover, and the tiled shower floor slopes towards it. It never runs along either of the two long sides; never a central point drain, never a round or square grate in the shower floor. A fixed glass panel; every wall around the entire shower-floor perimeter is tiled continuously to the ceiling' },
+  { id: 'walk-in', label: 'Gefälledusche / Walk-in, bodeneben gefliest', prompt: 'floor-level walk-in shower whose tiled floor is flush with the bathroom floor, with no step, no kerb and no raised platform. The shower area is a rectangle; one of its two SHORT ends is a solid wall, the end wall. A linear channel drain (Duschrinne) lies in the floor across one of the two SHORT ends of that rectangle, at the foot of that short end wall and running its whole width: one long narrow slot with a slim tiled-in or brushed stainless steel cover, and the tiled shower floor slopes towards it. It never runs along either of the two long sides; never a central point drain, never a round or square grate in the shower floor. A fixed glass panel; every wall around the entire shower-floor perimeter is tiled continuously to the ceiling' },
 ];
 
 export const bathtubOptions: ChoiceOption[] = [
   { id: 'keine', label: 'Keine Badewanne', prompt: 'no bathtub and no bath filler' },
-  { id: 'einbau', label: 'Einbaubadewanne', prompt: 'built-in bathtub within the original wet-area footprint' },
-  { id: 'freistehend', label: 'Freistehende Badewanne', prompt: 'freestanding bathtub only within the original wet-area footprint and only when the photographed room has enough space', packages: ['atelier'] },
+  { id: 'einbau', label: 'Einbaubadewanne', prompt: 'built-in bathtub' },
+  { id: 'freistehend', label: 'Freistehende Badewanne', prompt: 'freestanding bathtub', packages: ['atelier'] },
 ];
 
 export const basinOptions: ChoiceOption[] = [
@@ -814,7 +814,7 @@ export const basinOptions: ChoiceOption[] = [
 ];
 
 export const mirrorOptions: ChoiceOption[] = [
-  { id: 'spiegelschrank', label: 'Spiegelschrank', prompt: 'mirror cabinet with LED light' },
+  { id: 'spiegelschrank', label: 'Spiegelschrank', prompt: 'mirror cabinet with LED light, recognisable as a cabinet and not as a bare pane of glass: a body with visible depth standing proud of the wall, its mirrored doors meeting in visible vertical joints, and light along its edge' },
   { id: 'spiegel', label: 'Spiegel mit LED-Licht', prompt: 'large mirror with integrated LED light' },
 ];
 
