@@ -303,7 +303,7 @@ test('der Prompt ist eine Bearbeitung, keine Neuzeichnung', async () => {
   assert.match(prompt, /^PHOTO EDITING TASK, not a design task\. Image 1 is a photograph of the customer's existing bathroom\. The result is that same photograph after the renovation/);
   // 22.09.: aus der dritten Wiederholung wurde die Liste dessen, was die Pruefung wirklich verwirft.
   assert.match(prompt, /BEFORE YOU DRAW, check against image 1, point by point: same viewpoint and framing; no window at all; every recess, alcove and wall step still there and none filled in/);
-  assert.match(prompt, /the shower no larger than the wet area image 1 already has\.$/);
+  assert.match(prompt, /the mirror cabinet readable as a cabinet and not as a bare pane of glass\.$/);
   assert.doesNotMatch(prompt, /A small, tight room stays small and tight/);
   assert.doesNotMatch(prompt, /must recognise it at first glance/);
   assert.match(prompt, /This is an edit of image 1, not a new picture/);
@@ -1448,7 +1448,7 @@ test('the image prompt carries no leftover source code (quote, plus, indentation
   const prompt = gen.body.contents[0].parts[0].text;
   // Seit 637f03a stand mitten im Prompt woertlich: "\n    + " (aus einem Template-String).
   assert.doesNotMatch(prompt, /"\s*\n\s*\+\s*"/);
-  assert.match(prompt, /never create extra floor area\. Whatever stands in the immediate foreground/);
+  assert.match(prompt, /never create extra floor area\. Each of the four edges of the result cuts through the very same things/);
 });
 
 test('beide Pruefungen denken wenig, das Bildmodell bleibt unveraendert', async () => {
@@ -1518,7 +1518,7 @@ test('Walk-in: die Rinne gehoert an die Schmalseite und eine falsche Seite wird 
   assert.equal(res.statusCode, 200);
   assert.equal(h.counts().generation, 2, 'der Punktablauf loest einen zweiten Versuch aus');
   const prompt = h.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
-  assert.match(prompt, /ALL shower fittings sit together on that short end wall/);
+  assert.match(prompt, /sits inside the shower area, all together on one and the same wall of the shower \(in a floor-level shower one of the two short end walls\)/);
   // 22.09., nach der Gegenpruefung: die Rinne wird NICHT mehr von den Armaturen abgeleitet.
   // Diego hat nur die Schmalseite bestaetigt, sonst nichts.
   assert.match(prompt, /A linear channel drain \(Duschrinne\) lies in the floor across one of the two SHORT ends of that rectangle, at the foot of that short end wall and running its whole width/);
@@ -2036,4 +2036,91 @@ test('Die interne Mail zeigt beide Versuche ungekuerzt und legt beide verworfene
 
   // Beide verworfenen Bilder, mit unterscheidbaren Namen.
   assert.deepEqual(mail.body.attachments.map(({ filename }) => filename), ['foto.png', 'verworfen-1.jpg', 'verworfen-2.jpg']);
+});
+
+/* ---------- Prompt: nur die am 22.09. belegten Vorgaben, ohne Doppelspur ---------- */
+
+const promptOf = (h) => h.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
+const wieOft = (text, teil) => text.split(teil).length - 1;
+
+test('Prompt: Kamera und Bildausschnitt sind als pruefbare Invariante formuliert', async () => {
+  // Belegt am verworfenen Render vom 22.09.: der Ausschnitt wanderte, Teile an den Raendern
+  // verschwanden und es kam Boden und Wand dazu, die im Foto gar nicht sind.
+  const h = harness(); await h.invoke();
+  const prompt = promptOf(h);
+  assert.match(prompt, /Each of the four edges of the result cuts through the very same things it cuts through in image 1/);
+  assert.match(prompt, /never step back, never turn the camera/);
+  // Die Tuer war nicht entfernt, sie war aus dem Bild gerutscht: was ganz zu sehen ist, bleibt ganz.
+  assert.match(prompt, /everything image 1 shows whole stays whole/);
+  assert.match(prompt, /no window, no door, no fixture, no tap, no mirror and no piece of furniture that image 1 shows completely may end up cut off/);
+});
+
+test('Prompt: kein erfundener Heizkoerper, und die Regel steht nur einmal', async () => {
+  const h = harness(); await h.invoke();
+  const prompt = promptOf(h);
+  assert.match(prompt, /never add a radiator, a towel warmer or a heater where image 1 has none/);
+  assert.match(prompt, /no radiator, heater or towel warmer that image 1 does not have/);
+  // Frueher stand "and the radiators" zusaetzlich in der Aufzaehlung darueber: dreimal dasselbe.
+  assert.doesNotMatch(prompt, /the room proportions, and the radiators/);
+  assert.equal(wieOft(prompt, 'never add a radiator'), 1, 'die Regel steht genau einmal');
+});
+
+test('Prompt: Duschgrundriss und Nische sind masslich gebunden', async () => {
+  const h = harness(); await h.invoke(showerPayload());
+  const prompt = promptOf(h);
+  assert.match(prompt, /its floor rectangle keeps the same length along every wall it touches/);
+  assert.match(prompt, /the recess or alcove it stands in keeps its width and its depth/);
+  // Die Regel gehoert an eine Stelle: nicht mehr zusaetzlich im Text der Duschoption.
+  assert.equal(wieOft(prompt, 'never more floor than that'), 1);
+});
+
+test('Prompt: jedes gewaehlte Produkt muss ganz im Bild sein, ohne den Ausschnitt zu aendern', async () => {
+  // Der Aurelia-Mischer war am Bildrand abgeschnitten und damit nicht beurteilbar.
+  const h = harness(); await h.invoke();
+  const prompt = promptOf(h);
+  assert.match(prompt, /Every product named under CHANGE must be judgeable: its whole shape inside the picture, not cut off by the border/);
+  // Kein Widerspruch zur Ausschnitt-Regel: die geht vor.
+  assert.match(prompt, /The framing is never changed to achieve this/);
+  assert.match(prompt, /nothing that image 1 shows whole cut off by the border/);
+});
+
+test('Prompt: die Aurelia-Formen stehen so drin, wie die Produktfotos sie zeigen', async () => {
+  // Der Atelier-Fixture waehlt Ribbed Rovere Smoked: die Antwort muss dazu passen, sonst verwirft der Pruefer.
+  const h = harness({ checks: [atelierShower()] });
+  const res = await h.invoke(atelierPayload({ dusche: 'walk-in', badewanne: 'keine' }));
+  assert.equal(res.statusCode, 200);
+  const prompt = promptOf(h);
+  // Waschtisch: eine rechteckige Platte, flacher Auslauf, flacher Hebel.
+  assert.match(prompt, /ONE flat rectangular wall plate, wider than it is high, carrying both the spout and the lever/);
+  assert.match(prompt, /a flat paddle lever that hangs down from a rounded base/);
+  // Dusche: zwei runde Bedienrosetten, getrennter Schlauchanschluss, geriffelte Griffzone OBEN.
+  assert.match(prompt, /TWO round wall plates that carry the controls/);
+  assert.match(prompt, /a separate, smaller round wall outlet for the hose/);
+  assert.match(prompt, /whose UPPER part carries a finely fluted, knurled band just below the round spray face while the rest of the rod is plain/);
+  assert.match(prompt, /a round overhead shower on a flat wall arm, its shell finely fluted around the rim/);
+});
+
+test('Prompt: der Spiegelschrank muss als Schrank erkennbar sein', async () => {
+  const h = harness(); await h.invoke();
+  const prompt = promptOf(h);
+  assert.match(prompt, /recognisable as a cabinet and not as a bare pane of glass/);
+  assert.match(prompt, /a body with visible depth standing proud of the wall, its mirrored doors meeting in visible vertical joints/);
+  // Und die doppelte Komma-Stelle aus dem alten Text ist weg.
+  assert.doesNotMatch(prompt, /finish,, with/);
+});
+
+test('Prompt: die Regel zur Lage der Duscharmaturen steht genau einmal', async () => {
+  const h = harness(); await h.invoke(showerPayload());
+  const prompt = promptOf(h);
+  assert.equal(wieOft(prompt, 'all together on one and the same wall of the shower'), 1);
+  assert.doesNotMatch(prompt, /ALL shower fittings sit together on that short end wall/);
+});
+
+test('Pruefer: Rosetten und Griff werden eindeutig gefragt', async () => {
+  const h = harness(); await h.invoke(atelierPayload({ dusche: 'walk-in', badewanne: 'keine' }));
+  const frage = checkQuestionOf(h);
+  // Der Wandanschluss des Schlauchs ist auch rund: er darf nicht mitgezaehlt werden.
+  assert.match(frage, /do not count the round wall outlet the hose comes out of and do not count the wall arm of the overhead shower/);
+  // Die Riffelung sitzt nur auf einem kurzen Stueck: "along it" haette "smooth" nahegelegt.
+  assert.match(frage, /when ANY part of the hand shower handle has fine grooves or knurling, even a short band/);
 });
