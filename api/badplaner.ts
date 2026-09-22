@@ -1236,7 +1236,7 @@ function buildPrompt(v: {
   const fixtures = v.room === 'gaeste-wc'
     ? 'This is a guest WC: the result must contain NO shower, shower tray, shower enclosure, shower controls, bathtub or bath filler. Do not convert any visible area into a shower or bathtub.'
     : [
-        v.wantsShower ? `${v.showerPrompt}; it covers only the wet area image 1 already has, whatever stood there, a shower tray, a shower enclosure or a bathtub, and never more floor than that: its floor rectangle keeps the same length along every wall it touches, and the recess or alcove it stands in keeps its width and its depth` : 'NO shower, shower tray, shower enclosure or shower controls',
+        v.wantsShower ? `${v.showerPrompt}; it may reach further into the rear zone of the room than the old shower tray, shower enclosure or bathtub did, and it may be wider than they were; what it must never do is swallow something built: the recess, alcove or wall offset it stands in keeps its width and its depth and stays open, and the shower never runs over a window, a door, their reveals or a wall step` : 'NO shower, shower tray, shower enclosure or shower controls',
         v.wantsBathtub ? `${v.bathtubPrompt}; it covers only the wet area image 1 already has and never more floor than that` : 'NO bathtub and no bath filler',
       ].join('; ');
   const toilet = v.cistern === 'aufputz'
@@ -1246,11 +1246,11 @@ function buildPrompt(v: {
   return [
     intro,
     layoutLine,
-    `This is an edit of image 1, not a new picture. Keep image 1 and change only what the CHANGE list names. Everything else stays exactly as it is: the camera position, angle, lens and framing, the same crop and the same aspect ratio, the walls where they stand, the ceiling including any sloping ceiling and the room height, and the room proportions. Never zoom out, never widen the view, never step back, never turn the camera, never show floor, wall or ceiling beyond the edges of image 1, never create extra floor area. Each of the four edges of the result cuts through the very same things it cuts through in image 1: the top edge, the bottom edge, the left edge and the right edge. Whatever stands in the immediate foreground at the edge of image 1 stays in the picture and is never removed to show more of the room: an open door leaf, a door frame, the edge of a wall, a piece of furniture cut off by the border. And the other way round: everything image 1 shows whole stays whole - no window, no door, no fixture, no tap, no mirror and no piece of furniture that image 1 shows completely may end up cut off by the border of the result. Every window keeps the same share of the picture it has in image 1; do not move closer to it and do not make it larger. ${windowRule}${glassRule}`,
+    `This is an edit of image 1, not a new picture. Keep image 1 and change only what the CHANGE list names. Everything else stays exactly as it is: the camera position, angle, lens and framing, the same crop and the same aspect ratio, the walls where they stand, the ceiling including any sloping ceiling and the room height, and the room proportions. Never zoom out, never widen the view, never step back, never turn the camera, never show floor, wall or ceiling beyond the edges of image 1, never create extra floor area. The view is measured by the structure of the room, not by what stands in it: the room corners, the wall and ceiling edges, the line where wall meets floor and the vanishing lines run exactly as in image 1, and every window and door keeps its place in the frame. What is built stays at the edge of the picture too: an open door leaf, a door frame, the near edge of a wall. Fixtures, furniture and loose objects that the CHANGE and TAKE AWAY lists take out may disappear, at the edge of the picture as anywhere else - that is not a change of view. Every window keeps the same share of the picture it has in image 1; do not move closer to it and do not make it larger. ${windowRule}${glassRule}`,
     `KEEP THE POSITIONS. A half-height wall, a low built wall or a boxed pre-wall that a fixture stands against is part of the room, not furniture: it keeps its place, its length, its height and its depth, and the fixture stays mounted on it. Every fixture keeps the wall or low wall it stands against in image 1 and its place along it, measured against the corners, the door and the window next to it. The toilet keeps its wall and its place because its drain cannot be moved: under a sloping ceiling it stays under that sloping ceiling and is never moved to a straight or rear wall to gain headroom. The washbasin keeps its wall and its place. NO NEW WALLS: never add a wall, a partition, a half-height wall, a boxed pre-wall, a ledge, a shelf or a niche that image 1 does not show, not behind the toilet, not behind the washbasin and not in the shower. Where image 1 shows one flat wall, the result shows that same flat wall with new tiles: it never steps forward and never gets a flat top at mid-height. NOTHING IS FILLED IN EITHER: every recess, alcove, niche, wall offset, corner step and wall projection that image 1 shows stays exactly where it is, with the same width, depth and height, above all in the shower area. A shower or bathtub that stands in a recess or alcove stays inside it, and the new tiles follow the wall into the recess and around its corners. Never fill a recess, never close an alcove, never tile a niche over flush and never straighten a stepped wall into one flat wall. NOTHING PERMANENT IS ADDED EITHER: the heating elements of image 1 stay exactly as they are — never add a radiator, a towel warmer or a heater where image 1 has none, and never remove or move one that image 1 does show. Only surfaces, sanitary fixtures, taps, furniture and lights change.`,
     `CHANGE this, and only this, in ${v.room === 'gaeste-wc' ? 'this guest WC' : 'this bathroom'} (style "${v.packageName}"):${look} ${surfaces}; ${fixtures}; if a toilet is visible in image 1, ${toilet}; ${vanity}; ${v.tapPrompt}${tapReferences ? `; ${tapReferences}` : ''}.${accent}`,
-    `TAKE AWAY. If image 1 shows a bidet, it is gone: this bathroom has none, and the wall and floor where it stood are finished like the rest, with nothing standing in its place. The old shower curtain and its rail are gone. Clutter, towels, bottles and rugs are gone, and so is loose furniture that just stands around; the washbasin's own vanity unit is not loose furniture and is always there, as described above. Every shower fitting — mixer, riser, overhead shower with its arm, hand shower with its holder — sits inside the shower area, all together on one and the same wall of the shower (in a floor-level shower one of the two short end walls), never split over two walls and never on a wall next to the toilet or the washbasin. Natural daylight, no people, no text. Every product named under CHANGE must be judgeable: its whole shape inside the picture, not cut off by the border - the washbasin mixer, the shower fittings, the mirror cabinet and the sanitary module above all. The only exception is a product that replaces something image 1 itself already cuts at the border. The framing is never changed to achieve this.`,
-    `BEFORE YOU DRAW, check against image 1, point by point: same viewpoint and framing; ${v.windows === '0' ? 'no window at all' : 'the same windows and the same door, at the same size and in the same place'}; every recess, alcove and wall step still there and none filled in; no wall, low wall, ledge, shelf or niche that image 1 does not have; no radiator, heater or towel warmer that image 1 does not have; every fixture on the wall where image 1 has it; the shower no larger than the wet area image 1 already has; nothing that image 1 shows whole cut off by the border; the washbasin mixer and the shower fittings whole in the picture and shaped exactly like their reference photos; the mirror cabinet readable as a cabinet and not as a bare pane of glass.`,
+    `TAKE AWAY. If image 1 shows a bidet, it is gone: this bathroom has none, and the wall and floor where it stood are finished like the rest, with nothing standing in its place. The old shower curtain and its rail are gone. Clutter, towels, bottles and rugs are gone, and so is loose furniture that just stands around; the washbasin's own vanity unit is not loose furniture and is always there, as described above. Every shower fitting — mixer, riser, overhead shower with its arm, hand shower with its holder — sits inside the shower area, all together on one and the same wall of the shower (in a floor-level shower one of the two short end walls), never split over two walls and never on a wall next to the toilet or the washbasin. Natural daylight, no people, no text.`,
+    `BEFORE YOU DRAW, check against image 1, point by point: same viewpoint and framing; ${v.windows === '0' ? 'no window at all' : 'the same windows and the same door, at the same size and in the same place'}; every recess, alcove and wall step still there and none filled in; no wall, low wall, ledge, shelf or niche that image 1 does not have; no radiator, heater or towel warmer that image 1 does not have; every fixture on the wall where image 1 has it; the recess or wall offset of the shower still open, same width and same depth; every shower fitting on one and the same wall, the overhead shower and the mixer never on two different sides; the washbasin mixer and the shower fittings shaped exactly like their reference photos; the mirror cabinet readable as a cabinet and not as a bare pane of glass.`,
   ].filter(Boolean).join('\n');
 }
 
@@ -1452,7 +1452,7 @@ async function checkOpenings(
       // fittings_wall, shower_wider_than_deep, drain_on_long_side) und die Ableitung daraus
       // sind am 22.09. raus: sie banden die Rinne an die Kamera und an die Armaturenwand.
       + 'The floor of that floor-level shower is a rectangle with two SHORT ends and two LONG sides. Set drain_side to "short" when its linear channel drain lies across one of the two short ends, "long" when it runs along one of the two long sides, "none" when there is no channel drain, "unknown" when you cannot see the shower floor. '
-      + 'Set shower_fittings_split true only if its fittings (mixer, overhead shower arm, hand shower holder) are mounted on two or more different walls rather than all on one wall; false when there is no such shower or you cannot see it. '
+      + 'Set shower_fittings_split true whenever the overhead shower with its arm, the mixer or control, and the hand shower holder are NOT all on one and the same wall of the shower — for example the overhead shower on one side and the mixer or the hand shower on another; false only when you can see that all of them sit on the same wall; false when there is no such shower or you cannot see it. '
     : '';
   const glassQuestion = wanted.shower
     ? 'Set shower_glass to "yes" when the shower in image 2 has a fixed glass panel or a glass screen, "no" when its shower has none at all, "no_shower" when image 2 has no shower. '
@@ -1465,7 +1465,7 @@ async function checkOpenings(
       + 'Set vanity_tone to the colour of that front: "light" for a pale, almost whitish wood, "natural" for a mid honey oak, "warm-brown" for a warm reddish or tobacco brown, "dark-brown" for a deep dark brown, "grey-brown" for a smoked greyish brown with little red in it, "black", "not-wood" or "unknown". '
     : '';
   const tapQuestions = wanted.taps === 'aurelia'
-    ? 'Look at the washbasin mixer in image 2. Set washbasin_tap_plate to the shape of the plate or body it sits on at the wall: "rectangular", "round", "none" or "unknown". '
+    ? 'Look at the washbasin mixer in image 2. Set washbasin_tap_plate to the shape of the plate or body it sits on at the wall: "rectangular", "round", "none" or "unknown". Answer "none" only when there is no mixer at the washbasin at all; a mixer that is partly hidden behind the basin, seen at a sharp angle or simply small in the picture is still there, then answer the shape you can see or "unknown". '
       + 'Set washbasin_tap_lever to "flat-paddle" for a wide flat paddle lever, "round-knob" for a round knob, "thin-rod" for a plain thin rod or stick, "cross", "other" or "unknown". '
       + (wanted.shower
         ? 'Look at the shower fittings in image 2. Set shower_rosette_count to the number of separate round wall plates that carry the shower CONTROLS, as a number; do not count the round wall outlet the hose comes out of and do not count the wall arm of the overhead shower. '
@@ -1491,10 +1491,15 @@ async function checkOpenings(
     // Diegos Test vom 20.09., 09:56: der Ruecksprung in der Wand der Dusche war im Ideenbild zugemauert.
     'Set wall_element_lost true if image 1 has a recess, alcove, niche, wall offset, corner step or wall projection anywhere in the room, in the shower area or elsewhere, that image 2 no longer has because it was filled in, closed or straightened into one flat wall. An old bathtub with its panel, an old shower tray or enclosure, a surface-mounted cistern with its casing, a bidet and loose furniture are not wall elements: removing them is no loss. ' +
     drainQuestions +
-    'Then say whether something large stands in the immediate foreground of image 1 at the edge of the picture, cut off by the border — an open door leaf, a door frame, the near edge of a wall, a piece of furniture — taking up roughly a fifth of the picture or more; and whether that same object is still visible at the edge of image 2 at any size, even as a narrow strip (foreground_object_after is false only when it is gone completely). ' +
+    // Nur noch Gebautes: ein Waschbecken, ein Bidet oder ein Moebel am Bildrand darf weg,
+    // das steht so in der Auswahl. Vorher zaehlte das als verlorener Vordergrund (Diego, 22.09.).
+    'Then say whether something BUILT stands in the immediate foreground of image 1 at the edge of the picture, cut off by the border — an open door leaf, a door frame, the near edge of a wall — taking up roughly a fifth of the picture or more; a washbasin, a toilet, a bidet, a shower tray, furniture and loose objects do NOT count here, they are allowed to be removed. Then say whether that same built element is still visible at the edge of image 2 at any size, even as a narrow strip (foreground_object_after is false only when it is gone completely). ' +
     'Set window_much_bigger true only if a window that is visible in both images takes up a clearly larger part of image 2 than of image 1, about half again as large or more. ' +
     'Set extra_openings true only if image 2 has a window, roof window, door or outside opening that image 1 does not have, or lost one that image 1 has. ' +
-    'Set view_changed true if camera position, angle, lens or framing changed, or if image 2 shows floor, wall or ceiling area that lies outside image 1. ' +
+    // Diego, 22.09.: der Pruefer hielt das geplante Entfernen des zweiten Waschbeckens im
+    // Vordergrund fuer eine Kameradrehung. Der Blickwinkel wird nur noch an der Struktur
+    // gemessen: Raumkanten, Oeffnungen, Fluchtlinien.
+    'Set view_changed true ONLY on structural evidence that the camera moved: the room corners, the wall and ceiling edges, the line where wall meets floor or the vanishing lines run differently than in image 1, a window or door sits at a different place in the frame, or image 2 shows floor, wall or ceiling area that lies outside image 1. Fixtures, furniture and loose objects that are gone or new are NOT evidence of a changed view: they were meant to be replaced. ' +
     // Diegos Test vom 22.09.: rechts stand ein Heizkoerper, den das Foto nicht hat. Gezaehlt
     // wird in BEIDEN Bildern und der Code vergleicht; eine freie Einschaetzung setzte voraus,
     // dass ueberhaupt einer da ist.
@@ -1684,12 +1689,12 @@ async function checkOpenings(
           : null)
       : null;
 
-    // Mit gewaehlter Dusche muss die Antwort da sein: ein fehlendes Feld war bis zum
-    // 22.09. ein Freibrief. Ohne Dusche wird gar nicht danach gefragt.
-    const footprintGrown = wanted.shower
-      ? mustBe('shower_footprint_grown', parsed.shower_footprint_grown, [false],
-        () => 'the shower takes clearly more floor than the wet area the photo already has, so its footprint was enlarged')
-      : null;
+    // Diego, 22.09., nach den Fotos des fertigen Bades: eine groessere Dusche ist gewollt,
+    // nicht falsch. Die Frage bleibt als Diagnose stehen, verwirft aber nichts mehr. Was zaehlt,
+    // steht in wall_element_lost: der Ruecksprung darf nicht zugemauert werden.
+    if (wanted.shower && parsed.shower_footprint_grown === true) {
+      console.info('[badplaner] Dusche groesser als die alte Nassflaeche - erlaubt, nur vermerkt');
+    }
 
     // Unterbau und Armaturen: das Modell beschreibt, der Code vergleicht mit der Auswahl.
     // Mit zwei Bildern ist das ein Filter gegen grobe Abweichungen, kein Beweis, dass das
@@ -1735,7 +1740,6 @@ async function checkOpenings(
       radiatorFault,
       glassFault,
       basinCountWrong,
-      footprintGrown,
       ...mirrorFaults,
       ...drainFaults,
       ...vanityFaults,
