@@ -431,13 +431,19 @@ test('eine fehlende Dusche und ein verschobenes Waschbecken werden verworfen', a
   assert.match(JSON.stringify(second.calls.find((c) => c.url === 'https://api.resend.com/emails').body), /washbasin moved from the left wall to the back wall/);
 });
 
-test('eine unbrauchbare Antwort der Pruefung gilt als nicht verfuegbar, nicht als bestanden', async () => {
+test('eine unbrauchbare Antwort der Pruefung haelt das Ideenbild zurueck', async () => {
+  // 22.09.: vorher wurde ein ungeprueftes Bild ausgeliefert und der Ausfall nur vermerkt.
+  // Jetzt gilt: keine Pruefung, kein Bild.
   for (const text of ['kein JSON', JSON.stringify({ before: { toilet: 'links' }, after: {} }), JSON.stringify({ before: {}, after: {}, extra_openings: false, view_changed: false, reason: 'x' })]) {
     const h = harness({ checks: [() => checked(false, text), () => checked(false, text)] });
     const res = await h.invoke();
-    assert.equal(res.statusCode, 200, 'nicht lesbar heisst ausgeliefert, aber in der Lead-Mail vermerkt');
+    assert.equal(res.statusCode, 502, 'ohne Pruefung darf kein Bild raus');
+    assert.equal(res.body.code, 'RENDER_CHECK_UNAVAILABLE');
+    assert.equal(res.body.image, undefined);
     const leadMail = h.calls.find((call) => call.url === 'https://api.resend.com/emails');
     assert.match(JSON.stringify(leadMail.body), /nicht m\u00f6glich/);
+    // Das ungeprüfte Bild liegt der internen Mail bei, damit wir es beurteilen können.
+    assert.deepEqual(leadMail.body.attachments.map(({ filename }) => filename), ['foto.png', 'ungeprueft.jpg']);
   }
 });
 
@@ -981,38 +987,67 @@ test('second generation failure after rejection still fails closed', async () =>
   assert.equal(res.statusCode, 502); assert.equal(res.body.image, undefined); assert.equal(h.counts().mail, 1);
 });
 
+// Unlesbares JSON, falscher Typ, fehlende oder unbekannte Schluessel: nach dem einen
+// Wiederholungsversuch der Pruefung geht kein Bild raus (fail closed, Codex 22.09.).
 for (const answer of ['not json', '```json\n{"extra_openings":false,"reason":"x"}\n```', '{"extra_openings":"false","reason":"x"}', '{"extra_openings":false}', '{"extra_openings":false,"reason":""}', '{"extra_openings":false,"reason":"x","uncertain":true}', 'null', '[]']) {
-  test(`checker retries and delivers malformed result for ${answer.slice(0, 28)}`, async () => {
+  test(`checker retries, then holds the render back for ${answer.slice(0, 28)}`, async () => {
     const h = harness({ checks: [() => checked(false, answer), () => checked(false, answer)] }); const res = await h.invoke();
-    assert.equal(res.statusCode, 200); assert.equal(res.body.image.data, PNG); assert.equal(h.counts().mail, 2);
+    assert.equal(res.statusCode, 502);
+    assert.equal(res.body.code, 'RENDER_CHECK_UNAVAILABLE');
+    assert.equal(res.body.image, undefined);
+    // Ein zweites Bild wird nicht erzeugt: kaputt ist der Pruefer, nicht das Bild.
+    assert.deepEqual(h.counts(), { generation: 1, checks: 2, mail: 1 });
+    assert.match(res.body.error, /konnte gerade nicht gepr.ft werden/);
   });
 }
 
-test('checker result without a completed STOP response is retried and delivered with warning', async () => {
+test('eine abgebrochene Antwort der Pruefung haelt das Ideenbild ebenfalls zurueck', async () => {
   for (const finishReason of [undefined, 'MAX_TOKENS', 'SAFETY']) {
     const unavailable = () => response({ candidates: [{ finishReason, content: { parts: [{ text: '{"extra_openings":false,"reason":"fixture"}' }] } }] });
     const h = harness({ checks: [unavailable, unavailable] });
-    const res = await h.invoke(); assert.equal(res.statusCode, 200); assert.equal(h.counts().mail, 2);
+    const res = await h.invoke();
+    assert.equal(res.statusCode, 502, `finishReason ${String(finishReason)}`);
+    assert.equal(res.body.code, 'RENDER_CHECK_UNAVAILABLE');
+    assert.deepEqual(h.counts(), { generation: 1, checks: 2, mail: 1 });
   }
 });
 
-test('disabled checker delivers and reports it in the lead mail', async () => {
+test('eine abgeschaltete Pruefung liefert nichts mehr aus, ausser mit ausdruecklichem Bypass', async () => {
+  // In Produktion gibt es keinen Blindflug: ohne Pruefung kein Bild (Codex, 22.09.).
   for (const value of ['', '  ']) {
-    const h = harness({ env: { BADPLANER_CHECK_MODEL: value } }); const res = await h.invoke();
-    assert.equal(res.statusCode, 200); assert.deepEqual(h.counts(), { generation: 1, checks: 0, mail: 2 });
-    assert.match(JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails')?.body), /Fensterprüfung.*deaktiviert/);
+    const h = harness({ env: { BADPLANER_CHECK_MODEL: value } });
+    const res = await h.invoke();
+    assert.equal(res.statusCode, 502, `BADPLANER_CHECK_MODEL=${JSON.stringify(value)}`);
+    assert.equal(res.body.code, 'RENDER_CHECK_UNAVAILABLE');
+    assert.deepEqual(h.counts(), { generation: 1, checks: 0, mail: 1 });
+    assert.match(JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails')?.body), /deaktiviert/);
   }
+  // Nur fuer Test und Entwicklung: der Bypass muss ausdruecklich gesetzt sein.
+  const bypass = harness({ env: { BADPLANER_CHECK_MODEL: '', BADPLANER_CHECK_BYPASS: '1' } });
+  const bypassRes = await bypass.invoke();
+  assert.equal(bypassRes.statusCode, 200);
+  assert.deepEqual(bypass.counts(), { generation: 1, checks: 0, mail: 2 });
+  assert.match(JSON.stringify(bypass.calls.find((call) => call.url === 'https://api.resend.com/emails')?.body), /deaktiviert \(Bypass\)/);
+  // Ein anderer Wert als "1" ist kein Bypass.
+  const notBypass = harness({ env: { BADPLANER_CHECK_MODEL: '', BADPLANER_CHECK_BYPASS: 'true' } });
+  assert.equal((await notBypass.invoke()).statusCode, 502);
 });
 
 test('missing generation key still fails before rendering', async () => {
   const h = harness({ env: { GEMINI_API_KEY: '' } }); assert.equal((await h.invoke()).statusCode, 503); assert.equal(h.calls.length, 0);
 });
 
-test('unavailable checker retries once, delivers the lead and marks the mail', async () => {
-  const h = harness({ checks: [() => response({}, 503), () => response({}, 503)] }); const res = await h.invoke();
-  assert.equal(res.statusCode, 200); assert.equal(res.body.image.data, PNG);
-  assert.deepEqual(h.counts(), { generation: 1, checks: 2, mail: 2 });
-  assert.match(JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails')?.body), /Fensterprüfung.*nicht möglich \(HTTP 503\)/);
+test('ein HTTP-Fehler der Pruefung: ein Wiederholungsversuch, dann kein Bild', async () => {
+  const h = harness({ checks: [() => response({}, 503), () => response({}, 503)] });
+  const res = await h.invoke();
+  assert.equal(res.statusCode, 502);
+  assert.equal(res.body.code, 'RENDER_CHECK_UNAVAILABLE');
+  assert.equal(res.body.image, undefined);
+  // Der Wiederholungsversuch der PRUEFUNG bleibt, ein zweites BILD gibt es nicht.
+  assert.deepEqual(h.counts(), { generation: 1, checks: 2, mail: 1 });
+  assert.match(JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails')?.body), /Prüfung.*nicht möglich \(HTTP 503\)/);
+  // Dem Kunden sagen wir nichts Technisches.
+  assert.doesNotMatch(res.body.error, /HTTP|JSON|Timeout/);
 });
 
 test('ein Ausfall des Bilddienstes wird gemeldet, der Lead aber nicht weggeworfen', async () => {
@@ -1430,9 +1465,12 @@ test('nach einem Timeout der Pruefung folgt ein kurzer zweiter Anlauf von hoechs
   const quick = harness({ checkDelays: [21000, 9000] }); const ok = await quick.invoke();
   assert.equal(ok.statusCode, 200); assert.equal(quick.counts().checks, 2);
   assert.match(JSON.stringify(quick.calls.find((call) => call.url === 'https://api.resend.com/emails').body), /Fensterprüfung.*ok/);
+  // Laeuft auch der zweite Anlauf ab, geht kein Bild raus (fail closed, Codex 22.09.).
   const slow = harness({ checkDelays: [21000, 11000] }); const late = await slow.invoke();
-  assert.equal(late.statusCode, 200); assert.equal(slow.counts().checks, 2);
-  assert.match(JSON.stringify(slow.calls.find((call) => call.url === 'https://api.resend.com/emails').body), /Fensterprüfung.*nicht möglich \(Timeout\)/);
+  assert.equal(late.statusCode, 502); assert.equal(late.body.code, 'RENDER_CHECK_UNAVAILABLE');
+  assert.equal(late.body.image, undefined);
+  assert.deepEqual(slow.counts(), { generation: 1, checks: 2, mail: 1 });
+  assert.match(JSON.stringify(slow.calls.find((call) => call.url === 'https://api.resend.com/emails').body), /Prüfung.*nicht möglich \(Timeout\)/);
 });
 
 test('ein zugemauerter Ruecksprung in der Wand wird verworfen', async () => {
@@ -1881,4 +1919,37 @@ test('Unverbindliche Antworten verwerfen: unknown ist kein Ja', async () => {
   const noShower = twice(shower({ shower_glass: 'no_shower' }));
   assert.equal((await noShower.invoke(showerPayload())).statusCode, 502);
   assert.match(leadMailOf(noShower), /fixed glass panel of the chosen shower was not confirmed/);
+});
+
+test('Die zwei Fehlerwege bleiben getrennt: verworfen ist nicht dasselbe wie ungeprueft', async () => {
+  // Sichtbar falsch -> RENDER_REJECTED.
+  const rejected = twice(() => checkedInv({}, {}, { radiators_before: 0, radiators_after: 1 }));
+  const rejectedRes = await rejected.invoke(payload());
+  assert.equal(rejectedRes.statusCode, 502);
+  assert.equal(rejectedRes.body.code, 'RENDER_REJECTED');
+  assert.match(rejectedRes.body.error, /Qualit.tspr.fung nicht bestanden/);
+  assert.equal(rejected.counts().generation, 2, 'ein sichtbarer Fehler rechtfertigt den zweiten Versuch');
+
+  // Nicht pruefbar -> RENDER_CHECK_UNAVAILABLE, und KEIN zweites Bild.
+  const broken = harness({ checks: [() => response({}, 500), () => response({}, 500)] });
+  const brokenRes = await broken.invoke(payload());
+  assert.equal(brokenRes.statusCode, 502);
+  assert.equal(brokenRes.body.code, 'RENDER_CHECK_UNAVAILABLE');
+  assert.match(brokenRes.body.error, /konnte gerade nicht gepr.ft werden/);
+  assert.equal(broken.counts().generation, 1, 'ein Ausfall des Pruefers erzeugt kein zweites Bild');
+
+  // Erst verworfen, dann faellt der Pruefer aus: der zweite Weg gewinnt, das Bild bleibt liegen.
+  const mixed = harness({ checks: [() => checkedInv({}, {}, { radiators_before: 0, radiators_after: 1 }), () => response({}, 500), () => response({}, 500)] });
+  const mixedRes = await mixed.invoke(payload());
+  assert.equal(mixedRes.statusCode, 502);
+  assert.equal(mixedRes.body.code, 'RENDER_CHECK_UNAVAILABLE');
+  assert.equal(mixedRes.body.image, undefined);
+  assert.equal(mixed.counts().generation, 2, 'das zweite Bild kam wegen des Befunds, nicht wegen des Ausfalls');
+
+  // In beiden Faellen: interne Mail mit dem Bild, Kunde ohne technische Einzelheiten.
+  for (const h of [rejected, broken, mixed]) {
+    const mail = h.calls.find((call) => call.url === 'https://api.resend.com/emails');
+    assert.equal(mail.body.attachments.length, 2, 'Foto und Bild liegen der internen Mail bei');
+  }
+  assert.doesNotMatch(brokenRes.body.error, /HTTP|JSON|Timeout|500/);
 });
