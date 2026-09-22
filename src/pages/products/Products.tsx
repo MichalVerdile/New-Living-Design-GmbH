@@ -153,6 +153,9 @@ const Products: React.FC = () => {
                     Anschlüsse. Wir klären zuerst Raum, Nutzung und technische Voraussetzungen. Danach wählen wir mit
                     Ihnen eine Ausführung, die zu Ihrem Alltag und Ihrem Budget passt.
                   </p>
+                  <p>
+                    Wellness sehen Sie bei uns in der Ausstellung in Zofingen.
+                  </p>
                   <div className={styles['category-highlights']} aria-label="Wellness-Sortiment">
                     <span>Sauna</span><span>Dampf</span><span>Wellnesskabinen</span><span>Whirlwannen</span>
                   </div>
