@@ -687,7 +687,7 @@ test('fixture checker rejects a shower in a Gäste-WC', async () => {
   assert.match(leadMail.body.subject, /Ideenbild abgelehnt/);
   assert.match(JSON.stringify(leadMail.body), /shower on the right wall although none was ordered/);
   // Das verworfene Bild geht nur an uns, damit wir sehen, was die Pruefung beanstandet hat.
-  assert.deepEqual(leadMail.body.attachments.map(({ filename }) => filename), ['foto.png', 'verworfen.jpg']);
+  assert.deepEqual(leadMail.body.attachments.map(({ filename }) => filename), ['foto.png', 'verworfen-1.jpg', 'verworfen-2.jpg']);
   assert.equal(h.counts().mail, 1, 'the customer must not receive a rejected image');
 });
 
@@ -984,7 +984,7 @@ test('second rejected result is never returned, while the lead and original phot
   const leadMail = h.calls.find((call) => call.url === 'https://api.resend.com/emails');
   assert.match(JSON.stringify(leadMail.body), /Ideenbild.*abgelehnt \(Prüfung\), nicht angezeigt/);
   assert.match(JSON.stringify(leadMail.body), /Muster/);
-  assert.deepEqual(leadMail.body.attachments.map(({ filename }) => filename), ['foto.png', 'verworfen.jpg']);
+  assert.deepEqual(leadMail.body.attachments.map(({ filename }) => filename), ['foto.png', 'verworfen-1.jpg', 'verworfen-2.jpg']);
   // Der zweite, ebenfalls verworfene Versuch ist der, den wir zu sehen bekommen.
   assert.ok(leadMail.body.attachments[1].content.length > 0);
 });
@@ -1090,7 +1090,8 @@ test('auch ein gescheiterter zweiter Versuch behaelt den Lead und das verworfene
   assert.equal(h.counts().generation, 2);
   assert.equal(h.counts().mail, 1);
   const leadMail = h.calls.find((call) => call.url === 'https://api.resend.com/emails');
-  assert.deepEqual(leadMail.body.attachments.map(({ filename }) => filename), ['foto.png', 'verworfen.jpg']);
+  // Der zweite Anlauf lieferte gar kein Bild: nur das verworfene des ersten liegt bei.
+  assert.deepEqual(leadMail.body.attachments.map(({ filename }) => filename), ['foto.png', 'verworfen-1.jpg']);
 });
 
 test('ein Ausfall des Bilddienstes kostet den Kunden keinen Tagesversuch', async () => {
@@ -1358,7 +1359,7 @@ test('Vorschau: verworfenes Bild verspricht keinen Rueckruf und bleibt intern si
   assert.match(mail.body.subject, /^Badplaner-Fehler ohne Kontakt/);
   assert.match(JSON.stringify(mail.body), /Qualitätsprüfung abgelehnt/);
   assert.match(JSON.stringify(mail.body), /Paket.*Essenza/);
-  assert.deepEqual(mail.body.attachments.map(({ filename }) => filename), ['foto.png', 'verworfen.jpg']);
+  assert.deepEqual(mail.body.attachments.map(({ filename }) => filename), ['foto.png', 'verworfen-1.jpg', 'verworfen-2.jpg']);
 });
 
 test('Beratung nach Bildfehler uebermittelt Foto und Auswahl ohne Gemini', async () => {
@@ -1963,10 +1964,16 @@ test('Die zwei Fehlerwege bleiben getrennt: verworfen ist nicht dasselbe wie ung
   assert.equal(mixedRes.body.image, undefined);
   assert.equal(mixed.counts().generation, 2, 'das zweite Bild kam wegen des Befunds, nicht wegen des Ausfalls');
 
-  // In beiden Faellen: interne Mail mit dem Bild, Kunde ohne technische Einzelheiten.
-  for (const h of [rejected, broken, mixed]) {
+  // In allen Faellen: interne Mail mit jedem erzeugten Bild, Kunde ohne technische Einzelheiten.
+  // Die Namen sagen, welcher Weg gelaufen ist - die blosse Anzahl sagte es nicht.
+  const expectedAttachments = [
+    [rejected, ['foto.png', 'verworfen-1.jpg', 'verworfen-2.jpg']],
+    [broken, ['foto.png', 'ungeprueft.jpg']],
+    [mixed, ['foto.png', 'verworfen-1.jpg', 'ungeprueft.jpg']],
+  ];
+  for (const [h, names] of expectedAttachments) {
     const mail = h.calls.find((call) => call.url === 'https://api.resend.com/emails');
-    assert.equal(mail.body.attachments.length, 2, 'Foto und Bild liegen der internen Mail bei');
+    assert.deepEqual(mail.body.attachments.map(({ filename }) => filename), names, 'Foto und jedes erzeugte Bild liegen der internen Mail bei');
   }
   assert.doesNotMatch(brokenRes.body.error, /HTTP|JSON|Timeout|500/);
 });
@@ -1993,4 +2000,40 @@ test('Der Duschgrundriss wird nur mit Dusche verlangt, dann aber verbindlich', a
   assert.equal(keineRes.statusCode, 200, 'ohne Dusche darf das fehlende Feld nicht blockieren');
   assert.doesNotMatch(checkQuestionOf(keine), /shower_footprint_grown/);
   assert.match(checkQuestionOf(ok), /Set shower_footprint_grown true only if the shower in image 2 takes clearly more floor/);
+});
+
+test('Die interne Mail zeigt beide Versuche ungekuerzt und legt beide verworfenen Bilder bei', async () => {
+  // Am 22.09. brach der Grund nach 600 Zeichen mitten im Satz ab ("the hand shower handle"),
+  // die Mail nannte nur den zweiten Versuch und legte nur dessen Bild bei.
+  const vieleBefunde = {
+    view_changed: true,
+    radiators_before: 0, radiators_after: 1,
+    shower_footprint_grown: true,
+    washbasin_tap_plate: 'none',
+    shower_rosette_count: 1,
+    shower_overhead_shape: 'square',
+    shower_handset_grip: 'smooth',
+  };
+  const h = harness({ checks: [
+    atelierShower(vieleBefunde),
+    atelierShower({ ...vieleBefunde, radiators_after: 2 }),
+  ] });
+  const res = await h.invoke(atelierPayload({ dusche: 'walk-in', badewanne: 'keine' }));
+  assert.equal(res.statusCode, 502);
+  assert.equal(res.body.code, 'RENDER_REJECTED');
+  assert.equal(res.body.image, undefined);
+  assert.equal(h.counts().generation, 2);
+
+  const mail = h.calls.find((call) => call.url === 'https://api.resend.com/emails');
+  const paar = mail.body.text.match(/1\. Versuch: ([\s\S]*?) \| 2\. Versuch: ([\s\S]*?)\n/);
+  assert.ok(paar, 'beide Gruende stehen getrennt in der Mail');
+  assert.notEqual(paar[1], paar[2], 'die beiden Versuche werden getrennt berichtet, nicht dupliziert');
+  // Nichts abgeschnitten: der letzte Befund der Liste steht noch drin, und die Liste ist
+  // laenger als die alte Schranke.
+  assert.match(paar[1], /the hand shower handle is smooth where the Treemme Aurelia handle is ribbed/);
+  assert.match(paar[2], /the hand shower handle is smooth where the Treemme Aurelia handle is ribbed/);
+  assert.ok(paar[1].length > 600, `1. Versuch zu kurz: ${paar[1].length}`);
+
+  // Beide verworfenen Bilder, mit unterscheidbaren Namen.
+  assert.deepEqual(mail.body.attachments.map(({ filename }) => filename), ['foto.png', 'verworfen-1.jpg', 'verworfen-2.jpg']);
 });
