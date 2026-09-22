@@ -1146,11 +1146,12 @@ function buildPrompt(v: {
         : 'The number of windows, roof windows and doors must be identical to image 1: never add an opening that is not visible in image 1; walls that are solid in image 1 stay solid.';
   // Diegos Foto vom 19.09.: rechts steht die alte Duschkabine mit satiniertem Glas. In drei von
   // vier Versuchen zeichnete das Modell dort ein Fenster in die rechte Wand.
-  // Seit dem 22.09. steht die Regel NICHT mehr immer da: sie gilt nur, wenn die Fotopruefung
-  // ausdruecklich eine alte Duschabtrennung mit mattem Glas gemeldet hat. Sonst wuerde sie ein
-  // echtes Fenster mit mattem Glas zur Wand machen - Diegos Foto vom 22.09. hat rechts ein
-  // echtes Fenster mit Rahmen und Griff, und der Kunde hat ein Fenster angegeben.
-  const glassRule = v.frostedShowerPanel
+  // Seit dem 22.09. steht die Regel NICHT mehr immer da. Sie braucht ZWEI Bedingungen:
+  // der Kunde hat NULL Fenster angegeben UND die Fotopruefung meldet eine alte Duschabtrennung
+  // mit mattem Glas. Die Angabe des Kunden schlaegt die Bildeinschaetzung immer: ein mattes
+  // Fenster darf nie zur Wand werden, nur weil das Modell es fuer eine Duschkabine haelt.
+  // Ist die Fensterzahl nicht angegeben, gilt die Regel ebenfalls nicht.
+  const glassRule = v.windows === '0' && v.frostedShowerPanel
     ? ' Image 1 shows an old shower enclosure or shower door with frosted glass: that pane is not a window. Behind it stands a solid wall of the room, and the result shows tiled wall there, never a window, a sill or outside light. This applies only to that shower enclosure: a pane set in a window frame, or with a handle or a hinge, stays the window or door it is, whatever its glass looks like.'
     : '';
 
@@ -1188,7 +1189,7 @@ function buildPrompt(v: {
     intro,
     layoutLine,
     `This is an edit of image 1, not a new picture. Keep image 1 and change only what the CHANGE list names. Everything else stays exactly as it is: the camera position, angle, lens and framing, the same crop and the same aspect ratio, the walls where they stand, the ceiling including any sloping ceiling and the room height, the room proportions, and the radiators. Never zoom out, never widen the view, never show floor, wall or ceiling beyond the edges of image 1, never create extra floor area. Whatever stands in the immediate foreground at the edge of image 1 stays in the picture and is never removed to show more of the room: an open door leaf, a door frame, the edge of a wall, a piece of furniture cut off by the border. Every window keeps the same share of the picture it has in image 1; do not move closer to it and do not make it larger. ${windowRule}${glassRule}`,
-    `KEEP THE POSITIONS. A half-height wall, a low built wall or a boxed pre-wall that a fixture stands against is part of the room, not furniture: it keeps its place, its length, its height and its depth, and the fixture stays mounted on it. Every fixture keeps the wall or low wall it stands against in image 1 and its place along it, measured against the corners, the door and the window next to it. The toilet keeps its wall and its place because its drain cannot be moved: under a sloping ceiling it stays under that sloping ceiling and is never moved to a straight or rear wall to gain headroom. The washbasin keeps its wall and its place. NO NEW WALLS: never add a wall, a partition, a half-height wall, a boxed pre-wall, a ledge, a shelf or a niche that image 1 does not show, not behind the toilet, not behind the washbasin and not in the shower. Where image 1 shows one flat wall, the result shows that same flat wall with new tiles: it never steps forward and never gets a flat top at mid-height. NOTHING IS FILLED IN EITHER: every recess, alcove, niche, wall offset, corner step and wall projection that image 1 shows stays exactly where it is, with the same width, depth and height, above all in the shower area. A shower or bathtub that stands in a recess or alcove stays inside it, and the new tiles follow the wall into the recess and around its corners. Never fill a recess, never close an alcove, never tile a niche over flush and never straighten a stepped wall into one flat wall. NOTHING PERMANENT IS ADDED EITHER: never add a radiator, a towel warmer or a heater at a place where image 1 has none; a radiator that image 1 does show keeps its place. Only surfaces, sanitary fixtures, taps, furniture and lights change.`,
+    `KEEP THE POSITIONS. A half-height wall, a low built wall or a boxed pre-wall that a fixture stands against is part of the room, not furniture: it keeps its place, its length, its height and its depth, and the fixture stays mounted on it. Every fixture keeps the wall or low wall it stands against in image 1 and its place along it, measured against the corners, the door and the window next to it. The toilet keeps its wall and its place because its drain cannot be moved: under a sloping ceiling it stays under that sloping ceiling and is never moved to a straight or rear wall to gain headroom. The washbasin keeps its wall and its place. NO NEW WALLS: never add a wall, a partition, a half-height wall, a boxed pre-wall, a ledge, a shelf or a niche that image 1 does not show, not behind the toilet, not behind the washbasin and not in the shower. Where image 1 shows one flat wall, the result shows that same flat wall with new tiles: it never steps forward and never gets a flat top at mid-height. NOTHING IS FILLED IN EITHER: every recess, alcove, niche, wall offset, corner step and wall projection that image 1 shows stays exactly where it is, with the same width, depth and height, above all in the shower area. A shower or bathtub that stands in a recess or alcove stays inside it, and the new tiles follow the wall into the recess and around its corners. Never fill a recess, never close an alcove, never tile a niche over flush and never straighten a stepped wall into one flat wall. NOTHING PERMANENT IS ADDED EITHER: the heating elements of image 1 stay exactly as they are — never add a radiator, a towel warmer or a heater where image 1 has none, and never remove or move one that image 1 does show. Only surfaces, sanitary fixtures, taps, furniture and lights change.`,
     `CHANGE this, and only this, in ${v.room === 'gaeste-wc' ? 'this guest WC' : 'this bathroom'} (style "${v.packageName}"):${look} ${surfaces}; ${fixtures}; if a toilet is visible in image 1, ${toilet}; ${vanity}; ${v.tapPrompt}${tapReferences ? `; ${tapReferences}` : ''}.${accent}`,
     `TAKE AWAY. If image 1 shows a bidet, it is gone: this bathroom has none, and the wall and floor where it stood are finished like the rest, with nothing standing in its place. The old shower curtain and its rail are gone. Clutter, towels, bottles and rugs are gone, and so is loose furniture that just stands around; the washbasin's own vanity unit is not loose furniture and is always there, as described above. Every shower fitting — mixer, riser, overhead shower with its arm, hand shower with its holder — sits inside the shower area, all together on one and the same wall of the shower (in a floor-level shower the short end wall, with the drain at its foot), never split over two walls and never on a wall next to the toilet or the washbasin. Natural daylight, no people, no text.`,
     `BEFORE YOU DRAW, check against image 1, point by point: same viewpoint and framing; ${v.windows === '0' ? 'no window at all' : 'the same windows and the same door, at the same size and in the same place'}; every recess, alcove and wall step still there and none filled in; no wall, low wall, ledge, shelf or niche that image 1 does not have; no radiator, heater or towel warmer that image 1 does not have; every fixture on the wall where image 1 has it; the shower no larger than the wet area image 1 already has.`,
@@ -1434,11 +1435,13 @@ async function checkOpenings(
     'Set window_much_bigger true only if a window that is visible in both images takes up a clearly larger part of image 2 than of image 1, about half again as large or more. ' +
     'Set extra_openings true only if image 2 has a window, roof window, door or outside opening that image 1 does not have, or lost one that image 1 has. ' +
     'Set view_changed true if camera position, angle, lens or framing changed, or if image 2 shows floor, wall or ceiling area that lies outside image 1. ' +
-    // Diegos Test vom 22.09.: rechts stand ein Heizkoerper, den das Foto nicht hat.
-    'Set radiator_added true only if image 2 shows a radiator, a towel warmer or a heater at a place where image 1 shows none; false when image 1 already shows one there. ' +
+    // Diegos Test vom 22.09.: rechts stand ein Heizkoerper, den das Foto nicht hat. Gezaehlt
+    // wird in BEIDEN Bildern und der Code vergleicht; eine freie Einschaetzung setzte voraus,
+    // dass ueberhaupt einer da ist.
+    'Count the heating elements — radiators, towel warmers, heaters of any kind — that are visible in each image, and set radiators_before to the number in image 1 and radiators_after to the number in image 2, both as numbers. Count a heating element only when you can see it; do not guess at what might be hidden. ' +
     // Der gewaehlte Spiegel wurde nicht gesetzt: der alte Schrank blieb stehen.
     'Set mirror_kind to "cabinet" when what hangs above the washbasin in image 2 is a mirror cabinet with a body of its own, "mirror" when it is a flat mirror without a cabinet body, "none" when there is nothing above the washbasin. ' +
-    'Set mirror_unchanged true when the mirror or mirror cabinet above the washbasin in image 2 is visibly the same old object as in image 1, with the same frame or the same fittings, rather than a new one. ' +
+    'Set mirror_state to "selected_new" when what hangs above the washbasin in image 2 is a different, newly fitted object than the one image 1 has at that place, "old_or_missing" when it is visibly the same object as in image 1 or when there is nothing above the washbasin at all, "unknown" when you cannot tell. ' +
     'Set washbasin_count to the number of separate washbasins on the vanity unit in image 2, as a number. ' +
     'Set shower_footprint_grown true only if the shower in image 2 takes clearly more floor than the wet area of image 1 taken together (the old shower tray, shower enclosure or bathtub and the floor they stood on), about a third more or more. ' +
     glassQuestion +
@@ -1453,7 +1456,7 @@ async function checkOpenings(
     '"foreground_object_before":false,"foreground_object_after":false,"window_much_bigger":false,' +
     (wanted.linearDrain ? '"point_drain":false,"shower_fittings_split":false,"drain_side":"none",' : '') +
     '"extra_openings":false,"view_changed":false,' +
-    '"radiator_added":false,"mirror_kind":"none","mirror_unchanged":false,"washbasin_count":1,"shower_footprint_grown":false,' +
+    '"radiators_before":0,"radiators_after":0,"mirror_kind":"none","mirror_state":"unknown","washbasin_count":1,"shower_footprint_grown":false,' +
     (wanted.shower ? '"shower_glass":"no_shower",' : '') +
     (wanted.vanity ? '"vanity_material":"unknown","vanity_texture":"unknown","vanity_tone":"unknown",' : '') +
     (wanted.taps === 'aurelia' ? '"washbasin_tap_plate":"unknown","washbasin_tap_lever":"unknown",' : '') +
@@ -1490,7 +1493,7 @@ async function checkOpenings(
       'window_much_bigger', 'point_drain', 'shower_fittings_split', 'drain_side',
       'extra_openings', 'view_changed',
       // Seit dem 22.09.: was gewaehlt wurde, muss im Bild stehen, und nichts Dauerhaftes darf dazukommen.
-      'radiator_added', 'shower_glass', 'mirror_kind', 'mirror_unchanged', 'washbasin_count', 'shower_footprint_grown',
+      'radiators_before', 'radiators_after', 'shower_glass', 'mirror_kind', 'mirror_state', 'washbasin_count', 'shower_footprint_grown',
       'vanity_material', 'vanity_texture', 'vanity_tone',
       'washbasin_tap_plate', 'washbasin_tap_lever', 'shower_rosette_count', 'shower_overhead_shape', 'shower_handset_grip',
       'reason'];
@@ -1512,9 +1515,11 @@ async function checkOpenings(
       || typeof parsed.window_much_bigger !== 'boolean' || !optionalFlag('shower_fittings_split')
       || !optionalChoice('drain_side', ['short', 'long', 'none', 'unknown'])
       || typeof parsed.extra_openings !== 'boolean' || typeof parsed.view_changed !== 'boolean'
-      || !optionalFlag('radiator_added') || !optionalFlag('mirror_unchanged') || !optionalFlag('shower_footprint_grown')
+      || !optionalFlag('shower_footprint_grown')
+      || !optionalCount('radiators_before') || !optionalCount('radiators_after')
       || !optionalChoice('shower_glass', ['yes', 'no', 'no_shower'])
       || !optionalChoice('mirror_kind', ['cabinet', 'mirror', 'none'])
+      || !optionalChoice('mirror_state', ['selected_new', 'old_or_missing', 'unknown'])
       || !optionalCount('washbasin_count')
       || !optionalChoice('vanity_material', ['wood', 'lacquer', 'stone', 'other', 'unknown'])
       || !optionalChoice('vanity_texture', ['flat', 'fluted', 'grid', 'angled-slats', 'other', 'unknown'])
@@ -1567,8 +1572,13 @@ async function checkOpenings(
     ] : [];
 
     // Was das Foto nicht zeigt, darf nicht dazukommen; was gewaehlt wurde, muss da sein.
-    const radiatorAdded = parsed.radiator_added === true
-      ? 'a radiator, towel warmer or heater was added where the photo shows none; nothing permanent may be added that image 1 does not have'
+    // Erhaltung, nicht "wurde einer dazugestellt": gleich viele vorher wie nachher.
+    const radiatorsBefore = typeof parsed.radiators_before === 'number' ? parsed.radiators_before : null;
+    const radiatorsAfter = typeof parsed.radiators_after === 'number' ? parsed.radiators_after : null;
+    const radiatorMismatch = radiatorsBefore !== null && radiatorsAfter !== null && radiatorsBefore !== radiatorsAfter
+      ? (radiatorsAfter > radiatorsBefore
+        ? `${radiatorsAfter - radiatorsBefore} radiator, towel warmer or heater was added that image 1 does not have; the heating elements of image 1 must stay exactly as they are, no more and no fewer`
+        : `${radiatorsBefore - radiatorsAfter} radiator, towel warmer or heater of image 1 is missing; the heating elements of image 1 must stay exactly as they are, no more and no fewer`)
       : null;
     const glassMissing = wanted.showerGlass && parsed.shower_glass === 'no'
       ? 'the shower was drawn without the fixed glass panel that belongs to the chosen shower'
@@ -1580,8 +1590,8 @@ async function checkOpenings(
     const mirrorWrongKind = mirrorWanted && (parsed.mirror_kind === 'cabinet' || parsed.mirror_kind === 'mirror') && parsed.mirror_kind !== mirrorWanted
       ? `above the washbasin there is a ${parsed.mirror_kind === 'cabinet' ? 'mirror cabinet' : 'plain mirror'} instead of the chosen ${mirrorWanted === 'cabinet' ? 'mirror cabinet' : 'mirror with integrated light'}`
       : null;
-    const mirrorOld = parsed.mirror_unchanged === true
-      ? 'the old mirror or mirror cabinet of the photo was left in place instead of the chosen new one'
+    const mirrorOld = parsed.mirror_state === 'old_or_missing'
+      ? 'above the washbasin there is still the old mirror or mirror cabinet of the photo, or nothing at all, instead of the chosen new one'
       : null;
     const basinCountWrong = typeof wanted.basins === 'number' && typeof parsed.washbasin_count === 'number' && parsed.washbasin_count !== wanted.basins
       ? `${parsed.washbasin_count} washbasins were drawn although ${wanted.basins} was chosen`
@@ -1634,7 +1644,7 @@ async function checkOpenings(
       wallLost,
       foregroundLost,
       zoomedIn,
-      radiatorAdded,
+      radiatorMismatch,
       glassMissing,
       mirrorMissing,
       mirrorWrongKind,
