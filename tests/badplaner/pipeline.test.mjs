@@ -54,8 +54,8 @@ const inv = (changes = {}) => ({ toilet: 'left', washbasin: 'left', shower: 'non
 // Die sichtbare Reihenfolge von links nach rechts folgt dem Inventar, solange
 // ein Test nichts anderes sagt.
 const order = (state) => ['washbasin', 'toilet', 'bidet', 'shower', 'bathtub'].filter((key) => state[key] !== 'none');
-const checked = (extra = false, text) => response({ candidates: [{ content: { parts: [{ text: text ?? JSON.stringify({ before: inv(), after: inv(), order_before: order(inv()), order_after: order(inv()), nearest_before: 'toilet', nearest_after: 'toilet', toilet_on_low_wall_before: false, toilet_on_low_wall_after: false, new_wall_element: false, wall_element_lost: false, point_drain: false, foreground_object_before: false, foreground_object_after: false, window_much_bigger: false, extra_openings: extra, view_changed: false, reason: 'inventory' }) }] }, finishReason: 'STOP' }] });
-const checkedInv = (before, after, extra = {}) => response({ candidates: [{ content: { parts: [{ text: JSON.stringify({ before: inv(before), after: inv(after), order_before: order(inv(before)), order_after: order(inv(after)), nearest_before: 'toilet', nearest_after: 'toilet', toilet_on_low_wall_before: false, toilet_on_low_wall_after: false, new_wall_element: false, wall_element_lost: false, point_drain: false, foreground_object_before: false, foreground_object_after: false, window_much_bigger: false, extra_openings: false, view_changed: false, reason: 'inventory', ...extra }) }] }, finishReason: 'STOP' }] });
+const checked = (extra = false, text) => response({ candidates: [{ content: { parts: [{ text: text ?? JSON.stringify({ before: inv(), after: inv(), order_before: order(inv()), order_after: order(inv()), nearest_before: 'toilet', nearest_after: 'toilet', toilet_on_low_wall_before: false, toilet_on_low_wall_after: false, new_wall_element: false, wall_element_lost: false, point_drain: false, foreground_object_before: false, foreground_object_after: false, window_much_bigger: false, extra_openings: extra, view_changed: false, radiators_before: 0, radiators_after: 0, mirror_kind: 'cabinet', mirror_state: 'selected_new', washbasin_count: 1, drain_side: 'short', shower_fittings_split: false, shower_glass: 'yes', vanity_material: 'wood', vanity_texture: 'flat', vanity_tone: 'light', washbasin_tap_plate: 'rectangular', washbasin_tap_lever: 'flat-paddle', shower_rosette_count: 2, shower_overhead_shape: 'round', shower_handset_grip: 'ribbed', reason: 'inventory' }) }] }, finishReason: 'STOP' }] });
+const checkedInv = (before, after, extra = {}) => response({ candidates: [{ content: { parts: [{ text: JSON.stringify({ before: inv(before), after: inv(after), order_before: order(inv(before)), order_after: order(inv(after)), nearest_before: 'toilet', nearest_after: 'toilet', toilet_on_low_wall_before: false, toilet_on_low_wall_after: false, new_wall_element: false, wall_element_lost: false, point_drain: false, foreground_object_before: false, foreground_object_after: false, window_much_bigger: false, extra_openings: false, view_changed: false, radiators_before: 0, radiators_after: 0, mirror_kind: 'cabinet', mirror_state: 'selected_new', washbasin_count: 1, drain_side: 'short', shower_fittings_split: false, shower_glass: 'yes', vanity_material: 'wood', vanity_texture: 'flat', vanity_tone: 'light', washbasin_tap_plate: 'rectangular', washbasin_tap_lever: 'flat-paddle', shower_rosette_count: 2, shower_overhead_shape: 'round', shower_handset_grip: 'ribbed', reason: 'inventory', ...extra }) }] }, finishReason: 'STOP' }] });
 
 function harness(settings = {}) {
   const clock = fakeClock();
@@ -1463,10 +1463,13 @@ test('Walk-in: die Rinne gehoert an die Schmalseite und eine falsche Seite wird 
   assert.equal(h.counts().generation, 2, 'der Punktablauf loest einen zweiten Versuch aus');
   const prompt = h.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
   assert.match(prompt, /ALL shower fittings sit together on that short end wall/);
-  assert.match(prompt, /The drain starts from the fittings: a linear channel drain \(Duschrinne\) lies in the floor at the foot of the very wall that carries the mixer and the hand shower/);
-  // 22.09.: der bedingte Satz mit "towards the camera" ist raus, die Regel gilt jetzt immer
-  // und spricht nur von den Seiten des Rechtecks.
-  assert.match(prompt, /It always lies across one of the two SHORT ends of that rectangle, the one with the fittings, and never along either of the two long sides/);
+  // 22.09., nach der Gegenpruefung: die Rinne wird NICHT mehr von den Armaturen abgeleitet.
+  // Diego hat nur die Schmalseite bestaetigt, sonst nichts.
+  assert.match(prompt, /A linear channel drain \(Duschrinne\) lies in the floor across one of the two SHORT ends of that rectangle, at the foot of that short end wall and running its whole width/);
+  assert.match(prompt, /It never runs along either of the two long sides/);
+  assert.doesNotMatch(prompt, /The drain starts from the fittings/);
+  assert.doesNotMatch(prompt, /the one with the fittings/);
+  assert.doesNotMatch(prompt, /at the foot of any wall without fittings/);
   assert.doesNotMatch(prompt, /towards the camera/);
   assert.doesNotMatch(prompt, /When the shower is wider than it is deep/);
   assert.doesNotMatch(prompt, /side walls on its left and right/, 'a3: der Satz schob die Armaturen an die Rueckwand');
@@ -1485,7 +1488,7 @@ test('Walk-in: die Rinne gehoert an die Schmalseite und eine falsche Seite wird 
   const longSide = () => checkedInv({ shower: 'back' }, { shower: 'back' }, { drain_side: 'long' });
   const side = harness({ checks: [longSide, longSide] });
   assert.equal((await side.invoke(payload({ dusche: 'walk-in', badewanne: 'keine' }))).statusCode, 502);
-  assert.match(JSON.stringify(side.calls.find((call) => call.url === 'https://api.resend.com/emails').body), /along a long side of the shower floor instead of across the selected short end/);
+  assert.match(JSON.stringify(side.calls.find((call) => call.url === 'https://api.resend.com/emails').body), /along a long side of the shower floor instead of across one of the two short ends/);
 
   const split = () => checkedInv({ shower: 'back' }, { shower: 'back' }, { shower_fittings_split: true });
   const splitH = harness({ checks: [split, split] });
@@ -1578,7 +1581,9 @@ const twice = (answer) => harness({ checks: [answer, answer] });
 const checkQuestionOf = (h) => h.calls.find((call) => call.url.includes('generativelanguage.googleapis.com')
   && !call.body?.generationConfig?.responseModalities
   && call.body.contents[0].parts.filter((part) => part.inlineData).length === 2).body.contents[0].parts[0].text;
-const shower = (extra = {}) => () => checkedInv({ shower: 'back' }, { shower: 'back' }, { drain_side: 'short', ...extra });
+const shower = (extra = {}) => () => checkedInv({ shower: 'back' }, { shower: 'back' }, { ...extra });
+// Der Atelier-Fixture waehlt Ribbed Rovere Smoked: kanneliert und grau-braun statt der Vorgabe.
+const atelierShower = (extra = {}) => () => checkedInv({ shower: 'back' }, { shower: 'back' }, { vanity_texture: 'fluted', vanity_tone: 'grey-brown', ...extra });
 const showerPayload = (changes = {}) => payload({ dusche: 'walk-in', badewanne: 'keine', ...changes });
 function atelierPayload(changes = {}) {
   const options = optionsForPackage('atelier');
@@ -1648,13 +1653,18 @@ test('Der falsche und der alte Spiegel werden verworfen', async () => {
   assert.equal((await old.invoke(payload())).statusCode, 502);
   assert.match(leadMailOf(old), /still the old mirror or mirror cabinet of the photo, or nothing at all/);
   assert.match(checkQuestionOf(old), /Set mirror_state to "selected_new" when what hangs above the washbasin in image 2 is a different, newly fitted object/);
-  // "unknown" verwirft nicht.
-  const unsureMirror = harness({ checks: [() => checkedInv({}, {}, { mirror_kind: 'cabinet', mirror_state: 'unknown' })] });
-  assert.equal((await unsureMirror.invoke(payload())).statusCode, 200);
+  // "unknown" verwirft jetzt auch: im Zweifel wird nicht geliefert (Codex, 22.09.).
+  const unsureMirror = twice(() => checkedInv({}, {}, { mirror_kind: 'cabinet', mirror_state: 'unknown' }));
+  assert.equal((await unsureMirror.invoke(payload())).statusCode, 502);
+  assert.match(leadMailOf(unsureMirror), /mirror_state was answered .{1,8}unknown/);
+  // Und ein fehlender Schluessel ebenso.
+  const ohneMirror = twice(() => checkedInv({}, {}, { mirror_state: undefined }));
+  assert.equal((await ohneMirror.invoke(payload())).statusCode, 502);
+  assert.match(leadMailOf(ohneMirror), /the check did not answer mirror_state/);
 
   const empty = twice(() => checkedInv({}, {}, { mirror_kind: 'none' }));
   assert.equal((await empty.invoke(payload())).statusCode, 502);
-  assert.match(leadMailOf(empty), /nothing was drawn above the washbasin although a mirror was chosen/);
+  assert.match(leadMailOf(empty), /nothing was drawn above the washbasin although a mirror cabinet was chosen/);
 
   const good = harness({ checks: [() => checkedInv({}, {}, { mirror_kind: 'cabinet', mirror_state: 'selected_new' })] });
   assert.equal((await good.invoke(payload())).statusCode, 200);
@@ -1698,26 +1708,31 @@ test('Eine vergroesserte Dusche wird verworfen und der Prompt nennt die Nasszone
 
 test('Der Unterbau wird gegen die Auswahl gehalten, mit Toleranz bei benachbarten Toenen', async () => {
   // Gewaehlt: Rexa Ribbed Rovere Smoked = Holz, feine vertikale Kannelierung, grau-braun.
-  const warm = twice(shower({ vanity_material: 'wood', vanity_texture: 'fluted', vanity_tone: 'warm-brown' }));
+  const warm = twice(atelierShower({ vanity_tone: 'warm-brown' }));
   assert.equal((await warm.invoke(atelierPayload())).statusCode, 502, 'warm-rot statt smoked');
   assert.match(leadMailOf(warm), /the vanity front is warm-brown where the selection is grey-brown/);
 
-  const flat = twice(shower({ vanity_material: 'wood', vanity_texture: 'flat', vanity_tone: 'grey-brown' }));
+  const flat = twice(atelierShower({ vanity_texture: 'flat' }));
   assert.equal((await flat.invoke(atelierPayload())).statusCode, 502, 'glatt statt kanneliert');
   assert.match(leadMailOf(flat), /the vanity front is flat where the selection is fluted/);
 
-  const lacquer = twice(shower({ vanity_material: 'lacquer', vanity_texture: 'fluted', vanity_tone: 'grey-brown' }));
+  const lacquer = twice(atelierShower({ vanity_material: 'lacquer' }));
   assert.equal((await lacquer.invoke(atelierPayload())).statusCode, 502);
   assert.match(leadMailOf(lacquer), /the vanity front is lacquer where the selection is wood/);
 
   // Genau richtig, und der Nachbarton dark-brown: beides geht durch.
   for (const tone of ['grey-brown', 'dark-brown']) {
-    const h = harness({ checks: [shower({ vanity_material: 'wood', vanity_texture: 'fluted', vanity_tone: tone })] });
+    const h = harness({ checks: [atelierShower({ vanity_tone: tone })] });
     assert.equal((await h.invoke(atelierPayload())).statusCode, 200, `Ton ${tone} sollte durchgehen`);
   }
-  // "unknown" verwirft nie: die Pruefung soll nicht raten.
-  const unsure = harness({ checks: [shower({ vanity_material: 'unknown', vanity_texture: 'unknown', vanity_tone: 'unknown' })] });
-  assert.equal((await unsure.invoke(atelierPayload())).statusCode, 200);
+  // "unknown" verwirft jetzt: im Zweifel wird nicht geliefert (Codex, 22.09.).
+  const unsure = twice(atelierShower({ vanity_tone: 'unknown' }));
+  assert.equal((await unsure.invoke(atelierPayload())).statusCode, 502);
+  assert.match(leadMailOf(unsure), /vanity_tone was answered .{1,8}unknown/);
+  // Ein fehlender Schluessel ebenso.
+  const ohne = twice(atelierShower({ vanity_material: undefined }));
+  assert.equal((await ohne.invoke(atelierPayload())).statusCode, 502);
+  assert.match(leadMailOf(ohne), /the check did not answer vanity_material/);
 
   // Ohne Erwartung wird gar nicht gefragt: Essenza-Unterbauten sind keine Rexa-Legni.
   const essenza = harness();
@@ -1735,12 +1750,23 @@ test('Die Armaturen werden gegen die Form der Treemme Aurelia gehalten', async (
     [{ shower_handset_grip: 'smooth' }, /the hand shower handle is smooth where the Treemme Aurelia handle is ribbed/],
   ];
   for (const [answer, reason] of cases) {
-    const h = twice(shower(answer));
+    const h = twice(atelierShower(answer));
     assert.equal((await h.invoke(atelierPayload())).statusCode, 502, `${JSON.stringify(answer)} sollte verworfen werden`);
     assert.match(leadMailOf(h), reason);
   }
+  // "none", "unknown" und ein fehlender Schluessel verwerfen ebenfalls (fail closed).
+  const noTap = twice(atelierShower({ washbasin_tap_plate: 'none' }));
+  assert.equal((await noTap.invoke(atelierPayload())).statusCode, 502);
+  assert.match(leadMailOf(noTap), /no washbasin mixer is visible although the Treemme Aurelia was chosen/);
+  const unsureTap = twice(atelierShower({ shower_handset_grip: 'unknown' }));
+  assert.equal((await unsureTap.invoke(atelierPayload())).statusCode, 502);
+  assert.match(leadMailOf(unsureTap), /shower_handset_grip was answered .{1,8}unknown/);
+  const ohneTap = twice(atelierShower({ shower_rosette_count: undefined }));
+  assert.equal((await ohneTap.invoke(atelierPayload())).statusCode, 502);
+  assert.match(leadMailOf(ohneTap), /the check did not answer shower_rosette_count/);
+
   // Die ganze Aurelia richtig: geht durch.
-  const good = harness({ checks: [shower({ washbasin_tap_plate: 'rectangular', washbasin_tap_lever: 'flat-paddle', shower_rosette_count: 2, shower_overhead_shape: 'round', shower_handset_grip: 'ribbed' })] });
+  const good = harness({ checks: [atelierShower()] });
   assert.equal((await good.invoke(atelierPayload())).statusCode, 200);
   // Ausserhalb von Atelier wird nicht danach gefragt.
   const essenza = harness();
@@ -1775,4 +1801,84 @@ test('Gaeste-WC: keine Rinnen-, Glas- oder Armaturenfragen in der Pruefung', asy
   // Was immer gilt, steht trotzdem da.
   assert.match(question, /set radiators_before to the number in image 1 and radiators_after to the number in image 2/);
   assert.match(question, /Set washbasin_count to the number of separate washbasins/);
+});
+
+/* ---------------------------------------------------------------------------
+ * FAIL CLOSED (Codex, 22.09.2026). Fehlt ein Schluessel, den die Auswahl verlangt,
+ * oder ist die Antwort unverbindlich, wird verworfen: zweiter Versuch, dann 502 mit
+ * dem Weg zur persoenlichen Beratung. Nie ein Bild, das keiner bestaetigt hat.
+ * ------------------------------------------------------------------------- */
+test('Fehlende Schluessel der Pruefung verwerfen, sie gehen nicht durch', async () => {
+  const cases = [
+    ['radiators_before', {}, /the check did not answer radiators_before and radiators_after/],
+    ['radiators_after', { radiators_after: undefined }, /the check did not answer radiators_before and radiators_after/],
+    ['mirror_state', { mirror_state: undefined }, /the check did not answer mirror_state/],
+    ['mirror_kind', { mirror_kind: undefined }, /the check did not answer mirror_kind/],
+    ['washbasin_count', { washbasin_count: undefined }, /the check did not answer washbasin_count/],
+  ];
+  for (const [name, answer, reason] of cases) {
+    const extra = name === 'radiators_before' ? { radiators_before: undefined } : answer;
+    const h = twice(() => checkedInv({}, {}, extra));
+    const res = await h.invoke(payload());
+    assert.equal(res.statusCode, 502, `${name} fehlt und wird trotzdem geliefert`);
+    assert.equal(res.body.code, 'RENDER_REJECTED');
+    assert.equal(h.counts().generation, 2, `${name}: erst ein zweiter Versuch, dann der Fehlerweg`);
+    assert.match(leadMailOf(h), reason);
+    // Der Kunde bekommt den ehrlichen Weg, keine Ausrede.
+    assert.match(JSON.stringify(res.body), /Qualit.tspr.fung nicht bestanden/);
+  }
+});
+
+test('Fehlende Schluessel der Dusche und der Produkte verwerfen ebenfalls', async () => {
+  const showerCases = [
+    ['drain_side', { drain_side: undefined }, /the check did not answer drain_side/],
+    ['point_drain', { point_drain: undefined }, /the check did not answer point_drain/],
+    ['shower_fittings_split', { shower_fittings_split: undefined }, /the check did not answer shower_fittings_split/],
+    ['shower_glass', { shower_glass: undefined }, /the check did not answer shower_glass/],
+  ];
+  for (const [name, answer, reason] of showerCases) {
+    const h = twice(shower(answer));
+    const res = await h.invoke(showerPayload());
+    assert.equal(res.statusCode, 502, `${name} fehlt und wird trotzdem geliefert`);
+    assert.match(leadMailOf(h), reason);
+  }
+
+  const atelierCases = [
+    ['vanity_texture', { vanity_texture: undefined }, /the check did not answer vanity_texture/],
+    ['vanity_tone', { vanity_tone: undefined }, /the check did not answer vanity_tone/],
+    ['washbasin_tap_lever', { washbasin_tap_lever: undefined }, /the check did not answer washbasin_tap_lever/],
+    ['shower_overhead_shape', { shower_overhead_shape: undefined }, /the check did not answer shower_overhead_shape/],
+  ];
+  for (const [name, answer, reason] of atelierCases) {
+    const h = twice(atelierShower(answer));
+    const res = await h.invoke(atelierPayload());
+    assert.equal(res.statusCode, 502, `${name} fehlt und wird trotzdem geliefert`);
+    assert.match(leadMailOf(h), reason);
+  }
+});
+
+test('Unverbindliche Antworten verwerfen: unknown ist kein Ja', async () => {
+  const vagueCases = [
+    [() => checkedInv({}, {}, { mirror_kind: 'unknown' }), payload(), /mirror_kind was answered/],
+    [shower({ drain_side: 'unknown' }), showerPayload(), /drain_side was answered/],
+    [shower({ shower_glass: 'unknown' }), showerPayload(), /shower_glass was answered/],
+    [atelierShower({ vanity_material: 'unknown' }), atelierPayload(), /vanity_material was answered/],
+    [atelierShower({ washbasin_tap_plate: 'unknown' }), atelierPayload(), /washbasin_tap_plate was answered/],
+    [atelierShower({ shower_overhead_shape: 'unknown' }), atelierPayload(), /shower_overhead_shape was answered/],
+  ];
+  for (const [answer, body, reason] of vagueCases) {
+    const h = twice(answer);
+    const res = await h.invoke(body);
+    assert.equal(res.statusCode, 502, `unknown geht durch: ${reason}`);
+    assert.equal(h.counts().generation, 2);
+    assert.match(leadMailOf(h), reason);
+  }
+  // "none" bei der Rinne ist ebenfalls kein Ja.
+  const noDrain = twice(shower({ drain_side: 'none' }));
+  assert.equal((await noDrain.invoke(showerPayload())).statusCode, 502);
+  assert.match(leadMailOf(noDrain), /was not confirmed on a short end of the shower floor/);
+  // Und "no_shower", wenn eine Dusche gewaehlt wurde.
+  const noShower = twice(shower({ shower_glass: 'no_shower' }));
+  assert.equal((await noShower.invoke(showerPayload())).statusCode, 502);
+  assert.match(leadMailOf(noShower), /fixed glass panel of the chosen shower was not confirmed/);
 });
