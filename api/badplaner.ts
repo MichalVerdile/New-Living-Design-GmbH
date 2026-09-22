@@ -18,8 +18,9 @@
  *      Bekannte Legacy-Feldnamen bleiben gültig; widersprüchliche Auswahl-IDs nicht.
  *   2. Grenzen prüfen: Cookie 3 Ideenbilder pro Gerät und Tag, 6 pro IP, Tagesdeckel.
  *   3. Musterbild der Wandplatte laden, Prompt bauen, Ideenbild bei Gemini erzeugen.
- *   4. Fensterprüfung: abgelehnte Bilder werden verworfen. Ist der Prüfdienst auch
- *      nach einem kurzen Retry nicht erreichbar, wird das Bild mit Warnhinweis zugestellt.
+ *   4. Qualitätsprüfung: abgelehnte Bilder werden verworfen (RENDER_REJECTED). Ist der
+ *      Prüfdienst auch nach einem kurzen Retry nicht erreichbar oder unlesbar, geht ebenfalls
+ *      KEIN Bild an den Kunden (RENDER_CHECK_UNAVAILABLE): ungeprüft heisst nicht geliefert.
  *   5. Lead-Mail an NLD; bei eindeutigem HTTP-Fehler Formspree ohne Bilder.
  *      Ohne bestätigte Provider-Annahme kein Erfolg. Unklare Zustellung nicht blind wiederholen.
  *   6. Kundenmail/Newsletter mit separatem Zustellstatus, kein falsches Versandversprechen.
@@ -39,10 +40,11 @@
  *                        Domain muss bei Resend verifiziert sein)
  *   BADPLANER_DAILY_CAP  Maximale Ideenbilder pro Tag insgesamt (Default 60)
  *   BADPLANER_MODEL      Gemini-Modell (Default gemini-3-pro-image, das genaueste)
- *   BADPLANER_CHECK_MODEL Gemini-Textmodell für die Fensterprüfung (Default gemini-3.6-flash);
- *   BADPLANER_CHECK_BYPASS "1" liefert Ideenbilder auch ohne Prüfung aus – nur für Test und
- *     Entwicklung. Ohne die Variable gilt: keine Prüfung, kein Bild.
- *                        leer lassen = Prüfung bewusst deaktiviert
+ *   BADPLANER_CHECK_MODEL Gemini-Textmodell für die Qualitätsprüfung (Default gemini-3.6-flash).
+ *                        Leer lassen schaltet die Prüfung ab – dann wird auch kein Bild mehr
+ *                        ausgeliefert, ausser BADPLANER_CHECK_BYPASS steht auf "1".
+ *   BADPLANER_CHECK_BYPASS "1" liefert Ideenbilder ohne Prüfung aus. Nur für Test und
+ *                        Entwicklung; in Produktion nicht setzen.
  *
  * Fotos und Ideenbilder werden NICHT gespeichert (kein Blob, kein KV): sie gehen
  * nur an Google zur Bilderzeugung und per E-Mail an uns und an den Kunden.
@@ -677,9 +679,10 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
         { filename: 'verworfen.jpg', content: gen.data },
       ],
     }, ctx);
-    // Ein abgelehntes Ideenbild ist für den Kunden kein Versuch: sein Tageslimit
-    // bleibt unberührt, er darf es gleich nochmals probieren. Gegen endloses
-    // Wiederholen bleibt das IP-Limit stehen, darum wird es nicht zurückgedreht.
+    // Ein abgelehntes Ideenbild kostet den Kunden keinen Geräteversuch: das Cookie wird
+    // nicht hochgezählt, er darf es gleich nochmals probieren. Das IP-Limit und der
+    // Tagesdeckel sind dagegen schon verbraucht und werden nicht zurückgedreht: sonst
+    // liesse sich mit absichtlich schlechten Fotos unbegrenzt generieren.
     delivered = true;
     return res.status(502).json({
       ok: false, code: 'RENDER_REJECTED',
@@ -719,7 +722,8 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
         { filename: 'ungeprueft.jpg', content: gen.data },
       ],
     }, ctx);
-    // Wie beim abgelehnten Bild: der Kunde hat nichts falsch gemacht, sein Tageslimit bleibt.
+    // Wie beim abgelehnten Bild: das Gerät-Cookie wird nicht hochgezählt. IP-Limit und
+    // Tagesdeckel bleiben verbraucht, auch hier gegen endloses Wiederholen.
     delivered = true;
     return res.status(502).json({
       ok: false, code: 'RENDER_CHECK_UNAVAILABLE',
@@ -729,10 +733,6 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
         ? 'Ihr Ideenbild konnte gerade nicht geprüft werden und wird deshalb nicht angezeigt. Versuchen Sie es später noch einmal oder fragen Sie eine persönliche Beratung an.'
         : 'Ihr Ideenbild konnte gerade nicht geprüft werden und wird deshalb nicht angezeigt. Ihre Angaben und Ihr Foto sind bei uns. Wir melden uns persönlich bei Ihnen.',
     });
-  }
-  if (check.status === 'approved' && check.note) {
-    checkNote = checkNote + ', Bildausschnitt verändert: ' + check.note;
-    console.info('[badplaner] Bildausschnitt verändert, Ideenbild trotzdem geliefert:', check.note);
   }
   // Nur vermerkt, nicht verworfen: ein zweiter Durchgang kostet 30 s und ein zweites Bild.
   for (const hint of check.status === 'approved' ? check.hints ?? [] : []) {
@@ -1234,7 +1234,7 @@ function buildPrompt(v: {
     `This is an edit of image 1, not a new picture. Keep image 1 and change only what the CHANGE list names. Everything else stays exactly as it is: the camera position, angle, lens and framing, the same crop and the same aspect ratio, the walls where they stand, the ceiling including any sloping ceiling and the room height, the room proportions, and the radiators. Never zoom out, never widen the view, never show floor, wall or ceiling beyond the edges of image 1, never create extra floor area. Whatever stands in the immediate foreground at the edge of image 1 stays in the picture and is never removed to show more of the room: an open door leaf, a door frame, the edge of a wall, a piece of furniture cut off by the border. Every window keeps the same share of the picture it has in image 1; do not move closer to it and do not make it larger. ${windowRule}${glassRule}`,
     `KEEP THE POSITIONS. A half-height wall, a low built wall or a boxed pre-wall that a fixture stands against is part of the room, not furniture: it keeps its place, its length, its height and its depth, and the fixture stays mounted on it. Every fixture keeps the wall or low wall it stands against in image 1 and its place along it, measured against the corners, the door and the window next to it. The toilet keeps its wall and its place because its drain cannot be moved: under a sloping ceiling it stays under that sloping ceiling and is never moved to a straight or rear wall to gain headroom. The washbasin keeps its wall and its place. NO NEW WALLS: never add a wall, a partition, a half-height wall, a boxed pre-wall, a ledge, a shelf or a niche that image 1 does not show, not behind the toilet, not behind the washbasin and not in the shower. Where image 1 shows one flat wall, the result shows that same flat wall with new tiles: it never steps forward and never gets a flat top at mid-height. NOTHING IS FILLED IN EITHER: every recess, alcove, niche, wall offset, corner step and wall projection that image 1 shows stays exactly where it is, with the same width, depth and height, above all in the shower area. A shower or bathtub that stands in a recess or alcove stays inside it, and the new tiles follow the wall into the recess and around its corners. Never fill a recess, never close an alcove, never tile a niche over flush and never straighten a stepped wall into one flat wall. NOTHING PERMANENT IS ADDED EITHER: the heating elements of image 1 stay exactly as they are — never add a radiator, a towel warmer or a heater where image 1 has none, and never remove or move one that image 1 does show. Only surfaces, sanitary fixtures, taps, furniture and lights change.`,
     `CHANGE this, and only this, in ${v.room === 'gaeste-wc' ? 'this guest WC' : 'this bathroom'} (style "${v.packageName}"):${look} ${surfaces}; ${fixtures}; if a toilet is visible in image 1, ${toilet}; ${vanity}; ${v.tapPrompt}${tapReferences ? `; ${tapReferences}` : ''}.${accent}`,
-    `TAKE AWAY. If image 1 shows a bidet, it is gone: this bathroom has none, and the wall and floor where it stood are finished like the rest, with nothing standing in its place. The old shower curtain and its rail are gone. Clutter, towels, bottles and rugs are gone, and so is loose furniture that just stands around; the washbasin's own vanity unit is not loose furniture and is always there, as described above. Every shower fitting — mixer, riser, overhead shower with its arm, hand shower with its holder — sits inside the shower area, all together on one and the same wall of the shower (in a floor-level shower the short end wall, with the drain at its foot), never split over two walls and never on a wall next to the toilet or the washbasin. Natural daylight, no people, no text.`,
+    `TAKE AWAY. If image 1 shows a bidet, it is gone: this bathroom has none, and the wall and floor where it stood are finished like the rest, with nothing standing in its place. The old shower curtain and its rail are gone. Clutter, towels, bottles and rugs are gone, and so is loose furniture that just stands around; the washbasin's own vanity unit is not loose furniture and is always there, as described above. Every shower fitting — mixer, riser, overhead shower with its arm, hand shower with its holder — sits inside the shower area, all together on one and the same wall of the shower (in a floor-level shower one of the two short end walls), never split over two walls and never on a wall next to the toilet or the washbasin. Natural daylight, no people, no text.`,
     `BEFORE YOU DRAW, check against image 1, point by point: same viewpoint and framing; ${v.windows === '0' ? 'no window at all' : 'the same windows and the same door, at the same size and in the same place'}; every recess, alcove and wall step still there and none filled in; no wall, low wall, ledge, shelf or niche that image 1 does not have; no radiator, heater or towel warmer that image 1 does not have; every fixture on the wall where image 1 has it; the shower no larger than the wet area image 1 already has.`,
   ].filter(Boolean).join('\n');
 }
@@ -1441,6 +1441,8 @@ async function checkOpenings(
     : '';
   const glassQuestion = wanted.shower
     ? 'Set shower_glass to "yes" when the shower in image 2 has a fixed glass panel or a glass screen, "no" when its shower has none at all, "no_shower" when image 2 has no shower. '
+      // Nur mit gewaehlter Dusche gefragt und nur dann verlangt (Codex, 22.09.).
+      + 'Set shower_footprint_grown true only if the shower in image 2 takes clearly more floor than the wet area of image 1 taken together (the old shower tray, shower enclosure or bathtub and the floor they stood on), about a third more or more; false when it stays within it. '
     : '';
   const vanityQuestions = wanted.vanity
     ? 'Look at the front of the washbasin vanity unit in image 2, not at the walls or the floor. Set vanity_material to "wood", "lacquer", "stone", "other" or "unknown". '
@@ -1486,7 +1488,6 @@ async function checkOpenings(
     'Set mirror_kind to "cabinet" when what hangs above the washbasin in image 2 is a mirror cabinet with a body of its own, "mirror" when it is a flat mirror without a cabinet body, "none" when there is nothing above the washbasin. ' +
     'Set mirror_state to "selected_new" when what hangs above the washbasin in image 2 is a different, newly fitted object than the one image 1 has at that place, "old_or_missing" when it is visibly the same object as in image 1 or when there is nothing above the washbasin at all, "unknown" when you cannot tell. ' +
     'Set washbasin_count to the number of separate washbasins on the vanity unit in image 2, as a number. ' +
-    'Set shower_footprint_grown true only if the shower in image 2 takes clearly more floor than the wet area of image 1 taken together (the old shower tray, shower enclosure or bathtub and the floor they stood on), about a third more or more. ' +
     glassQuestion +
     vanityQuestions +
     tapQuestions +
@@ -1499,8 +1500,8 @@ async function checkOpenings(
     '"foreground_object_before":false,"foreground_object_after":false,"window_much_bigger":false,' +
     (wanted.linearDrain ? '"point_drain":false,"shower_fittings_split":false,"drain_side":"none",' : '') +
     '"extra_openings":false,"view_changed":false,' +
-    '"radiators_before":0,"radiators_after":0,"mirror_kind":"none","mirror_state":"unknown","washbasin_count":1,"shower_footprint_grown":false,' +
-    (wanted.shower ? '"shower_glass":"no_shower",' : '') +
+    '"radiators_before":0,"radiators_after":0,"mirror_kind":"none","mirror_state":"unknown","washbasin_count":1,' +
+    (wanted.shower ? '"shower_glass":"no_shower","shower_footprint_grown":false,' : '') +
     (wanted.vanity ? '"vanity_material":"unknown","vanity_texture":"unknown","vanity_tone":"unknown",' : '') +
     (wanted.taps === 'aurelia' ? '"washbasin_tap_plate":"unknown","washbasin_tap_lever":"unknown",' : '') +
     (wanted.taps === 'aurelia' && wanted.shower ? '"shower_rosette_count":2,"shower_overhead_shape":"unknown","shower_handset_grip":"unknown",' : '') +
@@ -1596,6 +1597,12 @@ async function checkOpenings(
     const zoomedIn = parsed.window_much_bigger
       ? 'the window takes up much more of the result than of the photo, so the camera moved closer'
       : null;
+    // Bis zum 22.09. nur vermerkt und trotzdem geliefert. Das widerspricht der ersten Regel
+    // des Prompts ("dasselbe Foto, dieselbe Kamera, derselbe Ausschnitt") und ist genau das,
+    // woran der Kunde sein Bad nicht wiedererkennt.
+    const viewChanged = parsed.view_changed === true
+      ? 'the camera position, angle, lens or framing changed, or the result shows floor, wall or ceiling that lies outside the photo'
+      : null;
     // FAIL CLOSED (Codex, 22.09.): was die Auswahl verlangt, muss die Pruefung beantwortet
     // haben. Fehlt der Schluessel oder ist die Antwort unverbindlich, wird verworfen statt
     // geliefert. Ein fehlendes Feld ist kein Freibrief.
@@ -1662,8 +1669,11 @@ async function checkOpenings(
           : null)
       : null;
 
-    const footprintGrown = parsed.shower_footprint_grown === true
-      ? 'the shower takes clearly more floor than the wet area the photo already has, so its footprint was enlarged'
+    // Mit gewaehlter Dusche muss die Antwort da sein: ein fehlendes Feld war bis zum
+    // 22.09. ein Freibrief. Ohne Dusche wird gar nicht danach gefragt.
+    const footprintGrown = wanted.shower
+      ? mustBe('shower_footprint_grown', parsed.shower_footprint_grown, [false],
+        () => 'the shower takes clearly more floor than the wet area the photo already has, so its footprint was enlarged')
       : null;
 
     // Unterbau und Armaturen: das Modell beschreibt, der Code vergleicht mit der Auswahl.
@@ -1706,6 +1716,7 @@ async function checkOpenings(
       wallLost,
       foregroundLost,
       zoomedIn,
+      viewChanged,
       radiatorFault,
       glassFault,
       basinCountWrong,
@@ -1716,10 +1727,8 @@ async function checkOpenings(
       ...tapFaults,
     ].filter((entry): entry is string => !!entry);
     if (faults.length) return { status: 'rejected', reason: faults.join('; ').slice(0, 600), flags };
-    // Ein anderer Bildausschnitt allein ist kein Grund, dem Kunden nichts zu zeigen:
-    // Fenster, WC, Waende und Ausstattung stimmen dann ja. Er wird nur vermerkt.
     const hints: string[] = [];
-    return flags.view_changed ? { status: 'approved', note: parsed.reason.slice(0, 200), hints } : { status: 'approved', hints };
+    return { status: 'approved', hints };
   } catch (err: any) {
     const detail = err && (err.name === 'AbortError' || err.name === 'TimeoutError') ? 'Timeout' : String(err?.message || err).slice(0, 120);
     console.error('[badplaner] Fensterprüfung nicht möglich', detail);
