@@ -40,6 +40,8 @@
  *   BADPLANER_DAILY_CAP  Maximale Ideenbilder pro Tag insgesamt (Default 60)
  *   BADPLANER_MODEL      Gemini-Modell (Default gemini-3-pro-image, das genaueste)
  *   BADPLANER_CHECK_MODEL Gemini-Textmodell für die Fensterprüfung (Default gemini-3.6-flash);
+ *   BADPLANER_CHECK_BYPASS "1" liefert Ideenbilder auch ohne Prüfung aus – nur für Test und
+ *     Entwicklung. Ohne die Variable gilt: keine Prüfung, kein Bild.
  *                        leer lassen = Prüfung bewusst deaktiviert
  *
  * Fotos und Ideenbilder werden NICHT gespeichert (kein Blob, kein KV): sie gehen
@@ -169,11 +171,13 @@ interface BeratungBody {
   website?: string;
 }
 
-type RenderFailureCode = 'PHOTO_NOT_A_BATHROOM' | 'RENDER_FAILED' | 'RENDER_REJECTED';
+type RenderFailureCode = 'PHOTO_NOT_A_BATHROOM' | 'RENDER_FAILED' | 'RENDER_REJECTED' | 'RENDER_CHECK_UNAVAILABLE';
 const RENDER_FAILURE_LABELS: Record<RenderFailureCode, string> = {
   PHOTO_NOT_A_BATHROOM: 'Foto nicht als Bad oder Gäste-WC erkannt – kein Ideenbild erzeugt',
   RENDER_FAILED: 'Bildgenerierung fehlgeschlagen – kein Ideenbild erzeugt',
   RENDER_REJECTED: 'Ideenbild von der Qualitätsprüfung abgelehnt – nicht angezeigt',
+  // Getrennt vom abgelehnten Bild: hier war das Bild vielleicht gut, aber niemand konnte es pruefen.
+  RENDER_CHECK_UNAVAILABLE: 'Qualitätsprüfung nicht möglich – Ideenbild sicherheitshalber nicht angezeigt',
 };
 
 interface GrundrissBody {
@@ -687,6 +691,45 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
         : 'Ihr Ideenbild hat unsere Qualitätsprüfung nicht bestanden und wird deshalb nicht angezeigt. Ihre Angaben und Ihr Foto sind bei uns. Wir melden uns persönlich bei Ihnen.',
     });
   }
+  // Der Kunde bekommt nur, was geprueft wurde. Faellt der Pruefdienst aus - Timeout, HTTP-Fehler,
+  // unlesbares JSON oder eine Antwort ohne die verlangten Schluessel -, geht kein Ideenbild raus:
+  // ein ungepruefes Bild ist nicht besser als ein falsches (Codex, 22.09.). Ein zweites Bild wird
+  // dafuer NICHT erzeugt - kaputt ist der Pruefer, nicht das Bild. Der Wiederholungsversuch der
+  // Pruefung selbst (checkWithUnavailableRetry) ist vorher schon gelaufen.
+  const checkBypass = env.BADPLANER_CHECK_BYPASS === '1';
+  const uncheckable = check.status === 'unavailable'
+    ? `nicht möglich (${check.detail})`
+    : check.status === 'disabled' && !checkBypass
+      ? 'deaktiviert (BADPLANER_CHECK_MODEL ist leer und BADPLANER_CHECK_BYPASS steht nicht auf 1)'
+      : null;
+  if (uncheckable) {
+    console.error('[badplaner] Ideenbild nicht geliefert, Prüfung', uncheckable);
+    const leadDelivery = await sendLeadMail({
+      subject: preview
+        ? `Badplaner-Fehler ohne Kontakt – ${isGuestWc ? 'Gäste-WC' : pkg.name} – Prüfung nicht möglich`
+        : `Badplaner-Lead: ${name} – ${isGuestWc ? 'Gäste-WC' : pkg.name} – Prüfung nicht möglich`,
+      replyTo: email || undefined,
+      intro: preview
+        ? 'Anonymer Badplaner-Versuch ohne Kontaktdaten. Die Qualitätsprüfung war nicht möglich, darum wurde das Ideenbild nicht angezeigt. Originalfoto, Auswahl und das ungeprüfte Bild liegen bei.'
+        : 'Die Qualitätsprüfung war nicht möglich, darum wurde das Ideenbild dem Kunden nicht angezeigt. Originalfoto, Auswahl und das ungeprüfte Bild liegen bei.',
+      details: leadDetails(`Prüfung ${uncheckable}`, RENDER_FAILURE_LABELS.RENDER_CHECK_UNAVAILABLE),
+      // Das ungeprüfte Bild geht mit: nur so sehen wir hinterher, ob es brauchbar gewesen wäre.
+      attachments: [
+        { filename: photoName, content: photo.data },
+        { filename: 'ungeprueft.jpg', content: gen.data },
+      ],
+    }, ctx);
+    // Wie beim abgelehnten Bild: der Kunde hat nichts falsch gemacht, sein Tageslimit bleibt.
+    delivered = true;
+    return res.status(502).json({
+      ok: false, code: 'RENDER_CHECK_UNAVAILABLE',
+      delivery: { lead: leadDelivery.status, leadProvider: leadDelivery.provider, leadAttachments: leadDelivery.attachments },
+      // Dem Kunden sagen wir nichts Technisches: die Einzelheiten stehen in der Mail und im Log.
+      error: preview || leadDelivery.status !== 'accepted'
+        ? 'Ihr Ideenbild konnte gerade nicht geprüft werden und wird deshalb nicht angezeigt. Versuchen Sie es später noch einmal oder fragen Sie eine persönliche Beratung an.'
+        : 'Ihr Ideenbild konnte gerade nicht geprüft werden und wird deshalb nicht angezeigt. Ihre Angaben und Ihr Foto sind bei uns. Wir melden uns persönlich bei Ihnen.',
+    });
+  }
   if (check.status === 'approved' && check.note) {
     checkNote = checkNote + ', Bildausschnitt verändert: ' + check.note;
     console.info('[badplaner] Bildausschnitt verändert, Ideenbild trotzdem geliefert:', check.note);
@@ -696,8 +739,8 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
     checkNote = checkNote + ', Hinweis: ' + hint;
     console.info('[badplaner]', hint);
   }
-  if (check.status === 'unavailable') checkNote = `nicht möglich (${check.detail})`;
-  if (check.status === 'disabled') checkNote = 'deaktiviert';
+  // Nur noch mit ausdruecklichem Bypass erreichbar (Test und Entwicklung).
+  if (check.status === 'disabled') checkNote = 'deaktiviert (Bypass)';
   console.log('[badplaner] Fensterprüfung:', checkNote);
 
   // 11. Lead-Mail an NLD (Resend mit Anhängen, sonst Formspree ohne Bilder)
