@@ -10,17 +10,29 @@ const CookieBanner: React.FC = () => {
     // darum hier der eigene Sichtbarkeitsschalter.
     const [hidden, setHidden] = useState(false);
 
+    // Blendet sich das Banner aus, faellt der Tastaturfokus sonst auf <body>
+    // zurueck und die naechste Tabulatortaste beginnt wieder ganz oben.
+    const moveFocusToPage = () => {
+        const main = document.getElementById('main-content');
+        if (!main) return;
+        if (!main.hasAttribute('tabindex')) main.setAttribute('tabindex', '-1');
+        main.focus({ preventScroll: true });
+    };
+
     const handleAccept = () => {
         saveConsent({ analytics: true, marketing: true });
+        moveFocusToPage();
     };
 
     const handleDecline = () => {
         saveConsent({ analytics: false, marketing: false });
+        moveFocusToPage();
     };
 
     const handleStatistikOnly = () => {
         saveConsent({ analytics: true, marketing: false });
         setHidden(true);
+        moveFocusToPage();
     };
 
     // ariaAcceptLabel und ariaDeclineLabel: ohne sie liest ein Screenreader die
@@ -80,6 +92,11 @@ const CookieBanner: React.FC = () => {
                 minWidth: "0",
                 width: "100%",
                 maxWidth: "none"
+            }}
+            customContainerAttributes={{
+                role: 'region',
+                'aria-label': 'Cookie-Einwilligung',
+                'aria-live': 'polite',
             }}
             containerClasses="cookie-banner-container"
             buttonClasses="cookie-banner-accept"
