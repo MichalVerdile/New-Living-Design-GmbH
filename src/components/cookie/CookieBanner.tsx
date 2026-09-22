@@ -1,15 +1,38 @@
-import React from 'react';
+import React, { useState } from 'react';
 import CookieConsent from 'react-cookie-consent';
 import { BANNER_COOKIE, saveConsent } from '../../utils/tracking';
 import './CookieBanner.css';
 
 const CookieBanner: React.FC = () => {
+    // Statistik und Marketing sind zwei getrennte Entscheidungen. Der dritte
+    // Knopf nimmt nur die Statistik an; die Werbesignale bleiben gesperrt.
+    // react-cookie-consent blendet sich nur bei den eigenen zwei Knoepfen aus,
+    // darum hier der eigene Sichtbarkeitsschalter.
+    const [hidden, setHidden] = useState(false);
+
+    // Blendet sich das Banner aus, faellt der Tastaturfokus sonst auf <body>
+    // zurueck und die naechste Tabulatortaste beginnt wieder ganz oben.
+    const moveFocusToPage = () => {
+        const main = document.getElementById('main-content');
+        if (!main) return;
+        if (!main.hasAttribute('tabindex')) main.setAttribute('tabindex', '-1');
+        main.focus({ preventScroll: true });
+    };
+
     const handleAccept = () => {
         saveConsent({ analytics: true, marketing: true });
+        moveFocusToPage();
     };
 
     const handleDecline = () => {
         saveConsent({ analytics: false, marketing: false });
+        moveFocusToPage();
+    };
+
+    const handleStatistikOnly = () => {
+        saveConsent({ analytics: true, marketing: false });
+        setHidden(true);
+        moveFocusToPage();
     };
 
     // ariaAcceptLabel und ariaDeclineLabel: ohne sie liest ein Screenreader die
@@ -17,6 +40,7 @@ const CookieBanner: React.FC = () => {
     return (
         <CookieConsent
             location="bottom"
+            visible={hidden ? 'hidden' : 'byCookieValue'}
             buttonText="Alle Cookies akzeptieren"
             declineButtonText="Nur notwendige"
             ariaAcceptLabel="Alle Cookies akzeptieren"
@@ -69,6 +93,11 @@ const CookieBanner: React.FC = () => {
                 width: "100%",
                 maxWidth: "none"
             }}
+            customContainerAttributes={{
+                role: 'region',
+                'aria-label': 'Cookie-Einwilligung',
+                'aria-live': 'polite',
+            }}
             containerClasses="cookie-banner-container"
             buttonClasses="cookie-banner-accept"
             declineButtonClasses="cookie-banner-decline"
@@ -76,7 +105,11 @@ const CookieBanner: React.FC = () => {
             <div className="cookie-banner-content">
                 <div className="cookie-banner-text">
                     <p>
-                        Statistik (Google Analytics) und Marketing (Meta Pixel) nur mit Ihrer Zustimmung.{' '}
+                        Statistik (Google Analytics) und Marketing (Meta Pixel) nur mit Ihrer Zustimmung, je einzeln.{' '}
+                        <button type="button" className="cookie-banner-link" onClick={handleStatistikOnly}>
+                            Nur Statistik
+                        </button>
+                        {' · '}
                         <a href="/datenschutz#cookie-settings" style={{ color: "#ffffff", textDecoration: "underline" }}>Datenschutz</a>
                     </p>
                 </div>
