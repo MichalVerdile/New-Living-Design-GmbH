@@ -146,7 +146,9 @@ test('Aufputz and Unterputz produce explicit, exclusive toilet branches', async 
     if (cistern === 'aufputz') {
       assert.match(prompt, /is completely removed and must not survive in any form/);
       assert.match(prompt, /exactly the sanitary module of image \d, copied part for part/);
-      assert.match(prompt, /clearly more than twice as tall as it is wide/);
+      // 22.09.: die Zentimeter waren nirgends belegt und sind raus; die Struktur ist belegt (Archiproducts).
+      assert.match(prompt, /a slim upright factory-made glass and steel part, clearly taller than it is wide/);
+      assert.doesNotMatch(prompt, /about 11 cm deep|about 50 cm wide|about 115 cm high|reaching down to the floor/);
       assert.match(prompt, /flush button on the glass front near the top, never on the top surface/);
       assert.match(prompt, /the toilet is wall-hung, rimless, in .*hanging on the front of that module/);
       // Ein Holzsitz auf weisser Keramik war einer der Befunde vom 16.09.
@@ -292,8 +294,11 @@ test('der Prompt ist eine Bearbeitung, keine Neuzeichnung', async () => {
   // 19.09.: aus Diegos engem Bad wurde ein Ausstellungsbad mit anderer Kamera und
   // einem Fenster. Zuerst steht, was das Ergebnis ist, zuletzt der Abgleich.
   assert.match(prompt, /^PHOTO EDITING TASK, not a design task\. Image 1 is a photograph of the customer's existing bathroom\. The result is that same photograph after the renovation/);
-  assert.match(prompt, /BEFORE YOU DRAW, compare with image 1: the same viewpoint and framing, the same walls and ceiling, no window at all, the same door, every fixture where image 1 has it/);
-  assert.match(prompt, /never show more of the room than image 1 shows\.$/);
+  // 22.09.: aus der dritten Wiederholung wurde die Liste dessen, was die Pruefung wirklich verwirft.
+  assert.match(prompt, /BEFORE YOU DRAW, check against image 1, point by point: same viewpoint and framing; no window at all; every recess, alcove and wall step still there and none filled in/);
+  assert.match(prompt, /the shower no larger than the wet area image 1 already has\.$/);
+  assert.doesNotMatch(prompt, /A small, tight room stays small and tight/);
+  assert.doesNotMatch(prompt, /must recognise it at first glance/);
   assert.match(prompt, /This is an edit of image 1, not a new picture/);
   assert.match(prompt, /KEEP THE POSITIONS/);
   assert.match(prompt, /its place along it, measured against the corners, the door and the window/);
@@ -303,13 +308,34 @@ test('der Prompt ist eine Bearbeitung, keine Neuzeichnung', async () => {
   assert.match(prompt, /Every shower fitting[^.]*sits inside the shower area, all together on one and the same wall of the shower[^.]*never split over two walls and never on a wall next to the toilet or the washbasin/);
 });
 
-test('das Glas der alten Duschkabine ist im Prompt kein Fenster', async () => {
+test('das Glas der alten Duschkabine ist kein Fenster, aber nur wenn die Fotopruefung eine meldet', async () => {
   // Diegos Foto vom 19.09.: rechts die alte Kabine mit satiniertem Glas, kein Fenster im Bad.
   // Produktion 12:09 (beide Versuche) und 12:24 (erster Versuch): "a window on the right wall".
-  const h = harness();
-  await h.invoke();
+  const kabine = { is_bathroom: true, reason: 'old shower cabin with frosted glass', walls: { toilet: 'back', washbasin: 'back', shower: 'right', bathtub: 'none', bidet: 'none' }, order: ['washbasin', 'toilet', 'shower'], nearest: 'washbasin', frosted_shower_panel: true };
+  const h = harness({ photoChecks: [() => photoChecked(true, JSON.stringify(kabine))] });
+  await h.invoke(payload({ windows: '0' }));
   const prompt = h.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
-  assert.match(prompt, /every wall stays a solid wall\. The glass of an old shower enclosure, a shower door or any frosted or misted pane in image 1 is not a window: behind it stands a solid wall of the room/);
+  assert.match(prompt, /every wall stays a solid wall\. Image 1 shows an old shower enclosure or shower door with frosted glass: that pane is not a window/);
+  assert.match(prompt, /a pane set in a window frame, or with a handle or a hinge, stays the window or door it is/i);
+
+  // Diegos Foto vom 22.09.: rechts ein echtes Fenster mit Rahmen und Griff, ein Fenster angegeben.
+  // Ohne den Befund darf die Regel nicht dastehen, sonst wird ein echtes Fenster zugemauert.
+  const fenster = { is_bathroom: true, reason: 'window and door on the right', walls: { toilet: 'left', washbasin: 'left', shower: 'none', bathtub: 'none', bidet: 'none' }, order: ['washbasin', 'toilet'], nearest: 'toilet', frosted_shower_panel: false };
+  const w = harness({ photoChecks: [() => photoChecked(true, JSON.stringify(fenster))] });
+  await w.invoke(payload({ windows: '1' }));
+  const windowPrompt = w.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
+  assert.doesNotMatch(windowPrompt, /is not a window/);
+  assert.match(windowPrompt, /Image 1 shows exactly 1 window\(s\) including roof windows: the result must show exactly the same window\(s\) at the same place and size/);
+
+  // Fehlt das Feld ganz, gilt "keine Kabine": die angegebenen Oeffnungen bleiben.
+  const alt = harness();
+  await alt.invoke(payload({ windows: '1' }));
+  assert.doesNotMatch(alt.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text, /is not a window/);
+
+  // Und die Fotopruefung fragt ueberhaupt danach, in derselben Anfrage wie bisher.
+  const photoQuestion = alt.calls.find((call) => call.url.includes('generativelanguage.googleapis.com')).body.contents[0].parts[0].text;
+  assert.match(photoQuestion, /set frosted_shower_panel true only if the photo shows an existing shower enclosure, shower cubicle or shower door whose glass is frosted/);
+  assert.match(photoQuestion, /A pane set in a window frame, or a pane with a handle, a hinge or a lock, is a window or a door and not a shower enclosure/);
 });
 
 test('der Grundriss aus der Vorpruefung steht im Prompt, was wo steht', async () => {
@@ -574,7 +600,10 @@ test('der Prompt haelt den Vordergrund und den Waschtischunterbau fest', async (
   await h.invoke();
   const prompt = h.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
   // Der Tuerfluegel im Vordergrund gehoert zum Bild.
-  assert.match(prompt, /Whatever stands in the immediate foreground at the edge of image 1 belongs to the picture and stays/);
+  // 22.09.: der Satz sagte "takes up the same part of the picture as before", die Pruefung verwirft
+  // aber nur das voellige Verschwinden. Prompt und Pruefung sagen jetzt dasselbe.
+  assert.match(prompt, /Whatever stands in the immediate foreground at the edge of image 1 stays in the picture and is never removed to show more of the room/);
+  assert.doesNotMatch(prompt, /takes up the same part of the picture as before/);
   assert.match(prompt, /Every window keeps the same share of the picture it has in image 1/);
   // "Loose furniture is gone" hat im Gaeste-WC den Waschtischunterbau mitgenommen.
   assert.match(prompt, /the washbasin's own vanity unit is not loose furniture and is always there/);
@@ -1406,40 +1435,64 @@ test('ein zugemauerter Ruecksprung in der Wand wird verworfen', async () => {
   assert.match(question, /tiles simply end at mid-height with paint above is still a full-height wall/);
 });
 
-test('Walk-in: Duschrinne im Prompt, ein Punktablauf wird nur vermerkt', async () => {
+test('Walk-in: die Rinne gehoert an die Schmalseite und eine falsche Seite wird verworfen', async () => {
   const drain = () => checkedInv({ shower: 'back' }, { shower: 'back' }, { point_drain: true });
-  const h = harness({ checks: [drain] });
+  // Ein Punktablauf ist seit dem 22.09. ein Grund zum Verwerfen, kein blosser Vermerk:
+  // der zweite Versuch zeichnet die Rinne richtig und das Bild geht dann raus.
+  const rightDrain = () => checkedInv({ shower: 'back' }, { shower: 'back' }, { drain_side: 'short' });
+  const h = harness({ checks: [drain, rightDrain] });
   const res = await h.invoke(payload({ dusche: 'walk-in', badewanne: 'keine' }));
-  assert.equal(res.statusCode, 200); assert.equal(h.counts().generation, 1, 'kein zweites Bild wegen des Ablaufs');
+  assert.equal(res.statusCode, 200);
+  assert.equal(h.counts().generation, 2, 'der Punktablauf loest einen zweiten Versuch aus');
   const prompt = h.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
   assert.match(prompt, /ALL shower fittings sit together on that short end wall/);
-  // Diego, 20.09.: die Rinne wird von den Armaturen aus beschrieben, bei breiter Dusche nie entlang der Rueckwand.
   assert.match(prompt, /The drain starts from the fittings: a linear channel drain \(Duschrinne\) lies in the floor at the foot of the very wall that carries the mixer and the hand shower/);
-  assert.match(prompt, /When the shower is wider than it is deep, this drain runs through the full depth of the shower, from the back wall towards the glass panel, that is towards the camera: it is perpendicular to the back wall and never runs along it/);
+  // 22.09.: der bedingte Satz mit "towards the camera" ist raus, die Regel gilt jetzt immer
+  // und spricht nur von den Seiten des Rechtecks.
+  assert.match(prompt, /It always lies across one of the two SHORT ends of that rectangle, the one with the fittings, and never along either of the two long sides/);
+  assert.doesNotMatch(prompt, /towards the camera/);
+  assert.doesNotMatch(prompt, /When the shower is wider than it is deep/);
   assert.doesNotMatch(prompt, /side walls on its left and right/, 'a3: der Satz schob die Armaturen an die Rueckwand');
   assert.match(prompt, /flush with the bathroom floor, with no step, no kerb and no raised platform/);
   assert.match(prompt, /never a central point drain, never a round or square grate/);
-  assert.match(JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails').body), /Punktablauf statt Duschrinne/);
-  // Rinne an der Laengsseite und Armaturen an zwei Waenden: ebenfalls nur Vermerke (Diego, 20.09.).
-  const side = harness({ checks: [() => checkedInv({ shower: 'back' }, { shower: 'back' }, { drain_on_long_side: true, shower_fittings_split: true })] });
-  const sideRes = await side.invoke(payload({ dusche: 'walk-in', badewanne: 'keine' }));
-  assert.equal(sideRes.statusCode, 200); assert.equal(side.counts().generation, 1);
-  const sideMail = JSON.stringify(side.calls.find((call) => call.url === 'https://api.resend.com/emails').body);
-  assert.match(sideMail, /Duschrinne an der Längsseite statt an der Schmalseite/);
-  assert.match(sideMail, /Duscharmaturen an zwei Wänden statt alle an der Schmalseite/);
-  // Die Pruefung nennt nur die Waende (a1: Armaturen links, Rinne hinten), der Code vermerkt die Laengsseite.
-  for (const walls of [{ drain_wall: 'back', fittings_wall: 'left' }, { drain_wall: 'back', fittings_wall: 'back', shower_wider_than_deep: true }]) {
-    const w = harness({ checks: [() => checkedInv({ shower: 'back' }, { shower: 'back' }, walls)] });
-    assert.equal((await w.invoke(payload({ dusche: 'walk-in', badewanne: 'keine' }))).statusCode, 200);
-    assert.match(JSON.stringify(w.calls.find((call) => call.url === 'https://api.resend.com/emails').body), /Duschrinne an der L.ngsseite/);
-  }
-  const right = harness({ checks: [() => checkedInv({ shower: 'back' }, { shower: 'back' }, { drain_wall: 'left', fittings_wall: 'left', shower_wider_than_deep: true })] });
-  await right.invoke(payload({ dusche: 'walk-in', badewanne: 'keine' }));
-  assert.doesNotMatch(JSON.stringify(right.calls.find((call) => call.url === 'https://api.resend.com/emails').body), /L.ngsseite/);
-  // Mit Duschwanne gibt es keine Rinne: kein Vermerk.
+  assert.match(JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails').body), /point drain instead of the linear channel drain/);
+
+  // Bleibt der Fehler auch im zweiten Versuch, bekommt der Kunde kein Bild.
+  const twiceDrain = harness({ checks: [drain, drain] });
+  const twiceRes = await twiceDrain.invoke(payload({ dusche: 'walk-in', badewanne: 'keine' }));
+  assert.equal(twiceRes.statusCode, 502);
+  assert.equal(twiceRes.body.code, 'RENDER_REJECTED');
+  assert.equal(twiceDrain.counts().generation, 2, 'nie mehr als zwei Versuche');
+
+  // Die Pruefung beantwortet die Seite direkt; es gibt keine Ableitung ueber Kamera oder Armaturenwand mehr.
+  const longSide = () => checkedInv({ shower: 'back' }, { shower: 'back' }, { drain_side: 'long' });
+  const side = harness({ checks: [longSide, longSide] });
+  assert.equal((await side.invoke(payload({ dusche: 'walk-in', badewanne: 'keine' }))).statusCode, 502);
+  assert.match(JSON.stringify(side.calls.find((call) => call.url === 'https://api.resend.com/emails').body), /along a long side of the shower floor instead of across the selected short end/);
+
+  const split = () => checkedInv({ shower: 'back' }, { shower: 'back' }, { shower_fittings_split: true });
+  const splitH = harness({ checks: [split, split] });
+  assert.equal((await splitH.invoke(payload({ dusche: 'walk-in', badewanne: 'keine' }))).statusCode, 502);
+  assert.match(JSON.stringify(splitH.calls.find((call) => call.url === 'https://api.resend.com/emails').body), /fittings are spread over two walls/);
+
+  // Rinne an der Schmalseite: kein Fehler, ein Versuch.
+  const good = harness({ checks: [() => checkedInv({ shower: 'back' }, { shower: 'back' }, { drain_side: 'short' })] });
+  const goodRes = await good.invoke(payload({ dusche: 'walk-in', badewanne: 'keine' }));
+  assert.equal(goodRes.statusCode, 200);
+  assert.equal(good.counts().generation, 1);
+
+  // Die Frage nach der Seite steht nur bei der Walk-in-Dusche in der Pruefung.
+  const checkQuestion = good.calls.find((call) => call.url.includes('generativelanguage.googleapis.com')
+    && !call.body?.generationConfig?.responseModalities
+    && call.body.contents[0].parts.filter((part) => part.inlineData).length === 2).body.contents[0].parts[0].text;
+  assert.match(checkQuestion, /Set drain_side to "short" when its linear channel drain lies across one of the two short ends/);
+  assert.doesNotMatch(checkQuestion, /drain_wall|fittings_wall|shower_wider_than_deep|drain_on_long_side/);
+
+  // Mit Duschwanne gibt es keine Rinne: der Punktablauf ist dort kein Fehler.
   const tray = harness({ checks: [drain] });
-  await tray.invoke(payload({ dusche: 'duschwanne', badewanne: 'keine' }));
-  assert.doesNotMatch(JSON.stringify(tray.calls.find((call) => call.url === 'https://api.resend.com/emails').body), /Punktablauf/);
+  const trayRes = await tray.invoke(payload({ dusche: 'duschwanne', badewanne: 'keine' }));
+  assert.equal(trayRes.statusCode, 200);
+  assert.equal(tray.counts().generation, 1);
 });
 
 test('Armaturen: Atelier zeigt die Form von Treemme Aurelia in der gewaehlten Oberflaeche', async () => {
@@ -1496,4 +1549,194 @@ test('Armaturen: Essenza zeigt die Form von Treemme Up+, nicht irgendeine Armatu
   assert.match(prompt, /mixer standing on the washbasin or its countertop/);
   assert.match(prompt, /exposed wall mixer that stands clearly out from the tiles.*never a flat concealed plate/);
   assert.doesNotMatch(prompt, /product photo of the tap fittings/);
+});
+
+/* ---------------------------------------------------------------------------
+ * Produktidentitaet, 22.09.2026. Was der Kunde gewaehlt hat, muss im Bild stehen;
+ * was das Foto nicht zeigt, darf nicht dazukommen. Alles bloeckt, nichts ist mehr
+ * nur ein Vermerk in der internen Mail. Nur bestaetigte Anforderungen.
+ * ------------------------------------------------------------------------- */
+const leadMailOf = (h) => JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails').body);
+const twice = (answer) => harness({ checks: [answer, answer] });
+const checkQuestionOf = (h) => h.calls.find((call) => call.url.includes('generativelanguage.googleapis.com')
+  && !call.body?.generationConfig?.responseModalities
+  && call.body.contents[0].parts.filter((part) => part.inlineData).length === 2).body.contents[0].parts[0].text;
+const shower = (extra = {}) => () => checkedInv({ shower: 'back' }, { shower: 'back' }, { drain_side: 'short', ...extra });
+const showerPayload = (changes = {}) => payload({ dusche: 'walk-in', badewanne: 'keine', ...changes });
+function atelierPayload(changes = {}) {
+  const options = optionsForPackage('atelier');
+  const tile = options.tiles[0];
+  return payload({
+    paket: 'atelier', look: tile.look, format: tile.format, platte: tile.id, kombination: 'einheitlich',
+    unterbau: 'rexa-legno-ribbed-rovere-smoked', top: options.tops[0].id, becken: options.basinTypes[0].id,
+    finish: 'treemme-cromo', keramik: options.sanitary[0].id, wall: options.walls[0].id,
+    dusche: 'walk-in', badewanne: 'keine', waschtisch: options.basins[0].id, spiegel: options.mirrors[0].id,
+    ...changes,
+  });
+}
+
+test('Ein erfundener Heizkoerper wird verworfen', async () => {
+  const h = twice(() => checkedInv({}, {}, { radiator_added: true }));
+  const res = await h.invoke(payload());
+  assert.equal(res.statusCode, 502);
+  assert.equal(res.body.code, 'RENDER_REJECTED');
+  assert.equal(h.counts().generation, 2, 'nie mehr als zwei Versuche');
+  assert.match(leadMailOf(h), /radiator, towel warmer or heater was added/);
+  // Ein Heizkoerper, den schon das Foto hat, ist kein Fehler.
+  const kept = harness({ checks: [() => checkedInv({}, {}, { radiator_added: false })] });
+  assert.equal((await kept.invoke(payload())).statusCode, 200);
+  // Und der Prompt verbietet es ausdruecklich, ohne Fenster und Tueren zu wiederholen.
+  const prompt = kept.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
+  assert.match(prompt, /NOTHING PERMANENT IS ADDED EITHER: never add a radiator, a towel warmer or a heater at a place where image 1 has none/);
+  assert.doesNotMatch(prompt, /never add a radiator, a towel warmer, a heater, a window, a door or a skylight/);
+});
+
+test('Eine Dusche ohne das gewaehlte Glas wird verworfen', async () => {
+  const h = twice(shower({ shower_glass: 'no' }));
+  assert.equal((await h.invoke(showerPayload())).statusCode, 502);
+  assert.match(leadMailOf(h), /without the fixed glass panel that belongs to the chosen shower/);
+
+  const glass = harness({ checks: [shower({ shower_glass: 'yes' })] });
+  assert.equal((await glass.invoke(showerPayload())).statusCode, 200);
+
+  // Ohne gewaehlte Dusche wird gar nicht danach gefragt.
+  const none = harness();
+  assert.equal((await none.invoke(payload({ dusche: 'keine', badewanne: 'keine' }))).statusCode, 200);
+  assert.doesNotMatch(checkQuestionOf(none), /Set shower_glass/);
+  assert.match(checkQuestionOf(glass), /Set shower_glass to "yes" when the shower in image 2 has a fixed glass panel/);
+});
+
+test('Der falsche und der alte Spiegel werden verworfen', async () => {
+  // Gewaehlt ist der Spiegelschrank (mirrors[0]).
+  const wrong = twice(() => checkedInv({}, {}, { mirror_kind: 'mirror' }));
+  assert.equal((await wrong.invoke(payload())).statusCode, 502);
+  assert.match(leadMailOf(wrong), /plain mirror instead of the chosen mirror cabinet/);
+
+  const old = twice(() => checkedInv({}, {}, { mirror_kind: 'cabinet', mirror_unchanged: true }));
+  assert.equal((await old.invoke(payload())).statusCode, 502);
+  assert.match(leadMailOf(old), /old mirror or mirror cabinet of the photo was left in place/);
+
+  const empty = twice(() => checkedInv({}, {}, { mirror_kind: 'none' }));
+  assert.equal((await empty.invoke(payload())).statusCode, 502);
+  assert.match(leadMailOf(empty), /nothing was drawn above the washbasin although a mirror was chosen/);
+
+  const good = harness({ checks: [() => checkedInv({}, {}, { mirror_kind: 'cabinet', mirror_unchanged: false })] });
+  assert.equal((await good.invoke(payload())).statusCode, 200);
+  // Der Prompt sagt jetzt, dass der alte ersetzt wird.
+  assert.match(good.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text,
+    /a new one that replaces whatever mirror or mirror cabinet image 1 has at that place, so nothing of the old one is left/);
+
+  // Spiegel statt Spiegelschrank gewaehlt: dann ist der flache Spiegel richtig.
+  const flat = harness({ checks: [() => checkedInv({}, {}, { mirror_kind: 'mirror' })] });
+  assert.equal((await flat.invoke(payload({ spiegel: 'spiegel' }))).statusCode, 200);
+});
+
+test('Eine andere Zahl von Waschbecken als gewaehlt wird verworfen', async () => {
+  const two = twice(() => checkedInv({}, {}, { washbasin_count: 2 }));
+  assert.equal((await two.invoke(payload())).statusCode, 502, 'Einzelwaschtisch, aber zwei gezeichnet');
+  assert.match(leadMailOf(two), /2 washbasins were drawn although 1 was chosen/);
+
+  const ok = harness({ checks: [() => checkedInv({}, {}, { washbasin_count: 1 })] });
+  assert.equal((await ok.invoke(payload())).statusCode, 200);
+
+  const double = harness({ checks: [() => checkedInv({}, {}, { washbasin_count: 2 })] });
+  assert.equal((await double.invoke(payload({ waschtisch: 'doppel' }))).statusCode, 200);
+  const single = twice(() => checkedInv({}, {}, { washbasin_count: 1 }));
+  assert.equal((await single.invoke(payload({ waschtisch: 'doppel' }))).statusCode, 502);
+  assert.match(leadMailOf(single), /1 washbasins were drawn although 2 was chosen/);
+});
+
+test('Eine vergroesserte Dusche wird verworfen und der Prompt nennt die Nasszone neutral', async () => {
+  const h = twice(shower({ shower_footprint_grown: true }));
+  assert.equal((await h.invoke(showerPayload())).statusCode, 502);
+  assert.match(leadMailOf(h), /takes clearly more floor than the wet area the photo already has/);
+
+  const good = harness({ checks: [shower()] });
+  assert.equal((await good.invoke(showerPayload())).statusCode, 200);
+  const prompt = good.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
+  // Eine einzige, neutrale Formulierung: keine Wanne mehr, weil nicht jedes Bad eine hat.
+  assert.match(prompt, /it covers only the wet area image 1 already has, whatever stood there, a shower tray, a shower enclosure or a bathtub, and never more floor than that/);
+  assert.doesNotMatch(prompt, /A bathtub that becomes a shower uses only the bathtub's own footprint/);
+  assert.doesNotMatch(prompt, /inside the original wet-area footprint/);
+});
+
+test('Der Unterbau wird gegen die Auswahl gehalten, mit Toleranz bei benachbarten Toenen', async () => {
+  // Gewaehlt: Rexa Ribbed Rovere Smoked = Holz, feine vertikale Kannelierung, grau-braun.
+  const warm = twice(shower({ vanity_material: 'wood', vanity_texture: 'fluted', vanity_tone: 'warm-brown' }));
+  assert.equal((await warm.invoke(atelierPayload())).statusCode, 502, 'warm-rot statt smoked');
+  assert.match(leadMailOf(warm), /the vanity front is warm-brown where the selection is grey-brown/);
+
+  const flat = twice(shower({ vanity_material: 'wood', vanity_texture: 'flat', vanity_tone: 'grey-brown' }));
+  assert.equal((await flat.invoke(atelierPayload())).statusCode, 502, 'glatt statt kanneliert');
+  assert.match(leadMailOf(flat), /the vanity front is flat where the selection is fluted/);
+
+  const lacquer = twice(shower({ vanity_material: 'lacquer', vanity_texture: 'fluted', vanity_tone: 'grey-brown' }));
+  assert.equal((await lacquer.invoke(atelierPayload())).statusCode, 502);
+  assert.match(leadMailOf(lacquer), /the vanity front is lacquer where the selection is wood/);
+
+  // Genau richtig, und der Nachbarton dark-brown: beides geht durch.
+  for (const tone of ['grey-brown', 'dark-brown']) {
+    const h = harness({ checks: [shower({ vanity_material: 'wood', vanity_texture: 'fluted', vanity_tone: tone })] });
+    assert.equal((await h.invoke(atelierPayload())).statusCode, 200, `Ton ${tone} sollte durchgehen`);
+  }
+  // "unknown" verwirft nie: die Pruefung soll nicht raten.
+  const unsure = harness({ checks: [shower({ vanity_material: 'unknown', vanity_texture: 'unknown', vanity_tone: 'unknown' })] });
+  assert.equal((await unsure.invoke(atelierPayload())).statusCode, 200);
+
+  // Ohne Erwartung wird gar nicht gefragt: Essenza-Unterbauten sind keine Rexa-Legni.
+  const essenza = harness();
+  await essenza.invoke(payload());
+  assert.doesNotMatch(checkQuestionOf(essenza), /Set vanity_material/);
+  assert.match(checkQuestionOf(unsure), /Set vanity_texture to "flat" for a smooth flat front, "fluted" for fine vertical fluting/);
+});
+
+test('Die Armaturen werden gegen die Form der Treemme Aurelia gehalten', async () => {
+  const cases = [
+    [{ washbasin_tap_plate: 'round' }, /sits on a round wall plate where the Treemme Aurelia has a rectangular one/],
+    [{ washbasin_tap_lever: 'thin-rod' }, /has a thin-rod handle where the Treemme Aurelia has a flat-paddle lever/],
+    [{ shower_rosette_count: 1 }, /sit on 1 round wall plates where the Treemme Aurelia set has 2/],
+    [{ shower_overhead_shape: 'square' }, /the overhead shower is square where the Treemme Aurelia is round/],
+    [{ shower_handset_grip: 'smooth' }, /the hand shower handle is smooth where the Treemme Aurelia handle is ribbed/],
+  ];
+  for (const [answer, reason] of cases) {
+    const h = twice(shower(answer));
+    assert.equal((await h.invoke(atelierPayload())).statusCode, 502, `${JSON.stringify(answer)} sollte verworfen werden`);
+    assert.match(leadMailOf(h), reason);
+  }
+  // Die ganze Aurelia richtig: geht durch.
+  const good = harness({ checks: [shower({ washbasin_tap_plate: 'rectangular', washbasin_tap_lever: 'flat-paddle', shower_rosette_count: 2, shower_overhead_shape: 'round', shower_handset_grip: 'ribbed' })] });
+  assert.equal((await good.invoke(atelierPayload())).statusCode, 200);
+  // Ausserhalb von Atelier wird nicht danach gefragt.
+  const essenza = harness();
+  await essenza.invoke(payload());
+  assert.doesNotMatch(checkQuestionOf(essenza), /washbasin_tap_plate/);
+  assert.match(checkQuestionOf(good), /Set washbasin_tap_lever to "flat-paddle" for a wide flat paddle lever/);
+});
+
+test('Der zweite Versuch und die interne Mail bekommen alle Gruende, nicht nur den ersten', async () => {
+  const many = () => checkedInv({}, {}, { radiator_added: true, mirror_unchanged: true, washbasin_count: 2 });
+  const h = twice(many);
+  assert.equal((await h.invoke(payload())).statusCode, 502);
+  const generations = h.calls.filter((call) => call.body?.generationConfig?.responseModalities);
+  assert.equal(generations.length, 2);
+  const retry = generations[1].body.contents[0].parts[0].text;
+  const reasons = [/radiator, towel warmer or heater was added/, /old mirror or mirror cabinet of the photo was left in place/, /2 washbasins were drawn although 1 was chosen/];
+  for (const reason of reasons) assert.match(retry, reason, 'der zweite Versuch kennt jeden Grund');
+  const mail = leadMailOf(h);
+  for (const reason of reasons) assert.match(mail, reason, 'die interne Mail nennt jeden Grund');
+  // Und die Gruende stehen in einer Zeile, durch Semikolon getrennt.
+  assert.match(retry, /previous attempt failed the structural and fixture check: [^\n]*; [^\n]*; /);
+});
+
+test('Gaeste-WC: keine Rinnen-, Glas- oder Armaturenfragen in der Pruefung', async () => {
+  const h = harness();
+  const res = await h.invoke(payload({ raum: 'gaeste-wc', dusche: '', badewanne: '', waschtisch: 'einzel' }));
+  assert.equal(res.statusCode, 200, `unerwartet ${res.statusCode}: ${JSON.stringify(res.body).slice(0, 200)}`);
+  const question = checkQuestionOf(h);
+  assert.doesNotMatch(question, /Set drain_side/);
+  assert.doesNotMatch(question, /Set shower_glass/);
+  assert.doesNotMatch(question, /washbasin_tap_plate/);
+  // Was immer gilt, steht trotzdem da.
+  assert.match(question, /Set radiator_added true only if image 2 shows a radiator/);
+  assert.match(question, /Set washbasin_count to the number of separate washbasins/);
 });
