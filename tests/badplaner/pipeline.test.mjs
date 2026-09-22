@@ -632,7 +632,10 @@ test('der Prompt haelt den Vordergrund und den Waschtischunterbau fest', async (
   // Der Tuerfluegel im Vordergrund gehoert zum Bild.
   // 22.09.: der Satz sagte "takes up the same part of the picture as before", die Pruefung verwirft
   // aber nur das voellige Verschwinden. Prompt und Pruefung sagen jetzt dasselbe.
-  assert.match(prompt, /Whatever stands in the immediate foreground at the edge of image 1 stays in the picture and is never removed to show more of the room/);
+  // 22.09., nach Diegos Pruefung: nur Gebautes. Ein zweites Waschbecken am Bildrand darf weg,
+  // die Auswahl verlangt es; das war frueher ein "verlorener Vordergrund".
+  assert.match(prompt, /What is built stays at the edge of the picture too: an open door leaf, a door frame, the near edge of a wall/);
+  assert.match(prompt, /Fixtures, furniture and loose objects that the CHANGE and TAKE AWAY lists take out may disappear/);
   assert.doesNotMatch(prompt, /takes up the same part of the picture as before/);
   assert.match(prompt, /Every window keeps the same share of the picture it has in image 1/);
   // "Loose furniture is gone" hat im Gaeste-WC den Waschtischunterbau mitgenommen.
@@ -1448,7 +1451,7 @@ test('the image prompt carries no leftover source code (quote, plus, indentation
   const prompt = gen.body.contents[0].parts[0].text;
   // Seit 637f03a stand mitten im Prompt woertlich: "\n    + " (aus einem Template-String).
   assert.doesNotMatch(prompt, /"\s*\n\s*\+\s*"/);
-  assert.match(prompt, /never create extra floor area\. Each of the four edges of the result cuts through the very same things/);
+  assert.match(prompt, /never create extra floor area\. The view is measured by the structure of the room/);
 });
 
 test('beide Pruefungen denken wenig, das Bildmodell bleibt unveraendert', async () => {
@@ -1748,17 +1751,23 @@ test('Eine andere Zahl von Waschbecken als gewaehlt wird verworfen', async () =>
   assert.match(leadMailOf(single), /1 washbasins were drawn although 2 was chosen/);
 });
 
-test('Eine vergroesserte Dusche wird verworfen und der Prompt nennt die Nasszone neutral', async () => {
-  const h = twice(shower({ shower_footprint_grown: true }));
-  assert.equal((await h.invoke(showerPayload())).statusCode, 502);
-  assert.match(leadMailOf(h), /takes clearly more floor than the wet area the photo already has/);
+test('Eine groessere Dusche ist erlaubt, ein zugemauerter Ruecksprung nicht', async () => {
+  // Diego, 22.09., an den Fotos des fertigen Bades: die Dusche darf nach hinten breiter werden.
+  const gross = harness({ checks: [shower({ shower_footprint_grown: true })] });
+  const res = await gross.invoke(showerPayload());
+  assert.equal(res.statusCode, 200, 'mehr Duschflaeche ist gewollt, kein Fehler');
+  assert.ok(res.body.image);
 
-  const good = harness({ checks: [shower()] });
-  assert.equal((await good.invoke(showerPayload())).statusCode, 200);
-  const prompt = good.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
-  // Eine einzige, neutrale Formulierung: keine Wanne mehr, weil nicht jedes Bad eine hat.
-  assert.match(prompt, /it covers only the wet area image 1 already has, whatever stood there, a shower tray, a shower enclosure or a bathtub, and never more floor than that/);
-  assert.doesNotMatch(prompt, /A bathtub that becomes a shower uses only the bathtub's own footprint/);
+  // Was zaehlt, ist der Ruecksprung: wird er zugemauert, geht kein Bild raus.
+  const zu = twice(shower({ wall_element_lost: true }));
+  assert.equal((await zu.invoke(showerPayload())).statusCode, 502);
+  assert.match(leadMailOf(zu), /a recess, alcove, niche or step of the wall that is in the photo was filled in or straightened/);
+
+  const prompt = gross.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
+  assert.match(prompt, /it may reach further into the rear zone of the room than the old shower tray, shower enclosure or bathtub did/);
+  assert.match(prompt, /the recess, alcove or wall offset it stands in keeps its width and its depth and stays open/);
+  // Das alte Pauschalverbot ist weg, hier wie in der Spezifikation.
+  assert.doesNotMatch(prompt, /never more floor than that/);
   assert.doesNotMatch(prompt, /inside the original wet-area footprint/);
 });
 
@@ -1978,28 +1987,25 @@ test('Die zwei Fehlerwege bleiben getrennt: verworfen ist nicht dasselbe wie ung
   assert.doesNotMatch(brokenRes.body.error, /HTTP|JSON|Timeout|500/);
 });
 
-test('Der Duschgrundriss wird nur mit Dusche verlangt, dann aber verbindlich', async () => {
-  // Mit gewaehlter Dusche: fehlt die Antwort, geht kein Bild raus (Codex, 22.09.).
-  const ohne = twice(shower({ shower_footprint_grown: undefined }));
-  const res = await ohne.invoke(showerPayload());
-  assert.equal(res.statusCode, 502);
-  assert.equal(res.body.code, 'RENDER_REJECTED');
-  assert.equal(res.body.image, undefined);
-  assert.match(leadMailOf(ohne), /the check did not answer shower_footprint_grown/);
-
-  // false ist konform, true verwirft.
-  const ok = harness({ checks: [shower({ shower_footprint_grown: false })] });
-  assert.equal((await ok.invoke(showerPayload())).statusCode, 200);
-  const grown = twice(shower({ shower_footprint_grown: true }));
-  assert.equal((await grown.invoke(showerPayload())).statusCode, 502);
-  assert.match(leadMailOf(grown), /takes clearly more floor than the wet area the photo already has/);
+test('Der Duschgrundriss verwirft nichts mehr, weder fehlend noch gewachsen', async () => {
+  // Bis zum 22.09. mittags war jede dieser drei Antworten ein Grund zum Verwerfen. Diego hat
+  // an zwei Fotos des fertigen Bades entschieden: eine groessere Dusche ist gewollt.
+  for (const antwort of [undefined, false, true]) {
+    const h = harness({ checks: [shower({ shower_footprint_grown: antwort })] });
+    const r = await h.invoke(showerPayload());
+    assert.equal(r.statusCode, 200, `shower_footprint_grown=${String(antwort)} darf nicht blockieren`);
+  }
+  const frei = harness({ checks: [shower({ shower_footprint_grown: true })] });
+  await frei.invoke(showerPayload());
+  assert.doesNotMatch(leadMailOf(frei), /takes clearly more floor than the wet area/);
 
   // Ohne Dusche wird nicht danach gefragt und nichts verlangt.
   const keine = harness({ checks: [() => checkedInv({}, {}, { shower_footprint_grown: undefined })] });
   const keineRes = await keine.invoke(payload({ dusche: 'keine', badewanne: 'keine' }));
   assert.equal(keineRes.statusCode, 200, 'ohne Dusche darf das fehlende Feld nicht blockieren');
   assert.doesNotMatch(checkQuestionOf(keine), /shower_footprint_grown/);
-  assert.match(checkQuestionOf(ok), /Set shower_footprint_grown true only if the shower in image 2 takes clearly more floor/);
+  // Gefragt wird weiter, als Diagnose - nur verworfen wird nicht mehr.
+  assert.match(checkQuestionOf(frei), /Set shower_footprint_grown true only if the shower in image 2 takes clearly more floor/);
 });
 
 test('Die interne Mail zeigt beide Versuche ungekuerzt und legt beide verworfenen Bilder bei', async () => {
@@ -2008,7 +2014,9 @@ test('Die interne Mail zeigt beide Versuche ungekuerzt und legt beide verworfene
   const vieleBefunde = {
     view_changed: true,
     radiators_before: 0, radiators_after: 1,
-    shower_footprint_grown: true,
+    wall_element_lost: true,
+    shower_fittings_split: true,
+    drain_side: 'long',
     washbasin_tap_plate: 'none',
     shower_rosette_count: 1,
     shower_overhead_shape: 'square',
@@ -2048,11 +2056,12 @@ test('Prompt: Kamera und Bildausschnitt sind als pruefbare Invariante formuliert
   // verschwanden und es kam Boden und Wand dazu, die im Foto gar nicht sind.
   const h = harness(); await h.invoke();
   const prompt = promptOf(h);
-  assert.match(prompt, /Each of the four edges of the result cuts through the very same things it cuts through in image 1/);
+  assert.match(prompt, /The view is measured by the structure of the room, not by what stands in it/);
+  assert.match(prompt, /the room corners, the wall and ceiling edges, the line where wall meets floor and the vanishing lines run exactly as in image 1/);
   assert.match(prompt, /never step back, never turn the camera/);
-  // Die Tuer war nicht entfernt, sie war aus dem Bild gerutscht: was ganz zu sehen ist, bleibt ganz.
-  assert.match(prompt, /everything image 1 shows whole stays whole/);
-  assert.match(prompt, /no window, no door, no fixture, no tap, no mirror and no piece of furniture that image 1 shows completely may end up cut off/);
+  // Und ausdruecklich: ein entferntes Waschbecken am Rand ist kein Kamerawechsel.
+  assert.match(prompt, /that is not a change of view/);
+  assert.doesNotMatch(prompt, /everything image 1 shows whole stays whole/);
 });
 
 test('Prompt: kein erfundener Heizkoerper, und die Regel steht nur einmal', async () => {
@@ -2065,23 +2074,14 @@ test('Prompt: kein erfundener Heizkoerper, und die Regel steht nur einmal', asyn
   assert.equal(wieOft(prompt, 'never add a radiator'), 1, 'die Regel steht genau einmal');
 });
 
-test('Prompt: Duschgrundriss und Nische sind masslich gebunden', async () => {
+test('Prompt: die Dusche darf wachsen, der Ruecksprung nicht verschwinden', async () => {
   const h = harness(); await h.invoke(showerPayload());
   const prompt = promptOf(h);
-  assert.match(prompt, /its floor rectangle keeps the same length along every wall it touches/);
-  assert.match(prompt, /the recess or alcove it stands in keeps its width and its depth/);
-  // Die Regel gehoert an eine Stelle: nicht mehr zusaetzlich im Text der Duschoption.
-  assert.equal(wieOft(prompt, 'never more floor than that'), 1);
-});
-
-test('Prompt: jedes gewaehlte Produkt muss ganz im Bild sein, ohne den Ausschnitt zu aendern', async () => {
-  // Der Aurelia-Mischer war am Bildrand abgeschnitten und damit nicht beurteilbar.
-  const h = harness(); await h.invoke();
-  const prompt = promptOf(h);
-  assert.match(prompt, /Every product named under CHANGE must be judgeable: its whole shape inside the picture, not cut off by the border/);
-  // Kein Widerspruch zur Ausschnitt-Regel: die geht vor.
-  assert.match(prompt, /The framing is never changed to achieve this/);
-  assert.match(prompt, /nothing that image 1 shows whole cut off by the border/);
+  assert.match(prompt, /it may reach further into the rear zone of the room than the old shower tray, shower enclosure or bathtub did, and it may be wider than they were/);
+  assert.match(prompt, /the recess, alcove or wall offset it stands in keeps its width and its depth and stays open/);
+  assert.match(prompt, /the shower never runs over a window, a door, their reveals or a wall step/);
+  // Das Pauschalverbot steht nirgends mehr, auch nicht im Text der Duschoption.
+  assert.equal(wieOft(prompt, 'never more floor than that'), 0);
 });
 
 test('Prompt: die Aurelia-Formen stehen so drin, wie die Produktfotos sie zeigen', async () => {
@@ -2123,4 +2123,40 @@ test('Pruefer: Rosetten und Griff werden eindeutig gefragt', async () => {
   assert.match(frage, /do not count the round wall outlet the hose comes out of and do not count the wall arm of the overhead shower/);
   // Die Riffelung sitzt nur auf einem kurzen Stueck: "along it" haette "smooth" nahegelegt.
   assert.match(frage, /when ANY part of the hand shower handle has fine grooves or knurling, even a short band/);
+  // Diego, 22.09.: der Mischer war da und richtig, der Pruefer sagte "none".
+  assert.match(frage, /Answer "none" only when there is no mixer at the washbasin at all/);
+  assert.match(frage, /a mixer that is partly hidden behind the basin, seen at a sharp angle or simply small in the picture is still there/);
+});
+
+test('Pruefer: der Blickwinkel wird nur an der Struktur gemessen', async () => {
+  // Diego, 22.09.: der Pruefer hielt das geplante Entfernen des zweiten Waschbeckens im
+  // Vordergrund fuer eine Kameradrehung.
+  const h = harness(); await h.invoke(showerPayload());
+  const frage = checkQuestionOf(h);
+  assert.match(frage, /Set view_changed true ONLY on structural evidence that the camera moved/);
+  assert.match(frage, /Fixtures, furniture and loose objects that are gone or new are NOT evidence of a changed view/);
+  // Der Vordergrund zaehlt nur noch, wenn er gebaut ist.
+  assert.match(frage, /Then say whether something BUILT stands in the immediate foreground/);
+  assert.match(frage, /a washbasin, a toilet, a bidet, a shower tray, furniture and loose objects do NOT count here/);
+});
+
+test('Geteilte Duscharmaturen bleiben ein Grund zum Verwerfen', async () => {
+  // Der belegte Fehler vom 22.09.: Kopfbrause und Mischer auf zwei verschiedenen Seiten.
+  const geteilt = twice(shower({ shower_fittings_split: true }));
+  const res = await geteilt.invoke(showerPayload());
+  assert.equal(res.statusCode, 502);
+  assert.equal(res.body.code, 'RENDER_REJECTED');
+  assert.equal(res.body.image, undefined);
+  assert.match(leadMailOf(geteilt), /the shower fittings are spread over two walls instead of sitting together on one wall/);
+  const frage = checkQuestionOf(geteilt);
+  assert.match(frage, /the overhead shower on one side and the mixer or the hand shower on another/);
+});
+
+test('Erfundene Heizkoerper bleiben ein Grund zum Verwerfen', async () => {
+  // Zwei erfundene Heizkoerper, von Diego an den Fotos bestaetigt.
+  const zwei = twice(shower({ radiators_before: 0, radiators_after: 2 }));
+  const res = await zwei.invoke(showerPayload());
+  assert.equal(res.statusCode, 502);
+  assert.equal(res.body.image, undefined);
+  assert.match(leadMailOf(zwei), /radiator/);
 });
