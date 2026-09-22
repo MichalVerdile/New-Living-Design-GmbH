@@ -705,3 +705,55 @@
   .cta-button { width: 100%; max-width: 300px; }
   .section-header { margin-bottom: 3rem; }
 }
+
+/* Unterkategorie-Karten (NLD-Medienpaket 22.09.2026) */
+.subcategory-grid {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+  gap: 2rem;
+  max-width: 1200px;
+  margin: 4rem auto 0;
+  padding: 0 2rem;
+}
+
+.subcategory-card {
+  scroll-margin-top: 6rem;
+}
+
+.subcategory-card figure {
+  margin: 0;
+}
+
+.subcategory-card img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: 1rem;
+}
+
+.subcategory-card figcaption {
+  margin-top: 0.75rem;
+}
+
+.subcategory-title {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.subcategory-brand {
+  font-size: 0.95rem;
+}
+
+.category-section.light .subcategory-title { color: #1f2937; }
+.category-section.light .subcategory-brand { color: #475569; }
+.category-section.dark .subcategory-title { color: #ffffff; }
+.category-section.dark .subcategory-brand { color: #e5e7eb; }
+
+@media (max-width: 768px) {
+  .subcategory-grid { margin-top: 2.5rem; padding: 0 1rem; gap: 1.5rem; }
+}

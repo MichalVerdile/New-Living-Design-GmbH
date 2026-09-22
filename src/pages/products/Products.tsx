@@ -2,17 +2,85 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import styles from './Products.module.css';
 import heroImage from '../../assets/14264-rchi-mirabilia-villas-01.webp';
-import bodenbelaegeImage from '../../assets/Dosem_Onyx_WhiteBlue_60x120120x270_bathroom_HD_1.jpg';
 import wandverkleidungenImage from '../../assets/Inediti_05_HP_desktop.webp';
-import badmoebelImage from '../../assets/PRIME_mobili_generale.webp';
 import armaturenImage from '../../assets/Newform_Deltazero_P2.webp';
 import sanitaerapparateImage from '../../assets/Ambiente-Set-5.webp';
 import heizkoerperImage from '../../assets/image.avif';
-import wellnessImage from '../../assets/Zen_Combi_duo_Linear_6-1030x1030.webp';
 import beleuchtungenImage from '../../assets/BEAM_STICK_family_color_edited.avif';
 import accessoiresImage from '../../assets/viv-au2420bmset5_5.avif';
 import { SEOHead } from '../../components';
-import { photoUrl } from '../../data/references';
+
+// Herstellerbilder aus dem NLD-Medienpaket vom 22.09.2026 (Webnutzung von NLD bestätigt).
+// Grösste WebP-Datei als src, 960w-Variante für kleinere Viewports.
+const media = (path: string, width: number, height: number, alt: string) => ({
+  src: `/images/${path}-${width}w.webp`,
+  srcSet: `/images/${path}-960w.webp 960w, /images/${path}-${width}w.webp ${width}w`,
+  width,
+  height,
+  alt,
+});
+
+type SubcategoryCard = {
+  id?: string;
+  title: string;
+  brand: string;
+  image: ReturnType<typeof media>;
+};
+
+const heroes = {
+  bad: media('bad/bad-hero-edone-hexis', 1600, 900, 'Edoné Hexis Badmöbel in einem grosszügigen, modern gestalteten Badezimmer'),
+  kuechen: media('kuechen/kuechen-hero-febal-origina', 1600, 900, 'Offene Febal Casa Origina Küche mit Insel und raumhohen Schränken'),
+  wellness: media('wellness/wellness-hero-novellini-home-oasis', 1600, 900, 'Novellini Home Oasis mit Sauna, Dusche und Spa in einem hellen Wellnessraum'),
+  platten: media('platten/platten-hero-emilgroup-feinsteinzeug', 1600, 900, 'Emilgroup Feinsteinzeug in Holzoptik in einem hellen Badezimmer'),
+};
+
+const cards: Record<keyof typeof heroes, SubcategoryCard[]> = {
+  bad: [
+    { id: 'badmoebel', title: 'Badmöbel', brand: 'Froidevaux AG', image: media('bad/bad-badmoebel-froidevaux-massarbeit', 1600, 900, 'Froidevaux Waschtischmöbel aus Holz mit zwei Aufsatzbecken') },
+    { id: 'armaturen', title: 'Armaturen', brand: 'Gessi', image: media('bad/bad-armaturen-gessi-jacqueline', 1136, 639, 'Gessi Designarmaturen in Bronze an dunklen Aufsatzwaschbecken') },
+    { id: 'sanitaerkeramik', title: 'Sanitärkeramik', brand: 'Ceramica Cielo', image: media('bad/bad-sanitaerkeramik-cielo-le-giare', 1600, 900, 'Weisse Le Giare Sanitärkeramik von Ceramica Cielo vor blauem Hintergrund') },
+    { id: 'duschen', title: 'Duschen & Duschabtrennungen', brand: 'Vismaravetro', image: media('bad/bad-duschen-vismaravetro-suite', 1600, 900, 'Vismaravetro Dusch- und Trennwandsystem in einem modernen Bad') },
+    { id: 'accessoires', title: 'Badaccessoires', brand: 'Capannoli', image: media('bad/bad-accessoires-capannoli-tratto', 1600, 900, 'Capannoli Badaccessoires in verschiedenen Metalloberflächen an einer hellen Wand') },
+    { id: 'designheizkoerper', title: 'Designheizkörper', brand: 'Antrax IT', image: media('bad/bad-designheizkoerper-antrax-pypeline', 1600, 900, 'Antrax IT Pypeline Designheizkörper in einem schwarzen Badezimmer mit freistehender Badewanne') },
+    { title: 'Designheizkörper', brand: 'Cordivari Design', image: media('bad/bad-designheizkoerper-cordivari', 1552, 873, 'Cordivari Designheizkörper in Spiegeloptik über einer Holzkonsole') },
+  ],
+  kuechen: [
+    { id: 'kuechenwelten', title: 'Küchenwelten', brand: 'Febal Casa', image: media('kuechen/kuechen-card-febal-origina', 1008, 567, 'Febal Casa Origina Küche mit farbigem Inseltisch und Holzfronten') },
+  ],
+  wellness: [
+    { id: 'whirlpool', title: 'Whirlpool & Minipool', brand: 'Novellini', image: media('wellness/wellness-whirlpool-novellini-moon', 1600, 900, 'Novellini Moon Whirlpool im Freien mit integrierter Beleuchtung') },
+    { title: 'Whirlpool & Minipool', brand: 'Albatros Wellness', image: media('wellness/wellness-whirlpool-albatros-soreha', 1024, 576, 'Albatros Soreha Whirlpool mit Holzverkleidung und sprudelndem Wasser') },
+    { id: 'sauna', title: 'Sauna', brand: 'Novellini', image: media('wellness/wellness-sauna-novellini-fun', 1600, 900, 'Novellini Fun Sauna mit Glasfront in einem warm gestalteten Wohnbereich') },
+    { id: 'hammam', title: 'Hammam & Dampfbad', brand: 'Megius', image: media('wellness/wellness-hammam-megius-zen-combi', 1600, 900, 'Megius Zen Combi Sauna und Hammam mit Dusche in einem modernen Wellnessraum') },
+  ],
+  platten: [
+    { id: 'grossformate', title: 'Grossformate & Marmoroptik', brand: 'La Fabbrica AVA', image: media('platten/platten-grossformat-lafabbrica-venezia', 1600, 900, 'La Fabbrica AVA Venezia Platten in schwarzer Marmoroptik in einem eleganten Wohnraum') },
+    { id: 'mosaik', title: 'Mosaik', brand: 'SICIS', image: media('platten/platten-mosaik-sicis-elegance', 1600, 900, 'Künstlerische SICIS Mosaikwand mit abstrahiertem Gesicht in einem Wohnraum') },
+    { id: 'parkett', title: 'Parkett & Holz', brand: 'Skema', image: media('platten/platten-parkett-skema-villa', 1408, 792, 'Skema Villa Parkettboden aus heller Eiche in einem modernen Interieur') },
+    { id: 'spc', title: 'SPC & Designböden', brand: 'Zenon Bath & SPC Surfaces', image: media('platten/platten-spc-zenon-tempo', 1600, 900, 'Zenon Tempo SPC-Boden in heller Holzoptik in einem Schlafzimmer') },
+    { title: 'SPC & Designböden', brand: 'Déco', image: media('platten/platten-spc-deco-clap', 1600, 900, 'Déco Clap Designboden in Holzoptik in einem warm beleuchteten Interieur') },
+    { id: 'wandbelaege', title: 'Dekorative Wandbeläge & Teppiche', brand: 'Inkiostro Bianco', image: media('platten/platten-wandbelag-inkiostro-white-paper', 1600, 900, 'Inkiostro Bianco Wandverkleidung mit geometrischem Muster und farbigen Sesseln') },
+    { id: 'naturstein', title: 'Naturstein & Wandverkleidungen', brand: 'Mosavit', image: media('platten/platten-naturstein-mosavit-fachaleta-quartz-marfil', 1520, 855, 'Mosavit Fachaleta Quartz Marfil Natursteinverkleidung an einer hellen Aussenwand') },
+  ],
+};
+
+const HERO_SIZES = '(max-width: 1024px) 100vw, 568px';
+
+const SubcategoryGrid: React.FC<{ items: SubcategoryCard[]; label: string }> = ({ items, label }) => (
+  <ul className={styles['subcategory-grid']} aria-label={label}>
+    {items.map((card) => (
+      <li key={card.image.src} id={card.id} className={styles['subcategory-card']}>
+        <figure>
+          <img {...card.image} sizes="(max-width: 768px) 100vw, 368px" loading="lazy" decoding="async" />
+          <figcaption>
+            <h4 className={styles['subcategory-title']}>{card.title}</h4>
+            <span className={styles['subcategory-brand']}>{card.brand}</span>
+          </figcaption>
+        </figure>
+      </li>
+    ))}
+  </ul>
+);
 
 const Products: React.FC = () => {
   const [isVisible, setIsVisible] = useState(false);
@@ -113,9 +181,10 @@ const Products: React.FC = () => {
                 </div>
               </div>
               <div className={styles['category-image']}>
-                <img src={badmoebelImage} alt="Wandhängendes Badmöbel mit zwei Aufsatzbecken und Spiegeln vor grossformatigen Platten" />
+                <img {...heroes.bad} sizes={HERO_SIZES} />
               </div>
             </div>
+            <SubcategoryGrid items={cards.bad} label="Bad-Kategorien" />
           </div>
 
           {/* Küchen */}
@@ -137,9 +206,10 @@ const Products: React.FC = () => {
                 </div>
               </div>
               <div className={styles['category-image']}>
-                <img src={photoUrl('kueche-insel-messing-01.webp')} alt="Realisierte Küche mit Insel, Messingdetails und Einbaugeräten" loading="lazy" width="1200" height="800" />
+                <img {...heroes.kuechen} sizes={HERO_SIZES} />
               </div>
             </div>
+            <SubcategoryGrid items={cards.kuechen} label="Küchen-Kategorien" />
           </div>
 
           {/* Wellness */}
@@ -163,9 +233,10 @@ const Products: React.FC = () => {
                 </div>
               </div>
               <div className={styles['category-image']}>
-                <img src={wellnessImage} alt="Kombinierte Wellnesskabine mit Saunabereich und Duschkabine" />
+                <img {...heroes.wellness} sizes={HERO_SIZES} />
               </div>
             </div>
+            <SubcategoryGrid items={cards.wellness} label="Wellness-Kategorien" />
           </div>
 
           {/* Platten */}
@@ -187,9 +258,10 @@ const Products: React.FC = () => {
                 </div>
               </div>
               <div className={styles['category-image']}>
-                <img src={bodenbelaegeImage} alt="Grossformatige Keramikplatten für Wand und Boden" />
+                <img {...heroes.platten} sizes={HERO_SIZES} />
               </div>
             </div>
+            <SubcategoryGrid items={cards.platten} label="Platten-Kategorien" />
           </div>
 
           {/* Wandverkleidungen */}
