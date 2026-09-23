@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { SEOHead } from '../../components';
 import { business, bathPackages, localBusinessJsonLd } from '../../config/business';
-import { homeReferencePhotos, photoUrl } from '../../data/references';
+import { homeReferencePhotos, photoUrl, referenceById } from '../../data/references';
 import bathroomImage from '../../assets/PRIME_mobili_generale.webp';
 import tilesImage from '../../assets/Dosem_Onyx_WhiteBlue_60x120120x270_bathroom_HD_1.jpg';
 import wellnessImage from '../../assets/Zen_Combi_duo_Linear_6-1030x1030.webp';
@@ -10,10 +10,13 @@ import styles from './Home.module.css';
 
 const categories = [
   { title: 'Bad', label: 'Aufeinander abgestimmt', text: 'Badmöbel, Waschtische, Armaturen, Keramik, Dusche und Badewanne – gemeinsam ausgewählt, damit Form, Farbe und Funktion zusammenpassen.', href: '/produkte#bad', image: bathroomImage, alt: 'Badmöbel und Waschtisch aus dem Produktsortiment' },
-  { title: 'Küchen', label: 'Für Ihren Alltag geplant', text: 'Raumaufteilung, Fronten, Arbeitsflächen, Geräte und Licht. Mit 3D-Planung, Lieferung, Montage und auf Wunsch mit Renovation der bestehenden Küche.', href: '/produkte#kuechen', image: photoUrl('kueche-insel-messing-01.webp', true), alt: 'Realisierte Küche mit Insel, Messingdetails und Einbaugeräten' },
+  { title: 'Küchen', label: 'Für Ihren Alltag geplant', text: 'Raumaufteilung, Fronten, Arbeitsflächen, Geräte und Licht. Mit 3D-Planung, Lieferung, Montage und auf Wunsch mit Renovation der bestehenden Küche.', href: '/produkte#kuechen', image: photoUrl('kueche-insel-messing-01.webp', true), srcSet: `${photoUrl('kueche-insel-messing-01.webp', true)} 480w, ${photoUrl('kueche-insel-messing-01.webp')} 900w`, alt: 'Realisierte Küche mit Insel, Messingdetails und Einbaugeräten' },
   { title: 'Platten', label: 'Vom Muster in den Raum', text: 'Keramik, Feinsteinzeug, Mosaik und Grossformate für Wand und Boden – ausgewählt nach Wirkung, Nutzung und Pflege.', href: '/produkte#platten', image: tilesImage, alt: 'Badezimmer mit grossformatigen Wandplatten in blauer und weisser Onyxoptik' },
   { title: 'Wellness', label: 'Entspannung, die zum Raum passt', text: 'Sauna, Dampfbad, Wellnesskabine oder Whirlwanne. Wir klären Platz, Anschlüsse und Nutzung und zeigen Ihnen passende Möglichkeiten.', href: '/produkte#wellness', image: wellnessImage, alt: 'Wellness-Kabine aus dem Produktsortiment' },
 ];
+
+// Ruhiges Messingdetail aus einer realisierten Dusche als Ergänzung zum Ausstellungsbild.
+const heroDetail = referenceById('dusche-zellige-petrol-messing')?.photos.find((p) => p.file === 'dusche-zellige-petrol-04.webp');
 
 const Home: React.FC = () => {
   const showroomImage = photoUrl('ausstellung-zofingen-01.webp');
@@ -37,7 +40,8 @@ const Home: React.FC = () => {
           <div className={styles.heroAddress}><span>{business.address.street}</span><span>{business.address.zip} {business.address.city}</span></div>
         </div>
         <figure className={styles.heroFigure}>
-          <img src={showroomImage} alt="Einblick in unsere Ausstellung in Zofingen: Waschtische, ovale Spiegel und eine Wand in Onyxoptik" width="1200" height="1600" fetchPriority="high" />
+          <img className={styles.heroImage} src={showroomImage} srcSet={`${photoUrl('ausstellung-zofingen-01.webp', true)} 480w, ${showroomImage} 1200w`} sizes="(max-width: 767px) 100vw, max(50vw, 600px)" alt="Einblick in unsere Ausstellung in Zofingen: Waschtische, ovale Spiegel und eine Wand in Onyxoptik" width="1200" height="1600" fetchPriority="high" />
+          {heroDetail && <img className={styles.heroDetail} src={photoUrl(heroDetail.file, true)} alt={heroDetail.alt} width="480" height="640" loading="lazy" decoding="async" />}
           <figcaption><span>New Living Design</span><span>Unsere Ausstellung</span></figcaption>
         </figure>
       </section>
@@ -46,10 +50,10 @@ const Home: React.FC = () => {
         <div className={styles.container}>
           <div className={styles.sectionHead}><div><p className={styles.eyebrow}>Bad, Küchen, Platten und Wellness</p><h2 id="sortiment-title">Vier Bereiche. Eine stimmige Auswahl.</h2></div><Link to="/produkte" className={styles.textLink}>Alle Produkte ansehen</Link></div>
           <div className={styles.categoryGrid}>
-            {categories.map((category) => (
+            {categories.map((category, index) => (
               <Link key={category.title} to={category.href} className={styles.categoryCard}>
-                <div className={styles.categoryImage}><img src={category.image} alt={category.alt} width="640" height="600" loading="lazy" /></div>
-                <div className={styles.categoryHeading}><h3>{category.title}</h3></div>
+                <div className={styles.categoryImage}><img src={category.image} srcSet={category.srcSet} sizes="(max-width: 767px) 100vw, (max-width: 1100px) 50vw, 300px" alt={category.alt} width="640" height="800" loading="lazy" decoding="async" /></div>
+                <div className={styles.categoryHeading}><span className={styles.categoryNumber} aria-hidden="true">{String(index + 1).padStart(2, '0')}</span><h3>{category.title}</h3></div>
                 <p className={styles.categoryLabel}>{category.label}</p><p className={styles.categoryText}>{category.text}</p>
               </Link>
             ))}
@@ -81,7 +85,7 @@ const Home: React.FC = () => {
           <div className={styles.referenceGrid}>
             {homeReferencePhotos.map(({ reference, photo }) => (
               <Link key={reference.id} to={`/referenzen#${reference.id}`} className={styles.referenceCard}>
-                <img src={photoUrl(photo.file, true)} alt={photo.alt} loading="lazy" width="640" height="853" /><div><h3>{reference.title}</h3></div>
+                <img src={photoUrl(photo.file, true)} srcSet={`${photoUrl(photo.file, true)} 480w, ${photoUrl(photo.file)} 1067w`} sizes="(max-width: 767px) 100vw, 40vw" alt={photo.alt} loading="lazy" decoding="async" width="480" height="640" /><div><h3>{reference.title}</h3></div>
               </Link>
             ))}
           </div>

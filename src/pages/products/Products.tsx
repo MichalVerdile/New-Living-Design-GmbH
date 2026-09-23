@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
 import styles from './Products.module.css';
-import heroImage from '../../assets/14264-rchi-mirabilia-villas-01.webp';
 import wandverkleidungenImage from '../../assets/Inediti_05_HP_desktop.webp';
 import armaturenImage from '../../assets/Newform_Deltazero_P2.webp';
 import sanitaerapparateImage from '../../assets/Ambiente-Set-5.webp';
@@ -9,6 +8,7 @@ import heizkoerperImage from '../../assets/image.avif';
 import beleuchtungenImage from '../../assets/BEAM_STICK_family_color_edited.avif';
 import accessoiresImage from '../../assets/viv-au2420bmset5_5.avif';
 import { SEOHead } from '../../components';
+import { photoUrl } from '../../data/references';
 
 // Herstellerbilder aus dem NLD-Medienpaket vom 22.09.2026 (Webnutzung von NLD bestätigt).
 // Grösste WebP-Datei als src, 960w-Variante für kleinere Viewports.
@@ -64,14 +64,14 @@ const cards: Record<keyof typeof heroes, SubcategoryCard[]> = {
   ],
 };
 
-const HERO_SIZES = '(max-width: 1024px) 100vw, 568px';
+const HERO_SIZES = '(max-width: 1024px) calc(100vw - 3rem), 680px';
 
 const SubcategoryGrid: React.FC<{ items: SubcategoryCard[]; label: string }> = ({ items, label }) => (
   <ul className={styles['subcategory-grid']} aria-label={label}>
     {items.map((card) => (
       <li key={card.image.src} id={card.id} className={styles['subcategory-card']}>
         <figure>
-          <img {...card.image} sizes="(max-width: 768px) 100vw, 368px" loading="lazy" decoding="async" />
+          <img {...card.image} sizes="(max-width: 1024px) 50vw, 300px" loading="lazy" decoding="async" />
           <figcaption>
             <h4 className={styles['subcategory-title']}>{card.title}</h4>
             <span className={styles['subcategory-brand']}>{card.brand}</span>
@@ -83,23 +83,7 @@ const SubcategoryGrid: React.FC<{ items: SubcategoryCard[]; label: string }> = (
 );
 
 const Products: React.FC = () => {
-  const [isVisible, setIsVisible] = useState(false);
-
-  useEffect(() => {
-    setIsVisible(true);
-
-    // CSS-Module-kompatible Reveal-Animation
-    const timer = setTimeout(() => {
-      const allElements = document.querySelectorAll('.' + styles['scroll-reveal']);
-      allElements.forEach((el, index) => {
-        setTimeout(() => {
-          el.classList.add(styles.visible);
-        }, index * 200);
-      });
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, []);
+  const showroomImage = photoUrl('ausstellung-zofingen-01.webp');
 
   return (
     <main id="main-content" className={styles['products-page']}>
@@ -112,33 +96,31 @@ const Products: React.FC = () => {
         image="https://newlivingdesign.ch/assets/14264-rchi-mirabilia-villas-01.webp"
       />
 
-      {/* Hero Section */}
+      {/* Hero: echte Ausstellung in Zofingen statt Symbolbild */}
       <section className={styles.hero}>
-        <div className={styles['hero-background']}>
-          <div className={styles['hero-overlay']}></div>
+        <div className={styles['hero-content']}>
+          <h1 className={styles['hero-title']}>
+            <span className={styles['title-line']}>Bad, Küchen, Platten</span>
+            <span>&amp; Wellness.</span>
+          </h1>
+          <div className={styles['hero-description']}>
+            <p>
+              Eine Auswahl, die zusammenpasst.
+            </p>
+          </div>
+          <p className={styles['hero-scroll-indicator']}>Scrollen Sie nach unten</p>
+        </div>
+        <figure className={styles['hero-figure']}>
           <img
-            src={heroImage}
-            alt="Modernes Wohnhaus mit Pool in der Abenddämmerung"
-            className={styles['hero-bg-image']}
+            src={showroomImage}
+            srcSet={`${photoUrl('ausstellung-zofingen-01.webp', true)} 480w, ${showroomImage} 1200w`}
+            sizes="(max-width: 1024px) 100vw, 45vw"
+            alt="Einblick in unsere Ausstellung in Zofingen: Waschtische, ovale Spiegel und eine Wand in Onyxoptik"
+            width="1200"
+            height="1600"
+            fetchPriority="high"
           />
-        </div>
-        <div className={styles['hero-container']}>
-          <div className={`${styles['hero-content']} ${isVisible ? styles.visible : ''}`}>
-            <h1 className={styles['hero-title']}>
-              <span className={styles['title-line']}>Bad, Küchen, Platten</span>
-              <span>&amp; Wellness.</span>
-            </h1>
-            <div className={styles['hero-description']}>
-              <p>
-                Eine Auswahl, die zusammenpasst.
-              </p>
-            </div>
-          </div>
-          <div className={styles['hero-scroll-indicator']}>
-            <div className={styles['scroll-dot']}></div>
-            <span>Scrollen Sie nach unten</span>
-          </div>
-        </div>
+        </figure>
       </section>
 
       {/* Introduction Section */}
@@ -174,9 +156,9 @@ const Products: React.FC = () => {
                     gemeinsame Kombination aus. Dabei achten wir auf Masse, Materialien, Farben und die tägliche Nutzung.
                     Neben Serienmöbeln zeigen wir auch massgefertigte Lösungen aus Corian® und Korakril™.
                   </p>
-                  <div className={styles['category-highlights']} aria-label="Bad-Sortiment">
-                    <span>Badmöbel</span><span>Waschtische</span><span>Armaturen</span><span>Keramik</span><span>Duschen</span><span>Badewannen</span>
-                  </div>
+                  <ul className={styles['category-highlights']} aria-label="Bad-Sortiment">
+                    <li>Badmöbel</li><li>Waschtische</li><li>Armaturen</li><li>Keramik</li><li>Duschen</li><li>Badewannen</li>
+                  </ul>
                   <Link to="/kontakt" className={styles['category-link']}>Badberatung anfragen</Link>
                 </div>
               </div>
@@ -199,9 +181,9 @@ const Products: React.FC = () => {
                     Proportionen und Materialien vor der Bestellung. Lieferung, Montage und die Renovation der
                     bestehenden Küche koordinieren wir nach Bedarf.
                   </p>
-                  <div className={styles['category-highlights']} aria-label="Küchenleistungen">
-                    <span>Planung &amp; 3D</span><span>Lieferung</span><span>Montage</span><span>Renovation</span>
-                  </div>
+                  <ul className={styles['category-highlights']} aria-label="Küchenleistungen">
+                    <li>Planung &amp; 3D</li><li>Lieferung</li><li>Montage</li><li>Renovation</li>
+                  </ul>
                   <Link to="/kontakt" className={styles['category-link']}>Küchenberatung anfragen</Link>
                 </div>
               </div>
@@ -226,9 +208,9 @@ const Products: React.FC = () => {
                   <p>
                     Wellness sehen Sie bei uns in der Ausstellung in Zofingen.
                   </p>
-                  <div className={styles['category-highlights']} aria-label="Wellness-Sortiment">
-                    <span>Sauna</span><span>Dampf</span><span>Wellnesskabinen</span><span>Whirlwannen</span>
-                  </div>
+                  <ul className={styles['category-highlights']} aria-label="Wellness-Sortiment">
+                    <li>Sauna</li><li>Dampf</li><li>Wellnesskabinen</li><li>Whirlwannen</li>
+                  </ul>
                   <Link to="/kontakt" className={styles['category-link']}>Wellness-Beratung anfragen</Link>
                 </div>
               </div>
@@ -251,9 +233,9 @@ const Products: React.FC = () => {
                     bis zu grossen Platten für durchgehende Flächen. Für Terrassen und andere Aussenbereiche beraten wir
                     Sie auch zu geeigneten rutschhemmenden Oberflächen.
                   </p>
-                  <div className={styles['category-highlights']} aria-label="Platten-Sortiment">
-                    <span>Keramik</span><span>Feinsteinzeug</span><span>Mosaik</span><span>Grossformate</span><span>Outdoor</span>
-                  </div>
+                  <ul className={styles['category-highlights']} aria-label="Platten-Sortiment">
+                    <li>Keramik</li><li>Feinsteinzeug</li><li>Mosaik</li><li>Grossformate</li><li>Outdoor</li>
+                  </ul>
                   <Link to="/kontakt" className={styles['category-link']}>Plattenberatung anfragen</Link>
                 </div>
               </div>
@@ -264,116 +246,46 @@ const Products: React.FC = () => {
             <SubcategoryGrid items={cards.platten} label="Platten-Kategorien" />
           </div>
 
-          {/* Wandverkleidungen */}
-          <div className={`${styles['category-section']} ${styles.light}`}>
-            <div className={styles['category-content']}>
-              <div className={styles['category-text']}>
-                <h3 className={styles['category-title']}>Nicht jede Wand braucht dieselbe Oberfläche</h3>
-                <div className={styles['category-description']}>
-                  <p>
-                    Neben Keramik bieten wir Glasfaser- und Vinyltapeten, Holzverkleidungen, Mosaik und Vetrite. Wir zeigen
-                    Ihnen, welche Oberfläche für den jeweiligen Raum geeignet ist und wie sie sich mit Boden, Möbeln und Licht kombinieren lässt.
-                  </p>
-                </div>
-              </div>
-              <div className={styles['category-image']}>
-                <img src={wandverkleidungenImage} alt="Wohnraum mit gemusterter Wandverkleidung" />
-              </div>
-            </div>
+          {/* Weitere Themen: ruhiges Raster statt sechs gleich gewichteter Vollbreiten-Abschnitte.
+              Die drei 380x347-Bilder werden nie breiter als ihre Originalgrösse gezeigt (siehe .detail-small). */}
+          <div className={styles.details}>
+            {/* Wandverkleidungen */}
+            <article className={styles.detail}>
+              <img src={wandverkleidungenImage} alt="Wohnraum mit gemusterter Wandverkleidung" width="1400" height="787" loading="lazy" decoding="async" />
+              <h3 className={styles['category-title']}>Nicht jede Wand braucht dieselbe Oberfläche</h3>
+              <p>Neben Keramik bieten wir Glasfaser- und Vinyltapeten, Holzverkleidungen, Mosaik und Vetrite. Wir zeigen Ihnen, welche Oberfläche für den jeweiligen Raum geeignet ist und wie sie sich mit Boden, Möbeln und Licht kombinieren lässt.</p>
+            </article>
+            {/* Armaturen */}
+            <article className={styles.detail}>
+              <img src={armaturenImage} alt="Schwarze Wannenarmatur mit Handbrause auf einer dunklen Steinfläche" width="1400" height="989" loading="lazy" decoding="async" />
+              <h3 className={styles['category-title']}>Form und Oberfläche konsequent weiterführen</h3>
+              <p>Rund oder eckig, verchromt, schwarz, gebürstet oder in einer PVD-Oberfläche: Wir stimmen Waschtisch-, Dusch- und Wannenarmaturen auf Keramik, Möbel und Zubehör ab. Dabei berücksichtigen wir Bedienung, Anschlüsse und Pflege ebenso wie die Gestaltung.</p>
+            </article>
+            {/* Sanitärapparate */}
+            <article className={styles.detail}>
+              <img src={sanitaerapparateImage} alt="Wandhängendes WC und Bidet in Schwarz neben einem Waschtischmöbel aus Holz" width="1400" height="1000" loading="lazy" decoding="async" />
+              <h3 className={styles['category-title']}>Keramik und Ausstattung passend zum Raum</h3>
+              <p>Unser Sortiment umfasst Waschtische, WCs, Dusch-WCs, Badewannen, Duschwannen und Duschlösungen. Wir achten darauf, dass Masse, Anschlüsse und Nutzung zur Raumsituation passen und die einzelnen Produkte eine gemeinsame Linie bilden.</p>
+            </article>
+            {/* Heizkörper */}
+            <article className={`${styles.detail} ${styles['detail-small']}`}>
+              <img src={heizkoerperImage} alt="Vertikaler Designheizkörper in einem Wohnraum" width="380" height="347" loading="lazy" decoding="async" />
+              <h3 className={styles['category-title']}>Wärme, Format und Anschluss zusammen planen</h3>
+              <p>Handtuch- und Designheizkörper sind in unterschiedlichen Grössen, Formen und Farben erhältlich. Wir stimmen Modell, Heizleistung und Anschlussposition auf den Raum und die übrige Ausstattung ab.</p>
+            </article>
+            {/* Beleuchtungen */}
+            <article className={`${styles.detail} ${styles['detail-small']}`}>
+              <img src={beleuchtungenImage} alt="Zylindrische Pendelleuchten in Schwarz mit Messingdetails" width="380" height="347" loading="lazy" decoding="async" />
+              <h3 className={styles['category-title']}>Licht für Alltag und Atmosphäre</h3>
+              <p>Gutes Licht am Spiegel erfüllt eine andere Aufgabe als die Beleuchtung des gesamten Raums. Wir kombinieren Funktions- und Stimmungslicht passend zu Oberflächen, Farben und Nutzung.</p>
+            </article>
+            {/* Accessoires */}
+            <article className={`${styles.detail} ${styles['detail-small']}`}>
+              <img src={accessoiresImage} alt="Schwarzer Wandhalter mit zwei Seifenspendern" width="380" height="347" loading="lazy" decoding="async" />
+              <h3 className={styles['category-title']}>Die letzte Auswahl soll nicht zufällig sein</h3>
+              <p>Handtuchhalter, Papierrollenhalter, Haken, Seifenhalter und weitere Accessoires führen Form und Oberfläche der Armaturen weiter. So wirkt der Raum bis ins Detail abgestimmt.</p>
+            </article>
           </div>
-
-          {/* Armaturen */}
-          <div className={`${styles['category-section']} ${styles.dark} ${styles.reverse}`}>
-            <div className={styles['category-content']}>
-              <div className={styles['category-text']}>
-                <h3 className={styles['category-title']}>Form und Oberfläche konsequent weiterführen</h3>
-                <div className={styles['category-description']}>
-                  <p>
-                    Rund oder eckig, verchromt, schwarz, gebürstet oder in einer PVD-Oberfläche: Wir stimmen Waschtisch-,
-                    Dusch- und Wannenarmaturen auf Keramik, Möbel und Zubehör ab. Dabei berücksichtigen wir Bedienung,
-                    Anschlüsse und Pflege ebenso wie die Gestaltung.
-                  </p>
-                </div>
-              </div>
-              <div className={styles['category-image']}>
-                <img src={armaturenImage} alt="Schwarze Wannenarmatur mit Handbrause auf einer dunklen Steinfläche" />
-              </div>
-            </div>
-          </div>
-
-          {/* Sanitärapparate */}
-          <div className={`${styles['category-section']} ${styles.light}`}>
-            <div className={styles['category-content']}>
-              <div className={styles['category-text']}>
-                <h3 className={styles['category-title']}>Keramik und Ausstattung passend zum Raum</h3>
-                <div className={styles['category-description']}>
-                  <p>
-                    Unser Sortiment umfasst Waschtische, WCs, Dusch-WCs, Badewannen, Duschwannen und Duschlösungen.
-                    Wir achten darauf, dass Masse, Anschlüsse und Nutzung zur Raumsituation passen und die einzelnen
-                    Produkte eine gemeinsame Linie bilden.
-                  </p>
-                </div>
-              </div>
-              <div className={styles['category-image']}>
-                <img src={sanitaerapparateImage} alt="Wandhängendes WC und Bidet in Schwarz neben einem Waschtischmöbel aus Holz" />
-              </div>
-            </div>
-          </div>
-
-          {/* Heizkörper */}
-          <div className={`${styles['category-section']} ${styles.dark} ${styles.reverse}`}>
-            <div className={styles['category-content']}>
-              <div className={styles['category-text']}>
-                <h3 className={styles['category-title']}>Wärme, Format und Anschluss zusammen planen</h3>
-                <div className={styles['category-description']}>
-                  <p>
-                    Handtuch- und Designheizkörper sind in unterschiedlichen Grössen, Formen und Farben erhältlich.
-                    Wir stimmen Modell, Heizleistung und Anschlussposition auf den Raum und die übrige Ausstattung ab.
-                  </p>
-                </div>
-              </div>
-              <div className={styles['category-image']}>
-                <img src={heizkoerperImage} alt="Vertikaler Designheizkörper in einem Wohnraum" />
-              </div>
-            </div>
-          </div>
-
-          {/* Beleuchtungen */}
-          <div className={`${styles['category-section']} ${styles.light}`}>
-            <div className={styles['category-content']}>
-              <div className={styles['category-text']}>
-                <h3 className={styles['category-title']}>Licht für Alltag und Atmosphäre</h3>
-                <div className={styles['category-description']}>
-                  <p>
-                    Gutes Licht am Spiegel erfüllt eine andere Aufgabe als die Beleuchtung des gesamten Raums. Wir
-                    kombinieren Funktions- und Stimmungslicht passend zu Oberflächen, Farben und Nutzung.
-                  </p>
-                </div>
-              </div>
-              <div className={styles['category-image']}>
-                <img src={beleuchtungenImage} alt="Zylindrische Pendelleuchten in Schwarz mit Messingdetails" />
-              </div>
-            </div>
-          </div>
-
-          {/* Accessoires */}
-          <div className={`${styles['category-section']} ${styles.dark} ${styles.reverse}`}>
-            <div className={styles['category-content']}>
-              <div className={styles['category-text']}>
-                <h3 className={styles['category-title']}>Die letzte Auswahl soll nicht zufällig sein</h3>
-                <div className={styles['category-description']}>
-                  <p>
-                    Handtuchhalter, Papierrollenhalter, Haken, Seifenhalter und weitere Accessoires führen Form und
-                    Oberfläche der Armaturen weiter. So wirkt der Raum bis ins Detail abgestimmt.
-                  </p>
-                </div>
-              </div>
-              <div className={styles['category-image']}>
-                <img src={accessoiresImage} alt="Schwarzer Wandhalter mit zwei Seifenspendern" />
-              </div>
-            </div>
-          </div>
-
         </div>
       </section>
 

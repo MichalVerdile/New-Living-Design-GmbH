@@ -15,7 +15,7 @@
 .button > span { font-size: 1.15rem; font-weight: 400; }
 .textLink { font-weight: 600; padding: .55rem 0; border-bottom: 1px solid currentColor; }
 .textLink:hover { color: #6b7457; }
-.hero { display: grid; grid-template-columns: 1.02fr 1fr; max-width: 1440px; margin: 0 auto; min-height: 620px; }
+.hero { display: grid; grid-template-columns: minmax(0, .94fr) minmax(0, 1.06fr); max-width: 1440px; margin: 0 auto; min-height: 640px; }
 .heroCopy { display: flex; flex-direction: column; justify-content: center; align-items: flex-start; min-width: 0; padding: 4.25rem clamp(1.5rem, 4.5vw, 5rem); }
 .heroTitle { font-family: Georgia, 'Times New Roman', serif; font-size: clamp(3.7rem, 6.2vw, 6.5rem); line-height: .98; font-weight: 400; letter-spacing: -.055em; }
 .heroTitle em { color: #60735e; font-weight: 400; }
@@ -23,21 +23,25 @@
 .home .heroText { max-width: 26rem; color: var(--muted); font-size: .96rem; line-height: 1.8; margin-top: .9rem; }
 .actions { display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap; margin-top: 2.1rem; }
 .heroAddress { display: flex; gap: 1.2rem; flex-wrap: wrap; margin-top: 2.6rem; color: var(--muted); font-size: .74rem; letter-spacing: .015em; }
+/* Editoriale Komposition: Ausstellungsbild gross, ruhiges Detail aus einem realisierten Bad als Einschub. */
 .heroFigure { position: relative; min-width: 0; display: flex; min-height: 100%; }
-.heroFigure img { width: 100%; height: 100%; max-height: 760px; min-height: 620px; object-fit: cover; object-position: center 48%; }
-.heroFigure figcaption { position: absolute; right: 0; bottom: 0; left: 0; display: flex; justify-content: space-between; gap: .75rem; background: #23302be8; color: #fff; padding: 1rem 1.5rem; font-size: .66rem; letter-spacing: .08em; text-transform: uppercase; }
+.heroImage { width: 100%; height: 100%; max-height: 780px; min-height: 640px; object-fit: cover; object-position: center 45%; }
+.heroDetail { position: absolute; left: clamp(-5.5rem, -5vw, -3rem); bottom: 4.25rem; width: clamp(150px, 13vw, 196px); height: auto; aspect-ratio: 3 / 4; object-fit: cover; border: 8px solid var(--paper); }
+.heroFigure figcaption { position: absolute; top: 0; right: 0; display: flex; gap: 2.5rem; background: var(--paper); color: var(--ink); padding: .95rem 1.5rem .95rem 1.6rem; font-size: .66rem; letter-spacing: .12em; text-transform: uppercase; }
+.heroFigure figcaption span + span { color: var(--muted); }
 .assortment { background: #fff; scroll-margin-top: 6rem; }
 .sectionHead { display: flex; justify-content: space-between; align-items: end; gap: 2rem; margin-bottom: 2.4rem; }
 .sectionHead > .textLink { flex-shrink: 0; }
-.categoryGrid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1.35rem; }
+.categoryGrid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2.25rem 1.5rem; }
 .categoryCard { display: block; text-decoration: none; min-width: 0; }
-.categoryImage { position: relative; overflow: hidden; background: #e9e8e1; aspect-ratio: 1.12; }
-.categoryImage img { display: block; width: 100%; height: 100%; object-fit: cover; transition: transform .3s ease; }
-.categoryCard:hover .categoryImage img { transform: scale(1.025); }
-.categoryNumber { position: absolute; top: .8rem; left: .8rem; color: #fff; background: #23302bcf; font-size: .68rem; padding: .4rem .55rem; }
-.categoryHeading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding-top: 1.2rem; }
+/* Einheitliches Hochformat 4:5 für alle vier Bereiche; Fokus je Bild nur wo nötig. */
+.categoryImage { position: relative; overflow: hidden; background: #e9e8e1; aspect-ratio: 4 / 5; }
+.categoryImage img { display: block; width: 100%; height: 100%; object-fit: cover; transition: transform .4s ease; }
+.categoryCard:nth-child(3) .categoryImage img { object-position: 62% center; }
+.categoryCard:hover .categoryImage img { transform: scale(1.02); }
+.categoryNumber { font-size: .7rem; letter-spacing: .12em; color: var(--muted); font-variant-numeric: tabular-nums; }
+.categoryHeading { display: flex; align-items: baseline; gap: .9rem; margin-top: 1.1rem; padding-top: .9rem; border-top: 1px solid var(--line); }
 .categoryHeading h3 { font-family: Georgia, 'Times New Roman', serif; font-weight: 400; font-size: 2rem; letter-spacing: -.025em; }
-.roundArrow { width: 2rem; height: 2rem; border-radius: 50%; border: 1px solid var(--line); display: grid; place-items: center; }
 .home .categoryLabel { font-size: .72rem; text-transform: uppercase; letter-spacing: .09em; margin-top: .6rem; }
 .home .categoryText { font-size: .85rem; line-height: 1.75; color: var(--muted); margin-top: .7rem; max-width: 23rem; }
 .home .imageNote { font-size: .69rem; line-height: 1.7; color: var(--muted); margin-top: 1.65rem; }
@@ -55,9 +59,10 @@
 .visitLinks { display: flex; flex-wrap: wrap; gap: 1.5rem; margin-top: 1rem; }
 .reviewLink { display: inline-flex; gap: .5rem; font-size: .72rem; text-decoration: underline; text-underline-offset: 3px; margin-top: 1.3rem; }
 .references { background: var(--paper); }
-.referenceGrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.6rem; }
+/* Bewusst ungleich gewichtet: ein Hauptbild, zwei begleitende Bilder. */
+.referenceGrid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr); align-items: end; gap: 1.6rem; }
 .referenceCard { text-decoration: none; min-width: 0; }
-.referenceCard img { display: block; width: 100%; height: auto; aspect-ratio: .96; object-fit: cover; }
+.referenceCard img { display: block; width: 100%; height: auto; aspect-ratio: 4 / 5; object-fit: cover; }
 .referenceCard > div { display: flex; gap: 1.25rem; justify-content: space-between; align-items: flex-start; margin-top: .9rem; }
 .referenceCard h3 { font-size: .8rem; line-height: 1.55; font-weight: 500; max-width: 20rem; }
 .referenceCard:hover h3 { text-decoration: underline; text-underline-offset: 4px; }
@@ -86,10 +91,12 @@
 @media (max-width: 1100px) {
   .heroTitle { font-size: clamp(3.5rem, 6.3vw, 5rem); }
   .heroCopy { padding: 3.1rem 2rem; }
-  .hero, .heroFigure img { min-height: 570px; }
+  .hero, .heroImage { min-height: 570px; }
+  .heroDetail { left: -1.75rem; bottom: 3.75rem; width: 132px; border-width: 6px; }
   .heroAddress { gap: .6rem; }
   .categoryGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .categoryGrid, .referenceGrid { gap: 1.1rem; }
+  .categoryGrid { gap: 2rem 1.25rem; }
+  .referenceGrid { gap: 1.1rem; }
   .packageRow a { padding: 1rem .7rem; }
 }
 @media (max-width: 767px) {
@@ -98,19 +105,21 @@
   .heroCopy > * { min-width: 0; max-width: 100%; }
   .heroTitle { font-size: clamp(3.4rem, 12.5vw, 5.3rem); }
   .heroFigure { height: 380px; min-height: 0; }
-  .heroFigure img { height: 100%; min-height: 0; max-height: none; object-position: center 56%; }
+  .heroImage { height: 100%; min-height: 0; max-height: none; object-position: center 56%; }
+  .heroDetail { display: none; }
+  .heroFigure figcaption { top: auto; bottom: 0; left: 0; right: auto; gap: 1.5rem; padding: .8rem 1.25rem .8rem 1.5rem; } /* frei vom WhatsApp-Knopf */
   .heroAddress { margin-top: 1.8rem; }
   .actions { gap: 1.1rem; }
   .sectionHead { display: block; margin-bottom: 1.8rem; }
   .sectionHead > .textLink { margin-top: 1.2rem; }
   .categoryGrid { grid-template-columns: 1fr; gap: 2.3rem; }
-  .categoryImage { aspect-ratio: 1.5; }
+  .categoryImage { aspect-ratio: 4 / 3; }
   .categoryHeading { padding-top: .9rem; }
   .categoryText { max-width: none !important; }
   .showroomGrid { grid-template-columns: 1fr; gap: 2.25rem; }
   .visitCard { padding: 1.8rem 0 0; border-left: 0; border-top: 1px solid #b7c2b0; }
   .referenceGrid { grid-template-columns: 1fr; gap: 1.8rem; }
-  .referenceCard img { aspect-ratio: 1.35; }
+  .referenceCard img { aspect-ratio: 4 / 3; }
   .referenceCard h3 { max-width: none; }
   .plannerInner, .contactInner { align-items: flex-start; flex-direction: column; gap: 1.8rem; }
   .planner, .contact { padding: 3rem 0; }
