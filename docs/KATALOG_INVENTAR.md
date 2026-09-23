@@ -11,7 +11,7 @@ Mit * markierte Serien sind Einzelbilder im Abschnitt «Weitere Bilder» und zä
 | Bad | Rexa Design | `/produkte/bad/rexa` | 2 | 9 | Unico (3), Moode (6) | ✅ |
 | Bad | Edoné | `/produkte/bad/edone` | 2 | 9 | Hexis (5), Calipso (4) | ✅ |
 | Bad | Archeda | `/produkte/bad/archeda` | 2 | 4 | Tulle Studio (2), Tulle Cannettato (2) | ✅ |
-| Bad | Froidevaux AG | `/produkte/bad/froidevaux` | 2 | 5 | iCON Standard (2), Connect Standard (2), Auswahl aus dem Medienpaket (1)* | ✅ |
+| Bad | Froidevaux AG | `/produkte/bad/froidevaux` | 2 | 6 | Gehro (3), Connect Standard (2), Auswahl aus dem Medienpaket (1)* | ✅ |
 | Bad | Pirovano Bagni | `/produkte/bad/pirovano` | 3 | 13 | Pilar (5), Linear (4), Millennium XL (4) | ✅ |
 | Bad | Rubinetterie Treemme | `/produkte/bad/treemme` | 2 | 7 | Aurelia (2), Appia (3), Up+ (1)*, Ran (1)* | ✅ |
 | Bad | Newform | `/produkte/bad/newform` | 2 | 11 | Steel Line (5), Ionika (5), Deltazero (1)* | ✅ |
