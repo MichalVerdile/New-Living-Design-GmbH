@@ -36,6 +36,15 @@
           ]
         },
         {
+          "title": "Waschtische",
+          "brands": [
+            "cielo",
+            "scarabeo",
+            "galassia",
+            "azzurra"
+          ]
+        },
+        {
           "title": "Duschen & Duschabtrennungen",
           "brands": [
             "megius",
@@ -377,21 +386,28 @@
       "series": [
         {
           "area": "bad",
-          "name": "iCON Standard",
+          "name": "Gehro",
           "images": [
             {
-              "pack": "katalog/bad/froidevaux/icon-standard-01",
-              "width": 1200,
-              "height": 1600,
-              "alt": "Froidevaux iCON Standard: weisses Waschtischmöbel mit zwei Türen vor dunkler Backsteinwand",
-              "sha1": "67ff76b823a49c2bded5c8bceb64e5637213829e"
+              "pack": "katalog/bad/froidevaux/gehro-01",
+              "width": 1610,
+              "height": 1200,
+              "alt": "Froidevaux Gehro: schwebendes schwarzes Waschtischmöbel mit Spiegel vor einer Holzwand",
+              "sha1": "b7e17f06f5b9365250b45ea94789d1062618b3a7"
             },
             {
-              "pack": "katalog/bad/froidevaux/icon-standard-02",
-              "width": 1200,
+              "pack": "katalog/bad/froidevaux/gehro-02",
+              "width": 1600,
               "height": 1200,
-              "alt": "Froidevaux iCON Standard: Waschtischmöbel mit Keramikbecken und Griffleisten, Frontansicht",
-              "sha1": "0394fb326276a7185988a6816e2d7c2fb31f1d13"
+              "alt": "Froidevaux Gehro: schwebendes Waschtischmöbel in rustikaler Holzoptik mit rechteckigem Aufsatzbecken",
+              "sha1": "f01d621b97f289c901650ef16b1a1f91f5ae63e8"
+            },
+            {
+              "pack": "katalog/bad/froidevaux/gehro-03",
+              "width": 1272,
+              "height": 848,
+              "alt": "Froidevaux Gehro: beiges Waschtischmöbel mit weissem Aufsatzbecken und goldfarbener Wandarmatur",
+              "sha1": "79091aa6f36ea6e4178be9771f0d04f92b7a429b"
             }
           ]
         },
