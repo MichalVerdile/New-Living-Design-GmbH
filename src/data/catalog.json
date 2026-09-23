@@ -1,0 +1,646 @@
+{
+  "$comment": "Katalog: Bereiche > Fachgebiete > Marken > Serien > Bilder. Aktive Marken und Kategorien laut NLD (23.09.2026). Bilder: 'pack' = public/images/<pack>-960w.webp und -<width>w.webp (Medienpaket 22.09.2026), 'asset' = Datei in src/assets. Nur echte, freigegebene Fotos.",
+  "areas": [
+    {
+      "id": "bad",
+      "title": "Bad",
+      "label": "Aufeinander abgestimmt",
+      "text": "Badmöbel, Waschtische, Armaturen, Keramik, Dusche und Badewanne – gemeinsam ausgewählt, damit Form, Farbe und Funktion zusammenpassen.",
+      "groups": [
+        {
+          "title": "Badmöbel",
+          "brands": [
+            "rexa",
+            "edone",
+            "archeda",
+            "froidevaux",
+            "pirovano"
+          ]
+        },
+        {
+          "title": "Armaturen",
+          "brands": [
+            "treemme",
+            "newform",
+            "gessi",
+            "luce"
+          ]
+        },
+        {
+          "title": "Sanitärkeramik",
+          "brands": [
+            "cielo",
+            "scarabeo",
+            "galassia",
+            "azzurra"
+          ]
+        },
+        {
+          "title": "Duschen & Duschabtrennungen",
+          "brands": [
+            "megius",
+            "novellini",
+            "vismaravetro"
+          ]
+        },
+        {
+          "title": "Badaccessoires",
+          "brands": [
+            "capannoli"
+          ]
+        },
+        {
+          "title": "Designheizkörper",
+          "brands": [
+            "antrax",
+            "cordivari",
+            "caleido"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "kuechen",
+      "title": "Küchen",
+      "label": "Für Ihren Alltag geplant",
+      "text": "Raumaufteilung, Fronten, Arbeitsflächen, Geräte und Licht. Mit 3D-Planung, Lieferung, Montage und auf Wunsch mit Renovation der bestehenden Küche.",
+      "groups": [
+        {
+          "title": "Küchenwelten",
+          "brands": [
+            "febal"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "platten",
+      "title": "Platten",
+      "label": "Vom Muster in den Raum",
+      "text": "Keramik, Feinsteinzeug, Mosaik und Grossformate für Wand und Boden – ausgewählt nach Wirkung, Nutzung und Pflege.",
+      "groups": [
+        {
+          "title": "Keramik, Feinsteinzeug & Grossformate",
+          "brands": [
+            "energieker",
+            "emilgroup",
+            "lafabbrica",
+            "supergres",
+            "ariana",
+            "acquario"
+          ]
+        },
+        {
+          "title": "Mosaik",
+          "brands": [
+            "sicis",
+            "mosavit"
+          ]
+        },
+        {
+          "title": "Parkett & Holz",
+          "brands": [
+            "skema"
+          ]
+        },
+        {
+          "title": "SPC & Designböden",
+          "brands": [
+            "deco",
+            "zenon"
+          ]
+        },
+        {
+          "title": "Dekorative Wandbeläge & Tapeten",
+          "brands": [
+            "inkiostro"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "wellness",
+      "title": "Wellness",
+      "label": "Entspannung, die zum Raum passt",
+      "text": "Sauna, Dampfbad, Wellnesskabine oder Whirlwanne. Wir klären Platz, Anschlüsse und Nutzung und zeigen Ihnen passende Möglichkeiten.",
+      "groups": [
+        {
+          "title": "Whirlpool & Minipool",
+          "brands": [
+            "novellini",
+            "albatros"
+          ]
+        },
+        {
+          "title": "Sauna",
+          "brands": [
+            "novellini",
+            "albatros"
+          ]
+        },
+        {
+          "title": "Hammam & Dampfbad",
+          "brands": [
+            "novellini",
+            "megius"
+          ]
+        },
+        {
+          "title": "Wellness-Duschen",
+          "brands": [
+            "novellini",
+            "megius"
+          ]
+        },
+        {
+          "title": "Badewannen",
+          "brands": [
+            "novellini",
+            "albatros"
+          ]
+        }
+      ]
+    }
+  ],
+  "suppliers": {
+    "rexa": {
+      "name": "Rexa Design",
+      "url": "https://rexadesign.it/",
+      "series": []
+    },
+    "edone": {
+      "name": "Edoné",
+      "url": "https://www.edonedesign.it/en",
+      "series": [
+        {
+          "area": "bad",
+          "name": "Hexis",
+          "images": [
+            {
+              "pack": "bad/bad-hero-edone-hexis",
+              "width": 1600,
+              "height": 900,
+              "alt": "Edoné Hexis Badmöbel in einem grosszügigen, modern gestalteten Badezimmer"
+            }
+          ]
+        }
+      ]
+    },
+    "archeda": {
+      "name": "Archeda",
+      "url": "https://www.archeda.eu/",
+      "series": []
+    },
+    "froidevaux": {
+      "name": "Froidevaux AG",
+      "url": "https://www.froidevaux.ch/de/",
+      "series": [
+        {
+          "area": "bad",
+          "name": "Auswahl aus dem Medienpaket",
+          "images": [
+            {
+              "pack": "bad/bad-badmoebel-froidevaux-massarbeit",
+              "width": 1600,
+              "height": 900,
+              "alt": "Froidevaux Waschtischmöbel aus Holz mit zwei Aufsatzbecken"
+            }
+          ]
+        }
+      ]
+    },
+    "pirovano": {
+      "name": "Pirovano Bagni",
+      "url": "https://pirovanobagni.it/",
+      "series": []
+    },
+    "treemme": {
+      "name": "Rubinetterie Treemme",
+      "url": "https://www.rubinetterie3m.it/it",
+      "series": []
+    },
+    "newform": {
+      "name": "Newform",
+      "url": "https://www.newform.it/it",
+      "series": [
+        {
+          "area": "bad",
+          "name": "Deltazero",
+          "images": [
+            {
+              "asset": "Newform_Deltazero_P2.webp",
+              "width": 1400,
+              "height": 989,
+              "alt": "Schwarze Wannenarmatur mit Handbrause auf einer dunklen Steinfläche"
+            }
+          ]
+        }
+      ]
+    },
+    "gessi": {
+      "name": "Gessi",
+      "url": "https://www.gessi.com/en/bath",
+      "series": [
+        {
+          "area": "bad",
+          "name": "Jacqueline",
+          "images": [
+            {
+              "pack": "bad/bad-armaturen-gessi-jacqueline",
+              "width": 1136,
+              "height": 639,
+              "alt": "Gessi Designarmaturen in Bronze an dunklen Aufsatzwaschbecken"
+            }
+          ]
+        }
+      ]
+    },
+    "luce": {
+      "name": "Luce Rubinetterie",
+      "url": "https://www.lucerubinetterie.it/rubinetteria/",
+      "series": []
+    },
+    "cielo": {
+      "name": "Ceramica Cielo",
+      "url": "https://www.ceramicacielo.it/en",
+      "series": [
+        {
+          "area": "bad",
+          "name": "Le Giare",
+          "images": [
+            {
+              "pack": "bad/bad-sanitaerkeramik-cielo-le-giare",
+              "width": 1600,
+              "height": 900,
+              "alt": "Weisse Le Giare Sanitärkeramik von Ceramica Cielo vor blauem Hintergrund"
+            }
+          ]
+        }
+      ]
+    },
+    "scarabeo": {
+      "name": "Scarabeo Ceramiche",
+      "url": "https://scarabeoceramiche.it/collezioni/collezione-ceramica/",
+      "series": []
+    },
+    "galassia": {
+      "name": "Ceramica Galassia",
+      "url": "https://www.ceramicagalassia.it/catalogue",
+      "series": []
+    },
+    "azzurra": {
+      "name": "Azzurra Ceramica",
+      "url": "https://www.azzurraceramica.it/",
+      "series": []
+    },
+    "megius": {
+      "name": "Megius",
+      "url": "https://www.megius.com/",
+      "series": [
+        {
+          "area": "wellness",
+          "name": "Zen Combi",
+          "images": [
+            {
+              "pack": "wellness/wellness-hammam-megius-zen-combi",
+              "width": 1600,
+              "height": 900,
+              "alt": "Megius Zen Combi Sauna und Hammam mit Dusche in einem modernen Wellnessraum"
+            },
+            {
+              "asset": "Zen_Combi_duo_Linear_6-1030x1030.webp",
+              "width": 1030,
+              "height": 1030,
+              "alt": "Wellness-Kabine aus dem Produktsortiment"
+            }
+          ]
+        }
+      ]
+    },
+    "novellini": {
+      "name": "Novellini",
+      "url": "https://novellini.com/",
+      "series": [
+        {
+          "area": "wellness",
+          "name": "Home Oasis",
+          "images": [
+            {
+              "pack": "wellness/wellness-hero-novellini-home-oasis",
+              "width": 1600,
+              "height": 900,
+              "alt": "Novellini Home Oasis mit Sauna, Dusche und Spa in einem hellen Wellnessraum"
+            }
+          ]
+        },
+        {
+          "area": "wellness",
+          "name": "Moon",
+          "images": [
+            {
+              "pack": "wellness/wellness-whirlpool-novellini-moon",
+              "width": 1600,
+              "height": 900,
+              "alt": "Novellini Moon Whirlpool im Freien mit integrierter Beleuchtung"
+            }
+          ]
+        },
+        {
+          "area": "wellness",
+          "name": "Fun",
+          "images": [
+            {
+              "pack": "wellness/wellness-sauna-novellini-fun",
+              "width": 1600,
+              "height": 900,
+              "alt": "Novellini Fun Sauna mit Glasfront in einem warm gestalteten Wohnbereich"
+            }
+          ]
+        }
+      ]
+    },
+    "vismaravetro": {
+      "name": "Vismaravetro",
+      "url": "https://www.vismaravetro.it/en/shower-enclosure-collections",
+      "series": [
+        {
+          "area": "bad",
+          "name": "Suite",
+          "images": [
+            {
+              "pack": "bad/bad-duschen-vismaravetro-suite",
+              "width": 1600,
+              "height": 900,
+              "alt": "Vismaravetro Dusch- und Trennwandsystem in einem modernen Bad"
+            }
+          ]
+        }
+      ]
+    },
+    "capannoli": {
+      "name": "Capannoli",
+      "url": "https://www.capannoli.it/",
+      "series": [
+        {
+          "area": "bad",
+          "name": "Tratto",
+          "images": [
+            {
+              "pack": "bad/bad-accessoires-capannoli-tratto",
+              "width": 1600,
+              "height": 900,
+              "alt": "Capannoli Badaccessoires in verschiedenen Metalloberflächen an einer hellen Wand"
+            }
+          ]
+        }
+      ]
+    },
+    "antrax": {
+      "name": "Antrax IT",
+      "url": "https://www.antrax.com/",
+      "series": [
+        {
+          "area": "bad",
+          "name": "Pypeline",
+          "images": [
+            {
+              "pack": "bad/bad-designheizkoerper-antrax-pypeline",
+              "width": 1600,
+              "height": 900,
+              "alt": "Antrax IT Pypeline Designheizkörper in einem schwarzen Badezimmer mit freistehender Badewanne"
+            }
+          ]
+        }
+      ]
+    },
+    "cordivari": {
+      "name": "Cordivari Design",
+      "url": "https://www.cordivaridesign.it/it/",
+      "series": [
+        {
+          "area": "bad",
+          "name": "Auswahl aus dem Medienpaket",
+          "images": [
+            {
+              "pack": "bad/bad-designheizkoerper-cordivari",
+              "width": 1552,
+              "height": 873,
+              "alt": "Cordivari Designheizkörper in Spiegeloptik über einer Holzkonsole"
+            }
+          ]
+        }
+      ]
+    },
+    "caleido": {
+      "name": "Caleido",
+      "url": "https://www.caleido.it/",
+      "series": []
+    },
+    "febal": {
+      "name": "Febal Casa",
+      "url": "https://www.febalcasa.com/en/kind/kitchens/",
+      "series": [
+        {
+          "area": "kuechen",
+          "name": "Origina",
+          "images": [
+            {
+              "pack": "kuechen/kuechen-hero-febal-origina",
+              "width": 1600,
+              "height": 900,
+              "alt": "Offene Febal Casa Origina Küche mit Insel und raumhohen Schränken"
+            },
+            {
+              "pack": "kuechen/kuechen-card-febal-origina",
+              "width": 1008,
+              "height": 567,
+              "alt": "Febal Casa Origina Küche mit farbigem Inseltisch und Holzfronten"
+            }
+          ]
+        }
+      ]
+    },
+    "energieker": {
+      "name": "Energieker",
+      "url": "https://www.energieker.it/en/collections/",
+      "series": []
+    },
+    "emilgroup": {
+      "name": "Emilgroup",
+      "url": "https://www.emilgroup.it/EN/",
+      "series": [
+        {
+          "area": "platten",
+          "name": "Auswahl aus dem Medienpaket",
+          "images": [
+            {
+              "pack": "platten/platten-hero-emilgroup-feinsteinzeug",
+              "width": 1600,
+              "height": 900,
+              "alt": "Emilgroup Feinsteinzeug in Holzoptik in einem hellen Badezimmer"
+            }
+          ]
+        }
+      ]
+    },
+    "lafabbrica": {
+      "name": "La Fabbrica AVA",
+      "url": "https://www.lafabbrica.it/en/",
+      "series": [
+        {
+          "area": "platten",
+          "name": "Venezia",
+          "images": [
+            {
+              "pack": "platten/platten-grossformat-lafabbrica-venezia",
+              "width": 1600,
+              "height": 900,
+              "alt": "La Fabbrica AVA Venezia Platten in schwarzer Marmoroptik in einem eleganten Wohnraum"
+            }
+          ]
+        }
+      ]
+    },
+    "supergres": {
+      "name": "Supergres",
+      "url": "https://www.supergres.com/en/",
+      "series": []
+    },
+    "ariana": {
+      "name": "Ariana Ceramiche / Gardenia&Ariana",
+      "url": "https://www.gardenia.it/en/collections",
+      "series": []
+    },
+    "acquario": {
+      "name": "Acquario Due",
+      "url": "https://en.acquariodue.com/collezioni",
+      "series": []
+    },
+    "sicis": {
+      "name": "SICIS",
+      "url": "https://www.sicis.com/en/mosaic",
+      "series": [
+        {
+          "area": "platten",
+          "name": "Elegance",
+          "images": [
+            {
+              "pack": "platten/platten-mosaik-sicis-elegance",
+              "width": 1600,
+              "height": 900,
+              "alt": "Künstlerische SICIS Mosaikwand mit abstrahiertem Gesicht in einem Wohnraum"
+            }
+          ]
+        }
+      ]
+    },
+    "mosavit": {
+      "name": "Mosavit / Trip by Mosavit",
+      "url": "https://mosavit.com/en/",
+      "series": [
+        {
+          "area": "platten",
+          "name": "Fachaleta Quartz Marfil",
+          "images": [
+            {
+              "pack": "platten/platten-naturstein-mosavit-fachaleta-quartz-marfil",
+              "width": 1520,
+              "height": 855,
+              "alt": "Mosavit Fachaleta Quartz Marfil Natursteinverkleidung an einer hellen Aussenwand"
+            }
+          ]
+        }
+      ]
+    },
+    "skema": {
+      "name": "Skema",
+      "url": "https://skema.eu/en/collections/wooden-floors/",
+      "series": [
+        {
+          "area": "platten",
+          "name": "Villa",
+          "images": [
+            {
+              "pack": "platten/platten-parkett-skema-villa",
+              "width": 1408,
+              "height": 792,
+              "alt": "Skema Villa Parkettboden aus heller Eiche in einem modernen Interieur"
+            }
+          ]
+        }
+      ]
+    },
+    "deco": {
+      "name": "Déco",
+      "url": "https://www.decodecking.it/it/indoor/clap/",
+      "series": [
+        {
+          "area": "platten",
+          "name": "Clap",
+          "images": [
+            {
+              "pack": "platten/platten-spc-deco-clap",
+              "width": 1600,
+              "height": 900,
+              "alt": "Déco Clap Designboden in Holzoptik in einem warm beleuchteten Interieur"
+            }
+          ]
+        }
+      ]
+    },
+    "zenon": {
+      "name": "Zenon Bath & SPC Surfaces",
+      "url": "https://zenonsurfaces.com/en/collections/Z_PD_FLOOR_PANELS_SPC_TEMPO/",
+      "series": [
+        {
+          "area": "platten",
+          "name": "Tempo",
+          "images": [
+            {
+              "pack": "platten/platten-spc-zenon-tempo",
+              "width": 1600,
+              "height": 900,
+              "alt": "Zenon Tempo SPC-Boden in heller Holzoptik in einem Schlafzimmer"
+            }
+          ]
+        }
+      ]
+    },
+    "inkiostro": {
+      "name": "Inkiostro Bianco",
+      "url": "https://www.inkiostrobianco.com/en/",
+      "series": [
+        {
+          "area": "platten",
+          "name": "White Paper",
+          "images": [
+            {
+              "pack": "platten/platten-wandbelag-inkiostro-white-paper",
+              "width": 1600,
+              "height": 900,
+              "alt": "Inkiostro Bianco Wandverkleidung mit geometrischem Muster und farbigen Sesseln"
+            }
+          ]
+        }
+      ]
+    },
+    "albatros": {
+      "name": "Albatros Wellness",
+      "url": "https://albatroswellness.it/en/",
+      "series": [
+        {
+          "area": "wellness",
+          "name": "Soreha",
+          "images": [
+            {
+              "pack": "wellness/wellness-whirlpool-albatros-soreha",
+              "width": 1024,
+              "height": 576,
+              "alt": "Albatros Soreha Whirlpool mit Holzverkleidung und sprudelndem Wasser"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

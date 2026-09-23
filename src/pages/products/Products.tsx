@@ -9,7 +9,7 @@ import beleuchtungenImage from '../../assets/BEAM_STICK_family_color_edited.avif
 import accessoiresImage from '../../assets/viv-au2420bmset5_5.avif';
 import { SEOHead } from '../../components';
 import { photoUrl, referenceById } from '../../data/references';
-import { packImages, registry, supplierHref, suppliersInArea, type AreaId, type SupplierImage, type SupplierKey } from '../../data/suppliers';
+import { areaHref, imageOf, supplierByKey, supplierHref, suppliersInArea, type AreaId, type SupplierImage, type SupplierKey } from '../../data/suppliers';
 
 // Herstellerbilder aus dem NLD-Medienpaket vom 22.09.2026; Zuordnung zur Marke in src/data/suppliers.ts.
 type SubcategoryCard = {
@@ -20,39 +20,39 @@ type SubcategoryCard = {
 };
 
 const heroes = {
-  bad: packImages.edone,
-  kuechen: packImages.febalHero,
-  wellness: packImages.novelliniOasis,
-  platten: packImages.emilgroup,
+  bad: imageOf('edone'),
+  kuechen: imageOf('febal', 'Origina', 0),
+  wellness: imageOf('novellini', 'Home Oasis'),
+  platten: imageOf('emilgroup'),
 };
 
 const cards: Record<keyof typeof heroes, SubcategoryCard[]> = {
   bad: [
-    { id: 'badmoebel', title: 'Badmöbel', supplier: 'froidevaux', image: packImages.froidevaux },
-    { id: 'armaturen', title: 'Armaturen', supplier: 'gessi', image: packImages.gessi },
-    { id: 'sanitaerkeramik', title: 'Sanitärkeramik', supplier: 'cielo', image: packImages.cielo },
-    { id: 'duschen', title: 'Duschen & Duschabtrennungen', supplier: 'vismaravetro', image: packImages.vismaravetro },
-    { id: 'accessoires', title: 'Badaccessoires', supplier: 'capannoli', image: packImages.capannoli },
-    { id: 'designheizkoerper', title: 'Designheizkörper', supplier: 'antrax', image: packImages.antrax },
-    { title: 'Designheizkörper', supplier: 'cordivari', image: packImages.cordivari },
+    { id: 'badmoebel', title: 'Badmöbel', supplier: 'froidevaux', image: imageOf('froidevaux') },
+    { id: 'armaturen', title: 'Armaturen', supplier: 'gessi', image: imageOf('gessi') },
+    { id: 'sanitaerkeramik', title: 'Sanitärkeramik', supplier: 'cielo', image: imageOf('cielo') },
+    { id: 'duschen', title: 'Duschen & Duschabtrennungen', supplier: 'vismaravetro', image: imageOf('vismaravetro') },
+    { id: 'accessoires', title: 'Badaccessoires', supplier: 'capannoli', image: imageOf('capannoli') },
+    { id: 'designheizkoerper', title: 'Designheizkörper', supplier: 'antrax', image: imageOf('antrax') },
+    { title: 'Designheizkörper', supplier: 'cordivari', image: imageOf('cordivari') },
   ],
   kuechen: [
-    { id: 'kuechenwelten', title: 'Küchenwelten', supplier: 'febal', image: packImages.febalCard },
+    { id: 'kuechenwelten', title: 'Küchenwelten', supplier: 'febal', image: imageOf('febal', 'Origina', 1) },
   ],
   wellness: [
-    { id: 'whirlpool', title: 'Whirlpool & Minipool', supplier: 'novellini', image: packImages.novelliniMoon },
-    { title: 'Whirlpool & Minipool', supplier: 'albatros', image: packImages.albatros },
-    { id: 'sauna', title: 'Sauna', supplier: 'novellini', image: packImages.novelliniFun },
-    { id: 'hammam', title: 'Hammam & Dampfbad', supplier: 'megius', image: packImages.megius },
+    { id: 'whirlpool', title: 'Whirlpool & Minipool', supplier: 'novellini', image: imageOf('novellini', 'Moon') },
+    { title: 'Whirlpool & Minipool', supplier: 'albatros', image: imageOf('albatros') },
+    { id: 'sauna', title: 'Sauna', supplier: 'novellini', image: imageOf('novellini', 'Fun') },
+    { id: 'hammam', title: 'Hammam & Dampfbad', supplier: 'megius', image: imageOf('megius') },
   ],
   platten: [
-    { id: 'grossformate', title: 'Grossformate & Marmoroptik', supplier: 'lafabbrica', image: packImages.lafabbrica },
-    { id: 'mosaik', title: 'Mosaik', supplier: 'sicis', image: packImages.sicis },
-    { id: 'parkett', title: 'Parkett & Holz', supplier: 'skema', image: packImages.skema },
-    { id: 'spc', title: 'SPC & Designböden', supplier: 'zenon', image: packImages.zenon },
-    { title: 'SPC & Designböden', supplier: 'deco', image: packImages.deco },
-    { id: 'wandbelaege', title: 'Dekorative Wandbeläge & Tapeten', supplier: 'inkiostro', image: packImages.inkiostro },
-    { id: 'naturstein', title: 'Mosaik', supplier: 'mosavit', image: packImages.mosavit },
+    { id: 'grossformate', title: 'Grossformate & Marmoroptik', supplier: 'lafabbrica', image: imageOf('lafabbrica') },
+    { id: 'mosaik', title: 'Mosaik', supplier: 'sicis', image: imageOf('sicis') },
+    { id: 'parkett', title: 'Parkett & Holz', supplier: 'skema', image: imageOf('skema') },
+    { id: 'spc', title: 'SPC & Designböden', supplier: 'zenon', image: imageOf('zenon') },
+    { title: 'SPC & Designböden', supplier: 'deco', image: imageOf('deco') },
+    { id: 'wandbelaege', title: 'Dekorative Wandbeläge & Tapeten', supplier: 'inkiostro', image: imageOf('inkiostro') },
+    { id: 'naturstein', title: 'Mosaik', supplier: 'mosavit', image: imageOf('mosavit') },
   ],
 };
 
@@ -69,7 +69,7 @@ const SubcategoryGrid: React.FC<{ items: SubcategoryCard[]; label: string; area:
               <img {...card.image} sizes="(max-width: 1024px) 50vw, 300px" loading="lazy" decoding="async" />
               <figcaption>
                 <h4 className={styles['subcategory-title']}>{card.title}</h4>
-                <Link to={supplierHref(card.supplier)} className={styles['subcategory-brand']}>{registry[card.supplier].name}</Link>
+                <Link to={supplierHref(card.supplier, area)} className={styles['subcategory-brand']}>{supplierByKey(card.supplier).name}</Link>
               </figcaption>
             </figure>
           </li>
@@ -77,10 +77,10 @@ const SubcategoryGrid: React.FC<{ items: SubcategoryCard[]; label: string; area:
       </ul>
       {/* Alle Marken des Bereichs, auch ohne Bild; jede öffnet ihre Angaben im Markenverzeichnis */}
       <div className={styles['area-brands']}>
-        <p className={styles['area-brands-title']}>Marken in diesem Bereich <span>{brands.length}</span></p>
+        <p className={styles['area-brands-title']}><Link to={areaHref(area)}>Marken und Serien</Link> <span>{brands.length}</span></p>
         <ul>
           {brands.map((s) => (
-            <li key={s.key}><Link to={supplierHref(s.key)}>{s.name}</Link>{s.images.length > 0 && <span aria-label={`${s.images.length} ${s.images.length === 1 ? 'Bild' : 'Bilder'}`}>{s.images.length}</span>}</li>
+            <li key={s.key}><Link to={supplierHref(s.key, area)}>{s.name}</Link>{s.images.length > 0 && <span aria-label={`${s.images.length} ${s.images.length === 1 ? 'Bild' : 'Bilder'}`}>{s.images.length}</span>}</li>
           ))}
         </ul>
       </div>

@@ -1,6 +1,6 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { areas, suppliers, type AreaId, type Supplier } from '../../data/suppliers';
+import { areas, seriesInArea, supplierHref, suppliers, type AreaId, type Series, type Supplier } from '../../data/suppliers';
 import styles from './SupplierDirectory.module.css';
 
 type Filter = 'alle' | AreaId;
@@ -16,52 +16,15 @@ const areaOrder = (s: Supplier) => areas.findIndex((a) => a.id === s.areas[0]?.i
 // Je Bereich zuerst die Marken mit Bildern, damit Bild- und Textkarten ruhige Gruppen bilden.
 const ordered = [...suppliers].sort((a, b) => areaOrder(a) - areaOrder(b) || Number(b.images.length > 0) - Number(a.images.length > 0));
 
-const countLabel = (n: number) => (n === 0 ? 'Ohne Bild' : n === 1 ? '1 Bild' : `${n} Bilder`);
-
-const Gallery: React.FC<{ supplier: Supplier }> = ({ supplier }) => {
-  const track = useRef<HTMLDivElement>(null);
-  const [index, setIndex] = useState(0);
-  const n = supplier.images.length;
-  // Blättert im Kreis: die Knöpfe werden nie deaktiviert, damit der Tastaturfokus nicht verloren geht.
-  const step = (dir: number) => {
-    const el = track.current;
-    if (!el) return;
-    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    el.scrollTo({ left: ((index + dir + n) % n) * el.clientWidth, behavior: reduce ? 'auto' : 'smooth' });
-  };
-  return (
-    <div className={styles.gallery}>
-      <div
-        ref={track}
-        className={styles.track}
-        tabIndex={0}
-        role="region"
-        aria-label={`Bilder von ${supplier.name}, mit Pfeiltasten blättern`}
-        onScroll={(e) => setIndex(Math.round(e.currentTarget.scrollLeft / e.currentTarget.clientWidth))}
-        onKeyDown={(e) => {
-          if (n > 1 && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) { e.preventDefault(); step(e.key === 'ArrowLeft' ? -1 : 1); }
-        }}
-      >
-        {supplier.images.map((img) => (
-          <figure key={img.src} className={styles.slide}>
-            <img {...img} sizes="(max-width: 767px) calc(100vw - 2.5rem), 820px" loading="lazy" decoding="async" />
-            <figcaption>{img.alt}</figcaption>
-          </figure>
-        ))}
-      </div>
-      {n > 1 && (
-        <div className={styles.controls}>
-          <button type="button" onClick={() => step(-1)} aria-label="Vorheriges Bild">←</button>
-          <span aria-live="polite">{index + 1} / {n}</span>
-          <button type="button" onClick={() => step(1)} aria-label="Nächstes Bild">→</button>
-        </div>
-      )}
-    </div>
-  );
+const countLabel = (series: Series[]) => {
+  const n = series.reduce((sum, x) => sum + x.images.length, 0);
+  if (!n) return 'Bilder folgen';
+  const k = series.length;
+  return `${k} ${k === 1 ? 'Serie' : 'Serien'} · ${n} ${n === 1 ? 'Bild' : 'Bilder'}`;
 };
 
-const Visual: React.FC<{ supplier: Supplier }> = ({ supplier }) => {
-  const [first, ...rest] = supplier.images;
+const Visual: React.FC<{ supplier: Supplier; series: Series[] }> = ({ supplier, series }) => {
+  const [first, ...rest] = series.flatMap((x) => x.images);
   if (!first) {
     return (
       <span className={styles.typeVisual}>
@@ -80,78 +43,42 @@ const Visual: React.FC<{ supplier: Supplier }> = ({ supplier }) => {
   );
 };
 
-const SupplierCard: React.FC<{ supplier: Supplier; hidden: boolean }> = ({ supplier, hidden }) => {
-  const details = useRef<HTMLDetailsElement>(null);
-  const heading = useRef<HTMLHeadingElement>(null);
-  const close = () => {
-    const el = details.current;
-    if (!el) return;
-    el.open = false;
-    el.querySelector('summary')?.focus();
-  };
-  const n = supplier.images.length;
+/** Markenkarte: führt zur Markenseite mit allen Serien. */
+export const SupplierCard: React.FC<{ supplier: Supplier; area?: AreaId; hidden?: boolean }> = ({ supplier, area, hidden }) => {
+  // Auf Bereichsseiten nur die Serien dieses Bereichs (Megius/Novellini: Bad und Wellness getrennt).
+  const series = area ? seriesInArea(supplier, area) : supplier.series;
+  const n = series.reduce((sum, x) => sum + x.images.length, 0);
   const variant = n > 1 ? styles.stack : n === 1 ? styles.single : styles.text;
   return (
-    <details
-      ref={details}
-      id={supplier.id}
-      name="marken"
-      className={`${styles.card} ${variant}`}
-      hidden={hidden}
-      // Die Karte wird beim Öffnen zum Panel: Fokus auf dessen Titel, damit er nicht verloren geht.
-      onToggle={() => { if (details.current?.open) heading.current?.focus(); }}
-      onKeyDown={(e) => { if (e.key === 'Escape' && details.current?.open) { e.preventDefault(); close(); } }}
-    >
-      <summary className={styles.summary} aria-label={`${supplier.name}, ${countLabel(n)}, Details öffnen`}>
-        <Visual supplier={supplier} />
+    <li className={`${styles.card} ${variant}`} hidden={hidden}>
+      <Link to={supplierHref(supplier.key, area)} className={styles.summary}>
+        <Visual supplier={supplier} series={series} />
         <span className={styles.caption}>
           <span className={styles.name}>{supplier.name}</span>
           <span className={styles.meta}>
-            {supplier.areas.map((a) => a.title).join(' · ')}
-            <span className={styles.count}>{countLabel(n)}</span>
+            {(area ? supplier.areas.filter((a) => a.id === area).flatMap((a) => a.specialties) : supplier.areas.map((a) => a.title)).join(' · ')}
+            <span className={styles.count}>{countLabel(series)}</span>
           </span>
         </span>
-      </summary>
-      <div className={styles.panel}>
-        <div className={styles.info}>
-          <h3 ref={heading} tabIndex={-1}>{supplier.name}</h3>
-          <dl>
-            {supplier.areas.map((a) => (
-              <div key={a.id}><dt>{a.title}</dt><dd>{a.specialties.join(', ')}</dd></div>
-            ))}
-          </dl>
-          <div className={styles.actions}>
-            <a href={supplier.url} target="_blank" rel="noopener noreferrer">Offizielle Website<span className={styles.srOnly}> von {supplier.name} (öffnet in neuem Fenster)</span></a>
-            <Link to="/kontakt">Beratung anfragen</Link>
-            <button type="button" onClick={close}>Schliessen</button>
-          </div>
-        </div>
-        {n ? <Gallery supplier={supplier} /> : (
-          <div className={styles.empty}>
-            <p>Für diese Marke liegen noch keine freigegebenen Bilder vor.</p>
-            <p>Welche Serien verfügbar oder in Zofingen zu sehen sind, klären wir persönlich mit Ihnen.</p>
-          </div>
-        )}
-      </div>
-    </details>
+      </Link>
+    </li>
   );
 };
 
-/** Markenverzeichnis mit Bereichsfilter; jede Marke öffnet inline ihre Bilder und Angaben. */
+/** Kartenraster für eine Auswahl von Marken, z. B. ein Fachgebiet auf der Bereichsseite. */
+export const SupplierList: React.FC<{ items: Supplier[]; area?: AreaId }> = ({ items, area }) => (
+  <ul className={styles.grid}>{items.map((s) => <SupplierCard key={s.key} supplier={s} area={area} />)}</ul>
+);
+
+/** Markenverzeichnis mit Bereichsfilter; jede Karte führt zur Markenseite. */
 const SupplierDirectory: React.FC = () => {
   const [filter, setFilter] = useState<Filter>('alle');
   const { hash } = useLocation();
 
-  // Sprungmarken: #bad usw. setzen den Filter, #marke-… öffnet die Marke.
+  // Sprungmarken #bad usw. setzen den Filter.
   useEffect(() => {
-    let id = '';
-    try { id = decodeURIComponent(hash.slice(1)); } catch { return; }
+    const id = hash.slice(1);
     if (filters.some((f) => f.id === id)) setFilter(id as Filter);
-    const el = id ? document.getElementById(id) : null;
-    if (el instanceof HTMLDetailsElement) {
-      setFilter('alle');
-      el.open = true;
-    }
   }, [hash]);
 
   const visible = suppliers.filter((s) => inFilter(s, filter)).length;
@@ -165,9 +92,9 @@ const SupplierDirectory: React.FC = () => {
         ))}
         <p className={styles.status} aria-live="polite">{visible} Marken</p>
       </div>
-      <div className={styles.grid}>
+      <ul className={styles.grid}>
         {ordered.map((s) => <SupplierCard key={s.key} supplier={s} hidden={!inFilter(s, filter)} />)}
-      </div>
+      </ul>
     </div>
   );
 };
