@@ -19,18 +19,18 @@ Bereich > Fachgebiet > Marke > Serien > Bilder, Daten in `src/data/catalog.json`
 
 ## Aktive Marken, Serien und Bilder
 
-Stand: NLD-Medienpaket vom 23.09.2026 (3 Teile: Bad, Platten, Küchen/Wellness), Nutzung von NLD
-freigegeben am 23.09.2026. Bilder liegen als WebP unverändert in
+Stand: NLD-Medienpaket vom 23.09.2026 (3 Teile: Bad, Platten, Küchen/Wellness) plus Ergänzungspaket
+vom 23.09.2026 (Treemme Appia, Mosavit Acquaris, Zenon Sonor SPC Floor, SICIS Crystal in 1200 px),
+Nutzung von NLD freigegeben am 23.09.2026. Bilder liegen als WebP unverändert in
 `public/images/katalog/<bereich>/<marke>/<serie>-NN-<breite>w.webp` (dazu `-960w.webp`, wenn breiter).
 Quellen je Bild: `docs/IMAGE_SOURCES.md`. Zählung je Seite: `docs/KATALOG_INVENTAR.md`
 (`npm run check:catalog`).
 
 - 34 Marken, 36 Markenseiten, 40 Katalogseiten vorgerendert.
-- 33 von 36 Seiten erfüllen die Anforderung (2 Serien mit je 2 Bildern oder 1 Serie mit 4 Bildern und Ausnahme).
-- Nicht erfüllt, weil das Paket nicht mehr belegbare Bilder enthält: Treemme (Aurelia 2; Appia-Bilder sind
-  Finish-Muster, EU-Banner und Stockfoto), Mosavit (NEXT 2; Piedra-Java-Bilder sind Naturtexturen ohne Produkt),
-  Zenon (Neo 2; Tempo-Bilder nur 281 px).
-- Ausnahmen mit einer Serie: Gessi (Incastri), Megius Bad (Materia), Novellini Bad (Riga), SICIS (Crystal, nur 384 px).
+- 36 von 36 Seiten erfüllen die Anforderung (2 Serien mit je 2 Bildern oder 1 Serie mit 4 Bildern und Ausnahme).
+  Treemme, Mosavit und Zenon haben ihre zweite Serie aus dem Ergänzungspaket (Appia, Acquaris, Sonor SPC Floor).
+- Ausnahmen mit einer Serie: Gessi (Incastri), Megius Bad (Materia), Novellini Bad (Riga), SICIS (Crystal:
+  vier Musterblätter in 1200 px, die die 384-px-Miniaturen des ersten Pakets ersetzen).
 - Einzelbilder ohne vollständige Serie stehen auf der Markenseite unter «Weitere Bilder» (`"extra": true`
   in `catalog.json`) und zählen nicht für die Anforderung.
 - Bereits kuratierte Bilder des Medienpakets vom 22.09.2026 wurden in die passende Paketserie eingeordnet;

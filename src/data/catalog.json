@@ -571,6 +571,33 @@
         },
         {
           "area": "bad",
+          "name": "Appia",
+          "images": [
+            {
+              "pack": "katalog/bad/treemme/appia-01",
+              "width": 2000,
+              "height": 1292,
+              "alt": "Rubinetterie Treemme Appia: Doppelwaschtisch mit Wandarmaturen in Chrom, zwei runden Spiegeln und freistehender Badewanne",
+              "sha1": "494b8a579929ed5268fe407003fb2ca6c5baa61a"
+            },
+            {
+              "pack": "katalog/bad/treemme/appia-02",
+              "width": 1548,
+              "height": 2000,
+              "alt": "Rubinetterie Treemme Appia: Wandarmatur in Chrom über einem Aufsatzbecken, Detailansicht",
+              "sha1": "36f75e79b864ae7e9367efd65dd33ec84ac2a36d"
+            },
+            {
+              "pack": "katalog/bad/treemme/appia-03",
+              "width": 1548,
+              "height": 2000,
+              "alt": "Rubinetterie Treemme Appia: Waschtischarmatur in Gold auf einem weissen Waschtisch",
+              "sha1": "6c7b7a0d1e7cf382635cde4585a78f96999964ca"
+            }
+          ]
+        },
+        {
+          "area": "bad",
           "name": "Up+",
           "images": [
             {
@@ -2593,38 +2620,31 @@
           "images": [
             {
               "pack": "katalog/platten/sicis/crystal-01",
-              "width": 384,
-              "height": 384,
-              "alt": "SICIS Crystal: Glasmosaik in Sechseckform, Grau",
-              "sha1": "cc7d42f640c5c8e69ae79d7e98b130d5cb7b0b0f"
+              "width": 1200,
+              "height": 1200,
+              "alt": "SICIS Crystal: Glasmosaik Blenda, sechseckige Steine in Grün-Gold, Musterblatt",
+              "sha1": "bc9b0d390b0f7bf2e7f99e6054f68f421e814a49"
             },
             {
               "pack": "katalog/platten/sicis/crystal-02",
-              "width": 384,
-              "height": 384,
-              "alt": "SICIS Crystal: Glasmosaik in Sechseckform, irisierend in Blau und Violett",
-              "sha1": "f7b534a5025fd3a34ece892bdc2c3d99b6d90530"
+              "width": 1200,
+              "height": 1200,
+              "alt": "SICIS Crystal: Glasmosaik Ametrino, sechseckige Steine mit irisierendem Farbverlauf, Musterblatt",
+              "sha1": "e35c80d9807abe6669186925a8ff67955051a28f"
             },
             {
               "pack": "katalog/platten/sicis/crystal-03",
-              "width": 384,
-              "height": 384,
-              "alt": "SICIS Crystal: Glasmosaik in Sechseckform, Weiss",
-              "sha1": "b925db8ed33996cee96ca7fb7167ed05ee4e8158"
+              "width": 1200,
+              "height": 1200,
+              "alt": "SICIS Crystal: Glasmosaik Axin, sechseckige Steine in Perlmuttweiss, Musterblatt",
+              "sha1": "d53557d64fed717fe8f387e336833c0a5a46c7ad"
             },
             {
               "pack": "katalog/platten/sicis/crystal-04",
-              "width": 384,
-              "height": 384,
-              "alt": "SICIS Crystal: Glasmosaik in Sechseckform, Grün",
-              "sha1": "117ff4f3eb79ae2895726af371eed9b98aaf9354"
-            },
-            {
-              "pack": "katalog/platten/sicis/crystal-05",
-              "width": 384,
-              "height": 384,
-              "alt": "SICIS Crystal: Glasmosaik in Sechseckform, Creme",
-              "sha1": "84d3aba7e471af4e07abe748cce51325a8d19e53"
+              "width": 1200,
+              "height": 1200,
+              "alt": "SICIS Crystal: Glasmosaik Beryl, sechseckige Steine in Hellgrün, Musterblatt",
+              "sha1": "967516daca2d8f105d7d2b8058b879f55e4d47e5"
             }
           ]
         },
@@ -2657,7 +2677,7 @@
         }
       ],
       "exception": {
-        "platten": "Im Paket ist nur Crystal vollständig belegt (5 Bilder, 384 px); von Pixel sind vier Bilder Katalogcover."
+        "platten": "Nur Crystal ist als Serie belegt (4 Musterblätter 1200 px aus dem Hersteller-CMS); von Pixel sind vier Bilder Katalogcover."
       }
     },
     "mosavit": {
@@ -2681,6 +2701,26 @@
               "height": 712,
               "alt": "Mosavit NEXT: Pool mit Mosaik in Grau und Bronze",
               "sha1": "487c63208510cf0329180585dfa86168fac2da77"
+            }
+          ]
+        },
+        {
+          "area": "platten",
+          "name": "Acquaris",
+          "images": [
+            {
+              "pack": "katalog/platten/mosavit/acquaris-01",
+              "width": 1536,
+              "height": 1152,
+              "alt": "Mosavit Acquaris: Glasmosaik in Türkis in einem privaten Pool mit Treppenstufen",
+              "sha1": "61b0177d6732d348ea534135711115de56863de8"
+            },
+            {
+              "pack": "katalog/platten/mosavit/acquaris-02",
+              "width": 1500,
+              "height": 2000,
+              "alt": "Mosavit Acquaris: Glasmosaik in Blau unter Wasser, Detail der Poolwand",
+              "sha1": "29524acc0bdceefb3a3015b229c11ebc9a478c39"
             }
           ]
         },
@@ -2866,6 +2906,40 @@
               "height": 900,
               "alt": "Zenon Neo SPC Floor: Bad mit Waschtisch und SPC-Boden in Hellgrau",
               "sha1": "7e63a08525ea6fd4c342c9aeef083bf0bad89943"
+            }
+          ]
+        },
+        {
+          "area": "platten",
+          "name": "Sonor SPC Floor",
+          "images": [
+            {
+              "pack": "katalog/platten/zenon/sonor-spc-floor-01",
+              "width": 1600,
+              "height": 900,
+              "alt": "Zenon Sonor SPC Floor: helle Bodenplanken 60x120 cm in Steinoptik, Detail mit Möbelfuss",
+              "sha1": "6f7f86753f967ff20ee2acd89b783c6cb8ffd453"
+            },
+            {
+              "pack": "katalog/platten/zenon/sonor-spc-floor-02",
+              "width": 1600,
+              "height": 900,
+              "alt": "Zenon Sonor SPC Floor: Bodenplanken in Beige-Steinoptik mit Lederstuhl",
+              "sha1": "8dd4979452164730a58a7bd8ec62535992ca1b6c"
+            },
+            {
+              "pack": "katalog/platten/zenon/sonor-spc-floor-03",
+              "width": 1600,
+              "height": 900,
+              "alt": "Zenon Sonor SPC Floor: Badezimmer mit hellem SPC-Boden, Waschtischmöbel in Grau und ovalem Spiegel",
+              "sha1": "d9063066382c4ad502a7dcd253a8be6440a0e6c6"
+            },
+            {
+              "pack": "katalog/platten/zenon/sonor-spc-floor-04",
+              "width": 1599,
+              "height": 900,
+              "alt": "Zenon Sonor SPC Floor: heller SPC-Boden unter einem wandhängenden Waschtischmöbel",
+              "sha1": "ea9505d508c408d25ac567b35010ad29318146fb"
             }
           ]
         },

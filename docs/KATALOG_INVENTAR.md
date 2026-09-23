@@ -4,7 +4,7 @@ Automatisch erzeugt von `npm run check:catalog`. Anforderung je Seite: mindesten
 mindestens 2 Bildern (oder 1 Serie mit mindestens 4 Bildern und begründeter Ausnahme).
 Mit * markierte Serien sind Einzelbilder im Abschnitt «Weitere Bilder» und zählen nicht.
 
-**33 von 36 Seiten erfüllt.**
+**36 von 36 Seiten erfüllt.**
 
 | Bereich | Marke | Seite | Serien | Bilder | Serien (Bilder) | Status |
 |---|---|---|---|---|---|---|
@@ -13,7 +13,7 @@ Mit * markierte Serien sind Einzelbilder im Abschnitt «Weitere Bilder» und zä
 | Bad | Archeda | `/produkte/bad/archeda` | 2 | 4 | Tulle Studio (2), Tulle Cannettato (2) | ✅ |
 | Bad | Froidevaux AG | `/produkte/bad/froidevaux` | 2 | 5 | iCON Standard (2), Connect Standard (2), Auswahl aus dem Medienpaket (1)* | ✅ |
 | Bad | Pirovano Bagni | `/produkte/bad/pirovano` | 3 | 13 | Pilar (5), Linear (4), Millennium XL (4) | ✅ |
-| Bad | Rubinetterie Treemme | `/produkte/bad/treemme` | 1 | 4 | Aurelia (2), Up+ (1)*, Ran (1)* | ❌ nur 1 Serie |
+| Bad | Rubinetterie Treemme | `/produkte/bad/treemme` | 2 | 7 | Aurelia (2), Appia (3), Up+ (1)*, Ran (1)* | ✅ |
 | Bad | Newform | `/produkte/bad/newform` | 2 | 11 | Steel Line (5), Ionika (5), Deltazero (1)* | ✅ |
 | Bad | Gessi | `/produkte/bad/gessi` | 1 | 6 | Incastri (5), Jacqueline (1)* | ✅ Ausnahme: Im Paket sind die Origini-Bilder Kampagnen-Stillleben ohne Produkt (420 px); nur Incastri ist belegt. |
 | Bad | Luce Rubinetterie | `/produkte/bad/luce` | 2 | 5 | Segno (2), Zefiro (2), Spazio (1)* | ✅ |
@@ -35,11 +35,11 @@ Mit * markierte Serien sind Einzelbilder im Abschnitt «Weitere Bilder» und zä
 | Platten | Supergres | `/produkte/platten/supergres` | 2 | 10 | Lightstones (5), Whisper (5) | ✅ |
 | Platten | Ariana Ceramiche / Gardenia&Ariana | `/produkte/platten/ariana` | 2 | 8 | Hermione (4), Gioia (4) | ✅ |
 | Platten | Acquario Due | `/produkte/platten/acquario` | 2 | 7 | Calathea (2), Papillon (5) | ✅ |
-| Platten | SICIS | `/produkte/platten/sicis` | 1 | 7 | Crystal (5), Pixel (1)*, Elegance (1)* | ✅ Ausnahme: Im Paket ist nur Crystal vollständig belegt (5 Bilder, 384 px); von Pixel sind vier Bilder Katalogcover. |
-| Platten | Mosavit / Trip by Mosavit | `/produkte/platten/mosavit` | 1 | 3 | NEXT (2), Fachaleta Quartz Marfil (1)* | ❌ nur 1 Serie |
+| Platten | SICIS | `/produkte/platten/sicis` | 1 | 6 | Crystal (4), Pixel (1)*, Elegance (1)* | ✅ Ausnahme: Nur Crystal ist als Serie belegt (4 Musterblätter 1200 px aus dem Hersteller-CMS); von Pixel sind vier Bilder Katalogcover. |
+| Platten | Mosavit / Trip by Mosavit | `/produkte/platten/mosavit` | 2 | 5 | NEXT (2), Acquaris (2), Fachaleta Quartz Marfil (1)* | ✅ |
 | Platten | Skema | `/produkte/platten/skema` | 2 | 7 | Villa Spina (3), Palladio (3), Villa (1)* | ✅ |
 | Platten | Déco | `/produkte/platten/deco` | 2 | 6 | Clap Zer0 (2), Clap Real (2), Clap 3D (1)*, Clap (1)* | ✅ |
-| Platten | Zenon Bath & SPC Surfaces | `/produkte/platten/zenon` | 1 | 3 | Neo SPC Floor (2), Tempo SPC Floor (1)* | ❌ nur 1 Serie |
+| Platten | Zenon Bath & SPC Surfaces | `/produkte/platten/zenon` | 2 | 7 | Neo SPC Floor (2), Sonor SPC Floor (4), Tempo SPC Floor (1)* | ✅ |
 | Platten | Inkiostro Bianco | `/produkte/platten/inkiostro` | 2 | 5 | Monochrome (2), Light and Shadows (2), White Paper (1)* | ✅ |
 | Wellness | Novellini | `/produkte/wellness/novellini` | 2 | 12 | Celsius Combo SH (5), Fun Sauna (5), Home Oasis (1)*, Moon (1)* | ✅ |
 | Wellness | Albatros Wellness | `/produkte/wellness/albatros` | 2 | 10 | Ethos Pool (5), Soreha Pool (5) | ✅ |
