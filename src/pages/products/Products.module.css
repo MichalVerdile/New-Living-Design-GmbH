@@ -186,6 +186,22 @@
   text-transform: uppercase;
 }
 
+.category-highlights a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: #aab2a7;
+  text-underline-offset: .3em;
+}
+
+.category-highlights a:hover,
+.category-highlights a:focus-visible {
+  color: #6b7457;
+  text-decoration-color: currentColor;
+}
+
 
 .category-link {
   display: inline-flex;

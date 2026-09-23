@@ -27,6 +27,15 @@ const heroes = {
   platten: imageOf('emilgroup'),
 };
 
+const badCategoryLinks: { label: string; area: AreaId; group: string }[] = [
+  { label: 'Badmöbel', area: 'bad', group: 'Badmöbel' },
+  { label: 'Waschtische', area: 'bad', group: 'Waschtische' },
+  { label: 'Armaturen', area: 'bad', group: 'Armaturen' },
+  { label: 'Keramik', area: 'bad', group: 'Sanitärkeramik' },
+  { label: 'Duschen', area: 'bad', group: 'Duschen & Duschabtrennungen' },
+  { label: 'Badewannen', area: 'wellness', group: 'Badewannen' },
+];
+
 const cards: Record<keyof typeof heroes, SubcategoryCard[]> = {
   bad: [
     { id: 'badmoebel', title: 'Badmöbel', supplier: 'rexa', image: imageOf('rexa', 'Moode') },
@@ -169,7 +178,9 @@ const Products: React.FC = () => {
                     Neben Serienmöbeln zeigen wir auch massgefertigte Lösungen aus Corian® und Korakril™.
                   </p>
                   <ul className={styles['category-highlights']} aria-label="Bad-Sortiment">
-                    <li>Badmöbel</li><li>Waschtische</li><li>Armaturen</li><li>Keramik</li><li>Duschen</li><li>Badewannen</li>
+                    {badCategoryLinks.map(({ label, area, group }) => (
+                      <li key={label}><Link to={`${areaHref(area)}#${groupSlug(group)}`}>{label}</Link></li>
+                    ))}
                   </ul>
                   <Link to="/kontakt" className={styles['category-link']}>Badberatung anfragen</Link>
                 </div>
