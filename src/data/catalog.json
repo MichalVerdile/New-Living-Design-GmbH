@@ -1,5 +1,5 @@
 {
-  "$comment": "Katalog: Bereiche > Fachgebiete > Marken > Serien > Bilder. Aktive Marken und Kategorien laut NLD (23.09.2026). Bilder: 'pack' = public/images/<pack>-<width>w.webp (dazu -960w.webp, wenn breiter als 960 px), 'asset' = Datei in src/assets. Serien mit 'extra': true sind Einzelbilder ohne vollständige Serie (Abschnitt «Weitere Bilder»), zählen nicht für die Mindestanforderung. 'exception': {<bereich>: Begründung} erlaubt eine einzelne Serie mit mindestens 4 Bildern. Nur echte, freigegebene Fotos.",
+  "$comment": "Katalog: Bereiche > Fachgebiete > Marken > Serien > Bilder. Aktive Marken und Kategorien laut NLD (23.09.2026). Bilder: 'pack' = public/images/<pack>-<width>w.webp (dazu -960w.webp, wenn breiter als 960 px), 'asset' = Datei in src/assets. Serien mit 'extra': true sind Einzelbilder ohne vollständige Serie (Abschnitt «Weitere Bilder»), zählen nicht für die Mindestanforderung. Nur echte, freigegebene Fotos.",
   "areas": [
     {
       "id": "bad",
@@ -781,14 +781,24 @@
               "width": 1136,
               "height": 639,
               "alt": "Gessi Designarmaturen in Bronze an dunklen Aufsatzwaschbecken"
+            },
+            {
+              "pack": "katalog/bad/gessi/jacqueline-02",
+              "width": 1000,
+              "height": 1000,
+              "alt": "Gessi Jacqueline: Waschtischarmatur in Kupfer mit Auslauf in Bambusform, Detail am Waschbecken",
+              "sha1": "5150d0bccebbb04d8bf8f2d333b385ed1c949a0b"
+            },
+            {
+              "pack": "katalog/bad/gessi/jacqueline-03",
+              "width": 1000,
+              "height": 1000,
+              "alt": "Gessi Jacqueline: zwei Standarmaturen mit Auslauf in Bambusform in Schwarz und Bronze",
+              "sha1": "37106049bcaf3810361bcc8fc2d484cffb8555db"
             }
-          ],
-          "extra": true
+          ]
         }
-      ],
-      "exception": {
-        "bad": "Im Paket sind die Origini-Bilder Kampagnen-Stillleben ohne Produkt (420 px); nur Incastri ist belegt."
-      }
+      ]
     },
     "luce": {
       "name": "Luce Rubinetterie",
@@ -1379,11 +1389,35 @@
               "sha1": "aea26500bf580d90bd9841255ffce95373e2e74b"
             }
           ]
+        },
+        {
+          "area": "bad",
+          "name": "Manolibera",
+          "images": [
+            {
+              "pack": "katalog/bad/megius/manolibera-01",
+              "width": 2000,
+              "height": 1568,
+              "alt": "Megius Manolibera: Duschkabine mit Schiebetür aus satiniertem Glas in einem Raum mit Blick auf den Pool",
+              "sha1": "e66d9f26fbea590ec89d9f62054484b4bf24c993"
+            },
+            {
+              "pack": "katalog/bad/megius/manolibera-02",
+              "width": 2000,
+              "height": 1442,
+              "alt": "Megius Manolibera: Duschtür mit geschwungenem Dekor im Glas neben einer Fensterfront",
+              "sha1": "28413e84231fbac0b1907eae2fc1e68f57499060"
+            },
+            {
+              "pack": "katalog/bad/megius/manolibera-03",
+              "width": 2000,
+              "height": 1692,
+              "alt": "Megius Manolibera: Nischendusche mit Schiebetür aus satiniertem Glas, Blick in ein Lesezimmer",
+              "sha1": "a187854edb5a055035692869b307c394696eea40"
+            }
+          ]
         }
-      ],
-      "exception": {
-        "bad": "Die Classic-Bilder im Paket sind ein Ratgeber-Cover und vier identische Profildetails; nur Materia ist belegt."
-      }
+      ]
     },
     "novellini": {
       "name": "Novellini",
@@ -1424,20 +1458,6 @@
           ]
         },
         {
-          "area": "bad",
-          "name": "Brera",
-          "images": [
-            {
-              "pack": "katalog/bad/novellini/brera-01",
-              "width": 1600,
-              "height": 900,
-              "alt": "Novellini Brera: Eckdusche mit Glaswänden in einem Bad mit Doppelwaschtisch",
-              "sha1": "b34a80c8a2b19af76e5559bca64db2ce3cfe1955"
-            }
-          ],
-          "extra": true
-        },
-        {
           "area": "wellness",
           "name": "Celsius Combo SH",
           "images": [
@@ -1475,6 +1495,26 @@
               "height": 1300,
               "alt": "Novellini Celsius Combo SH: Lichtlinien an der Kabinendecke",
               "sha1": "90bbca49970ce7c32260df7d1476cfd49e58a90d"
+            }
+          ]
+        },
+        {
+          "area": "bad",
+          "name": "Kuadra 2.0",
+          "images": [
+            {
+              "pack": "katalog/bad/novellini/kuadra-2-0-01",
+              "width": 1600,
+              "height": 900,
+              "alt": "Novellini Kuadra 2.0: Duschabtrennung mit Schiebetür und schwarzen Profilen vor dunkler Wand",
+              "sha1": "58b6141be18ec915262e5de144f61ab09c50efca"
+            },
+            {
+              "pack": "katalog/bad/novellini/kuadra-2-0-02",
+              "width": 2000,
+              "height": 1280,
+              "alt": "Novellini Kuadra 2.0 G+F: Eckdusche mit Drehtür und fester Seitenwand in einem hellen Bad",
+              "sha1": "8536bc84910da0c0808052278a72635e1db3b17b"
             }
           ]
         },
@@ -1520,6 +1560,20 @@
           ]
         },
         {
+          "area": "bad",
+          "name": "Brera",
+          "images": [
+            {
+              "pack": "katalog/bad/novellini/brera-01",
+              "width": 1600,
+              "height": 900,
+              "alt": "Novellini Brera: Eckdusche mit Glaswänden in einem Bad mit Doppelwaschtisch",
+              "sha1": "b34a80c8a2b19af76e5559bca64db2ce3cfe1955"
+            }
+          ],
+          "extra": true
+        },
+        {
           "area": "wellness",
           "name": "Home Oasis",
           "images": [
@@ -1545,10 +1599,7 @@
           ],
           "extra": true
         }
-      ],
-      "exception": {
-        "bad": "Von den Bad-Serien im Paket ist nur Riga mit Duschbildern belegt; das Brera-Bild zeigt einen Whirlpool."
-      }
+      ]
     },
     "vismaravetro": {
       "name": "Vismaravetro",
@@ -2650,6 +2701,26 @@
         },
         {
           "area": "platten",
+          "name": "Colibrì",
+          "images": [
+            {
+              "pack": "katalog/platten/sicis/colibri-01",
+              "width": 1200,
+              "height": 1200,
+              "alt": "SICIS Colibrì: Glasmosaik Kori in Gold, Musterblatt",
+              "sha1": "cfb95a490ead12687152b5f105716c23303a316a"
+            },
+            {
+              "pack": "katalog/platten/sicis/colibri-02",
+              "width": 1200,
+              "height": 1200,
+              "alt": "SICIS Colibrì: Glasmosaik Felicia in Blau, Musterblatt",
+              "sha1": "0e3558c1b0e0b1ad29e7061fa47a9f7665d85dd0"
+            }
+          ]
+        },
+        {
+          "area": "platten",
           "name": "Pixel",
           "images": [
             {
@@ -2675,10 +2746,7 @@
           ],
           "extra": true
         }
-      ],
-      "exception": {
-        "platten": "Nur Crystal ist als Serie belegt (4 Musterblätter 1200 px aus dem Hersteller-CMS); von Pixel sind vier Bilder Katalogcover."
-      }
+      ]
     },
     "mosavit": {
       "name": "Mosavit / Trip by Mosavit",

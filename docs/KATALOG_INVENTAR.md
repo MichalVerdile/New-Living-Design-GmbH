@@ -1,7 +1,7 @@
 # Katalog-Inventar
 
-Automatisch erzeugt von `npm run check:catalog`. Anforderung je Seite: mindestens 2 Serien mit je
-mindestens 2 Bildern (oder 1 Serie mit mindestens 4 Bildern und begründeter Ausnahme).
+Automatisch erzeugt von `npm run check:catalog`. Anforderung je Seite, ohne Ausnahmen:
+mindestens 2 Serien mit je mindestens 2 Bildern.
 Mit * markierte Serien sind Einzelbilder im Abschnitt «Weitere Bilder» und zählen nicht.
 
 **36 von 36 Seiten erfüllt.**
@@ -15,14 +15,14 @@ Mit * markierte Serien sind Einzelbilder im Abschnitt «Weitere Bilder» und zä
 | Bad | Pirovano Bagni | `/produkte/bad/pirovano` | 3 | 13 | Pilar (5), Linear (4), Millennium XL (4) | ✅ |
 | Bad | Rubinetterie Treemme | `/produkte/bad/treemme` | 2 | 7 | Aurelia (2), Appia (3), Up+ (1)*, Ran (1)* | ✅ |
 | Bad | Newform | `/produkte/bad/newform` | 2 | 11 | Steel Line (5), Ionika (5), Deltazero (1)* | ✅ |
-| Bad | Gessi | `/produkte/bad/gessi` | 1 | 6 | Incastri (5), Jacqueline (1)* | ✅ Ausnahme: Im Paket sind die Origini-Bilder Kampagnen-Stillleben ohne Produkt (420 px); nur Incastri ist belegt. |
+| Bad | Gessi | `/produkte/bad/gessi` | 2 | 8 | Incastri (5), Jacqueline (3) | ✅ |
 | Bad | Luce Rubinetterie | `/produkte/bad/luce` | 2 | 5 | Segno (2), Zefiro (2), Spazio (1)* | ✅ |
 | Bad | Ceramica Cielo | `/produkte/bad/cielo` | 2 | 11 | Filo (5), Le Giare (6) | ✅ |
 | Bad | Scarabeo Ceramiche | `/produkte/bad/scarabeo` | 3 | 15 | Fidia (5), Yugo (5), Skinny (5) | ✅ |
 | Bad | Ceramica Galassia | `/produkte/bad/galassia` | 2 | 7 | Dream (5), Meg11 (2) | ✅ |
 | Bad | Azzurra Ceramica | `/produkte/bad/azzurra` | 3 | 12 | Anfibio (4), Aurea (4), Build (4) | ✅ |
-| Bad | Megius | `/produkte/bad/megius` | 1 | 4 | Materia (4) | ✅ Ausnahme: Die Classic-Bilder im Paket sind ein Ratgeber-Cover und vier identische Profildetails; nur Materia ist belegt. |
-| Bad | Novellini | `/produkte/bad/novellini` | 1 | 5 | Riga (4), Brera (1)* | ✅ Ausnahme: Von den Bad-Serien im Paket ist nur Riga mit Duschbildern belegt; das Brera-Bild zeigt einen Whirlpool. |
+| Bad | Megius | `/produkte/bad/megius` | 2 | 7 | Materia (4), Manolibera (3) | ✅ |
+| Bad | Novellini | `/produkte/bad/novellini` | 2 | 7 | Riga (4), Kuadra 2.0 (2), Brera (1)* | ✅ |
 | Bad | Vismaravetro | `/produkte/bad/vismaravetro` | 3 | 14 | 7200 (5), Frame (3), Smack (5), Suite (1)* | ✅ |
 | Bad | Capannoli | `/produkte/bad/capannoli` | 2 | 11 | Tratto C (5), Minima (5), Tratto (1)* | ✅ |
 | Bad | Antrax IT | `/produkte/bad/antrax` | 2 | 9 | Hashi (4), Tavolina (4), Pypeline (1)* | ✅ |
@@ -35,7 +35,7 @@ Mit * markierte Serien sind Einzelbilder im Abschnitt «Weitere Bilder» und zä
 | Platten | Supergres | `/produkte/platten/supergres` | 2 | 10 | Lightstones (5), Whisper (5) | ✅ |
 | Platten | Ariana Ceramiche / Gardenia&Ariana | `/produkte/platten/ariana` | 2 | 8 | Hermione (4), Gioia (4) | ✅ |
 | Platten | Acquario Due | `/produkte/platten/acquario` | 2 | 7 | Calathea (2), Papillon (5) | ✅ |
-| Platten | SICIS | `/produkte/platten/sicis` | 1 | 6 | Crystal (4), Pixel (1)*, Elegance (1)* | ✅ Ausnahme: Nur Crystal ist als Serie belegt (4 Musterblätter 1200 px aus dem Hersteller-CMS); von Pixel sind vier Bilder Katalogcover. |
+| Platten | SICIS | `/produkte/platten/sicis` | 2 | 8 | Crystal (4), Colibrì (2), Pixel (1)*, Elegance (1)* | ✅ |
 | Platten | Mosavit / Trip by Mosavit | `/produkte/platten/mosavit` | 2 | 5 | NEXT (2), Acquaris (2), Fachaleta Quartz Marfil (1)* | ✅ |
 | Platten | Skema | `/produkte/platten/skema` | 2 | 7 | Villa Spina (3), Palladio (3), Villa (1)* | ✅ |
 | Platten | Déco | `/produkte/platten/deco` | 2 | 6 | Clap Zer0 (2), Clap Real (2), Clap 3D (1)*, Clap (1)* | ✅ |

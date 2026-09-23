@@ -20,17 +20,18 @@ Bereich > Fachgebiet > Marke > Serien > Bilder, Daten in `src/data/catalog.json`
 ## Aktive Marken, Serien und Bilder
 
 Stand: NLD-Medienpaket vom 23.09.2026 (3 Teile: Bad, Platten, Küchen/Wellness) plus Ergänzungspaket
-vom 23.09.2026 (Treemme Appia, Mosavit Acquaris, Zenon Sonor SPC Floor, SICIS Crystal in 1200 px),
+vom 23.09.2026 (Treemme Appia, Mosavit Acquaris, Zenon Sonor SPC Floor, SICIS Crystal in 1200 px) und
+zweitem Ergänzungspaket (Gessi Jacqueline, Megius Manolibera, Novellini Kuadra 2.0, SICIS Colibrì),
 Nutzung von NLD freigegeben am 23.09.2026. Bilder liegen als WebP unverändert in
 `public/images/katalog/<bereich>/<marke>/<serie>-NN-<breite>w.webp` (dazu `-960w.webp`, wenn breiter).
 Quellen je Bild: `docs/IMAGE_SOURCES.md`. Zählung je Seite: `docs/KATALOG_INVENTAR.md`
 (`npm run check:catalog`).
 
 - 34 Marken, 36 Markenseiten, 40 Katalogseiten vorgerendert.
-- 36 von 36 Seiten erfüllen die Anforderung (2 Serien mit je 2 Bildern oder 1 Serie mit 4 Bildern und Ausnahme).
-  Treemme, Mosavit und Zenon haben ihre zweite Serie aus dem Ergänzungspaket (Appia, Acquaris, Sonor SPC Floor).
-- Ausnahmen mit einer Serie: Gessi (Incastri), Megius Bad (Materia), Novellini Bad (Riga), SICIS (Crystal:
-  vier Musterblätter in 1200 px, die die 384-px-Miniaturen des ersten Pakets ersetzen).
+- 36 von 36 Seiten erfüllen die Anforderung ohne Ausnahme: mindestens 2 Serien mit je 2 Bildern.
+  Die zweite Serie aus den Ergänzungspaketen: Treemme Appia, Mosavit Acquaris, Zenon Sonor SPC Floor,
+  Gessi Jacqueline, Megius Manolibera, Novellini Kuadra 2.0, SICIS Colibrì (SICIS Crystal: vier
+  Musterblätter in 1200 px ersetzen die 384-px-Miniaturen des ersten Pakets).
 - Einzelbilder ohne vollständige Serie stehen auf der Markenseite unter «Weitere Bilder» (`"extra": true`
   in `catalog.json`) und zählen nicht für die Anforderung.
 - Bereits kuratierte Bilder des Medienpakets vom 22.09.2026 wurden in die passende Paketserie eingeordnet;

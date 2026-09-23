@@ -3,10 +3,8 @@
  *
  *   npm run check:catalog
  *
- * Mindestanforderung je Markenseite (/produkte/<bereich>/<marke>):
- *   - mindestens 2 Serien mit je mindestens 2 Bildern, oder
- *   - genau 1 Serie mit mindestens 4 Bildern und einer begründeten Ausnahme
- *     (`"exception": { "<bereich>": "Begründung" }` bei der Marke).
+ * Mindestanforderung je Markenseite (/produkte/<bereich>/<marke>), ohne Ausnahmen:
+ *   mindestens 2 Serien mit je mindestens 2 Bildern.
  *   Serien mit `"extra": true` («Weitere Bilder», Einzelbilder ohne vollständige Serie) zählen nicht.
  * Ausserdem: jede Bilddatei existiert, kein Bild wird doppelt verwendet.
  * Exit-Code 1, sobald eine Seite die Anforderung nicht erfüllt.
@@ -31,7 +29,6 @@ for (const area of catalog.areas) {
     const series = all.filter((x) => !x.extra)
     const images = all.reduce((n, x) => n + x.images.length, 0)
     const route = `/produkte/${area.id}/${key}`
-    const exception = s.exception?.[area.id]
     const problems = []
     for (const x of all) {
       for (const img of x.images) {
@@ -42,24 +39,22 @@ for (const area of catalog.areas) {
         else seen.set(id, `${route} ${x.name}`)
       }
     }
-    const okMulti = series.length >= 2 && series.every((x) => x.images.length >= 2)
-    const okSingle = series.length === 1 && images >= 4 && exception
     if (!images) problems.push('keine Bilder')
-    else if (!okMulti && !okSingle) {
+    else if (series.length < 2 || series.some((x) => x.images.length < 2)) {
       const thin = series.filter((x) => x.images.length < 2).map((x) => x.name)
       problems.push(series.length < 2 ? `nur ${series.length} Serie` : `Serien mit weniger als 2 Bildern: ${thin.join(', ')}`)
     }
     if (problems.length) errors.push(`${route}: ${problems.join('; ')}`)
     const detail = all.map((x) => `${x.name} (${x.images.length})${x.extra ? '*' : ''}`).join(', ') || '—'
-    lines.push(`| ${area.title} | ${s.name} | \`${route}\` | ${series.length} | ${images} | ${detail} | ${problems.length ? '❌ ' + problems.join('; ') : exception ? '✅ Ausnahme: ' + exception : '✅'} |`)
+    lines.push(`| ${area.title} | ${s.name} | \`${route}\` | ${series.length} | ${images} | ${detail} | ${problems.length ? '❌ ' + problems.join('; ') : '✅'} |`)
   }
 }
 
 const ok = lines.filter((l) => l.includes('| ✅')).length
 const report = `# Katalog-Inventar
 
-Automatisch erzeugt von \`npm run check:catalog\`. Anforderung je Seite: mindestens 2 Serien mit je
-mindestens 2 Bildern (oder 1 Serie mit mindestens 4 Bildern und begründeter Ausnahme).
+Automatisch erzeugt von \`npm run check:catalog\`. Anforderung je Seite, ohne Ausnahmen:
+mindestens 2 Serien mit je mindestens 2 Bildern.
 Mit * markierte Serien sind Einzelbilder im Abschnitt «Weitere Bilder» und zählen nicht.
 
 **${ok} von ${lines.length} Seiten erfüllt.**
