@@ -12,7 +12,9 @@ const SupplierPage: React.FC = () => {
   const supplier = suppliers.find((s) => s.key === key);
   const inArea = supplier?.areas.find((a) => a.id === area?.id);
   if (!area || !supplier || !inArea) return <Navigate to="/produkte" replace />;
-  const series = seriesInArea(supplier, area.id);
+  const all = seriesInArea(supplier, area.id);
+  const series = all.filter((s) => !s.extra);
+  const extras = all.filter((s) => s.extra);
   const group = area.groups.find((g) => g.brands.includes(supplier.key))!;
   const neighbours = group.brands.filter((b) => b !== supplier.key);
   const otherAreas = supplier.areas.filter((a) => a.id !== area.id);
@@ -23,7 +25,7 @@ const SupplierPage: React.FC = () => {
         description={`${supplier.name} bei New Living Design in Zofingen: ${inArea.specialties.join(', ')}. Auswahl, Beratung und Planung persönlich mit Ihnen.`}
         url={supplierHref(supplier.key, area.id)}
         type="website"
-        image={series[0] ? `https://newlivingdesign.ch${series[0].images[0].src}` : undefined}
+        image={all[0] ? `https://newlivingdesign.ch${all[0].images[0].src}` : undefined}
       />
       <div className={styles.container}>
         <nav aria-label="Brotkrumen" className={styles.crumbs}>
@@ -38,7 +40,7 @@ const SupplierPage: React.FC = () => {
           <div>
             <p className={styles.eyebrow}>{inArea.specialties.join(' · ')}</p>
             <h1>{supplier.name}</h1>
-            <p className={styles.facts}>{series.length ? `${series.length} ${series.length === 1 ? 'Serie' : 'Serien'} · ${series.reduce((n, s) => n + s.images.length, 0)} Bilder` : 'Bilder folgen'}</p>
+            <p className={styles.facts}>{all.length ? `${series.length} ${series.length === 1 ? 'Serie' : 'Serien'} · ${all.reduce((n, s) => n + s.images.length, 0)} Bilder` : 'Bilder folgen'}</p>
           </div>
           <div className={styles.supplierActions}>
             <a href={supplier.url} target="_blank" rel="noopener noreferrer">Offizielle Website<span className={styles.srOnly}> von {supplier.name} (öffnet in neuem Fenster)</span></a>
@@ -54,10 +56,19 @@ const SupplierPage: React.FC = () => {
             </div>
             <Gallery images={s.images} label={`${supplier.name} ${s.name}`} eager={i === 0} />
           </section>
-        )) : (
+        )) : !extras.length && (
           <section className={styles.pending} aria-label="Serien">
             <p>Für diese Marke liegen noch keine freigegebenen Serienbilder vor.</p>
             <p>Welche Serien verfügbar oder in Zofingen zu sehen sind, klären wir persönlich mit Ihnen.</p>
+          </section>
+        )}
+        {extras.length > 0 && (
+          <section className={styles.series} aria-labelledby="weitere-bilder">
+            <div className={styles.seriesHead}>
+              <h2 id="weitere-bilder">Weitere Bilder</h2>
+              <span>{extras.map((s) => s.name).join(' · ')}</span>
+            </div>
+            <Gallery images={extras.flatMap((s) => s.images)} label={`${supplier.name}: weitere Bilder`} eager={!series.length} />
           </section>
         )}
         {neighbours.length > 0 && (

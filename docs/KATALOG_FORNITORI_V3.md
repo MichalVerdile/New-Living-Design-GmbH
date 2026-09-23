@@ -19,57 +19,61 @@ Bereich > Fachgebiet > Marke > Serien > Bilder, Daten in `src/data/catalog.json`
 
 ## Aktive Marken, Serien und Bilder
 
-34 Marken, 40 Markenseiten. 21 Seiten mit Serienbildern (23 Serien, 25 Bilder), 15 Seiten ohne Bilder
-(13 Marken ohne Bild, dazu Megius und Novellini im Bereich Bad).
+Stand: NLD-Medienpaket vom 23.09.2026 (3 Teile: Bad, Platten, Küchen/Wellness), Nutzung von NLD
+freigegeben am 23.09.2026. Bilder liegen als WebP unverändert in
+`public/images/katalog/<bereich>/<marke>/<serie>-NN-<breite>w.webp` (dazu `-960w.webp`, wenn breiter).
+Quellen je Bild: `docs/IMAGE_SOURCES.md`. Zählung je Seite: `docs/KATALOG_INVENTAR.md`
+(`npm run check:catalog`).
 
-| Bereich | Fachgebiet | Marke | Seite | Serien (Bilder) |
-|---|---|---|---|---|
-| Bad | Badmöbel | Rexa Design | `/produkte/bad/rexa` | — |
-| Bad | Badmöbel | Edoné | `/produkte/bad/edone` | Hexis (1) |
-| Bad | Badmöbel | Archeda | `/produkte/bad/archeda` | — |
-| Bad | Badmöbel | Froidevaux AG | `/produkte/bad/froidevaux` | Auswahl aus dem Medienpaket (1) |
-| Bad | Badmöbel | Pirovano Bagni | `/produkte/bad/pirovano` | — |
-| Bad | Armaturen | Rubinetterie Treemme | `/produkte/bad/treemme` | — |
-| Bad | Armaturen | Newform | `/produkte/bad/newform` | Deltazero (1) |
-| Bad | Armaturen | Gessi | `/produkte/bad/gessi` | Jacqueline (1) |
-| Bad | Armaturen | Luce Rubinetterie | `/produkte/bad/luce` | — |
-| Bad | Sanitärkeramik | Ceramica Cielo | `/produkte/bad/cielo` | Le Giare (1) |
-| Bad | Sanitärkeramik | Scarabeo Ceramiche | `/produkte/bad/scarabeo` | — |
-| Bad | Sanitärkeramik | Ceramica Galassia | `/produkte/bad/galassia` | — |
-| Bad | Sanitärkeramik | Azzurra Ceramica | `/produkte/bad/azzurra` | — |
-| Bad | Duschen & Duschabtrennungen | Megius | `/produkte/bad/megius` | — |
-| Bad | Duschen & Duschabtrennungen | Novellini | `/produkte/bad/novellini` | — |
-| Bad | Duschen & Duschabtrennungen | Vismaravetro | `/produkte/bad/vismaravetro` | Suite (1) |
-| Bad | Badaccessoires | Capannoli | `/produkte/bad/capannoli` | Tratto (1) |
-| Bad | Designheizkörper | Antrax IT | `/produkte/bad/antrax` | Pypeline (1) |
-| Bad | Designheizkörper | Cordivari Design | `/produkte/bad/cordivari` | Auswahl aus dem Medienpaket (1) |
-| Bad | Designheizkörper | Caleido | `/produkte/bad/caleido` | — |
-| Küchen | Küchenwelten | Febal Casa | `/produkte/kuechen/febal` | Origina (2) |
-| Platten | Keramik, Feinsteinzeug & Grossformate | Energieker | `/produkte/platten/energieker` | — |
-| Platten | Keramik, Feinsteinzeug & Grossformate | Emilgroup | `/produkte/platten/emilgroup` | Auswahl aus dem Medienpaket (1) |
-| Platten | Keramik, Feinsteinzeug & Grossformate | La Fabbrica AVA | `/produkte/platten/lafabbrica` | Venezia (1) |
-| Platten | Keramik, Feinsteinzeug & Grossformate | Supergres | `/produkte/platten/supergres` | — |
-| Platten | Keramik, Feinsteinzeug & Grossformate | Ariana Ceramiche / Gardenia&Ariana | `/produkte/platten/ariana` | — |
-| Platten | Keramik, Feinsteinzeug & Grossformate | Acquario Due | `/produkte/platten/acquario` | — |
-| Platten | Mosaik | SICIS | `/produkte/platten/sicis` | Elegance (1) |
-| Platten | Mosaik | Mosavit / Trip by Mosavit | `/produkte/platten/mosavit` | Fachaleta Quartz Marfil (1) |
-| Platten | Parkett & Holz | Skema | `/produkte/platten/skema` | Villa (1) |
-| Platten | SPC & Designböden | Déco | `/produkte/platten/deco` | Clap (1) |
-| Platten | SPC & Designböden | Zenon Bath & SPC Surfaces | `/produkte/platten/zenon` | Tempo (1) |
-| Platten | Dekorative Wandbeläge & Tapeten | Inkiostro Bianco | `/produkte/platten/inkiostro` | White Paper (1) |
-| Wellness | Whirlpool & Minipool | Novellini | `/produkte/wellness/novellini` | Home Oasis (1), Moon (1), Fun (1) |
-| Wellness | Whirlpool & Minipool | Albatros Wellness | `/produkte/wellness/albatros` | Soreha (1) |
-| Wellness | Hammam & Dampfbad | Megius | `/produkte/wellness/megius` | Zen Combi (2) |
+- 34 Marken, 36 Markenseiten, 40 Katalogseiten vorgerendert.
+- 33 von 36 Seiten erfüllen die Anforderung (2 Serien mit je 2 Bildern oder 1 Serie mit 4 Bildern und Ausnahme).
+- Nicht erfüllt, weil das Paket nicht mehr belegbare Bilder enthält: Treemme (Aurelia 2; Appia-Bilder sind
+  Finish-Muster, EU-Banner und Stockfoto), Mosavit (NEXT 2; Piedra-Java-Bilder sind Naturtexturen ohne Produkt),
+  Zenon (Neo 2; Tempo-Bilder nur 281 px).
+- Ausnahmen mit einer Serie: Gessi (Incastri), Megius Bad (Materia), Novellini Bad (Riga), SICIS (Crystal, nur 384 px).
+- Einzelbilder ohne vollständige Serie stehen auf der Markenseite unter «Weitere Bilder» (`"extra": true`
+  in `catalog.json`) und zählen nicht für die Anforderung.
+- Bereits kuratierte Bilder des Medienpakets vom 22.09.2026 wurden in die passende Paketserie eingeordnet;
+  drei Duplikate (Edoné Hexis, Zenon Tempo, Novellini Fun) wurden durch die Paketdatei ersetzt und gelöscht.
 
-Seriennamen: aus Alt-Text bzw. Dateiname des Medienpakets. «Auswahl aus dem Medienpaket» heisst: Bild
-ohne Serienangabe (Froidevaux, Cordivari, Emilgroup). Neue Serien und Bilder werden nur in
-`catalog.json` ergänzt (Format siehe `$comment` dort).
+### Nicht übernommene Paketbilder (mit Grund)
 
-## Nicht verwendet (Rechte nicht bestätigt)
+Innerhalb einer Serie wurde von gleichen Motiven (perzeptiver Hash, Abstand ≤ 6) nur die grösste Datei
+übernommen. Ausserdem nicht übernommen:
 
-- `src/assets/Rexa_mobili_moode_gallery_7.jpg` (Rexa), `src/assets/FebalCasa_…Origina…webp` (Febal)
-- Farbmuster Rexa/Edoné in `public/badplaner/swatches/` (klein, Badplaner-Material)
-- Armaturenbilder Treemme in `public/badplaner/armaturen/` (Badplaner-Material)
+- treemme: aurelia-01.webp, appia-01.webp – Finish-Muster (Messingscheibe), kein Produktfoto
+- treemme: aurelia-02.webp, appia-02.webp – EU-Förderbanner, kein Produktfoto
+- treemme: aurelia-03.webp, appia-03.webp – Stockfoto mit Laptop, kein Produktfoto
+- gessi: origini-01.webp, origini-02.webp, origini-03.webp, origini-04.webp – Kampagnen-Stillleben ohne Produkt, 420 px
+- luce: segno-02.webp, segno-05.webp – identisch mit Zefiro-Bild, Serie nicht eindeutig
+- luce: zefiro-02.webp, zefiro-04.webp – identisch mit Segno-Bild, Serie nicht eindeutig
+- antrax: hashi-02.webp, tavolina-02.webp – Porträt des Designers, kein Produktfoto
+- caleido: infinito-05.webp – Messebanner Cersaie, kein Produktfoto
+- caleido: dinamo-05.webp – Hotelzimmer ohne erkennbares Produkt
+- megius: classic-01.webp, materia-01.webp – Cover eines Ratgebers, kein Produktfoto
+- megius: classic-02.webp, classic-03.webp, classic-04.webp, classic-05.webp – vier fast identische Profildetails, keine Serienansicht
+- novellini: riga-04.webp – zeigt einen Whirlpool, nicht die Duschserie Riga
+- novellini: brera-01.webp – zeigt einen Whirlpool, nicht die Duschserie Brera
+- febal: modula-01.webp, modula-02.webp, modula-03.webp – identisch mit Origina-Bild; laut Medienpaket Origina
+- emilgroup: fornace-provenza-01.webp, fornace-provenza-02.webp, fornace-provenza-03.webp, w-circles-01.webp, w-circles-02.webp, w-circles-03.webp – identisch in beiden Emilgroup-Serien, Serie nicht eindeutig
+- lafabbrica: venezia-02.webp – identisch mit Wabi-Sabi-Bild, Serie nicht eindeutig
+- lafabbrica: wabi-sabi-01.webp – identisch mit Venezia-Bild, Serie nicht eindeutig
+- lafabbrica: venezia-03.webp – Smartphone-Mockup, kein Produktfoto
+- acquario: calathea-03.webp, calathea-04.webp – nur 204 px breit
+- sicis: pixel-01.webp, pixel-03.webp, pixel-04.webp – Katalogcover mit Text
+- sicis: pixel-05.webp – Katalogcover mit Text und Model
+- mosavit: next-01.webp – Model vor Mosaik, Kampagnenfoto
+- mosavit: piedra-java-01.webp, piedra-java-02.webp – Naturtextur, kein Produktfoto
+- mosavit: piedra-java-03.webp – Baumrinde, kein Produktfoto
+- mosavit: piedra-java-04.webp – Kieselsteine, kein Produktfoto
+- mosavit: piedra-java-05.webp – Hand im Wasser, kein Produktfoto
+- skema: villa-spina-02.webp, villa-spina-03.webp – identisch mit Palladio-Bild, Serie nicht eindeutig
+- skema: palladio-04.webp, palladio-05.webp – identisch mit Villa-Spina-Bild, Serie nicht eindeutig
+- deco: clap-real-01.webp – Roboterarm-Motiv, kein Produktfoto
+- deco: clap-zer0-05.webp, clap-real-04.webp – identisch mit Clap-3D-Bild, Serie nicht eindeutig
+- deco: clap-3d-02.webp, clap-3d-03.webp – identisch mit Clap-Zer0-Bild, Serie nicht eindeutig
+- deco: clap-3d-04.webp, clap-3d-05.webp – identisch mit Clap-Real-Bild, Serie nicht eindeutig
+- zenon: tempo-spc-floor-01.webp, tempo-spc-floor-02.webp, tempo-spc-floor-03.webp, tempo-spc-floor-04.webp – nur 281 px breit
 
 ## Websites
 
@@ -77,6 +81,6 @@ Aus dem Quellenregister; aus der Arbeitsumgebung nicht online prüfbar (Netzwerk
 
 ## Bildregeln
 
-- Katalog und Galerie: `object-fit: contain`, Format 16:9 wie die Herstellerbilder, nichts beschnitten.
+- Katalog und Galerie: `object-fit: contain`, `scale-down` in der Galerie, nichts beschnitten, Quer- und Hochformate wie geliefert.
 - Redaktionelle Projektbilder (Hero, Referenzen, Küche): `cover` mit gesetztem Fokuspunkt.
 - Keine Vergrösserung über die Originalauflösung (geprüft bei 1440/1024/768/390 px).

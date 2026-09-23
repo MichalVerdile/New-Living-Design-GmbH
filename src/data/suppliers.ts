@@ -31,7 +31,8 @@ const toImage = (raw: RawImage): SupplierImage => {
 };
 
 export type Area = { id: AreaId; title: string; label: string; text: string; groups: { title: string; brands: SupplierKey[] }[] };
-export type Series = { name: string; area: AreaId; images: SupplierImage[] };
+/** extra: Einzelbild ohne vollständige Serie, Abschnitt «Weitere Bilder» */
+export type Series = { name: string; area: AreaId; images: SupplierImage[]; extra?: boolean };
 
 export type SupplierKey = keyof typeof catalog.suppliers;
 
@@ -49,8 +50,8 @@ export type Supplier = {
 };
 
 export const suppliers: Supplier[] = (Object.keys(catalog.suppliers) as SupplierKey[]).map((key) => {
-  const raw = catalog.suppliers[key] as { name: string; url: string; series: { name: string; area: string; images: RawImage[] }[] };
-  const series = raw.series.map((s) => ({ name: s.name, area: s.area as AreaId, images: s.images.map(toImage) }));
+  const raw = catalog.suppliers[key] as { name: string; url: string; series: { name: string; area: string; images: RawImage[]; extra?: boolean }[] };
+  const series = raw.series.map((s) => ({ name: s.name, area: s.area as AreaId, images: s.images.map(toImage), ...(s.extra ? { extra: true } : {}) }));
   return {
     key,
     name: raw.name,

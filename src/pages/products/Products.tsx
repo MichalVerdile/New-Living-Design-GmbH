@@ -42,12 +42,12 @@ const cards: Record<keyof typeof heroes, SubcategoryCard[]> = {
   wellness: [
     { id: 'whirlpool', title: 'Whirlpool & Minipool', supplier: 'novellini', image: imageOf('novellini', 'Moon') },
     { title: 'Whirlpool & Minipool', supplier: 'albatros', image: imageOf('albatros') },
-    { id: 'sauna', title: 'Sauna', supplier: 'novellini', image: imageOf('novellini', 'Fun') },
+    { id: 'sauna', title: 'Sauna', supplier: 'novellini', image: imageOf('novellini', 'Fun Sauna') },
     { id: 'hammam', title: 'Hammam & Dampfbad', supplier: 'megius', image: imageOf('megius') },
   ],
   platten: [
     { id: 'grossformate', title: 'Grossformate & Marmoroptik', supplier: 'lafabbrica', image: imageOf('lafabbrica') },
-    { id: 'mosaik', title: 'Mosaik', supplier: 'sicis', image: imageOf('sicis') },
+    { id: 'mosaik', title: 'Mosaik', supplier: 'sicis', image: imageOf('sicis', 'Elegance') },
     { id: 'parkett', title: 'Parkett & Holz', supplier: 'skema', image: imageOf('skema') },
     { id: 'spc', title: 'SPC & Designböden', supplier: 'zenon', image: imageOf('zenon') },
     { title: 'SPC & Designböden', supplier: 'deco', image: imageOf('deco') },

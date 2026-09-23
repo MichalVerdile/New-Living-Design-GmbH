@@ -22,7 +22,7 @@ const chapters: Chapter[] = [
   { id: 'kuechen', more: 'Küchen ansehen',
     main: { image: kitchenImage, credit: { label: kitchen?.title ?? 'Referenzen', href: '/referenzen#kueche-insel-messing' } }, side: [{ image: imageOf('febal', 'Origina', 0), supplier: 'febal' }, { image: imageOf('febal', 'Origina', 1), supplier: 'febal' }] },
   { id: 'platten', more: 'Platten ansehen',
-    main: { image: imageOf('lafabbrica'), supplier: 'lafabbrica' }, side: [{ image: imageOf('sicis'), supplier: 'sicis' }, { image: imageOf('skema'), supplier: 'skema' }] },
+    main: { image: imageOf('lafabbrica'), supplier: 'lafabbrica' }, side: [{ image: imageOf('sicis', 'Elegance'), supplier: 'sicis' }, { image: imageOf('skema'), supplier: 'skema' }] },
   { id: 'wellness', more: 'Wellness ansehen',
     main: { image: imageOf('novellini', 'Home Oasis'), supplier: 'novellini' }, side: [{ image: imageOf('megius'), supplier: 'megius' }, { image: imageOf('albatros'), supplier: 'albatros' }] },
 ];

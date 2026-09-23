@@ -9,7 +9,7 @@
  *     von dort geladen (nur offizielle Herstellerseiten verwenden).
  *
  * Ausgabe je Bild: public/images/katalog/<bereich>/<marke>/<serie>-NN-<breite>w.webp
- * (lange Kante höchstens 2000 px, dazu eine 960w-Variante, wenn das Bild breiter ist; nie vergrössert),
+ * (lange Kante höchstens 2000 px, fertige WebP-Dateien unverändert; dazu eine 960w-Variante, wenn das Bild breiter ist; nie vergrössert),
  * ein Eintrag in src/data/catalog.json und eine Zeile in docs/IMAGE_SOURCES.md.
  * Bereits importierte Bilder (gleicher Inhalt) werden übersprungen.
  */
@@ -82,7 +82,10 @@ for (const r of records) {
   const scale = Math.min(1, MAX / Math.max(meta.width, meta.height))
   const width = Math.round(meta.width * scale)
   const height = Math.round(meta.height * scale)
-  await sharp(buf).rotate().resize(width, height).webp({ quality: 82 }).toFile(path.join(root, 'public', 'images', `${base}-${width}w.webp`))
+  const target = path.join(root, 'public', 'images', `${base}-${width}w.webp`)
+  // Fertig optimiertes WebP unverändert übernehmen (keine zweite Kompression), sonst konvertieren.
+  if (meta.format === 'webp' && scale === 1 && !meta.orientation) fs.writeFileSync(target, buf)
+  else await sharp(buf).rotate().resize(width, height).webp({ quality: 82 }).toFile(target)
   if (width > SMALL) await sharp(buf).rotate().resize(SMALL).webp({ quality: 80 }).toFile(path.join(root, 'public', 'images', `${base}-${SMALL}w.webp`))
 
   series.images.push({ pack: base, width, height, alt: r.alt_de, sha1 })
