@@ -93,7 +93,7 @@
   min-height: 600px;
   max-height: 720px;
   object-fit: cover;
-  object-position: center 78%; /* Fokus auf Waschtische, anders als auf der Startseite */
+  object-position: center 55%;
 }
 
 /* Einleitung */
@@ -243,6 +243,54 @@
   text-transform: uppercase;
 }
 
+a.subcategory-brand { text-decoration: none; border-bottom: 1px solid transparent; }
+a.subcategory-brand:hover { color: var(--ink); border-bottom-color: currentColor; }
+
+/* Marken je Bereich: vollständige Zeile, führt ins Markenverzeichnis */
+.area-brands {
+  display: grid;
+  grid-template-columns: minmax(10rem, 14rem) minmax(0, 1fr);
+  gap: .6rem 2rem;
+  max-width: 1280px;
+  margin: clamp(2.5rem, 4vw, 3.5rem) auto 0;
+  padding: 1.1rem var(--gutter) 0;
+}
+
+.area-brands-title {
+  padding-top: .9rem;
+  border-top: 1px solid var(--ink);
+  font-size: .7rem;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.area-brands-title span { color: #8a6d3f; margin-left: .3rem; }
+
+.area-brands ul {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: .15rem 1.4rem;
+  padding: .7rem 0 0;
+  border-top: 1px solid var(--line);
+}
+
+.area-brands li { display: inline-flex; align-items: baseline; gap: .3rem; }
+.area-brands li span { font-size: .62rem; font-weight: 700; color: #8a6d3f; }
+
+.area-brands a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  color: var(--ink);
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 1.05rem;
+  text-decoration: none;
+}
+
+.area-brands a:hover { text-decoration: underline; text-underline-offset: .25em; text-decoration-thickness: 1px; }
+
 /* Weitere Themen: gleiches Bildverhältnis wie die kleinen Originale (380x347) */
 .details {
   display: grid;
@@ -346,6 +394,7 @@
 }
 
 @media (max-width: 560px) {
+  .area-brands { grid-template-columns: minmax(0, 1fr); }
   .details { grid-template-columns: minmax(0, 1fr); }
   .subcategory-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.75rem 1rem; }
 }

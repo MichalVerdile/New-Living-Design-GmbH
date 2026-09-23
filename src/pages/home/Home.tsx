@@ -3,20 +3,34 @@ import { Link } from 'react-router-dom';
 import { SEOHead } from '../../components';
 import { business, bathPackages, localBusinessJsonLd } from '../../config/business';
 import { homeReferencePhotos, photoUrl, referenceById } from '../../data/references';
-import bathroomImage from '../../assets/PRIME_mobili_generale.webp';
-import tilesImage from '../../assets/Dosem_Onyx_WhiteBlue_60x120120x270_bathroom_HD_1.jpg';
-import wellnessImage from '../../assets/Zen_Combi_duo_Linear_6-1030x1030.webp';
+import { areas, packImages, supplierByKey, supplierHref, suppliers, suppliersInArea, type SupplierImage, type SupplierKey } from '../../data/suppliers';
 import styles from './Home.module.css';
 
-const categories = [
-  { title: 'Bad', label: 'Aufeinander abgestimmt', text: 'Badmöbel, Waschtische, Armaturen, Keramik, Dusche und Badewanne – gemeinsam ausgewählt, damit Form, Farbe und Funktion zusammenpassen.', href: '/produkte#bad', image: bathroomImage, alt: 'Badmöbel und Waschtisch aus dem Produktsortiment' },
-  { title: 'Küchen', label: 'Für Ihren Alltag geplant', text: 'Raumaufteilung, Fronten, Arbeitsflächen, Geräte und Licht. Mit 3D-Planung, Lieferung, Montage und auf Wunsch mit Renovation der bestehenden Küche.', href: '/produkte#kuechen', image: photoUrl('kueche-insel-messing-01.webp', true), srcSet: `${photoUrl('kueche-insel-messing-01.webp', true)} 480w, ${photoUrl('kueche-insel-messing-01.webp')} 900w`, alt: 'Realisierte Küche mit Insel, Messingdetails und Einbaugeräten' },
-  { title: 'Platten', label: 'Vom Muster in den Raum', text: 'Keramik, Feinsteinzeug, Mosaik und Grossformate für Wand und Boden – ausgewählt nach Wirkung, Nutzung und Pflege.', href: '/produkte#platten', image: tilesImage, alt: 'Badezimmer mit grossformatigen Wandplatten in blauer und weisser Onyxoptik' },
-  { title: 'Wellness', label: 'Entspannung, die zum Raum passt', text: 'Sauna, Dampfbad, Wellnesskabine oder Whirlwanne. Wir klären Platz, Anschlüsse und Nutzung und zeigen Ihnen passende Möglichkeiten.', href: '/produkte#wellness', image: wellnessImage, alt: 'Wellness-Kabine aus dem Produktsortiment' },
+const kitchen = referenceById('kueche-insel-messing');
+const heroRef = referenceById('bad-marmoroptik-grau-schwarz');
+const heroPhoto = heroRef?.photos.find((p) => p.file === 'bad-marmor-grau-02.webp');
+
+type Story = {
+  id: string; title: string; label: string; text: string; href: string; more: string;
+  image: SupplierImage; sizes: string; credit: { prefix: string; label: string; href: string };
+};
+
+// Vier Bereiche als Bildgeschichten; der Bildnachweis führt zur Marke bzw. zur Referenz.
+const stories: Story[] = [
+  { id: 'bereich-bad', title: 'Bad', label: 'Aufeinander abgestimmt', text: 'Badmöbel, Waschtische, Armaturen, Keramik, Dusche und Badewanne – gemeinsam ausgewählt, damit Form, Farbe und Funktion zusammenpassen.', href: '/produkte#bad', more: 'Bad ansehen',
+    image: packImages.edone, sizes: '(max-width: 767px) 100vw, 60vw', credit: { prefix: 'Marke', label: 'Edoné', href: supplierHref('edone') } },
+  { id: 'bereich-kuechen', title: 'Küchen', label: 'Für Ihren Alltag geplant', text: 'Raumaufteilung, Fronten, Arbeitsflächen, Geräte und Licht. Mit 3D-Planung, Lieferung, Montage und auf Wunsch mit Renovation der bestehenden Küche.', href: '/produkte#kuechen', more: 'Küchen ansehen',
+    image: { src: photoUrl('kueche-insel-messing-01.webp'), srcSet: `${photoUrl('kueche-insel-messing-01.webp', true)} 480w, ${photoUrl('kueche-insel-messing-01.webp')} 900w`, width: 900, height: 1600, alt: 'Realisierte Küche mit Insel, Messingdetails und Einbaugeräten' },
+    sizes: '(max-width: 767px) 100vw, (max-width: 1100px) 50vw, 36vw', credit: { prefix: 'Referenz', label: kitchen?.title ?? 'Referenzen', href: '/referenzen#kueche-insel-messing' } },
+  { id: 'bereich-platten', title: 'Platten', label: 'Vom Muster in den Raum', text: 'Keramik, Feinsteinzeug, Mosaik und Grossformate für Wand und Boden – ausgewählt nach Wirkung, Nutzung und Pflege.', href: '/produkte#platten', more: 'Platten ansehen',
+    image: packImages.lafabbrica, sizes: '(max-width: 767px) 100vw, 70vw', credit: { prefix: 'Marke', label: 'La Fabbrica AVA', href: supplierHref('lafabbrica') } },
+  { id: 'bereich-wellness', title: 'Wellness', label: 'Entspannung, die zum Raum passt', text: 'Sauna, Dampfbad, Wellnesskabine oder Whirlwanne. Wir klären Platz, Anschlüsse und Nutzung und zeigen Ihnen passende Möglichkeiten.', href: '/produkte#wellness', more: 'Wellness ansehen',
+    image: packImages.novelliniOasis, sizes: '(max-width: 767px) 100vw, 55vw', credit: { prefix: 'Marke', label: 'Novellini', href: supplierHref('novellini') } },
 ];
 
-// Ruhiges Messingdetail aus einer realisierten Dusche als Ergänzung zum Ausstellungsbild.
-const heroDetail = referenceById('dusche-zellige-petrol-messing')?.photos.find((p) => p.file === 'dusche-zellige-petrol-04.webp');
+// Marken mit mehreren Bildern als Vorschau im Markenindex.
+const featured: SupplierKey[] = ['novellini', 'febal', 'megius'];
+const brandColumns = [...areas.map((a) => ({ id: a.id, title: a.title })), { id: 'weitere' as const, title: 'Weitere Marken' }];
 
 const Home: React.FC = () => {
   const showroomImage = photoUrl('ausstellung-zofingen-01.webp');
@@ -27,46 +41,108 @@ const Home: React.FC = () => {
         keywords="Bad Zofingen, Küchen Zofingen, Küchenplanung, Badmöbel, Platten, Keramikplatten, Wellness, Ausstellung Zofingen, New Living Design"
         url="/" type="website" structuredData={localBusinessJsonLd} image={`${business.siteUrl}${showroomImage}`} />
 
+      {/* Hero: vollflächiges Projektbild, Typografie-Panel ragt in den nächsten Abschnitt */}
       <section className={styles.hero} aria-labelledby="home-title">
-        <div className={styles.heroCopy}>
+        <figure className={styles.heroFigure}>
+          <img src={photoUrl('bad-marmor-grau-02.webp')} alt={heroPhoto?.alt ?? ''} width="1600" height="1102" fetchPriority="high" />
+          {heroRef && <figcaption><Link to={`/referenzen#${heroRef.id}`}>{heroRef.title}</Link></figcaption>}
+        </figure>
+        <div className={styles.heroPanel}>
           <p className={styles.eyebrow}><span className={styles.dot} /> Ausstellung in Zofingen</p>
-          <h1 id="home-title" className={styles.heroTitle}>Bad, Küchen,<br />Platten &amp; Wellness.</h1>
+          <h1 id="home-title" className={styles.heroTitle}>Bad, Küchen, Platten &amp; Wellness.</h1>
           <p className={styles.heroLead}>Nicht einzeln ausgesucht. Als Raum gedacht.</p>
           <p className={styles.heroText}>Wir kombinieren Materialien, Farben und Produkte so, dass sie zu Ihrem Raum, Ihrem Stil und Ihrem Budget passen. Wir beraten Sie persönlich in unserer Ausstellung in Zofingen. Bad und Küche visualisieren wir auf Wunsch in 3D.</p>
           <div className={styles.actions}>
-            <Link to="/kontakt" className={styles.button}>Ausstellungsberatung anfragen</Link>
+            <Link to="/kontakt" className={`${styles.button} ${styles.buttonLight}`}>Ausstellungsberatung anfragen</Link>
             <a href="#sortiment" className={styles.textLink}>Produkte entdecken</a>
           </div>
           <div className={styles.heroAddress}><span>{business.address.street}</span><span>{business.address.zip} {business.address.city}</span></div>
         </div>
-        <figure className={styles.heroFigure}>
-          <img className={styles.heroImage} src={showroomImage} srcSet={`${photoUrl('ausstellung-zofingen-01.webp', true)} 480w, ${showroomImage} 1200w`} sizes="(max-width: 767px) 100vw, max(50vw, 600px)" alt="Einblick in unsere Ausstellung in Zofingen: Waschtische, ovale Spiegel und eine Wand in Onyxoptik" width="1200" height="1600" fetchPriority="high" />
-          {heroDetail && <img className={styles.heroDetail} src={photoUrl(heroDetail.file, true)} alt={heroDetail.alt} width="480" height="640" loading="lazy" decoding="async" />}
-          <figcaption><span>New Living Design</span><span>Unsere Ausstellung</span></figcaption>
-        </figure>
       </section>
 
-      <section id="sortiment" className={`${styles.section} ${styles.assortment}`} aria-labelledby="sortiment-title">
+      {/* Vier Bereiche als Reise: Index, dann versetzte Bildgeschichten */}
+      <section id="sortiment" className={styles.journey} aria-labelledby="sortiment-title">
         <div className={styles.container}>
-          <div className={styles.sectionHead}><div><p className={styles.eyebrow}>Bad, Küchen, Platten und Wellness</p><h2 id="sortiment-title">Vier Bereiche. Eine stimmige Auswahl.</h2></div><Link to="/produkte" className={styles.textLink}>Alle Produkte ansehen</Link></div>
-          <div className={styles.categoryGrid}>
-            {categories.map((category, index) => (
-              <Link key={category.title} to={category.href} className={styles.categoryCard}>
-                <div className={styles.categoryImage}><img src={category.image} srcSet={category.srcSet} sizes="(max-width: 767px) 100vw, (max-width: 1100px) 50vw, 300px" alt={category.alt} width="640" height="800" loading="lazy" decoding="async" /></div>
-                <div className={styles.categoryHeading}><span className={styles.categoryNumber} aria-hidden="true">{String(index + 1).padStart(2, '0')}</span><h3>{category.title}</h3></div>
-                <p className={styles.categoryLabel}>{category.label}</p><p className={styles.categoryText}>{category.text}</p>
-              </Link>
-            ))}
+          <div className={styles.journeyHead}>
+            <div><p className={styles.eyebrow}>Bad, Küchen, Platten und Wellness</p><h2 id="sortiment-title">Vier Bereiche. Eine stimmige Auswahl.</h2></div>
+            <nav aria-label="Bereiche" className={styles.index}>
+              <ol>{stories.map((s, i) => <li key={s.id}><a href={`#${s.id}`}><span>{String(i + 1).padStart(2, '0')}</span>{s.title}</a></li>)}</ol>
+            </nav>
+            <Link to="/produkte" className={styles.textLink}>Alle Produkte ansehen</Link>
           </div>
+          {stories.map((s, i) => (
+            <article key={s.id} id={s.id} className={`${styles.story} ${styles[`story${i + 1}`]}`} aria-labelledby={`${s.id}-title`}>
+              <figure className={styles.storyFigure}>
+                <img {...s.image} sizes={s.sizes} loading="lazy" decoding="async" />
+                <figcaption>{s.credit.prefix}: <Link to={s.credit.href}>{s.credit.label}</Link></figcaption>
+              </figure>
+              <div className={styles.storyText}>
+                <span className={styles.storyNumber} aria-hidden="true">{String(i + 1).padStart(2, '0')}</span>
+                <h3 id={`${s.id}-title`}>{s.title}</h3>
+                <p className={styles.storyLabel}>{s.label}</p>
+                <p className={styles.storyBody}>{s.text}</p>
+                <Link to={s.href} className={styles.textLink}>{s.more}</Link>
+              </div>
+            </article>
+          ))}
           <p className={styles.imageNote}>Die gezeigte Küche wurde von uns realisiert. Weitere Motive zeigen ausgewählte Produkte unserer Lieferanten. Auswahl und Verfügbarkeit klären wir persönlich mit Ihnen.</p>
         </div>
       </section>
 
-      <section className={`${styles.section} ${styles.showroom}`} aria-labelledby="showroom-title">
+      {/* Markenindex: alle Marken nach Bereich, jede führt zu ihren Bildern und Angaben */}
+      <section className={styles.brands} aria-labelledby="brands-title">
+        <div className={`${styles.container} ${styles.brandsGrid}`}>
+          <div className={styles.brandsIntro}>
+            <p className={styles.eyebrow}>Unsere Marken</p>
+            <h2 id="brands-title">Marken, aus denen eine stimmige Auswahl wird.</h2>
+            <p>Nicht jedes Produkt passt zu jedem Raum. Wir nutzen die Sortimente unserer Partner, um Materialien, Funktionen und Oberflächen passend zu Ihrem Projekt zusammenzustellen.</p>
+            <Link to="/partner" className={styles.textLink}>Alle {suppliers.length} Marken ansehen</Link>
+          </div>
+          <ul className={styles.featured} aria-label="Marken mit mehreren Bildern">
+            {featured.map((key) => {
+              const s = supplierByKey(key);
+              return (
+                <li key={key}>
+                  <Link to={supplierHref(key)}>
+                    <span className={styles.featuredStack} aria-hidden="true">
+                      {s.images.slice(1, 3).map((img) => <img key={img.src} src={img.src} srcSet={img.srcSet} sizes="200px" width={img.width} height={img.height} alt="" loading="lazy" decoding="async" />)}
+                      <img src={s.images[0].src} srcSet={s.images[0].srcSet} sizes="(max-width: 767px) 33vw, 360px" width={s.images[0].width} height={s.images[0].height} alt="" loading="lazy" decoding="async" />
+                    </span>
+                    <span className={styles.featuredName}>{s.name}</span>
+                    <span className={styles.featuredCount}>{s.images.length} Bilder</span>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+          <div className={styles.brandIndex}>
+            {brandColumns.map((col) => (
+              <div key={col.id}>
+                <h3>{col.title}</h3>
+                <ul>
+                  {suppliersInArea(col.id).map((s) => (
+                    <li key={s.key}>
+                      <Link to={supplierHref(s.key)}>{s.name}</Link>
+                      {s.images.length > 0 && <span className={styles.imageCount} aria-label={`${s.images.length} ${s.images.length === 1 ? 'Bild' : 'Bilder'}`}>{s.images.length}</span>}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className={styles.showroom} aria-labelledby="showroom-title">
         <div className={`${styles.container} ${styles.showroomGrid}`}>
-          <div><p className={styles.eyebrow}>Ausstellung in Zofingen</p><h2 id="showroom-title">Was am Bildschirm gefällt, muss im Raum überzeugen.</h2>
+          <figure className={styles.showroomFigure}>
+            <img src={showroomImage} srcSet={`${photoUrl('ausstellung-zofingen-01.webp', true)} 480w, ${showroomImage} 1200w`} sizes="(max-width: 767px) 100vw, 40vw" alt="Einblick in unsere Ausstellung in Zofingen: Waschtische, ovale Spiegel und eine Wand in Onyxoptik" width="1200" height="1600" loading="lazy" decoding="async" />
+            <figcaption><span>New Living Design</span><span>Unsere Ausstellung</span></figcaption>
+          </figure>
+          <div className={styles.showroomText}>
+            <p className={styles.eyebrow}>Ausstellung in Zofingen</p><h2 id="showroom-title">Was am Bildschirm gefällt, muss im Raum überzeugen.</h2>
             <p className={styles.showroomIntro}>Oberflächen wirken je nach Licht, Format und Umgebung anders. In unserer Ausstellung vergleichen Sie Platten, Möbel, Armaturen und Farben direkt miteinander. Wir stellen mit Ihnen eine Auswahl zusammen, die nicht nur einzeln gefällt, sondern als Ganzes funktioniert.</p>
-            <Link to="/kontakt" className={styles.button}>Beratung in Zofingen anfragen</Link>
+            <Link to="/kontakt" className={`${styles.button} ${styles.buttonLight}`}>Beratung in Zofingen anfragen</Link>
           </div>
           <div className={styles.visitCard}>
             <p className={styles.visitLabel}>Wir freuen uns auf Ihren Besuch.</p>
