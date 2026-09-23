@@ -26,8 +26,8 @@ export const business = {
   phoneSecondary: { display: '062 544 58 53', e164: '+41625445853' },
   mobileEmanuel: { display: '+41 76 605 13 07', e164: '+41766051307', label: 'Emanuel Verdile, Mobile' },
   whatsapp: { display: '+41 76 743 84 30', e164: '+41767438430' },
-  email: 'diego.verdile@newlivingdesign.ch',
-  emailSecondary: 'emanuel.verdile@newlivingdesign.ch',
+  email: 'emanuel.verdile@newlivingdesign.ch',
+  emailSecondary: 'diego.verdile@newlivingdesign.ch',
 
   geo: { lat: 47.2842067, lng: 7.9477531 },
   mapsLink: 'https://maps.app.goo.gl/ZyhcBb3qb2JXkgny9',
@@ -160,7 +160,7 @@ export const individualPackage = {
 } as const;
 
 export const packageNote =
-  'Richtpreise inkl. Material, Montage und 8.1 % MwSt. für ein Bad von ca. 6 m² mit ca. 21 m² Plattenfläche (Dusche, Wand-WC, Waschtisch mit Möbel). Grössere Bäder: Zuschlag pro zusätzlichem Quadratmeter Platten, siehe Paket. Der Fixpreis gilt nach der Besichtigung vor Ort und ist 30 Tage gültig.';
+  'Richtpreise inkl. Material, Montage und 8.1 % MwSt. für ein Referenzbad von ca. 6 m² mit ca. 21 m² Plattenfläche. Der verbindliche Fixpreis gilt nach Besichtigung und Aufmass vor Ort. Zusatzarbeiten und grössere Flächen werden vor der Freigabe ausgewiesen.';
 
 /** Öffnungszeiten als schema.org OpeningHoursSpecification */
 export const openingHoursSpecification = business.openingHours.map((h) => ({
