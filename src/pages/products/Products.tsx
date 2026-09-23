@@ -51,8 +51,8 @@ const cards: Record<keyof typeof heroes, SubcategoryCard[]> = {
     { id: 'parkett', title: 'Parkett & Holz', supplier: 'skema', image: packImages.skema },
     { id: 'spc', title: 'SPC & Designböden', supplier: 'zenon', image: packImages.zenon },
     { title: 'SPC & Designböden', supplier: 'deco', image: packImages.deco },
-    { id: 'wandbelaege', title: 'Dekorative Wandbeläge & Teppiche', supplier: 'inkiostro', image: packImages.inkiostro },
-    { id: 'naturstein', title: 'Naturstein & Wandverkleidungen', supplier: 'mosavit', image: packImages.mosavit },
+    { id: 'wandbelaege', title: 'Dekorative Wandbeläge & Tapeten', supplier: 'inkiostro', image: packImages.inkiostro },
+    { id: 'naturstein', title: 'Mosaik', supplier: 'mosavit', image: packImages.mosavit },
   ],
 };
 

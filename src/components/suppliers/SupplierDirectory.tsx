@@ -3,18 +3,16 @@ import { Link, useLocation } from 'react-router-dom';
 import { areas, suppliers, type AreaId, type Supplier } from '../../data/suppliers';
 import styles from './SupplierDirectory.module.css';
 
-type Filter = 'alle' | AreaId | 'weitere';
+type Filter = 'alle' | AreaId;
 
 const filters: { id: Filter; title: string }[] = [
   { id: 'alle', title: 'Alle' },
   ...areas.map((a) => ({ id: a.id, title: a.title })),
-  { id: 'weitere', title: 'Weitere Marken' },
 ];
 
-const inFilter = (s: Supplier, f: Filter) =>
-  f === 'alle' || (f === 'weitere' ? s.areas.length === 0 : s.areas.some((a) => a.id === f));
+const inFilter = (s: Supplier, f: Filter) => f === 'alle' || s.areas.some((a) => a.id === f);
 
-const areaOrder = (s: Supplier) => (s.areas.length ? areas.findIndex((a) => a.id === s.areas[0].id) : areas.length);
+const areaOrder = (s: Supplier) => areas.findIndex((a) => a.id === s.areas[0]?.id);
 // Je Bereich zuerst die Marken mit Bildern, damit Bild- und Textkarten ruhige Gruppen bilden.
 const ordered = [...suppliers].sort((a, b) => areaOrder(a) - areaOrder(b) || Number(b.images.length > 0) - Number(a.images.length > 0));
 
@@ -40,6 +38,9 @@ const Gallery: React.FC<{ supplier: Supplier }> = ({ supplier }) => {
         role="region"
         aria-label={`Bilder von ${supplier.name}, mit Pfeiltasten blättern`}
         onScroll={(e) => setIndex(Math.round(e.currentTarget.scrollLeft / e.currentTarget.clientWidth))}
+        onKeyDown={(e) => {
+          if (n > 1 && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) { e.preventDefault(); step(e.key === 'ArrowLeft' ? -1 : 1); }
+        }}
       >
         {supplier.images.map((img) => (
           <figure key={img.src} className={styles.slide}>
@@ -65,7 +66,7 @@ const Visual: React.FC<{ supplier: Supplier }> = ({ supplier }) => {
     return (
       <span className={styles.typeVisual}>
         <span className={styles.typeName}>{supplier.name}</span>
-        <span className={styles.typeSpecs}>{supplier.areas.flatMap((a) => a.specialties).join(' · ') || 'Weitere Marke'}</span>
+        <span className={styles.typeSpecs}>{supplier.areas.flatMap((a) => a.specialties).join(' · ')}</span>
       </span>
     );
   }
@@ -106,7 +107,7 @@ const SupplierCard: React.FC<{ supplier: Supplier; hidden: boolean }> = ({ suppl
         <span className={styles.caption}>
           <span className={styles.name}>{supplier.name}</span>
           <span className={styles.meta}>
-            {supplier.areas.length ? supplier.areas.map((a) => a.title).join(' · ') : 'Weitere Marke'}
+            {supplier.areas.map((a) => a.title).join(' · ')}
             <span className={styles.count}>{countLabel(n)}</span>
           </span>
         </span>
@@ -115,9 +116,9 @@ const SupplierCard: React.FC<{ supplier: Supplier; hidden: boolean }> = ({ suppl
         <div className={styles.info}>
           <h3 ref={heading} tabIndex={-1}>{supplier.name}</h3>
           <dl>
-            {supplier.areas.length ? supplier.areas.map((a) => (
+            {supplier.areas.map((a) => (
               <div key={a.id}><dt>{a.title}</dt><dd>{a.specialties.join(', ')}</dd></div>
-            )) : <div><dt>Bereich</dt><dd>Im Quellenregister keinem Bereich zugeordnet</dd></div>}
+            ))}
           </dl>
           <div className={styles.actions}>
             <a href={supplier.url} target="_blank" rel="noopener noreferrer">Offizielle Website<span className={styles.srOnly}> von {supplier.name} (öffnet in neuem Fenster)</span></a>
@@ -127,7 +128,6 @@ const SupplierCard: React.FC<{ supplier: Supplier; hidden: boolean }> = ({ suppl
         </div>
         {n ? <Gallery supplier={supplier} /> : (
           <div className={styles.empty}>
-            {supplier.logo && <img src={supplier.logo} alt={supplier.name} className={styles.logo} loading="lazy" />}
             <p>Für diese Marke liegen noch keine freigegebenen Bilder vor.</p>
             <p>Welche Serien verfügbar oder in Zofingen zu sehen sind, klären wir persönlich mit Ihnen.</p>
           </div>

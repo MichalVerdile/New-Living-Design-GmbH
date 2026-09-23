@@ -1,21 +1,15 @@
 /**
  * Marken: eine Quelle für Register, Fachgebiete und Bildzuordnung (Startseite, /produkte, /partner).
  *
- * Register und Fachgebiete aus dem Quellenregister des NLD-Medienpakets vom 22.09.2026.
+ * Aktive Marken und Kategorien: verbindliche Liste von NLD (Stand 23.09.2026).
+ * Offizielle Websites aus dem Quellenregister des NLD-Medienpakets vom 22.09.2026.
  * Bilder: Medienpaket (Alt-Texte exakt aus media-manifest.json) sowie bereits veröffentlichte
  * Dateien, deren Name die Marke oder eine laut Manifest zugehörige Serie trägt.
- * Zuordnung und Lücken: docs/PR62_DESIGN_V2.md.
+ * Nicht mehr geführte Marken sind hier entfernt; ihre Dateien bleiben in src/assets.
+ * Zuordnung und Lücken: docs/KATALOG_FORNITORI_V3.md.
  */
-import fimaLogo from '../assets/logo.svg';
-import lavastoneLogo from '../assets/LAVASTONE.avif';
-import dosemLogo from '../assets/logo.png';
-import laminamLogo from '../assets/laminam.avif';
-import naiciLogo from '../assets/logoNaici-2024-450x144_2vy550ra.png';
-import cavalliLogo from '../assets/robertocavallihomeinteriors-logo.e54c5509.svg';
-import lamborghiniLogo from '../assets/cropped-lamborghini-logo-total-living-negative.png';
 import newformDeltazero from '../assets/Newform_Deltazero_P2.webp';
 import megiusZenCombiDuo from '../assets/Zen_Combi_duo_Linear_6-1030x1030.webp';
-import dosemOnyx from '../assets/Dosem_Onyx_WhiteBlue_60x120120x270_bathroom_HD_1.jpg';
 
 export type AreaId = 'bad' | 'kuechen' | 'platten' | 'wellness';
 
@@ -58,7 +52,7 @@ export const packImages = {
 
 const p = packImages;
 
-type RegistryEntry = { name: string; url: string; logo?: string; images?: SupplierImage[] };
+type RegistryEntry = { name: string; url: string; images?: SupplierImage[] };
 
 export const registry = {
   rexa: { name: 'Rexa Design', url: 'https://rexadesign.it/' },
@@ -95,18 +89,11 @@ export const registry = {
   zenon: { name: 'Zenon Bath & SPC Surfaces', url: 'https://zenonsurfaces.com/en/collections/Z_PD_FLOOR_PANELS_SPC_TEMPO/', images: [p.zenon] },
   inkiostro: { name: 'Inkiostro Bianco', url: 'https://www.inkiostrobianco.com/en/', images: [p.inkiostro] },
   albatros: { name: 'Albatros Wellness', url: 'https://albatroswellness.it/en/', images: [p.albatros] },
-  // Bisherige Logo-Partner, die im Quellenregister keinem Bereich zugeordnet sind.
-  fima: { name: 'Fima', url: 'https://fimacf.com/', logo: fimaLogo },
-  lavastone: { name: 'Lavastone', url: 'https://www.lavastone-official.com/', logo: lavastoneLogo },
-  dosem: { name: 'Dosem Ceramiche', url: 'https://www.dosemceramiche.it/', logo: dosemLogo, images: [{ src: dosemOnyx, width: 1250, height: 938, alt: 'Badezimmer mit grossformatigen Wandplatten in blauer und weisser Onyxoptik' }] },
-  laminam: { name: 'Laminam', url: 'https://www.laminam.com/de/', logo: laminamLogo },
-  naici: { name: 'Naici', url: 'https://www.naici.it/', logo: naiciLogo },
-  cavalli: { name: 'Roberto Cavalli Home Interiors', url: 'https://robertocavallihomeinteriors.onirogroup.it/', logo: cavalliLogo },
-  lamborghini: { name: 'Tonino Lamborghini', url: 'https://lamborghini-surfaces.com/', logo: lamborghiniLogo },
 } satisfies Record<string, RegistryEntry>;
 
 export type SupplierKey = keyof typeof registry;
 
+// Kategorien exakt nach der Liste von NLD (Stand 23.09.2026).
 export const areas: { id: AreaId; title: string; groups: { title: string; brands: SupplierKey[] }[] }[] = [
   {
     id: 'bad',
@@ -126,16 +113,16 @@ export const areas: { id: AreaId; title: string; groups: { title: string; brands
     title: 'Platten',
     groups: [
       { title: 'Keramik, Feinsteinzeug & Grossformate', brands: ['energieker', 'emilgroup', 'lafabbrica', 'supergres', 'ariana', 'acquario'] },
-      { title: 'Mosaik', brands: ['sicis'] },
-      { title: 'Naturstein & Wandverkleidungen', brands: ['mosavit'] },
-      { title: 'Parkett & Holz', brands: ['skema', 'deco'] },
-      { title: 'SPC & Designböden', brands: ['zenon', 'deco'] },
-      { title: 'Dekorative Wandbeläge & Teppiche', brands: ['inkiostro'] },
+      { title: 'Mosaik', brands: ['sicis', 'mosavit'] },
+      { title: 'Parkett & Holz', brands: ['skema'] },
+      { title: 'SPC & Designböden', brands: ['deco', 'zenon'] },
+      { title: 'Dekorative Wandbeläge & Tapeten', brands: ['inkiostro'] },
     ],
   },
   {
     id: 'wellness',
     title: 'Wellness',
+    // Marken laut NLD-Liste (Megius, Novellini, Albatros Wellness); Fachgebiete je Marke aus dem Quellenregister.
     groups: [
       { title: 'Whirlpool & Minipool', brands: ['novellini', 'albatros'] },
       { title: 'Sauna', brands: ['novellini', 'albatros'] },
@@ -151,9 +138,8 @@ export type Supplier = {
   id: string; // Sprungmarke auf /partner
   name: string;
   url: string;
-  logo?: string;
   images: SupplierImage[];
-  /** Bereich mit Fachgebieten laut Register; leer bei Marken ohne Registerzuordnung */
+  /** Bereiche mit Fachgebieten laut NLD-Liste */
   areas: { id: AreaId; title: string; specialties: string[] }[];
 };
 
@@ -164,7 +150,6 @@ const toSupplier = (key: SupplierKey): Supplier => {
     id: `marke-${key}`,
     name: entry.name,
     url: entry.url,
-    logo: entry.logo,
     images: entry.images ?? [],
     areas: areas.flatMap((area) => {
       const specialties = area.groups.filter((g) => g.brands.includes(key)).map((g) => g.title);
@@ -173,12 +158,11 @@ const toSupplier = (key: SupplierKey): Supplier => {
   };
 };
 
-/** Alle Marken in Registerreihenfolge (Bad, Küchen, Platten, Wellness, danach bisherige Logo-Partner). */
+/** Alle aktiven Marken in Listenreihenfolge (Bad, Küchen, Platten, Wellness). */
 export const suppliers: Supplier[] = (Object.keys(registry) as SupplierKey[]).map(toSupplier);
 
 export const supplierByKey = (key: SupplierKey): Supplier => suppliers.find((s) => s.key === key)!;
 
-export const suppliersInArea = (area: AreaId | 'weitere'): Supplier[] =>
-  suppliers.filter((s) => (area === 'weitere' ? s.areas.length === 0 : s.areas.some((a) => a.id === area)));
+export const suppliersInArea = (area: AreaId): Supplier[] => suppliers.filter((s) => s.areas.some((a) => a.id === area));
 
 export const supplierHref = (key: SupplierKey) => `/partner#marke-${key}`;

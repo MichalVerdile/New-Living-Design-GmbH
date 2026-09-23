@@ -3,34 +3,41 @@ import { Link } from 'react-router-dom';
 import { SEOHead } from '../../components';
 import { business, bathPackages, localBusinessJsonLd } from '../../config/business';
 import { homeReferencePhotos, photoUrl, referenceById } from '../../data/references';
-import { areas, packImages, supplierByKey, supplierHref, suppliers, suppliersInArea, type SupplierImage, type SupplierKey } from '../../data/suppliers';
+import { areas, packImages, supplierHref, suppliers, suppliersInArea, type AreaId, type SupplierImage, type SupplierKey } from '../../data/suppliers';
 import styles from './Home.module.css';
 
 const kitchen = referenceById('kueche-insel-messing');
 const heroRef = referenceById('bad-marmoroptik-grau-schwarz');
 const heroPhoto = heroRef?.photos.find((p) => p.file === 'bad-marmor-grau-02.webp');
 
-type Story = {
-  id: string; title: string; label: string; text: string; href: string; more: string;
-  image: SupplierImage; sizes: string; credit: { prefix: string; label: string; href: string };
-};
+type Shot = { image: SupplierImage; supplier?: SupplierKey; credit?: { label: string; href: string } };
+type Chapter = { id: AreaId; title: string; label: string; text: string; more: string; main: Shot; side: Shot[] };
 
-// Vier Bereiche als Bildgeschichten; der Bildnachweis führt zur Marke bzw. zur Referenz.
-const stories: Story[] = [
-  { id: 'bereich-bad', title: 'Bad', label: 'Aufeinander abgestimmt', text: 'Badmöbel, Waschtische, Armaturen, Keramik, Dusche und Badewanne – gemeinsam ausgewählt, damit Form, Farbe und Funktion zusammenpassen.', href: '/produkte#bad', more: 'Bad ansehen',
-    image: packImages.edone, sizes: '(max-width: 767px) 100vw, 60vw', credit: { prefix: 'Marke', label: 'Edoné', href: supplierHref('edone') } },
-  { id: 'bereich-kuechen', title: 'Küchen', label: 'Für Ihren Alltag geplant', text: 'Raumaufteilung, Fronten, Arbeitsflächen, Geräte und Licht. Mit 3D-Planung, Lieferung, Montage und auf Wunsch mit Renovation der bestehenden Küche.', href: '/produkte#kuechen', more: 'Küchen ansehen',
-    image: { src: photoUrl('kueche-insel-messing-01.webp'), srcSet: `${photoUrl('kueche-insel-messing-01.webp', true)} 480w, ${photoUrl('kueche-insel-messing-01.webp')} 900w`, width: 900, height: 1600, alt: 'Realisierte Küche mit Insel, Messingdetails und Einbaugeräten' },
-    sizes: '(max-width: 767px) 100vw, (max-width: 1100px) 50vw, 36vw', credit: { prefix: 'Referenz', label: kitchen?.title ?? 'Referenzen', href: '/referenzen#kueche-insel-messing' } },
-  { id: 'bereich-platten', title: 'Platten', label: 'Vom Muster in den Raum', text: 'Keramik, Feinsteinzeug, Mosaik und Grossformate für Wand und Boden – ausgewählt nach Wirkung, Nutzung und Pflege.', href: '/produkte#platten', more: 'Platten ansehen',
-    image: packImages.lafabbrica, sizes: '(max-width: 767px) 100vw, 70vw', credit: { prefix: 'Marke', label: 'La Fabbrica AVA', href: supplierHref('lafabbrica') } },
-  { id: 'bereich-wellness', title: 'Wellness', label: 'Entspannung, die zum Raum passt', text: 'Sauna, Dampfbad, Wellnesskabine oder Whirlwanne. Wir klären Platz, Anschlüsse und Nutzung und zeigen Ihnen passende Möglichkeiten.', href: '/produkte#wellness', more: 'Wellness ansehen',
-    image: packImages.novelliniOasis, sizes: '(max-width: 767px) 100vw, 55vw', credit: { prefix: 'Marke', label: 'Novellini', href: supplierHref('novellini') } },
+const kitchenImage: SupplierImage = { src: photoUrl('kueche-insel-messing-01.webp'), srcSet: `${photoUrl('kueche-insel-messing-01.webp', true)} 480w, ${photoUrl('kueche-insel-messing-01.webp')} 900w`, width: 900, height: 1600, alt: 'Realisierte Küche mit Insel, Messingdetails und Einbaugeräten' };
+
+// Vier Bereiche als Kapitel: ein Hauptbild, zwei Nebenbilder; jeder Bildnachweis führt zur Marke im Katalog.
+const chapters: Chapter[] = [
+  { id: 'bad', title: 'Bad', label: 'Aufeinander abgestimmt', text: 'Badmöbel, Waschtische, Armaturen, Keramik, Dusche und Badewanne – gemeinsam ausgewählt, damit Form, Farbe und Funktion zusammenpassen.', more: 'Bad ansehen',
+    main: { image: packImages.edone, supplier: 'edone' }, side: [{ image: packImages.gessi, supplier: 'gessi' }, { image: packImages.cielo, supplier: 'cielo' }] },
+  { id: 'kuechen', title: 'Küchen', label: 'Für Ihren Alltag geplant', text: 'Raumaufteilung, Fronten, Arbeitsflächen, Geräte und Licht. Mit 3D-Planung, Lieferung, Montage und auf Wunsch mit Renovation der bestehenden Küche.', more: 'Küchen ansehen',
+    main: { image: kitchenImage, credit: { label: kitchen?.title ?? 'Referenzen', href: '/referenzen#kueche-insel-messing' } }, side: [{ image: packImages.febalHero, supplier: 'febal' }, { image: packImages.febalCard, supplier: 'febal' }] },
+  { id: 'platten', title: 'Platten', label: 'Vom Muster in den Raum', text: 'Keramik, Feinsteinzeug, Mosaik und Grossformate für Wand und Boden – ausgewählt nach Wirkung, Nutzung und Pflege.', more: 'Platten ansehen',
+    main: { image: packImages.lafabbrica, supplier: 'lafabbrica' }, side: [{ image: packImages.sicis, supplier: 'sicis' }, { image: packImages.skema, supplier: 'skema' }] },
+  { id: 'wellness', title: 'Wellness', label: 'Entspannung, die zum Raum passt', text: 'Sauna, Dampfbad, Wellnesskabine oder Whirlwanne. Wir klären Platz, Anschlüsse und Nutzung und zeigen Ihnen passende Möglichkeiten.', more: 'Wellness ansehen',
+    main: { image: packImages.novelliniOasis, supplier: 'novellini' }, side: [{ image: packImages.megius, supplier: 'megius' }, { image: packImages.albatros, supplier: 'albatros' }] },
 ];
 
-// Marken mit mehreren Bildern als Vorschau im Markenindex.
-const featured: SupplierKey[] = ['novellini', 'febal', 'megius'];
-const brandColumns = [...areas.map((a) => ({ id: a.id, title: a.title })), { id: 'weitere' as const, title: 'Weitere Marken' }];
+const creditOf = (shot: Shot) => shot.credit ?? (shot.supplier ? { label: suppliers.find((x) => x.key === shot.supplier)?.name ?? '', href: supplierHref(shot.supplier) } : undefined);
+
+const Figure: React.FC<{ shot: Shot; sizes: string; className?: string }> = ({ shot, sizes, className }) => {
+  const credit = creditOf(shot);
+  return (
+    <figure className={className}>
+      <img {...shot.image} sizes={sizes} loading="lazy" decoding="async" />
+      {credit && <figcaption>{shot.supplier ? 'Marke' : 'Referenz'}: <Link to={credit.href}>{credit.label}</Link></figcaption>}
+    </figure>
+  );
+};
 
 const Home: React.FC = () => {
   const showroomImage = photoUrl('ausstellung-zofingen-01.webp');
@@ -60,76 +67,64 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* Vier Bereiche als Reise: Index, dann versetzte Bildgeschichten */}
+      {/* Vier Bereiche als Kapitel: Index, dann je ein Hauptbild mit zwei Nebenbildern */}
       <section id="sortiment" className={styles.journey} aria-labelledby="sortiment-title">
         <div className={styles.container}>
           <div className={styles.journeyHead}>
             <div><p className={styles.eyebrow}>Bad, Küchen, Platten und Wellness</p><h2 id="sortiment-title">Vier Bereiche. Eine stimmige Auswahl.</h2></div>
             <nav aria-label="Bereiche" className={styles.index}>
-              <ol>{stories.map((s, i) => <li key={s.id}><a href={`#${s.id}`}><span>{String(i + 1).padStart(2, '0')}</span>{s.title}</a></li>)}</ol>
+              <ol>{chapters.map((c, i) => <li key={c.id}><a href={`#bereich-${c.id}`}><span>{String(i + 1).padStart(2, '0')}</span>{c.title}</a></li>)}</ol>
             </nav>
             <Link to="/produkte" className={styles.textLink}>Alle Produkte ansehen</Link>
           </div>
-          {stories.map((s, i) => (
-            <article key={s.id} id={s.id} className={`${styles.story} ${styles[`story${i + 1}`]}`} aria-labelledby={`${s.id}-title`}>
-              <figure className={styles.storyFigure}>
-                <img {...s.image} sizes={s.sizes} loading="lazy" decoding="async" />
-                <figcaption>{s.credit.prefix}: <Link to={s.credit.href}>{s.credit.label}</Link></figcaption>
-              </figure>
-              <div className={styles.storyText}>
-                <span className={styles.storyNumber} aria-hidden="true">{String(i + 1).padStart(2, '0')}</span>
-                <h3 id={`${s.id}-title`}>{s.title}</h3>
-                <p className={styles.storyLabel}>{s.label}</p>
-                <p className={styles.storyBody}>{s.text}</p>
-                <Link to={s.href} className={styles.textLink}>{s.more}</Link>
-              </div>
-            </article>
-          ))}
+          {chapters.map((c, i) => {
+            const brands = suppliersInArea(c.id);
+            return (
+              <article key={c.id} id={`bereich-${c.id}`} className={`${styles.chapter} ${i % 2 ? styles.chapterAlt : ''} ${c.main.image.height > c.main.image.width ? styles.chapterPortrait : ''}`} aria-labelledby={`bereich-${c.id}-title`}>
+                <div className={styles.chapterText}>
+                  <span className={styles.storyNumber} aria-hidden="true">{String(i + 1).padStart(2, '0')}</span>
+                  <h3 id={`bereich-${c.id}-title`}>{c.title}</h3>
+                  <p className={styles.storyLabel}>{c.label}</p>
+                  <p className={styles.storyBody}>{c.text}</p>
+                  <div className={styles.chapterLinks}>
+                    <Link to={`/produkte#${c.id}`} className={styles.textLink}>{c.more}</Link>
+                    <Link to={`/partner#${c.id}`} className={styles.textLink}>{brands.length === 1 ? '1 Marke' : `${brands.length} Marken`} im Katalog</Link>
+                  </div>
+                </div>
+                <Figure shot={c.main} className={styles.chapterMain} sizes="(max-width: 767px) 100vw, (max-width: 1100px) 66vw, 760px" />
+                <div className={styles.chapterSide}>
+                  {c.side.map((shot) => <Figure key={shot.image.src} shot={shot} sizes="(max-width: 767px) 50vw, (max-width: 1100px) 33vw, 380px" />)}
+                </div>
+              </article>
+            );
+          })}
           <p className={styles.imageNote}>Die gezeigte Küche wurde von uns realisiert. Weitere Motive zeigen ausgewählte Produkte unserer Lieferanten. Auswahl und Verfügbarkeit klären wir persönlich mit Ihnen.</p>
         </div>
       </section>
 
-      {/* Markenindex: alle Marken nach Bereich, jede führt zu ihren Bildern und Angaben */}
-      <section className={styles.brands} aria-labelledby="brands-title">
-        <div className={`${styles.container} ${styles.brandsGrid}`}>
-          <div className={styles.brandsIntro}>
+      {/* Weg zum vollständigen Katalog: Zahlen je Bereich statt einer Namensliste */}
+      <section className={styles.catalog} aria-labelledby="catalog-title">
+        <div className={`${styles.container} ${styles.catalogGrid}`}>
+          <div>
             <p className={styles.eyebrow}>Unsere Marken</p>
-            <h2 id="brands-title">Marken, aus denen eine stimmige Auswahl wird.</h2>
-            <p>Nicht jedes Produkt passt zu jedem Raum. Wir nutzen die Sortimente unserer Partner, um Materialien, Funktionen und Oberflächen passend zu Ihrem Projekt zusammenzustellen.</p>
-            <Link to="/partner" className={styles.textLink}>Alle {suppliers.length} Marken ansehen</Link>
+            <h2 id="catalog-title">Marken, aus denen eine stimmige Auswahl wird.</h2>
+            <p className={styles.catalogIntro}>Nicht jedes Produkt passt zu jedem Raum. Wir nutzen die Sortimente unserer Partner, um Materialien, Funktionen und Oberflächen passend zu Ihrem Projekt zusammenzustellen.</p>
+            <Link to="/partner" className={styles.button}>Alle {suppliers.length} Marken ansehen</Link>
           </div>
-          <ul className={styles.featured} aria-label="Marken mit mehreren Bildern">
-            {featured.map((key) => {
-              const s = supplierByKey(key);
+          <ul className={styles.catalogAreas}>
+            {areas.map((a) => {
+              const n = suppliersInArea(a.id).length;
               return (
-                <li key={key}>
-                  <Link to={supplierHref(key)}>
-                    <span className={styles.featuredStack} aria-hidden="true">
-                      {s.images.slice(1, 3).map((img) => <img key={img.src} src={img.src} srcSet={img.srcSet} sizes="200px" width={img.width} height={img.height} alt="" loading="lazy" decoding="async" />)}
-                      <img src={s.images[0].src} srcSet={s.images[0].srcSet} sizes="(max-width: 767px) 33vw, 360px" width={s.images[0].width} height={s.images[0].height} alt="" loading="lazy" decoding="async" />
-                    </span>
-                    <span className={styles.featuredName}>{s.name}</span>
-                    <span className={styles.featuredCount}>{s.images.length} Bilder</span>
+                <li key={a.id}>
+                  <Link to={`/partner#${a.id}`}>
+                    <strong>{n}</strong>
+                    <span>{a.title}</span>
+                    <small>{a.groups.map((g) => g.title).join(' · ')}</small>
                   </Link>
                 </li>
               );
             })}
           </ul>
-          <div className={styles.brandIndex}>
-            {brandColumns.map((col) => (
-              <div key={col.id}>
-                <h3>{col.title}</h3>
-                <ul>
-                  {suppliersInArea(col.id).map((s) => (
-                    <li key={s.key}>
-                      <Link to={supplierHref(s.key)}>{s.name}</Link>
-                      {s.images.length > 0 && <span className={styles.imageCount} aria-label={`${s.images.length} ${s.images.length === 1 ? 'Bild' : 'Bilder'}`}>{s.images.length}</span>}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
         </div>
       </section>
 

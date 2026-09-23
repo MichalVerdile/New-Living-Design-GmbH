@@ -55,8 +55,7 @@ const Partners: React.FC = () => {
             "@type": "Organization",
             "position": i + 1,
             "name": p.name,
-            "url": p.url,
-            "logo": !p.logo || p.logo.startsWith("data:") ? undefined : `https://newlivingdesign.ch${p.logo}`
+            "url": p.url
           }))
         }) }} />
     </main>
