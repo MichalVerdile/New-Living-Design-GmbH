@@ -1,7 +1,6 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import styles from './Badplaner.module.css';
-import { imagesLoad } from './imagesLoad';
 import { SEOHead } from '../../components';
 import { business, bathPackages, individualPackage } from '../../config/business';
 import {
@@ -96,37 +95,6 @@ interface Result {
     newsletter?: 'accepted' | 'failed' | 'unknown' | 'skipped';
   };
 }
-
-/**
- * Vorher/Nachher oben auf der Seite: Foto eines alten Bads und das Ideenbild daraus.
- * Die zwei Dateien liefert NLD (echter Durchgang, mit Einwilligung des Kunden).
- * Fehlt eine, zeigt die Seite nichts statt eines kaputten Bildes. Ein onError am
- * <img> reicht dafuer nicht: die Seite ist vorgerendert, der Ladefehler faellt vor
- * der Hydration und React bekommt ihn nie mit. Darum erscheint der Block erst,
- * wenn beide Bilder nachweislich geladen sind.
- */
-const VORHER_NACHHER = { vorher: '/badplaner/vorher-nachher/vorher.jpg', nachher: '/badplaner/vorher-nachher/nachher.jpg' };
-
-const VorherNachher: React.FC = () => {
-  const [position, setPosition] = useState(50);
-  const [ready, setReady] = useState(false);
-  useEffect(() => {
-    let alive = true;
-    imagesLoad([VORHER_NACHHER.vorher, VORHER_NACHHER.nachher]).then((ok) => { if (alive) setReady(ok); });
-    return () => { alive = false; };
-  }, []);
-  if (!ready) return null;
-  return (
-    <div className={styles.beforeAfter}>
-      <img src={VORHER_NACHHER.vorher} alt="Vorher: Foto des bestehenden Bads" />
-      <img src={VORHER_NACHHER.nachher} alt="Nachher: Ideenbild aus dem Badplaner" style={{ clipPath: `inset(0 0 0 ${position}%)` }} />
-      <span className={styles.beforeAfterLabel}>Vorher</span>
-      <span className={`${styles.beforeAfterLabel} ${styles.beforeAfterLabelRight}`}>Ideenbild</span>
-      <span className={styles.beforeAfterHandle} style={{ left: `${position}%` }} aria-hidden="true" />
-      <input type="range" min={0} max={100} value={position} onChange={(e) => setPosition(Number(e.target.value))} className={styles.beforeAfterRange} aria-label="Vorher und Ideenbild vergleichen" />
-    </div>
-  );
-};
 
 const firstId = (list: { id: string }[]): string => (list.length > 0 ? list[0].id : '');
 
@@ -1015,8 +983,6 @@ const Badplaner: React.FC = () => {
         <div className={`${styles.heroContent} ${isVisible ? styles.visible : ''}`}>
           <p className={styles.eyebrow}>Neu · Badplaner</p>
           <h1 className={styles.heroTitle}>Ihr Bad als Ideenbild, aus Ihrem eigenen Foto</h1>
-          <VorherNachher />
-          {/* Der Knopf gleich unter dem Bild: auf dem Telefon noch ueber dem Cookie-Streifen. */}
           <div className={styles.heroActions}>
             <a href="#planer" className={styles.ctaPrimary} onClick={() => trackBadplaner('badplaner_start')}>Jetzt starten</a>
             <a href="#ablauf" className={styles.ctaSecondary}>So funktioniert's</a>
