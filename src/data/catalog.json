@@ -166,7 +166,21 @@
     "rexa": {
       "name": "Rexa Design",
       "url": "https://rexadesign.it/",
-      "series": []
+      "series": [
+        {
+          "area": "bad",
+          "name": "Moode",
+          "images": [
+            {
+              "pack": "katalog/bad/rexa/moode-01",
+              "width": 2000,
+              "height": 1334,
+              "alt": "Rexa Design Moode Waschtischanlage mit zwei runden Spiegeln vor Marmorwand und freistehender Badewanne",
+              "sha1": "04e20b051f7059de40c397b15675b19160885c0b"
+            }
+          ]
+        }
+      ]
     },
     "edone": {
       "name": "Edoné",
@@ -217,7 +231,54 @@
     "treemme": {
       "name": "Rubinetterie Treemme",
       "url": "https://www.rubinetterie3m.it/it",
-      "series": []
+      "series": [
+        {
+          "area": "bad",
+          "name": "Aurelia",
+          "images": [
+            {
+              "pack": "katalog/bad/treemme/aurelia-01",
+              "width": 900,
+              "height": 1200,
+              "alt": "Treemme Aurelia Wand-Waschtischarmatur in Chrom mit rechteckiger Abdeckplatte",
+              "sha1": "6b744aaac3084825bdda6f5c511a86ef93cf08e3"
+            },
+            {
+              "pack": "katalog/bad/treemme/aurelia-02",
+              "width": 900,
+              "height": 1200,
+              "alt": "Treemme Aurelia Unterputz-Duschset in Chrom mit Kopfbrause, zwei Mischern und Handbrause",
+              "sha1": "b1b0fa18221aeef971278b18d45e75dae079fcc2"
+            }
+          ]
+        },
+        {
+          "area": "bad",
+          "name": "Up+",
+          "images": [
+            {
+              "pack": "katalog/bad/treemme/up-01",
+              "width": 900,
+              "height": 1200,
+              "alt": "Treemme Up+ Waschtischarmatur in Chrom mit rundem Auslauf vor dunklem Hintergrund",
+              "sha1": "1116a01b9916ae19759a309927669f36d3eafe7c"
+            }
+          ]
+        },
+        {
+          "area": "bad",
+          "name": "Ran",
+          "images": [
+            {
+              "pack": "katalog/bad/treemme/ran-01",
+              "width": 900,
+              "height": 1200,
+              "alt": "Treemme Ran Waschtischarmatur in Chrom mit flachem Auslauf an einem weissen Aufsatzbecken",
+              "sha1": "37aafdceb901a34f5256f0df33a673bfab068ae8"
+            }
+          ]
+        }
+      ]
     },
     "newform": {
       "name": "Newform",
@@ -455,6 +516,13 @@
               "width": 1008,
               "height": 567,
               "alt": "Febal Casa Origina Küche mit farbigem Inseltisch und Holzfronten"
+            },
+            {
+              "pack": "katalog/kuechen/febal/origina-03",
+              "width": 1920,
+              "height": 1278,
+              "alt": "Febal Casa Origina Küche mit Kochinsel in Steinoptik und Hochschränken in Holz",
+              "sha1": "c6f589ab3584218a852c85a414ff8230390a630e"
             }
           ]
         }

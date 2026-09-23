@@ -12,7 +12,7 @@ export type AreaId = 'bad' | 'kuechen' | 'platten' | 'wellness';
 
 export type SupplierImage = { src: string; srcSet?: string; width: number; height: number; alt: string };
 
-type RawImage = { pack?: string; asset?: string; width: number; height: number; alt: string };
+type RawImage = { pack?: string; asset?: string; width: number; height: number; alt: string; sha1?: string };
 
 // Dateien aus src/assets per Name (Vite liefert die gehashte URL).
 const assetUrls = import.meta.glob<string>('../assets/*.{webp,jpg,jpeg,png,avif}', { eager: true, query: '?url', import: 'default' });
@@ -21,7 +21,9 @@ const assetUrls = import.meta.glob<string>('../assets/*.{webp,jpg,jpeg,png,avif}
 const toImage = (raw: RawImage): SupplierImage => {
   if (raw.pack) {
     const base = `/images/${raw.pack}`;
-    return { src: `${base}-${raw.width}w.webp`, srcSet: `${base}-960w.webp 960w, ${base}-${raw.width}w.webp ${raw.width}w`, width: raw.width, height: raw.height, alt: raw.alt };
+    const src = `${base}-${raw.width}w.webp`;
+    // 960w-Variante gibt es nur für Bilder, die breiter sind (nie vergrössert).
+    return { src, srcSet: raw.width > 960 ? `${base}-960w.webp 960w, ${src} ${raw.width}w` : undefined, width: raw.width, height: raw.height, alt: raw.alt };
   }
   const src = assetUrls[`../assets/${raw.asset}`];
   if (!src) throw new Error(`catalog.json: Datei fehlt in src/assets: ${raw.asset}`);
