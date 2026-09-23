@@ -213,6 +213,8 @@
 
 .subcategory-card { scroll-margin-top: 6rem; min-width: 0; }
 
+.subcategory-image-link { display: block; }
+
 .subcategory-card img {
   width: 100%;
   height: auto;
@@ -233,6 +235,9 @@
   overflow-wrap: break-word;
   hyphens: auto;
 }
+
+.subcategory-title a { color: inherit; text-decoration: none; }
+.subcategory-title a:hover { text-decoration: underline; text-underline-offset: .2em; }
 
 .subcategory-brand {
   display: block;

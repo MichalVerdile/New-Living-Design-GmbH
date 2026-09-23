@@ -9,12 +9,13 @@ import beleuchtungenImage from '../../assets/BEAM_STICK_family_color_edited.avif
 import accessoiresImage from '../../assets/viv-au2420bmset5_5.avif';
 import { SEOHead } from '../../components';
 import { photoUrl, referenceById } from '../../data/references';
-import { areaHref, imageOf, supplierByKey, supplierHref, suppliersInArea, type AreaId, type SupplierImage, type SupplierKey } from '../../data/suppliers';
+import { areaHref, groupSlug, imageOf, supplierByKey, supplierHref, suppliersInArea, type AreaId, type SupplierImage, type SupplierKey } from '../../data/suppliers';
 
 // Herstellerbilder aus dem NLD-Medienpaket vom 22.09.2026; Zuordnung zur Marke in src/data/suppliers.ts.
 type SubcategoryCard = {
   id?: string;
   title: string;
+  group?: string;
   supplier: SupplierKey;
   image: SupplierImage;
 };
@@ -28,7 +29,7 @@ const heroes = {
 
 const cards: Record<keyof typeof heroes, SubcategoryCard[]> = {
   bad: [
-    { id: 'badmoebel', title: 'Badmöbel', supplier: 'froidevaux', image: imageOf('froidevaux') },
+    { id: 'badmoebel', title: 'Badmöbel', supplier: 'rexa', image: imageOf('rexa', 'Moode') },
     { id: 'armaturen', title: 'Armaturen', supplier: 'gessi', image: imageOf('gessi') },
     { id: 'sanitaerkeramik', title: 'Sanitärkeramik', supplier: 'cielo', image: imageOf('cielo') },
     { id: 'duschen', title: 'Duschen & Duschabtrennungen', supplier: 'vismaravetro', image: imageOf('vismaravetro') },
@@ -46,7 +47,7 @@ const cards: Record<keyof typeof heroes, SubcategoryCard[]> = {
     { id: 'hammam', title: 'Hammam & Dampfbad', supplier: 'megius', image: imageOf('megius') },
   ],
   platten: [
-    { id: 'grossformate', title: 'Grossformate & Marmoroptik', supplier: 'lafabbrica', image: imageOf('lafabbrica') },
+    { id: 'grossformate', title: 'Grossformate & Marmoroptik', group: 'Keramik, Feinsteinzeug & Grossformate', supplier: 'lafabbrica', image: imageOf('lafabbrica') },
     { id: 'mosaik', title: 'Mosaik', supplier: 'sicis', image: imageOf('sicis', 'Elegance') },
     { id: 'parkett', title: 'Parkett & Holz', supplier: 'skema', image: imageOf('skema') },
     { id: 'spc', title: 'SPC & Designböden', supplier: 'zenon', image: imageOf('zenon') },
@@ -63,17 +64,20 @@ const SubcategoryGrid: React.FC<{ items: SubcategoryCard[]; label: string; area:
   return (
     <>
       <ul className={styles['subcategory-grid']} aria-label={label}>
-        {items.map((card) => (
-          <li key={card.image.src} id={card.id} className={styles['subcategory-card']}>
+        {items.map((card) => {
+          const categoryHref = `${areaHref(area)}#${groupSlug(card.group ?? card.title)}`;
+          return <li key={card.image.src} id={card.id} className={styles['subcategory-card']}>
             <figure>
-              <img {...card.image} sizes="(max-width: 1024px) 50vw, 300px" loading="lazy" decoding="async" />
+              <Link to={categoryHref} className={styles['subcategory-image-link']} aria-label={`${card.title}: alle Marken ansehen`}>
+                <img {...card.image} sizes="(max-width: 1024px) 50vw, 300px" loading="lazy" decoding="async" />
+              </Link>
               <figcaption>
-                <h4 className={styles['subcategory-title']}>{card.title}</h4>
+                <h4 className={styles['subcategory-title']}><Link to={categoryHref}>{card.title}</Link></h4>
                 <Link to={supplierHref(card.supplier, area)} className={styles['subcategory-brand']}>{supplierByKey(card.supplier).name}</Link>
               </figcaption>
             </figure>
-          </li>
-        ))}
+          </li>;
+        })}
       </ul>
       {/* Alle Marken des Bereichs, auch ohne Bild; jede öffnet ihre Angaben im Markenverzeichnis */}
       <div className={styles['area-brands']}>
