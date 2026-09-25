@@ -65,7 +65,8 @@ import { Budget, TimeoutError, type Clock } from '../server/badplaner/budget.js'
 import { normalizeSelection, ValidationError } from '../server/badplaner/validation.js';
 import { normalizeBase64, validateImageBytes, MAX_PHOTO_BASE64, MAX_PLAN_BASE64 } from '../src/pages/badplaner/imageValidation.js';
 import { SANITARY_MODULE_PHOTO } from '../server/badplaner/sanitaermodul.js';
-import { AURELIA_TAPS_PHOTO } from '../server/badplaner/aurelia.js';
+import { AURELIA_BASIN_PHOTO, AURELIA_TAPS_PHOTO } from '../server/badplaner/aurelia.js';
+import { UP_AUFPUTZ_PHOTO, UP_BASIN_PHOTO, UP_UNTERPUTZ_PHOTO } from '../server/badplaner/up.js';
 
 // Node-Globals ohne @types/node (api/tsconfig.json ist auf Edge ausgelegt)
 declare const process: any;
@@ -450,9 +451,11 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   // Beschreiben allein genügt dem Modell nicht, es baut sonst eine verkleidete
   // Vorwand. Das Bild liegt im Code, darum kann es weder fehlen noch Zeit kosten.
   const moduleImage = cistern === 'aufputz' ? SANITARY_MODULE_PHOTO : null;
-  // Atelier: Treemme Aurelia als Produktfoto, weil die Worte allein am 20.09. nur
-  // allgemeine Armaturen ergaben. Nur Armaturen auf weissem Grund, kein Raum.
-  const tapsImage = isAtelier && !isGuestWc ? AURELIA_TAPS_PHOTO : null;
+  // Die Armaturen als Produktfoto, weil die Worte allein nur allgemeine Armaturen ergaben (Aurelia am 20.09.,
+  // Up+ in P3 und P4 vom 25.09.). Nur Armaturen, kein Raum. Im Gaeste-WC nur die Waschtischarmatur.
+  const upSeries = pkg.id === 'essenza' || tapSeriesOption?.id === 'treemme-up';
+  const tapsImage = isAtelier ? (isGuestWc ? AURELIA_BASIN_PHOTO : AURELIA_TAPS_PHOTO)
+    : !upSeries ? null : isGuestWc ? UP_BASIN_PHOTO : pkg.id === 'essenza' ? UP_AUFPUTZ_PHOTO : UP_UNTERPUTZ_PHOTO;
 
   // Bilder an Gemini, in dieser Reihenfolge: 1 Foto, dann Platte, Bodenplatte, Akzent,
   // Waschtischplatte, Unterbau (dieselbe Datei nur einmal), Modul, Armaturen. Die Nummern stehen so im Prompt.
@@ -487,7 +490,8 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
     topPrompt: top.prompt,
     basePrompt: base.prompt,
     mirrorPrompt: mirror.prompt,
-    tapPrompt: isGuestWc ? `washbasin tap in ${finish.prompt}; no shower mixer, bath filler or shower controls` : taps.prompt,
+    // Gaeste-WC: dieselbe Serie ohne den Teil zur Dusche. Bis zum 25.09. stand hier nur "washbasin tap" (P4: kein Up+).
+    tapPrompt: isGuestWc ? `${taps.prompt.replace(/; in a shower [^;]*/, '')}; no shower mixer, bath filler or shower controls` : taps.prompt,
     tileIsMosaicSample: /MOSAICO/i.test(tile.src || ''),
     floorIsMosaicSample: /MOSAICO/i.test(floorTile?.src || ''),
     tileImageNumber: imageNumber(swatch),
@@ -1075,7 +1079,7 @@ function tapDescription(
   // in einer Reihe: Brauseanschluss mit Halter und Stabhandbrause, Mischer, Umsteller), Kopfbrause IT RTBR 376 CC (500 x 200).
   if (pkg === 'atelier') {
     return {
-      prompt: `concealed built-in (Unterputz) Treemme Aurelia fittings in ${finish.prompt}, with no exposed mixer body: at the washbasin two separate small round wall rosettes (about 7.5 cm) one above the other above the basin, no wall plate: from the upper one a long slim spout with flat facets runs about 20 cm out from the wall and bends gently down at its end, and the lower one carries the mixer, a short cylinder with a flat paddle lever; in a shower three small round wall rosettes (about 7.5 cm) in one row at the same height: one at the end of the row carries the hose outlet and the holder of a slim cylindrical stick hand shower on its hose, the other two each a short cylinder with the same flat lever; above them on the same wall, just below the ceiling, a thin flat rectangular overhead shower plate (about 50 × 20 cm) that sticks straight out from the wall, fixed to it by its short end, with its nozzles facing down`,
+      prompt: `concealed built-in (Unterputz) Treemme Aurelia fittings in ${finish.prompt}, with no exposed mixer body: at the washbasin two separate small round wall rosettes (about 7.5 cm) one above the other above the basin, no wall plate: from the upper one a long slim spout with flat facets runs about 20 cm out from the wall and bends gently down at its end, and the lower one carries the mixer, a short cylinder with a flat paddle lever; in a shower three small round wall rosettes (about 7.5 cm) in one row at the same height: one at the end of the row carries the hose outlet and the holder of a slim cylindrical stick hand shower on its hose, the other two each a short cylinder with the same flat lever, and above them on the same wall, just below the ceiling, a thin flat rectangular overhead shower plate (about 50 × 20 cm) that sticks straight out from the wall, fixed to it by its short end, with its nozzles facing down`,
       label: `${finish.label}, ${seriesText}`,
     };
   }
@@ -1088,11 +1092,11 @@ function tapDescription(
     };
   }
   return {
-    // Form aus Treemmes Up+-Katalog (Diego, 13.09.), Hebel nach der Produktseite (Carla, 25.09.): Zylinder,
-    // Stifthebel seitlich oben, langer gebogener Rohrauslauf; runde Rosetten, runde Kopfbrause.
+    // Treemme Up+ (Artikel vom 25.09., Bilder in server/badplaner/up.ts): Waschtisch IT 6B18, der hohe Einhebelmischer
+    // mit Stifthebel seitlich oben und langem Rohrauslauf; Dusche IT 6B60, Aufputzmischer mit Steigrohr und runder Kopfbrause.
     // Aufputz (Diego, 20.09.): die Probe von 09:56 zeigte in der Dusche eine Unterputz-Rosette. Darum steht der
     // sichtbare Koerper ausdruecklich da, und am Waschtisch die Standarmatur statt eines Wandauslaufs.
-    prompt: 'exposed surface-mounted (Aufputz) Treemme Up+ fittings in polished chrome for the requested fixtures only, all round, slim and plain: at the washbasin a slim cylindrical single-lever mixer standing on the washbasin or its countertop, as tall as the basin needs, with a thin pin lever on its side near the top and a long round tube spout that curves down; in a shower an exposed wall mixer that stands clearly out from the tiles, a slim round horizontal chrome body about 25 cm long on two short connectors with the same pin lever, not a flat concealed plate; from it a slim round riser pipe runs up the same wall to a thin round overhead shower on a short arm, with a slim round hand shower in a holder on the riser',
+    prompt: 'exposed surface-mounted (Aufputz) Treemme Up+ fittings in polished chrome for the requested fixtures only, all round, slim and plain: at the washbasin a slim cylindrical single-lever mixer with a flat top standing on the countertop or the washbasin, as tall as the basin needs, with a thin pin lever sticking out on its side near the top and just below it a long round tube spout that slopes down away from the body and bends down at its end; in a shower an exposed shower column: a slim round horizontal chrome mixer bar about 25 cm long with a round knob at each end, standing clearly out from the tiles on two short wall connectors, not a flat concealed plate, and from its middle a slim round riser pipe runs straight up the same wall and at the top bends forward into a short arm that holds a large thin round overhead shower, with a slim stick hand shower in a slider on the riser and its hose hanging down to the mixer bar',
     label: seriesText,
   };
 }
@@ -1159,7 +1163,9 @@ function buildPrompt(v: {
     sample(v.baseImageNumber, 'a colour sample for the front and body of the vanity unit');
   }
   sample(v.moduleImageNumber, 'a product photo of the sanitary module on a white background');
-  sample(v.tapsImageNumber, 'a product photo of the tap fittings on a white background, in chrome, the washbasin fittings at the top and the shower fittings below: copy their shapes, their finish is the one named under CHANGE');
+  sample(v.tapsImageNumber, v.room === 'gaeste-wc'
+    ? 'a product photo of the washbasin tap on a plain background, in chrome: copy its shape, its finish is the one named under CHANGE'
+    : 'a product photo of the washbasin and shower fittings on a plain background, in chrome: copy their shapes, their finish is the one named under CHANGE');
   const references = samples.length ? ` ${samples.join(' ')} These images show materials and products, never a room or a layout.` : '';
   const asIn = (n: number) => (n ? ` as in image ${n}` : '');
   const colourOf = (n: number) => (n ? ` in the colour and finish of image ${n}` : '');

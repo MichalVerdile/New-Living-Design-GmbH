@@ -708,19 +708,20 @@ test('the sanitary module travels as its own reference image', async () => {
   const generation = h.calls.find((call) => call.body?.generationConfig?.responseModalities);
   const parts = generation.body.contents[0].parts;
   // Foto, Plattenmuster, Muster von Waschtischplatte und Unterbau (eine Datei, wenn beide
-  // dieselbe haben), Sanitärmodul: das Modul kommt zuletzt.
+  // dieselbe haben), Sanitärmodul, Armaturen: das Modul kommt vor den Armaturen.
   const options = optionsForPackage('essenza');
   const vanity = new Set([options.tops[0].image, options.bases[0].image]).size;
   const images = parts.filter((part) => part.inlineData);
-  assert.equal(images.length, 2 + vanity + 1);
-  const module = images[images.length - 1].inlineData;
+  assert.equal(images.length, 2 + vanity + 2);
+  const module = images[images.length - 2].inlineData;
   assert.equal(module.mimeType, 'image/jpeg');
   // Ein echtes JPEG, kein Platzhalter: Base64 eines Bildes von einigen Kilobyte.
   assert.ok(module.data.startsWith('/9j/'), 'module image is not a JPEG');
   assert.ok(module.data.length > 2000, `module image too small: ${module.data.length}`);
   const prompt = parts[0].text;
-  assert.match(prompt, new RegExp(`Image ${images.length} is only a product photo of the sanitary module`));
-  assert.match(prompt, new RegExp(`stands the sanitary module of image ${images.length}:`));
+  assert.match(prompt, new RegExp(`Image ${images.length - 1} is only a product photo of the sanitary module`));
+  assert.match(prompt, new RegExp(`stands the sanitary module of image ${images.length - 1}:`));
+  assert.match(prompt, new RegExp(`Image ${images.length} is only a product photo of the washbasin and shower fittings`));
   assert.match(prompt, /not tiled or boxed in/);
   const leadMail = h.calls.find((call) => call.url === 'https://api.resend.com/emails');
   assert.match(JSON.stringify(leadMail.body), /OLI QR INOX Sospeso/);
@@ -732,8 +733,8 @@ test('the module image needs no network call and none is made for it', async () 
   assert.equal(res.statusCode, 200);
   assert.equal(h.calls.filter((call) => call.url.includes('oli-world')).length, 0);
   const generation = h.calls.find((call) => call.body?.generationConfig?.responseModalities);
-  // Plattenmuster fehlt hier (404), das Modul ist trotzdem dabei: Foto + Modul.
-  assert.equal(generation.body.contents[0].parts.filter((part) => part.inlineData).length, 2);
+  // Plattenmuster fehlt hier (404), Modul und Armaturen sind trotzdem dabei: Foto + Modul + Armaturen.
+  assert.equal(generation.body.contents[0].parts.filter((part) => part.inlineData).length, 3);
   assert.match(generation.body.contents[0].parts[0].text, /Image 2 is only a product photo of the sanitary module/);
 });
 
@@ -742,7 +743,8 @@ test('Unterputz carries no module image and forbids a module in front of the wal
   const res = await h.invoke(payload({ cistern: 'unterputz' }));
   assert.equal(res.statusCode, 200);
   const generation = h.calls.find((call) => call.body?.generationConfig?.responseModalities);
-  assert.equal(generation.body.contents[0].parts.filter((part) => part.inlineData).length, 1);
+  // Foto und Armaturen, kein Modul.
+  assert.equal(generation.body.contents[0].parts.filter((part) => part.inlineData).length, 2);
   const prompt = generation.body.contents[0].parts[0].text;
   assert.doesNotMatch(prompt, /product photo of the sanitary module/);
   assert.match(prompt, /no sanitary module is added/);
@@ -785,10 +787,10 @@ test('Waschtischplatte und Unterbau gehen als Muster mit, die Platte nimmt nie d
     waschtisch: options.basins[0].id, spiegel: options.mirrors[0].id,
   }));
   assert.equal(res.statusCode, 200);
-  // Dieselbe Datei wird einmal geladen und einmal mitgeschickt: Foto, Platte, Diamante.
+  // Dieselbe Datei wird einmal geladen und einmal mitgeschickt: Foto, Platte, Diamante, dazu die Armaturen Up+.
   assert.equal(h.calls.filter((call) => call.url.endsWith(top.image)).length, 1);
   const generation = h.calls.find((call) => call.body?.generationConfig?.responseModalities);
-  assert.equal(generation.body.contents[0].parts.filter((part) => part.inlineData).length, 3);
+  assert.equal(generation.body.contents[0].parts.filter((part) => part.inlineData).length, 4);
   const prompt = generation.body.contents[0].parts[0].text;
   assert.match(prompt, /Image 3 is only a colour sample for the whole vanity unit: its front, its body and its countertop/);
   assert.ok(prompt.includes(`countertop in ${top.prompt} in the colour and finish of image 3`), 'Platte ohne Verweis auf ihr Muster');
@@ -803,7 +805,8 @@ test('ohne ladbares Muster bleibt es bei der Beschreibung, ohne Bildnummer', asy
   const res = await h.invoke();
   assert.equal(res.statusCode, 200);
   const generation = h.calls.find((call) => call.body?.generationConfig?.responseModalities);
-  assert.equal(generation.body.contents[0].parts.filter((part) => part.inlineData).length, 1);
+  // Foto und die Armaturen, die im Code liegen.
+  assert.equal(generation.body.contents[0].parts.filter((part) => part.inlineData).length, 2);
   const prompt = generation.body.contents[0].parts[0].text;
   assert.doesNotMatch(prompt, /colour sample for|sample of the countertop/);
   assert.match(prompt, /not cut from the wall or floor tiles/);
@@ -1132,9 +1135,9 @@ test('current large catalog originals below 5 MiB retain their visual reference'
   const h = harness({ swatch: () => new Response(bytes, { headers: { 'content-type': 'image/png' } }) });
   const res = await h.invoke(); assert.equal(res.statusCode, 200);
   const generation = h.calls.find((call) => call.body?.generationConfig?.responseModalities);
-  // Text, Foto, Plattenmuster, dann die Muster von Waschtischplatte und Unterbau (hier eine Datei).
+  // Text, Foto, Plattenmuster, dann die Muster von Waschtischplatte und Unterbau (hier eine Datei), zuletzt die Armaturen.
   const options = optionsForPackage('essenza');
-  assert.equal(generation.body.contents[0].parts.length, 3 + new Set([options.tops[0].image, options.bases[0].image]).size);
+  assert.equal(generation.body.contents[0].parts.length, 4 + new Set([options.tops[0].image, options.bases[0].image]).size);
   assert.equal(Buffer.from(generation.body.contents[0].parts[2].inlineData.data, 'base64').length, bytes.length);
   const leadMail = h.calls.find((call) => call.url === 'https://api.resend.com/emails');
   assert.match(JSON.stringify(leadMail.body), /Muster/);
@@ -1527,7 +1530,7 @@ test('Armaturen: Atelier zeigt die Form von Treemme Aurelia in der gewaehlten Ob
   // Die Treemme-Produktfotos gehen als letzte Vorlage mit, nur fuer die Form.
   const parts = h.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts;
   const tapsImage = parts.filter((part) => part.inlineData).length;
-  assert.match(prompt, new RegExp(`Image ${tapsImage} is only a product photo of the tap fittings on a white background, in chrome, the washbasin fittings at the top`));
+  assert.match(prompt, new RegExp(`Image ${tapsImage} is only a product photo of the washbasin and shower fittings on a plain background`));
   assert.deepEqual(options.finishes.map((finish) => finish.id), ['treemme-cromo', 'treemme-nero-opaco', 'treemme-oro-spazzolato', 'treemme-nichel-spazzolato',
     'treemme-oro-rosa-spazzolato', 'treemme-nichel-lucido', 'treemme-oro', 'treemme-nero-cromo-lucido', 'treemme-nero-cromo-spazzolato', 'treemme-ottone-spazzolato']);
   // Lead und Kundenmail nennen die Serie.
@@ -1538,13 +1541,48 @@ test('Armaturen: Atelier zeigt die Form von Treemme Aurelia in der gewaehlten Ob
 
 test('Armaturen: Essenza zeigt die Form von Treemme Up+, nicht irgendeine Armatur', async () => {
   const h = harness(); await h.invoke();
-  const prompt = h.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
-  // Carla, 25.09., nach der Produktseite von Treemme: Stifthebel seitlich oben, langer gebogener Rohrauslauf.
-  assert.match(prompt, /Treemme Up\+ fittings in polished chrome .*thin pin lever on its side near the top and a long round tube spout that curves down/);
-  // Aufputz: am Waschtisch die Standarmatur, in der Dusche der sichtbare Mischer (Diego, 20.09.).
-  assert.match(prompt, /mixer standing on the washbasin or its countertop/);
-  assert.match(prompt, /exposed wall mixer that stands clearly out from the tiles.*not a flat concealed plate/);
-  assert.doesNotMatch(prompt, /product photo of the tap fittings/);
+  const parts = h.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts;
+  const prompt = parts[0].text;
+  // Artikel vom 25.09.: Waschtisch IT 6B18 (Stifthebel seitlich oben, langer Rohrauslauf), Dusche IT 6B60 Aufputz.
+  assert.match(prompt, /Treemme Up\+ fittings in polished chrome .*thin pin lever sticking out on its side near the top and just below it a long round tube spout that slopes down/);
+  assert.match(prompt, /mixer with a flat top standing on the countertop or the washbasin/);
+  // Aufputz: in der Dusche der sichtbare Mischer (Diego, 20.09.), mit Steigrohr und runder Kopfbrause.
+  assert.match(prompt, /exposed shower column: .*standing clearly out from the tiles .*not a flat concealed plate.*riser pipe .*large thin round overhead shower/);
+  // Die Produktbilder von Treemme gehen als letzte Vorlage mit (P3 vom 25.09.: ohne Bild kein Up+).
+  const images = parts.filter((part) => part.inlineData);
+  assert.match(prompt, new RegExp(`Image ${images.length} is only a product photo of the washbasin and shower fittings`));
+  assert.ok(images[images.length - 1].inlineData.data.startsWith('/9j/'));
+});
+
+test('Gaeste-WC: dieselbe Armaturenserie wie im Bad, nur am Waschtisch, mit Bild nur des Waschtischs', async () => {
+  // P4 vom 25.09. (Colore mit Up+): im Prompt stand nur "washbasin tap", auf Vorschau und Website kein Up+.
+  const colore = optionsForPackage('colore');
+  const atelier = optionsForPackage('atelier');
+  const guest = { raum: 'gaeste-wc', dusche: '', badewanne: '', waschtisch: 'einzel' };
+  const cases = [
+    [{ ...guest, paket: 'colore', format: colore.formats[0], platte: colore.tiles[0].id, unterbau: colore.bases[0].id, top: colore.tops[0].id,
+      becken: 'aufsatz', armaturenserie: 'treemme-up', finish: colore.finishes[0].id, keramik: colore.sanitary[0].id, wall: colore.walls[0].id,
+      spiegel: colore.mirrors[0].id }, /Treemme Up\+ fittings .*at the washbasin a slim cylindrical single-lever mixer/, 'a product photo of the washbasin tap'],
+    [{ ...guest, paket: 'atelier', look: atelier.tiles[0].look, format: atelier.tiles[0].format, platte: atelier.tiles[0].id, kombination: 'einheitlich',
+      unterbau: atelier.bases[0].id, top: atelier.tops[0].id, becken: atelier.basinTypes[0].id, finish: atelier.finishes[0].id,
+      keramik: atelier.sanitary[0].id, wall: atelier.walls[0].id, spiegel: atelier.mirrors[0].id }, /Treemme Aurelia fittings .*two separate small round wall rosettes/, 'a product photo of the washbasin tap'],
+    [{ ...guest }, /Treemme Up\+ fittings .*at the washbasin a slim cylindrical single-lever mixer/, 'a product photo of the washbasin tap'],
+  ];
+  for (const [body, series, sample] of cases) {
+    const h = harness();
+    const res = await h.invoke(payload(body));
+    assert.equal(res.statusCode, 200, `${body.paket}: ${JSON.stringify(res.body).slice(0, 200)}`);
+    const parts = h.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts;
+    const prompt = parts[0].text;
+    assert.match(prompt, series, body.paket);
+    assert.doesNotMatch(prompt, /in a shower |overhead shower|hand shower/, body.paket);
+    assert.match(prompt, /no shower mixer, bath filler or shower controls/);
+    assert.match(prompt, new RegExp(`Image ${parts.filter((part) => part.inlineData).length} is only ${sample}`), body.paket);
+  }
+  // Ran bekommt kein Bild: dafuer gibt es keine Vorlage.
+  const ran = harness();
+  await ran.invoke(payload({ ...cases[0][0], armaturenserie: 'treemme-ran' }));
+  assert.doesNotMatch(ran.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text, /product photo of the washbasin/);
 });
 
 test('Bodenplatte und Akzent gehen als eigene Muster mit, mit ihrer Bildnummer im Prompt', async () => {
