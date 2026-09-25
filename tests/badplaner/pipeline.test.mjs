@@ -296,6 +296,8 @@ test('der Prompt ist eine Bearbeitung, keine Neuzeichnung', async () => {
   // P4 und P5 vom 25.09.: ohne den Abgleich am Schluss kam bei "keine Fenster" ein Fenster dazu.
   assert.match(prompt, /BEFORE YOU DRAW, compare with image 1: the same viewpoint and framing, the same walls and ceiling, no window at all, the same door, every fixture where image 1 has it/);
   assert.match(prompt, /never show more of the room than image 1 shows\.$/);
+  assert.match(prompt, /Photorealistic, bright, even light, no people/);
+  assert.doesNotMatch(prompt, /daylight/);
   assert.match(prompt, /POSITIONS: every fixture keeps its wall and its place along it, measured against the corners, the door and the window/);
   // Ein Muretto ist Raum, keine Einrichtung: es bleibt stehen.
   assert.match(prompt, /A low wall or boxed pre-wall that a fixture stands against is part of the room: it stays, and the fixture stays on it/);

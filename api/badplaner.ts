@@ -1215,7 +1215,8 @@ function buildPrompt(v: {
     `POSITIONS: every fixture keeps its wall and its place along it, measured against the corners, the door and the window. The toilet's drain cannot move: the toilet stays on its wall at its place${v.ceiling === 'sloped' ? ', also under the sloping ceiling' : ''}. A low wall or boxed pre-wall that a fixture stands against is part of the room: it stays, and the fixture stays on it. A shower that replaces a bathtub uses the bathtub's footprint on the same wall. A shower or bathtub in a recess stays inside it, and the tiles follow the recess round its corners.`,
     `CHANGE in this ${roomName} (style "${v.packageName}"):${look} ${surfaces}; ${fixtures}; if a toilet is visible in image 1, ${toilet}; ${vanity}; ${v.tapPrompt}.${accent}`,
     `REMOVE: the bidet, if image 1 has one: its place is finished like the rest of the room, with nothing standing there; the old shower curtain and its rail; towels, bottles, rugs and loose furniture. The vanity unit is not loose furniture and stays. All shower fittings sit together on one wall inside the shower area, never next to the toilet or the washbasin.`,
-    'Photorealistic, natural daylight, no people, no text.',
+    // Tageslicht in einem Raum ohne Fenster verlangt nach einem Fenster (P4 und P5 vom 25.09.).
+    `Photorealistic, ${v.windows === '0' ? 'bright, even light' : 'natural daylight'}, no people, no text.`,
     `BEFORE YOU DRAW, compare with image 1: the same viewpoint and framing, the same walls and ceiling, ${v.windows === '0' ? 'no window at all' : 'the same windows'}, the same door, every fixture where image 1 has it, every recess, alcove and step of the walls that image 1 has, and no low wall, ledge, shelf or niche that image 1 does not have. A small, tight room stays small and tight: never show more of the room than image 1 shows.`,
   ].filter(Boolean).join('\n');
 }
