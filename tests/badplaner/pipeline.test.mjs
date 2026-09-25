@@ -1662,6 +1662,8 @@ test('ohne Dusche kein Duschset, die Wanne mit eigener Armatur', async () => {
   // Die freistehende Wanne kommt immer, wenn gewaehlt (Diego, 25.09.): kein "nur wenn Platz" mehr.
   assert.match(free, /a freestanding bathtub standing free on the floor in the place of the old bathtub .*never a built-in bathtub/);
   assert.doesNotMatch(free, /enough space/);
+  // Wannen gibt es in jeder Groesse (Diego, 25.09.): die Wanne passt sich an, der Raum bleibt.
+  assert.match(free, /in the length that fits that place: .*the room is never enlarged for it/);
   assert.match(free, /beside the freestanding bathtub a floor-standing bath mixer of the same series and finish: a slim round column on a round floor base/);
   assert.match(free, /no overhead shower, no shower rail and no shower mixer anywhere/);
   // Aurelia: Waschtisch und Wannenarmatur je als eigenes Bild (Bilder von Diego, 25.09.).

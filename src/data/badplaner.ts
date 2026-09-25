@@ -814,8 +814,9 @@ export const bathtubOptions: ChoiceOption[] = [
   { id: 'keine', label: 'Keine Badewanne', prompt: 'no bathtub and no bath filler' },
   { id: 'einbau', label: 'Einbaubadewanne', prompt: 'built-in bathtub within the original wet-area footprint' },
   // Jonathan am 25.09.: mit "nur wenn der Raum genug Platz hat" zeichnete das Modell zweimal eine Einbauwanne.
-  // Diego: ist sie gewaehlt, kommt sie immer, am Platz der alten Wanne und frei von den Waenden.
-  { id: 'freistehend', label: 'Freistehende Badewanne', prompt: 'freestanding bathtub standing free on the floor in the place of the old bathtub (or, when image 1 has none, in the original wet area), with a small gap to every wall: the old bathtub, its tiled panel and any raised base under it are removed down to the floor, and the new tub shows its own finished outer shell all round, never a built-in bathtub, a tiled bath panel or a plinth', packages: ['atelier'] },
+  // Diego: ist sie gewaehlt, kommt sie immer, am Platz der alten Wanne und frei von den Waenden. Freistehende
+  // Wannen gibt es in jeder Groesse (Rexa Design): die Wanne passt sich dem Platz an, nie der Raum der Wanne.
+  { id: 'freistehend', label: 'Freistehende Badewanne', prompt: 'freestanding bathtub standing free on the floor in the place of the old bathtub (or, when image 1 has none, in the original wet area), with a small gap to every wall, in the length that fits that place: freestanding tubs come in every size, so it may be shorter than the old one, and no wall is moved and the room is never enlarged for it; the old bathtub, its tiled panel and any raised base under it are removed down to the floor, and the new tub shows its own finished outer shell all round, never a built-in bathtub, a tiled bath panel or a plinth', packages: ['atelier'] },
 ];
 
 export const basinOptions: ChoiceOption[] = [
