@@ -783,22 +783,22 @@ export const wallOptions: ChoiceOption[] = [
     id: 'halbhoch',
     label: 'Im ganzen Dusch- und Wannenbereich raumhoch, übrige Wände bis ca. 120 cm',
     prompt:
-      'the walls tiled with the same tiles only up to about 120 cm height, the wall above painted plain matte white; the tiles simply end there in a straight line in the same plane as the wall, with no ledge, no shelf, no capping and no step, and the wall stays as flat as in image 1; inside the shower, every wall surface around the entire perimeter of the shower tray or sloped tiled shower floor is continuously tiled with the same wall tiles all the way up to the ceiling, including every side wall and return; every wall surface in the bathtub wet area is also tiled all the way up to the ceiling',
+      'the walls tiled up to about 120 cm, where the tiles end in a straight line flush with the wall, with no ledge, shelf or capping, and the wall above painted plain matte white; every wall of the shower and bathtub area is tiled up to the ceiling all round, including its side walls and returns',
   },
   {
     id: 'raumhoch',
     label: 'Raumhoch, alle Wände bis zur Decke',
-    prompt: 'all walls tiled with the same tiles from floor to ceiling',
+    prompt: 'all walls tiled from floor to ceiling',
   },
 ];
 
 export const showerOptions: ChoiceOption[] = [
   { id: 'keine', label: 'Keine Dusche', prompt: 'no shower, shower tray, shower enclosure or shower controls' },
-  { id: 'duschwanne', label: 'Dusche mit Duschwanne', prompt: 'shower with a low shower tray and a fixed glass panel; every wall around the entire shower-tray perimeter is tiled continuously to the ceiling' },
+  { id: 'duschwanne', label: 'Dusche mit Duschwanne', prompt: 'shower with a low shower tray and a fixed glass panel' },
   // Regel von Diego (20.09.): Rinne an der Schmalseite, am Fuss der Wand, und alle Duscharmaturen an
   // derselben Schmalseite. Die Armaturen setzt das Modell richtig (a1, 14:38), die Rinne lag an der Rueckwand:
   // darum wird die Rinne von den Armaturen aus beschrieben. Der Satz ueber die Seitenwaende (a3) schob die Armaturen an die Rueckwand.
-  { id: 'walk-in', label: 'Gefälledusche / Walk-in, bodeneben gefliest', prompt: 'floor-level walk-in shower whose tiled floor is flush with the bathroom floor, with no step, no kerb and no raised platform. The shower area is a rectangle; one of its two SHORT ends is a solid wall, the end wall. ALL shower fittings sit together on that short end wall: the mixer, the overhead shower with its wall arm and the hand shower in its holder; the long wall of the shower carries no fitting at all, only tiles. The drain starts from the fittings: a linear channel drain (Duschrinne) lies in the floor at the foot of the very wall that carries the mixer and the hand shower, directly below them, and runs along the foot of that same wall for its whole length inside the shower: one long narrow slot with a slim tiled-in or brushed stainless steel cover, and the tiled shower floor slopes towards it. When the shower is wider than it is deep, this drain runs through the full depth of the shower, from the back wall towards the glass panel, that is towards the camera: it is perpendicular to the back wall and never runs along it; never a central point drain, never a round or square grate in the shower floor, never a drain along the long wall or at the foot of any wall without fittings. A fixed glass panel; every wall around the entire shower-floor perimeter is tiled continuously to the ceiling' },
+  { id: 'walk-in', label: 'Gefälledusche / Walk-in, bodeneben gefliest', prompt: 'floor-level walk-in shower whose tiled floor runs flush with the bathroom floor, with no step or kerb, and a fixed glass panel; all its fittings sit together on one of its two short end walls, and a linear channel drain (Duschrinne) with a slim tiled-in or brushed steel cover runs in the floor along the foot of that same wall, the shower floor sloping towards it, never a point drain; in a shower wider than deep that end wall is a side wall, not the back wall' },
 ];
 
 export const bathtubOptions: ChoiceOption[] = [
