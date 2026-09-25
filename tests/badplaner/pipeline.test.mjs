@@ -733,7 +733,8 @@ test('the sanitary module travels as its own reference image', async () => {
   const prompt = parts[0].text;
   assert.match(prompt, new RegExp(`Image ${images.length - 1} is only a product photo of the sanitary module`));
   assert.match(prompt, new RegExp(`stands the sanitary module of image ${images.length - 1}:`));
-  assert.match(prompt, new RegExp(`Image ${images.length} is only a product photo of the washbasin and shower fittings`));
+  // Ohne Dusche (Standardauswahl) nur die Waschtischarmatur.
+  assert.match(prompt, new RegExp(`Image ${images.length} is only a product photo of the washbasin tap`));
   assert.match(prompt, /not tiled or boxed in/);
   const leadMail = h.calls.find((call) => call.url === 'https://api.resend.com/emails');
   assert.match(JSON.stringify(leadMail.body), /OLI QR INOX Sospeso/);
@@ -1548,12 +1549,13 @@ test('Armaturen: Atelier zeigt die Form von Treemme Aurelia in der gewaehlten Ob
   const options = optionsForPackage('atelier');
   assert.equal(options.tapSeries, 'Treemme Aurelia, Unterputz');
   const tile = options.tiles[0];
-  const h = harness();
+  // Mit Dusche: nur dann gehen Duschset und Duschtext mit.
+  const h = harness({ checks: [() => checkedInv({}, { shower: 'back' })] });
   const res = await h.invoke(payload({
     paket: 'atelier', look: tile.look, format: tile.format, platte: tile.id, kombination: 'einheitlich',
     unterbau: options.bases[0].id, top: options.tops[0].id, becken: options.basinTypes[0].id,
     finish: 'treemme-ottone-spazzolato', keramik: options.sanitary[0].id,
-    wall: options.walls[0].id, dusche: options.showers[0].id, badewanne: options.bathtubs[0].id,
+    wall: options.walls[0].id, dusche: 'walk-in', badewanne: options.bathtubs[0].id,
     waschtisch: options.basins[0].id, spiegel: options.mirrors[0].id,
   }));
   assert.equal(res.statusCode, 200, `unexpected status ${res.statusCode}: ${JSON.stringify(res.body).slice(0, 200)}`);
@@ -1576,7 +1578,7 @@ test('Armaturen: Atelier zeigt die Form von Treemme Aurelia in der gewaehlten Ob
 });
 
 test('Armaturen: Essenza zeigt die Form von Treemme Up+, nicht irgendeine Armatur', async () => {
-  const h = harness(); await h.invoke();
+  const h = harness({ checks: [() => checkedInv({}, { shower: 'back' })] }); await h.invoke(payload({ dusche: 'walk-in' }));
   const parts = h.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts;
   const prompt = parts[0].text;
   // Artikel vom 25.09.: Waschtisch IT 6B18 (Stifthebel seitlich oben, langer Rohrauslauf), Dusche IT 6B60 Aufputz.
@@ -1638,6 +1640,38 @@ test('Gaeste-WC gewaehlt, im Foto aber Wanne oder Dusche: Hinweis statt Bild', a
   // Ein echtes Gaeste-WC und ein Bad mit Dusche laufen weiter wie bisher.
   assert.equal((await harness({ photoChecks: [photo({})] }).invoke(guest)).statusCode, 200);
   assert.equal((await harness({ photoChecks: [photo({ shower: 'back' })] }).invoke(previewPayload())).statusCode, 200);
+});
+
+test('ohne Dusche kein Duschset, die Wanne mit eigener Armatur', async () => {
+  // Jonathan am 25.09. (Atelier, keine Dusche, freistehende Wanne): mit dem Duschset in Bild und Text zeichnete
+  // das Modell Kopf- und Handbrause ueber der Wanne und zweimal eine Dusche statt der Wanne.
+  const atelier = optionsForPackage('atelier');
+  const tile = atelier.tiles[0];
+  const base = { paket: 'atelier', look: tile.look, format: tile.format, platte: tile.id, kombination: 'einheitlich',
+    unterbau: atelier.bases[0].id, top: atelier.tops[0].id, becken: atelier.basinTypes[0].id, finish: atelier.finishes[0].id,
+    keramik: atelier.sanitary[0].id, wall: atelier.walls[0].id, waschtisch: 'einzel', spiegel: atelier.mirrors[0].id };
+  const promptOf = async (changes, after) => {
+    const h = harness({ checks: [() => checkedInv({}, after)] });
+    await h.invoke(payload({ ...base, ...changes }));
+    return h.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
+  };
+  const free = await promptOf({ dusche: 'keine', badewanne: 'freistehend' }, { bathtub: 'back' });
+  assert.doesNotMatch(free, /in a shower /);
+  assert.match(free, /beside the freestanding bathtub a floor-standing bath mixer of the same series and finish/);
+  assert.match(free, /no overhead shower, no shower rail and no shower mixer anywhere/);
+  assert.match(free, /is only a product photo of the washbasin tap/);
+  const builtIn = await promptOf({ dusche: 'keine', badewanne: 'einbau' }, { bathtub: 'back' });
+  assert.doesNotMatch(builtIn, /in a shower /);
+  assert.match(builtIn, /at the bathtub, on the wall at its tap end, a bath mixer .*concealed in the wall, and a hand shower on a hose/);
+  // Mit Dusche bleibt das Duschset, die Wanne bekommt ihre Armatur dazu.
+  const both = await promptOf({ dusche: 'walk-in', badewanne: 'einbau' }, { shower: 'back', bathtub: 'left' });
+  assert.match(both, /in a shower .*; at the bathtub, on the wall at its tap end/);
+  assert.match(both, /is only a product photo of the washbasin and shower fittings/);
+  // Essenza: die Wannenarmatur sichtbar an der Wand, wie das Duschsystem.
+  const essenza = harness({ checks: [() => checkedInv({}, { bathtub: 'back' })] });
+  await essenza.invoke(payload({ dusche: 'keine', badewanne: 'einbau' }));
+  assert.match(essenza.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text,
+    /a bath mixer of the same series and finish, exposed on the wall with its spout/);
 });
 
 test('Bodenplatte und Akzent gehen als eigene Muster mit, mit ihrer Bildnummer im Prompt', async () => {

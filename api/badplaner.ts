@@ -452,10 +452,13 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   // Vorwand. Das Bild liegt im Code, darum kann es weder fehlen noch Zeit kosten.
   const moduleImage = cistern === 'aufputz' ? SANITARY_MODULE_PHOTO : null;
   // Die Armaturen als Produktfoto, weil die Worte allein nur allgemeine Armaturen ergaben (Aurelia am 20.09.,
-  // Up+ in P3 und P4 vom 25.09.). Nur Armaturen, kein Raum. Im Gaeste-WC nur die Waschtischarmatur.
+  // Up+ in P3 und P4 vom 25.09.). Nur Armaturen, kein Raum. Ohne Dusche nur die Waschtischarmatur, im Bild wie
+  // im Text: mit dem Duschset zeichnete das Modell am 25.09. (Jonathan, Atelier ohne Dusche) ueber der
+  // freistehenden Wanne Kopf- und Handbrause und zweimal statt der Wanne eine Dusche.
   const upSeries = pkg.id === 'essenza' || tapSeriesOption?.id === 'treemme-up';
-  const tapsImage = isAtelier ? (isGuestWc ? AURELIA_BASIN_PHOTO : AURELIA_TAPS_PHOTO)
-    : !upSeries ? null : isGuestWc ? UP_BASIN_PHOTO : pkg.id === 'essenza' ? UP_AUFPUTZ_PHOTO : UP_UNTERPUTZ_PHOTO;
+  const noShower = !shower || shower.id === 'keine';
+  const tapsImage = isAtelier ? (noShower ? AURELIA_BASIN_PHOTO : AURELIA_TAPS_PHOTO)
+    : !upSeries ? null : noShower ? UP_BASIN_PHOTO : pkg.id === 'essenza' ? UP_AUFPUTZ_PHOTO : UP_UNTERPUTZ_PHOTO;
 
   // Bilder an Gemini, in dieser Reihenfolge: 1 Foto, dann Platte, Bodenplatte, Akzent,
   // Waschtischplatte, Unterbau (dieselbe Datei nur einmal), Modul, Armaturen. Die Nummern stehen so im Prompt.
@@ -465,6 +468,16 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   // Armaturen: Essenza Aufputz verchromt, Colore in der gewählten Serie und Oberfläche,
   // Atelier Unterputz in der gewählten Oberfläche.
   const taps = tapDescription(pkg.id as PackageId, finish, tapSeriesOption, opts.tapSeries);
+  // Die Wanne bekommt ihre eigene Armatur (Diego, 25.09.): die Einbauwanne an der Wand, mit Handbrause und ohne
+  // Kopfbrause, die freistehende eine Standarmatur am Boden.
+  const bathFiller = !bathtub || bathtub.id === 'keine' ? ''
+    : bathtub.id === 'freistehend'
+      ? '; beside the freestanding bathtub a floor-standing bath mixer of the same series and finish: a slim column rising from the floor at one end of the tub, with a spout that bends over the rim and a hand shower in a holder on the column, and no fitting on the walls around the bathtub'
+      : `; at the bathtub, on the wall at its tap end, a bath mixer of the same series and finish${pkg.id === 'essenza' ? ', exposed on the wall with its spout' : ': a wall spout above the rim and the mixer on a flat wall plate, concealed in the wall'}, and a hand shower on a hose in a small wall holder`;
+  const basinTaps = taps.prompt.replace(/; in a shower [^;]*/, '');
+  const tapPrompt = !noShower ? taps.prompt + bathFiller
+    : bathFiller ? `${basinTaps}${bathFiller}; no overhead shower, no shower rail and no shower mixer anywhere`
+    : `${basinTaps}; no shower mixer, bath filler or shower controls`;
 
   // Die Stirnwand der Dusche liest die Vorpruefung am schmalen Ende von Wanne oder Dusche im Foto.
   const showerWall = photoCheck.status === 'ok' && shower && shower.id !== 'keine' ? photoCheck.showerWall : undefined;
@@ -494,7 +507,7 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
     basePrompt: base.prompt,
     mirrorPrompt: mirror.prompt,
     // Gaeste-WC: dieselbe Serie ohne den Teil zur Dusche. Bis zum 25.09. stand hier nur "washbasin tap" (P4: kein Up+).
-    tapPrompt: isGuestWc ? `${taps.prompt.replace(/; in a shower [^;]*/, '')}; no shower mixer, bath filler or shower controls` : taps.prompt,
+    tapPrompt,
     tileIsMosaicSample: /MOSAICO/i.test(tile.src || ''),
     floorIsMosaicSample: /MOSAICO/i.test(floorTile?.src || ''),
     tileImageNumber: imageNumber(swatch),
@@ -1188,7 +1201,7 @@ function buildPrompt(v: {
     sample(v.baseImageNumber, 'a colour sample for the front and body of the vanity unit');
   }
   sample(v.moduleImageNumber, 'a product photo of the sanitary module on a white background');
-  sample(v.tapsImageNumber, v.room === 'gaeste-wc'
+  sample(v.tapsImageNumber, !v.wantsShower
     ? 'a product photo of the washbasin tap on a plain background, in chrome: copy its shape, its finish is the one named under CHANGE'
     : 'a product photo of the washbasin and shower fittings on a plain background, in chrome: copy their shapes, their finish is the one named under CHANGE');
   const references = samples.length ? ` ${samples.join(' ')} These images show materials and products, never a room or a layout.` : '';
