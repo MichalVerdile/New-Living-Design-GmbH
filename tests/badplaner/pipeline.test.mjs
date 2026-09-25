@@ -1659,6 +1659,9 @@ test('ohne Dusche kein Duschset, die Wanne mit eigener Armatur', async () => {
   const freeParts = await partsOf({ dusche: 'keine', badewanne: 'freistehend' }, { bathtub: 'back' });
   const free = freeParts[0].text;
   assert.doesNotMatch(free, /in a shower /);
+  // Die freistehende Wanne kommt immer, wenn gewaehlt (Diego, 25.09.): kein "nur wenn Platz" mehr.
+  assert.match(free, /a freestanding bathtub standing free on the floor in the place of the old bathtub .*never a built-in bathtub/);
+  assert.doesNotMatch(free, /enough space/);
   assert.match(free, /beside the freestanding bathtub a floor-standing bath mixer of the same series and finish: a slim round column on a round floor base/);
   assert.match(free, /no overhead shower, no shower rail and no shower mixer anywhere/);
   // Aurelia: Waschtisch und Wannenarmatur je als eigenes Bild (Bilder von Diego, 25.09.).
