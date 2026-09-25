@@ -6,6 +6,7 @@ import { business, bathPackages, individualPackage } from '../../config/business
 import {
   accentsForPlacement,
   badplanerFaq,
+  essenzaTaps,
   optionsForPackage,
   tilesForLook,
   type AccentPlacementId,
@@ -908,7 +909,7 @@ const Badplaner: React.FC = () => {
         ...original('Akzent', sel?.accentMode === 'kombination' ? chosen.accent : undefined),
         ...original('Unterbau', chosen.base),
         ...original('Waschtisch\u00adplatte', chosen.top), // weiches Trennzeichen fuer schmale Bildschirme
-        ...(pkg === 'colore' ? [chosen.tapSeries] : isAtelier ? options?.tapSeriesOptions ?? [] : []).flatMap((t) => original('Armaturen', t)),
+        ...(pkg === 'colore' ? [chosen.tapSeries] : isAtelier ? options?.tapSeriesOptions ?? [] : pkg === 'essenza' ? [essenzaTaps] : []).flatMap((t) => original('Armaturen', t)),
         ...original('Keramik', chosen.sanitary),
       ]
     : [];

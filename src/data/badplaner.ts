@@ -769,6 +769,9 @@ export const tapFinishes: FinishOption[] = [
 
 /* ---------- Armaturen-Serie je Paket (Kurztext für Lead-Mail und Prompt) ---------- */
 
+/** Essenza hat keine Wahl der Armatur; fuer die Zeile "im Original" unter dem Ideenbild (Carla, 25.09.). */
+export const essenzaTaps = { label: 'Up+ Aufputz', supplier: 'Treemme', image: '/badplaner/armaturen/armatur-up-aufputz.jpg' };
+
 export const tapSeries: Record<PackageId, string> = {
   essenza: 'Treemme Up+, Aufputz, verchromt',
   colore: 'Treemme',
@@ -801,7 +804,8 @@ const SHOWER_LAYOUT = 'The shower area is a rectangle; one of its two SHORT ends
 
 export const showerOptions: ChoiceOption[] = [
   { id: 'keine', label: 'Keine Dusche', prompt: 'no shower, shower tray, shower enclosure or shower controls' },
-  { id: 'duschwanne', label: 'Dusche mit Duschwanne', prompt: `shower with a flat shower tray set flush into the floor: the top of the tray is level with the bathroom floor, with no step, no kerb, no raised edge and no platform. ${SHOWER_LAYOUT}` },
+  // P3 vom 25.09.: mit "tray" allein zeichnete das Modell noch einen Rand. Vorbild ist das Foto im Katalog Aurelia, S. 16.
+  { id: 'duschwanne', label: 'Dusche mit Duschwanne', prompt: `shower with a flat white shower tray laid into the floor like one large floor tile: its surface is exactly level with the floor tiles around it, with no step, no kerb, no rim, no raised edge and no platform. ${SHOWER_LAYOUT}` },
   // Rinne von den Armaturen aus beschrieben (a1, 14:38); ein Satz ueber die Seitenwaende (a3) schob die Armaturen an die Rueckwand.
   { id: 'walk-in', label: 'Gefälledusche / Walk-in, bodeneben gefliest', prompt: `floor-level walk-in shower whose tiled floor is flush with the bathroom floor, with no step, no kerb and no raised platform. ${SHOWER_LAYOUT}` },
 ];
