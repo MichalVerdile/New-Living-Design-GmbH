@@ -21,11 +21,13 @@
  *   2. Grenzen: 5 Ideenbilder pro Geraet (Cookie) und 10 pro IP und Tag, Tagesdeckel.
  *   3. Gleichzeitig: Muster laden (Platte, Boden, Akzent, Waschtisch) und das Foto
  *      pruefen (ein Bad? was steht wo?). Kein Bad: kein Bild, Lead mit Foto an NLD.
- *   4. Prompt bauen, Ideenbild bei Gemini erzeugen, dann pruefen lassen (checkOpenings):
- *      Fenster, Tueren, Waende, WC, Waschtisch, Dusche und Wanne wie bestellt?
- *      Abgelehnt: ein zweiter Versuch, wenn die Zeit reicht. Ein abgelehntes Bild sieht
- *      der Kunde nie; NLD bekommt es mit dem Lead. Ist die Pruefung nicht erreichbar,
- *      geht das Bild mit Vermerk in der Lead-Mail hinaus.
+ *   4. Prompt bauen, Ideenbild bei Gemini erzeugen, dann pruefen lassen (checkOpenings).
+ *      Verworfen nur bei groben Fehlern: Fenster oder Tuer dazu oder weg, WC oder
+ *      Waschtisch an anderer Wand oder Stelle, Dusche oder Wanne nicht wie bestellt,
+ *      Bidet noch da. Dann ein zweiter Versuch, wenn die Zeit reicht; ein abgelehntes
+ *      Bild sieht der Kunde nie, NLD bekommt es mit dem Lead. Feineres (Muretto, Nische,
+ *      Vordergrund, Rinne) steht nur als Hinweis in der Lead-Mail. Ist die Pruefung nicht
+ *      erreichbar, geht das Bild mit Vermerk hinaus.
  *   5. Lead-Mail an NLD (Resend mit Anhaengen; bei eindeutigem Fehler Formspree ohne
  *      Bilder). Ohne bestaetigte Annahme kein Erfolg; unklare Zustellung wird nicht
  *      blind wiederholt.
@@ -1413,38 +1415,14 @@ async function checkOpenings(
   const wallAnswers = Object.fromEntries(['toilet_on_low_wall_before', 'toilet_on_low_wall_after', 'new_wall_element', 'wall_element_lost',
     'foreground_object_before', 'foreground_object_after', 'window_much_bigger'].map((key) => [key, parsed[key] as boolean]));
   const flags: CheckFlags = { extra_openings: parsed.extra_openings, view_changed: parsed.view_changed, before, after, orderBefore, orderAfter, nearestBefore, nearestAfter, wallAnswers };
-  const lowWallLost = parsed.toilet_on_low_wall_before && !parsed.toilet_on_low_wall_after
-    ? 'the low wall the toilet stood against is gone, so the toilet no longer sits where it did'
-    : null;
-  // Ein Muretto, das im Foto nicht da ist, gibt es im Umbau nicht (Diego, 19.09.). Beim Aufputz-
-  // Spuelkasten zaehlt das Glasmodul nicht: die Pruefung liest es manchmal als Vorwand.
-  const wallAdded = parsed.new_wall_element || (wanted.cistern === 'unterputz' && !parsed.toilet_on_low_wall_before && parsed.toilet_on_low_wall_after)
-    ? 'a low wall, ledge, shelf or niche that is not in the photo was added; where the photo shows a flat wall, the result must show the same flat wall'
-    : null;
-  const wallLost = parsed.wall_element_lost
-    ? 'a recess, alcove, niche or step of the wall that is in the photo was filled in or straightened; every recess and wall step of the photo must stay'
-    : null;
-  // Steht im Foto vorne am Bildrand die offene Tuer und fehlt sie im Ideenbild,
-  // hat das Modell den Blickwinkel gedreht: der Kunde erkennt sein Bad nicht wieder.
-  const foregroundLost = parsed.foreground_object_before && !parsed.foreground_object_after
-    ? 'what stood in the foreground of the photo, at the edge of the picture, is gone, so the view is no longer the same'
-    : null;
-  const zoomedIn = parsed.window_much_bigger
-    ? 'the window takes up much more of the result than of the photo, so the camera moved closer'
-    : null;
-  const fault = compareInventory(before, after, wanted)
-    || compareOrder(orderBefore, orderAfter)
-    || compareDepth(after, nearestBefore, nearestAfter)
-    || lowWallLost
-    || wallAdded
-    || wallLost
-    || foregroundLost
-    || zoomedIn;
+  // Verworfen wird nur, was den Raum falsch zeigt: eine Oeffnung mehr oder weniger, ein
+  // Sanitaerstueck an einer anderen Wand oder an einem anderen Platz in der Reihe, Dusche
+  // oder Wanne nicht wie bestellt, das Bidet noch da (Diego, 25.09.). Alles Feinere geht
+  // als Hinweis in die Lead-Mail: diese Antworten irren oefter, und ein Ideenbild mit
+  // einem kleinen Fehler hilft dem Kunden mehr als gar keines.
   if (flags.extra_openings) return { status: 'rejected', reason: `an opening was added or lost (${parsed.reason.slice(0, 120)})`, flags };
+  const fault = compareInventory(before, after, wanted) || compareOrder(orderBefore, orderAfter);
   if (fault) return { status: 'rejected', reason: fault, flags };
-  // Ein anderer Bildausschnitt allein ist kein Grund, dem Kunden nichts zu zeigen:
-  // Fenster, WC, Wände und Ausstattung stimmen dann ja. Er wird nur vermerkt.
-  // Rinne und Armaturen der Walk-in-Dusche werden nur vermerkt (siehe handleRender).
   // Die Rinne gehoert an den Fuss der Armaturenwand; bei einer Dusche breiter als tief nie an die Rueckwand.
   const drainWall: Wall | undefined = parsed.drain_wall;
   const fittingsWall: Wall | undefined = parsed.fittings_wall;
@@ -1452,11 +1430,22 @@ async function checkOpenings(
     || (!!drainWall && drainWall !== 'none' && !!fittingsWall && fittingsWall !== 'none' && drainWall !== fittingsWall)
     || (parsed.shower_wider_than_deep === true && drainWall === 'back');
   if (wanted.linearDrain) console.info('[badplaner] Walk-in:', `Rinne ${drainWall ?? '-'}, Armaturen ${fittingsWall ?? '-'}, breiter als tief ${parsed.shower_wider_than_deep ?? '-'}`);
-  const hints = wanted.linearDrain ? [
-    parsed.point_drain && 'Punktablauf statt Duschrinne gezeichnet',
-    drainOnLongSide && 'Duschrinne an der Längsseite statt an der Schmalseite',
-    parsed.shower_fittings_split === true && 'Duscharmaturen an zwei Wänden statt alle an der Schmalseite',
-  ].filter((hint): hint is string => !!hint) : [];
+  const hints = [
+    compareDepth(after, nearestBefore, nearestAfter),
+    parsed.toilet_on_low_wall_before && !parsed.toilet_on_low_wall_after && 'the low wall the toilet stood against is gone',
+    // Beim Aufputz-Spuelkasten zaehlt das Glasmodul nicht: die Pruefung liest es manchmal als Vorwand.
+    (parsed.new_wall_element || (wanted.cistern === 'unterputz' && !parsed.toilet_on_low_wall_before && parsed.toilet_on_low_wall_after))
+      && 'a low wall, ledge, shelf or niche that is not in the photo was added',
+    parsed.wall_element_lost && 'a recess, alcove, niche or step of the wall that is in the photo was filled in or straightened',
+    parsed.foreground_object_before && !parsed.foreground_object_after && 'what stood in the foreground of the photo, at the edge of the picture, is gone',
+    parsed.window_much_bigger && 'the window takes up much more of the result than of the photo',
+    ...(wanted.linearDrain ? [
+      parsed.point_drain && 'Punktablauf statt Duschrinne gezeichnet',
+      drainOnLongSide && 'Duschrinne an der Längsseite statt an der Schmalseite',
+      parsed.shower_fittings_split === true && 'Duscharmaturen an zwei Wänden statt alle an der Schmalseite',
+    ] : []),
+  ].filter((hint): hint is string => !!hint);
+  // Ein anderer Bildausschnitt wird ebenso nur vermerkt.
   return flags.view_changed ? { status: 'approved', note: parsed.reason.slice(0, 200), hints } : { status: 'approved', hints };
 }
 
@@ -1520,7 +1509,8 @@ function compareOrder(before: Fixture[], after: Fixture[]): string | null {
  * Wand und Reihenfolge reichen nicht: das WC kann an derselben Wand und in
  * derselben Reihenfolge nach hinten rutschen. Diego hat das am 17.09. zweimal
  * am selben Foto gesehen. Darum auch, was der Kamera am naechsten steht.
- * Ein weggeraeumtes Stueck loest die Regel nicht aus.
+ * Ein weggeraeumtes Stueck loest die Regel nicht aus. Seit dem 25.09. nur ein
+ * Hinweis in der Lead-Mail: "am naechsten" liest die Pruefung oft unsicher.
  */
 function compareDepth(
   after: Inventory,

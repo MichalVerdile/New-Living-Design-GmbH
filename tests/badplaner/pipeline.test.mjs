@@ -476,7 +476,7 @@ test('ein weggeraeumtes Stueck aendert die Reihenfolge nicht', async () => {
   assert.equal(res.statusCode, 200);
 });
 
-test('das WC darf an seiner Wand nicht nach hinten rutschen', async () => {
+test('rutscht das WC an seiner Wand nach hinten, steht es als Hinweis in der Lead-Mail', async () => {
   // Probe vom 17.09., zweimal am selben Foto: im Foto steht das WC vorne bei der
   // Tuer, im Ideenbild weiter hinten. Gleiche Wand, gleiche Reihenfolge, also
   // hat weder die Wand- noch die Reihenfolgepruefung etwas gemerkt.
@@ -488,26 +488,28 @@ test('das WC darf an seiner Wand nicht nach hinten rutschen', async () => {
     foreground_object_before: false, foreground_object_after: false, window_much_bigger: false,
     extra_openings: false, view_changed: false, reason: 'inventory',
   }) }] }, finishReason: 'STOP' }] });
-  const h = harness({ checks: [shifted, shifted] });
+  // Seit dem 25.09. nur ein Hinweis: "am naechsten" liest die Pruefung oft unsicher.
+  const h = harness({ checks: [shifted] });
   const res = await h.invoke(payload({ dusche: 'walk-in', badewanne: 'keine' }));
-  assert.equal(res.statusCode, 502);
+  assert.equal(res.statusCode, 200);
+  assert.equal(h.counts().generation, 1);
   const leadMail = h.calls.find((call) => call.url === 'https://api.resend.com/emails');
-  assert.match(JSON.stringify(leadMail.body), /in the photo the toilet is closest to the camera, in the result the washbasin/);
+  assert.match(JSON.stringify(leadMail.body), /Hinweis: in the photo the toilet is closest to the camera, in the result the washbasin/);
 });
 
-test('ein verschwundenes Muretto unter dem WC wird verworfen', async () => {
+test('ein verschwundenes Muretto unter dem WC steht als Hinweis in der Lead-Mail', async () => {
   // Diegos Befund vom 17.09.: das WC haengt rechts neben der Tuer an einem niedrigen
   // Mauerstueck, das die Spuelkasten traegt. Das Modell hat das Mauerstueck eingeebnet
   // und das WC an die Wand dahinter geschoben. Wand, Reihenfolge und Tiefe bleiben
   // dabei gleich, also merkt es keine der anderen Pruefungen.
   const flattened = () => checkedInv({ toilet: 'right' }, { toilet: 'right' },
     { toilet_on_low_wall_before: true, toilet_on_low_wall_after: false });
-  const h = harness({ checks: [flattened, flattened] });
+  const h = harness({ checks: [flattened] });
   const res = await h.invoke();
-  assert.equal(res.statusCode, 502);
-  assert.equal(res.body.code, 'RENDER_REJECTED');
+  assert.equal(res.statusCode, 200);
+  assert.equal(h.counts().generation, 1);
   const leadMail = h.calls.find((call) => call.url === 'https://api.resend.com/emails');
-  assert.match(JSON.stringify(leadMail.body), /the low wall the toilet stood against is gone/);
+  assert.match(JSON.stringify(leadMail.body), /Hinweis: the low wall the toilet stood against is gone/);
 });
 
 test('der zweite Versuch bekommt die ganze Liste noch einmal mit', async () => {
@@ -527,28 +529,29 @@ test('der zweite Versuch bekommt die ganze Liste noch einmal mit', async () => {
   assert.match(retryPrompt, /Whatever stands in the foreground at the edge of the picture/);
 });
 
-test('eine verschwundene Tuer im Vordergrund wird verworfen', async () => {
+test('eine verschwundene Tuer im Vordergrund steht als Hinweis in der Lead-Mail', async () => {
   // Probe vom 17.09.: im Foto steht links vorne der offene Tuerfluegel und nimmt ein
   // Viertel des Bildes ein. Im Ideenbild ist er weg, das Modell hat die Kamera gedreht.
   // Waende, Reihenfolge, Tiefe und Muretto blieben dabei gleich.
   const turned = () => checkedInv({}, {}, { foreground_object_before: true, foreground_object_after: false });
-  const h = harness({ checks: [turned, turned] });
+  const h = harness({ checks: [turned] });
   const res = await h.invoke();
-  assert.equal(res.statusCode, 502);
-  assert.equal(res.body.code, 'RENDER_REJECTED');
+  assert.equal(res.statusCode, 200);
+  assert.equal(h.counts().generation, 1);
   const leadMail = h.calls.find((call) => call.url === 'https://api.resend.com/emails');
-  assert.match(JSON.stringify(leadMail.body), /what stood in the foreground of the photo, at the edge of the picture, is gone/);
+  assert.match(JSON.stringify(leadMail.body), /Hinweis: what stood in the foreground of the photo, at the edge of the picture, is gone/);
 });
 
-test('ein Fenster, das viel groesser wird, wird verworfen', async () => {
+test('ein Fenster, das viel groesser wird, steht als Hinweis in der Lead-Mail', async () => {
   // Dasselbe Bild von aussen gemessen: das Fenster nimmt im Ideenbild viel mehr Platz
   // ein als im Foto, die Kamera ist also naeher herangegangen.
   const zoomed = () => checkedInv({}, {}, { window_much_bigger: true });
-  const h = harness({ checks: [zoomed, zoomed] });
+  const h = harness({ checks: [zoomed] });
   const res = await h.invoke();
-  assert.equal(res.statusCode, 502);
+  assert.equal(res.statusCode, 200);
+  assert.equal(h.counts().generation, 1);
   const leadMail = h.calls.find((call) => call.url === 'https://api.resend.com/emails');
-  assert.match(JSON.stringify(leadMail.body), /the window takes up much more of the result than of the photo/);
+  assert.match(JSON.stringify(leadMail.body), /Hinweis: the window takes up much more of the result than of the photo/);
 });
 
 test('die Pruefung fragt nach dem Vordergrund, der ganz verschwindet, nicht nach dem, der kleiner wird', async () => {
@@ -589,7 +592,7 @@ test('ein erhaltenes Muretto ist kein Fehler', async () => {
   assert.equal(res.statusCode, 200);
 });
 
-test('ein neues Muretto, eine Ablage oder eine Nische wird verworfen', async () => {
+test('ein neues Muretto, eine Ablage oder eine Nische steht als Hinweis in der Lead-Mail', async () => {
   // Diegos Test vom 19.09.: flache, raumhoch geplattete Wand, Spuelplatte buendig, im
   // Ideenbild ein halbhohes Muretto mit Ablage hinter Waschtisch, WC und Dusche.
   for (const flags of [
@@ -597,12 +600,12 @@ test('ein neues Muretto, eine Ablage oder eine Nische wird verworfen', async () 
     { toilet_on_low_wall_before: false, toilet_on_low_wall_after: true },
   ]) {
     const added = () => checkedInv({ toilet: 'right' }, { toilet: 'right' }, flags);
-    const h = harness({ checks: [added, added] });
+    const h = harness({ checks: [added] });
     const res = await h.invoke();
-    assert.equal(res.statusCode, 502);
-    assert.equal(res.body.code, 'RENDER_REJECTED');
-    const retry = h.calls.filter((call) => call.body?.generationConfig?.responseModalities)[1].body.contents[0].parts[0].text;
-    assert.match(retry, /a low wall, ledge, shelf or niche that is not in the photo was added/);
+    assert.equal(res.statusCode, 200);
+    assert.equal(h.counts().generation, 1);
+    const leadMail = h.calls.find((call) => call.url === 'https://api.resend.com/emails');
+    assert.match(JSON.stringify(leadMail.body), /Hinweis: a low wall, ledge, shelf or niche that is not in the photo was added/);
   }
   const prompt = harness();
   await prompt.invoke();
@@ -1389,15 +1392,16 @@ test('nach einem Timeout der Pruefung folgt ein kurzer zweiter Anlauf von hoechs
   assert.match(JSON.stringify(slow.calls.find((call) => call.url === 'https://api.resend.com/emails').body), /Fensterprüfung.*nicht möglich \(Timeout\)/);
 });
 
-test('ein zugemauerter Ruecksprung in der Wand wird verworfen', async () => {
+test('ein zugemauerter Ruecksprung in der Wand steht als Hinweis in der Lead-Mail', async () => {
   // Diegos Test vom 20.09., 09:56 (bp-mu9iv1yy-bdzji9): die Nische bei der Dusche war weg.
   const lost = () => checkedInv({ shower: 'back' }, { shower: 'back' }, { wall_element_lost: true });
-  const h = harness({ checks: [lost, () => checkedInv({ shower: 'back' }, { shower: 'back' })] });
+  const h = harness({ checks: [lost] });
   const res = await h.invoke(payload({ dusche: 'walk-in', badewanne: 'keine' }));
   assert.equal(res.statusCode, 200);
   const gens = h.calls.filter((call) => call.body?.generationConfig?.responseModalities);
-  assert.equal(gens.length, 2);
-  assert.match(gens[1].body.contents[0].parts[0].text, /a recess, alcove, niche or step of the wall that is in the photo was filled in/);
+  assert.equal(gens.length, 1);
+  assert.match(JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails').body),
+    /Hinweis: a recess, alcove, niche or step of the wall that is in the photo was filled in/);
   assert.match(gens[0].body.contents[0].parts[0].text, /every wall where it stands with every recess, alcove, step, projection, low wall and pre-wall it has, at the same size/);
   assert.match(gens[0].body.contents[0].parts[0].text, /A shower or bathtub in a recess stays inside it, and the tiles follow the recess round its corners/);
   const question = h.calls.find((call) => /wall_element_lost/.test(call.body?.contents?.[0]?.parts?.[0]?.text || '')).body.contents[0].parts[0].text;
