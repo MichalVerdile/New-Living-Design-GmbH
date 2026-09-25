@@ -65,7 +65,7 @@ import { Budget, TimeoutError, type Clock } from '../server/badplaner/budget.js'
 import { normalizeSelection, ValidationError } from '../server/badplaner/validation.js';
 import { normalizeBase64, validateImageBytes, MAX_PHOTO_BASE64, MAX_PLAN_BASE64 } from '../src/pages/badplaner/imageValidation.js';
 import { SANITARY_MODULE_PHOTO } from '../server/badplaner/sanitaermodul.js';
-import { AURELIA_BASIN_PHOTO, AURELIA_TAPS_PHOTO } from '../server/badplaner/aurelia.js';
+import { AURELIA_BASIN_PHOTO, AURELIA_BATH_FLOOR_PHOTO, AURELIA_BATH_WALL_PHOTO, AURELIA_TAPS_PHOTO } from '../server/badplaner/aurelia.js';
 import { UP_AUFPUTZ_PHOTO, UP_BASIN_PHOTO, UP_UNTERPUTZ_PHOTO } from '../server/badplaner/up.js';
 
 // Node-Globals ohne @types/node (api/tsconfig.json ist auf Edge ausgelegt)
@@ -459,10 +459,12 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   const noShower = !shower || shower.id === 'keine';
   const tapsImage = isAtelier ? (noShower ? AURELIA_BASIN_PHOTO : AURELIA_TAPS_PHOTO)
     : !upSeries ? null : noShower ? UP_BASIN_PHOTO : pkg.id === 'essenza' ? UP_AUFPUTZ_PHOTO : UP_UNTERPUTZ_PHOTO;
+  // Die Wannenarmatur als eigenes Bild, bisher nur fuer Aurelia (Bilder von Diego, 25.09.).
+  const bathImage = !isAtelier || !bathtub || bathtub.id === 'keine' ? null : bathtub.id === 'freistehend' ? AURELIA_BATH_FLOOR_PHOTO : AURELIA_BATH_WALL_PHOTO;
 
   // Bilder an Gemini, in dieser Reihenfolge: 1 Foto, dann Platte, Bodenplatte, Akzent,
-  // Waschtischplatte, Unterbau (dieselbe Datei nur einmal), Modul, Armaturen. Die Nummern stehen so im Prompt.
-  const references = [swatch, floorSwatch, accentSwatch, topSwatch, baseSwatch === topSwatch ? null : baseSwatch, moduleImage, tapsImage];
+  // Waschtischplatte, Unterbau (dieselbe Datei nur einmal), Modul, Armaturen, Wannenarmatur. Die Nummern stehen so im Prompt.
+  const references = [swatch, floorSwatch, accentSwatch, topSwatch, baseSwatch === topSwatch ? null : baseSwatch, moduleImage, tapsImage, bathImage];
   const imageNumber = (image: Photo | null) => (image ? 2 + references.filter(Boolean).indexOf(image) : 0);
 
   // Armaturen: Essenza Aufputz verchromt, Colore in der gewählten Serie und Oberfläche,
@@ -472,8 +474,12 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   // Kopfbrause, die freistehende eine Standarmatur am Boden.
   const bathFiller = !bathtub || bathtub.id === 'keine' ? ''
     : bathtub.id === 'freistehend'
-      ? '; beside the freestanding bathtub a floor-standing bath mixer of the same series and finish: a slim column rising from the floor at one end of the tub, with a spout that bends over the rim and a hand shower in a holder on the column, and no fitting on the walls around the bathtub'
-      : `; at the bathtub, on the wall at its tap end, a bath mixer of the same series and finish${pkg.id === 'essenza' ? ', exposed on the wall with its spout' : ': a wall spout above the rim and the mixer on a flat wall plate, concealed in the wall'}, and a hand shower on a hose in a small wall holder`;
+      ? `; beside the freestanding bathtub a floor-standing bath mixer of the same series and finish: ${isAtelier
+        ? 'a slim round column on a round floor base at one end of the tub, with a flat paddle lever on top, a faceted spout that bends down over the rim, a round knurled diverter knob on its side and a slim stick hand shower in a holder on a second thin rod beside the column'
+        : 'a slim column rising from the floor at one end of the tub, with a spout that bends over the rim and a hand shower in a holder on the column'}, and no fitting on the walls around the bathtub`
+      : `; at the bathtub, on the wall at its tap end, a bath mixer of the same series and finish${isAtelier
+        ? ': a long flat horizontal wall plate in the same finish just above the rim, carrying from left to right the hand shower outlet with a slim stick hand shower in its holder and a hose, a short cylindrical handle with a flat paddle lever hanging down, a faceted spout that bends down over the rim and a second handle with a paddle lever'
+        : `${pkg.id === 'essenza' ? ', exposed on the wall with its spout' : ': a wall spout above the rim and the mixer on a flat wall plate, concealed in the wall'}, and a hand shower on a hose in a small wall holder`}`;
   const basinTaps = taps.prompt.replace(/; in a shower [^;]*/, '');
   const tapPrompt = !noShower ? taps.prompt + bathFiller
     : bathFiller ? `${basinTaps}${bathFiller}; no overhead shower, no shower rail and no shower mixer anywhere`
@@ -517,6 +523,7 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
     baseImageNumber: imageNumber(baseSwatch),
     moduleImageNumber: imageNumber(moduleImage),
     tapsImageNumber: imageNumber(tapsImage),
+    bathImageNumber: imageNumber(bathImage),
     windows,
     cistern,
     layout: photoCheck.status === 'ok' ? photoCheck.layout : undefined,
@@ -1177,6 +1184,7 @@ function buildPrompt(v: {
   baseImageNumber: number;
   moduleImageNumber: number;
   tapsImageNumber?: number;
+  bathImageNumber?: number;
   windows: string;
   cistern: 'aufputz' | 'unterputz';
   layout?: Layout;
@@ -1204,6 +1212,7 @@ function buildPrompt(v: {
   sample(v.tapsImageNumber, !v.wantsShower
     ? 'a product photo of the washbasin tap on a plain background, in chrome: copy its shape, its finish is the one named under CHANGE'
     : 'a product photo of the washbasin and shower fittings on a plain background, in chrome: copy their shapes, their finish is the one named under CHANGE');
+  sample(v.bathImageNumber, 'a product photo of the bath mixer on a plain background, in chrome: copy its shape, its finish is the one named under CHANGE');
   const references = samples.length ? ` ${samples.join(' ')} These images show materials and products, never a room or a layout.` : '';
   const asIn = (n: number) => (n ? ` as in image ${n}` : '');
   const colourOf = (n: number) => (n ? ` in the colour and finish of image ${n}` : '');
