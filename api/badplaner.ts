@@ -65,6 +65,7 @@ import { Budget, TimeoutError, type Clock } from '../server/badplaner/budget.js'
 import { normalizeSelection, ValidationError } from '../server/badplaner/validation.js';
 import { normalizeBase64, validateImageBytes, MAX_PHOTO_BASE64, MAX_PLAN_BASE64 } from '../src/pages/badplaner/imageValidation.js';
 import { SANITARY_MODULE_PHOTO } from '../server/badplaner/sanitaermodul.js';
+import { LED_MIRROR_PHOTO, MIRROR_CABINET_PHOTO } from '../server/badplaner/spiegel.js';
 import { AURELIA_BASIN_PHOTO, AURELIA_BATH_FLOOR_PHOTO, AURELIA_BATH_WALL_PHOTO, AURELIA_TAPS_PHOTO } from '../server/badplaner/aurelia.js';
 import { UP_AUFPUTZ_PHOTO, UP_BASIN_PHOTO, UP_UNTERPUTZ_PHOTO } from '../server/badplaner/up.js';
 
@@ -461,10 +462,12 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
     : !upSeries ? null : noShower ? UP_BASIN_PHOTO : pkg.id === 'essenza' ? UP_AUFPUTZ_PHOTO : UP_UNTERPUTZ_PHOTO;
   // Die Wannenarmatur als eigenes Bild, bisher nur fuer Aurelia (Bilder von Diego, 25.09.).
   const bathImage = !isAtelier || !bathtub || bathtub.id === 'keine' ? null : bathtub.id === 'freistehend' ? AURELIA_BATH_FLOOR_PHOTO : AURELIA_BATH_WALL_PHOTO;
+  // Der neue Spiegel als Bild (Froidevaux): mit Worten allein kopierte das Modell in 10 von 12 Proben den alten (Jonathan, 25.09.).
+  const mirrorImage = mirror.id === 'spiegelschrank' ? MIRROR_CABINET_PHOTO : mirror.id === 'spiegel' ? LED_MIRROR_PHOTO : null;
 
   // Bilder an Gemini, in dieser Reihenfolge: 1 Foto, dann Platte, Bodenplatte, Akzent,
-  // Waschtischplatte, Unterbau (dieselbe Datei nur einmal), Modul, Armaturen, Wannenarmatur. Die Nummern stehen so im Prompt.
-  const references = [swatch, floorSwatch, accentSwatch, topSwatch, baseSwatch === topSwatch ? null : baseSwatch, moduleImage, tapsImage, bathImage];
+  // Waschtischplatte, Unterbau (dieselbe Datei nur einmal), Spiegel, Modul, Armaturen, Wannenarmatur. Die Nummern stehen so im Prompt.
+  const references = [swatch, floorSwatch, accentSwatch, topSwatch, baseSwatch === topSwatch ? null : baseSwatch, mirrorImage, moduleImage, tapsImage, bathImage];
   const imageNumber = (image: Photo | null) => (image ? 2 + references.filter(Boolean).indexOf(image) : 0);
 
   // Armaturen: Essenza Aufputz verchromt, Colore in der gewählten Serie und Oberfläche,
@@ -524,6 +527,7 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
     moduleImageNumber: imageNumber(moduleImage),
     tapsImageNumber: imageNumber(tapsImage),
     bathImageNumber: imageNumber(bathImage),
+    mirrorImageNumber: imageNumber(mirrorImage),
     windows,
     cistern,
     layout: photoCheck.status === 'ok' ? photoCheck.layout : undefined,
@@ -1185,6 +1189,7 @@ function buildPrompt(v: {
   moduleImageNumber: number;
   tapsImageNumber?: number;
   bathImageNumber?: number;
+  mirrorImageNumber?: number;
   windows: string;
   cistern: 'aufputz' | 'unterputz';
   layout?: Layout;
@@ -1213,6 +1218,7 @@ function buildPrompt(v: {
     ? 'a product photo of the washbasin tap on a plain background, in chrome: copy its shape, its finish is the one named under CHANGE'
     : 'a product photo of the washbasin and shower fittings on a plain background, in chrome: copy their shapes, their finish is the one named under CHANGE');
   sample(v.bathImageNumber, 'a product photo of the bath mixer on a plain background, in chrome: copy its shape, its finish is the one named under CHANGE');
+  sample(v.mirrorImageNumber, 'a product photo of the new mirror on a plain background: copy its shape, its doors and its light; it replaces the old mirror of image 1');
   const references = samples.length ? ` ${samples.join(' ')} These images show materials and products, never a room or a layout.` : '';
   const asIn = (n: number) => (n ? ` as in image ${n}` : '');
   const colourOf = (n: number) => (n ? ` in the colour and finish of image ${n}` : '');
@@ -1260,7 +1266,7 @@ function buildPrompt(v: {
   // Die gewaehlte Sanitaerkeramik gilt fuer WC und Waschbecken. Ohne das hier
   // blieb das Becken weiss, waehrend das WC farbig war: zwei Farben in einem Bad.
   const basinColour = v.basinIsCeramic ? `, the basin in the same ${v.sanitaryPrompt} as the toilet` : '';
-  const vanity = `if a washbasin is visible in image 1, ${v.basinPrompt} at its existing place on a wall-hung vanity: front and body in ${v.basePrompt}${colourOf(v.baseImageNumber)}, countertop in ${v.topPrompt}${colourOf(v.topImageNumber)}${v.basinTypePrompt ? `, ${v.basinTypePrompt}` : ''}${basinColour}, with ${v.mirrorPrompt} above it; the countertop is its own material, not cut from the wall or floor tiles`;
+  const vanity = `if a washbasin is visible in image 1, ${v.basinPrompt} at its existing place on a wall-hung vanity: front and body in ${v.basePrompt}${colourOf(v.baseImageNumber)}, countertop in ${v.topPrompt}${colourOf(v.topImageNumber)}${v.basinTypePrompt ? `, ${v.basinTypePrompt}` : ''}${basinColour}, with ${v.mirrorPrompt}${asIn(v.mirrorImageNumber ?? 0)} above it, which replaces the old mirror or mirror cabinet and its lamp completely: nothing of their shape, frame or light is kept; the countertop is its own material, not cut from the wall or floor tiles`;
 
   return [
     // Am 19.09. zeichnete das Modell aus Diegos engem Bad ein Ausstellungsbad: darum steht zuerst, was das

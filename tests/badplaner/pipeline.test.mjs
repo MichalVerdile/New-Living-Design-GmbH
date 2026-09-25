@@ -729,7 +729,7 @@ test('the sanitary module travels as its own reference image', async () => {
   const options = optionsForPackage('essenza');
   const vanity = new Set([options.tops[0].image, options.bases[0].image]).size;
   const images = parts.filter((part) => part.inlineData);
-  assert.equal(images.length, 2 + vanity + 2);
+  assert.equal(images.length, 2 + vanity + 3); // dazu der neue Spiegel
   const module = images[images.length - 2].inlineData;
   assert.equal(module.mimeType, 'image/jpeg');
   // Ein echtes JPEG, kein Platzhalter: Base64 eines Bildes von einigen Kilobyte.
@@ -752,8 +752,8 @@ test('the module image needs no network call and none is made for it', async () 
   assert.equal(h.calls.filter((call) => call.url.includes('oli-world')).length, 0);
   const generation = h.calls.find((call) => call.body?.generationConfig?.responseModalities);
   // Plattenmuster fehlt hier (404), Modul und Armaturen sind trotzdem dabei: Foto + Modul + Armaturen.
-  assert.equal(generation.body.contents[0].parts.filter((part) => part.inlineData).length, 3);
-  assert.match(generation.body.contents[0].parts[0].text, /Image 2 is only a product photo of the sanitary module/);
+  assert.equal(generation.body.contents[0].parts.filter((part) => part.inlineData).length, 4); // Spiegel, Modul, Armaturen
+  assert.match(generation.body.contents[0].parts[0].text, /Image 3 is only a product photo of the sanitary module/);
 });
 
 test('Unterputz carries no module image and forbids a module in front of the wall', async () => {
@@ -762,7 +762,7 @@ test('Unterputz carries no module image and forbids a module in front of the wal
   assert.equal(res.statusCode, 200);
   const generation = h.calls.find((call) => call.body?.generationConfig?.responseModalities);
   // Foto und Armaturen, kein Modul.
-  assert.equal(generation.body.contents[0].parts.filter((part) => part.inlineData).length, 2);
+  assert.equal(generation.body.contents[0].parts.filter((part) => part.inlineData).length, 3);
   const prompt = generation.body.contents[0].parts[0].text;
   assert.doesNotMatch(prompt, /product photo of the sanitary module/);
   assert.match(prompt, /no sanitary module is added/);
@@ -808,7 +808,7 @@ test('Waschtischplatte und Unterbau gehen als Muster mit, die Platte nimmt nie d
   // Dieselbe Datei wird einmal geladen und einmal mitgeschickt: Foto, Platte, Diamante, dazu die Armaturen Up+.
   assert.equal(h.calls.filter((call) => call.url.endsWith(top.image)).length, 1);
   const generation = h.calls.find((call) => call.body?.generationConfig?.responseModalities);
-  assert.equal(generation.body.contents[0].parts.filter((part) => part.inlineData).length, 4);
+  assert.equal(generation.body.contents[0].parts.filter((part) => part.inlineData).length, 5);
   const prompt = generation.body.contents[0].parts[0].text;
   assert.match(prompt, /Image 3 is only a colour sample for the whole vanity unit: its front, its body and its countertop/);
   assert.ok(prompt.includes(`countertop in ${top.prompt} in the colour and finish of image 3`), 'Platte ohne Verweis auf ihr Muster');
@@ -824,7 +824,7 @@ test('ohne ladbares Muster bleibt es bei der Beschreibung, ohne Bildnummer', asy
   assert.equal(res.statusCode, 200);
   const generation = h.calls.find((call) => call.body?.generationConfig?.responseModalities);
   // Foto und die Armaturen, die im Code liegen.
-  assert.equal(generation.body.contents[0].parts.filter((part) => part.inlineData).length, 2);
+  assert.equal(generation.body.contents[0].parts.filter((part) => part.inlineData).length, 3);
   const prompt = generation.body.contents[0].parts[0].text;
   assert.doesNotMatch(prompt, /colour sample for|sample of the countertop/);
   assert.match(prompt, /not cut from the wall or floor tiles/);
@@ -1155,7 +1155,7 @@ test('current large catalog originals below 5 MiB retain their visual reference'
   const generation = h.calls.find((call) => call.body?.generationConfig?.responseModalities);
   // Text, Foto, Plattenmuster, dann die Muster von Waschtischplatte und Unterbau (hier eine Datei), zuletzt die Armaturen.
   const options = optionsForPackage('essenza');
-  assert.equal(generation.body.contents[0].parts.length, 4 + new Set([options.tops[0].image, options.bases[0].image]).size);
+  assert.equal(generation.body.contents[0].parts.length, 5 + new Set([options.tops[0].image, options.bases[0].image]).size);
   assert.equal(Buffer.from(generation.body.contents[0].parts[2].inlineData.data, 'base64').length, bytes.length);
   const leadMail = h.calls.find((call) => call.url === 'https://api.resend.com/emails');
   assert.match(JSON.stringify(leadMail.body), /Muster/);
@@ -1690,6 +1690,24 @@ test('ohne Dusche kein Duschset, die Wanne mit eigener Armatur', async () => {
   const essenzaPrompt = essenza.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
   assert.match(essenzaPrompt, /a bath mixer of the same series and finish, exposed on the wall with its spout, and a hand shower on a hose/);
   assert.doesNotMatch(essenzaPrompt, /product photo of the bath mixer/, 'fuer Up+ gibt es noch kein Bild der Wannenarmatur');
+});
+
+test('der neue Spiegel geht als Bild mit, der alte wird ausdruecklich entfernt', async () => {
+  // Jonathan am 25.09.: mit einem Wort zeichnete das Modell in 10 von 12 Proben den alten Spiegel nach.
+  for (const [spiegel, words] of [
+    ['spiegelschrank', /with new rectangular mirror cabinet as wide as the vanity, with flush mirror doors and a slim LED light line along its top as in image \d+ above it, which replaces the old mirror or mirror cabinet and its lamp completely/],
+    ['spiegel', /with new frameless rectangular mirror without a cabinet, as wide as the vanity, with a slim LED light line in the glass near its top edge as in image \d+ above it, which replaces/],
+  ]) {
+    const h = harness();
+    await h.invoke(payload({ spiegel }));
+    const parts = h.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts;
+    const prompt = parts[0].text;
+    assert.match(prompt, words, spiegel);
+    const number = Number(/Image (\d+) is only a product photo of the new mirror on a plain background/.exec(prompt)?.[1]);
+    assert.ok(number >= 2, spiegel);
+    assert.match(prompt, new RegExp(`as in image ${number} above it, which replaces the old mirror`), spiegel);
+    assert.ok(parts.filter((part) => part.inlineData)[number - 1].inlineData.data.startsWith('/9j/'), spiegel);
+  }
 });
 
 test('Bodenplatte und Akzent gehen als eigene Muster mit, mit ihrer Bildnummer im Prompt', async () => {
