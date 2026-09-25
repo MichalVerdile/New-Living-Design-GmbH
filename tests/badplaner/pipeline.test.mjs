@@ -145,6 +145,8 @@ test('Aufputz and Unterputz produce explicit, exclusive toilet branches', async 
     const checkPrompt = checker.body.contents[0].parts[0].text;
     if (cistern === 'aufputz') {
       assert.match(prompt, /the old surface-mounted cistern and its casing are removed completely/);
+      // P3 vom 25.09.: im Foto nur die Betaetigungsplatte; das Modell stellte das WC samt Modul an die andere Wand.
+      assert.match(prompt, /If image 1 shows no cistern box but only a flush plate in the wall, the cistern is already in the wall: then no module is added, and the toilet keeps its wall, its place and its flush plate/);
       assert.match(prompt, /stands the sanitary module of image \d: a factory-made glass and steel panel/);
       assert.match(prompt, /about 50 cm wide, 115 cm high and 11 cm deep/);
       assert.match(prompt, /a small flush button on the front near the top/);
@@ -289,18 +291,21 @@ test('der Prompt ist eine Bearbeitung, keine Neuzeichnung', async () => {
   const prompt = h.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
   // 19.09.: aus Diegos engem Bad wurde ein Ausstellungsbad mit anderer Kamera und
   // einem Fenster. Zuerst steht, was das Ergebnis ist.
-  assert.match(prompt, /^PHOTO EDIT\. Image 1 is a photo of the customer's existing bathroom\. Show the same bathroom after its renovation, as the same photograph/);
-  assert.match(prompt, /this is not a new design and not a showroom/);
+  assert.match(prompt, /^PHOTO EDITING TASK, not a design task\. Image 1 is a photograph of the customer's existing bathroom\. The result is that same photograph after the renovation/);
+  assert.match(prompt, /Do not design a new bathroom and do not show a showroom/);
   assert.match(prompt, /Image 1 shows NO window and no roof window: the result must not contain any window or glass opening at all, every wall stays a solid wall\./);
-  assert.match(prompt, /Show exactly the part of the room that image 1 shows/);
+  // 25.09.: mit der gekuerzten Fassung zeichnete das Modell P2 und P5 aus einer anderen Kamera; der Wortlaut der Website hielt sie.
+  assert.match(prompt, /This is an edit of image 1, not a new picture\. Keep image 1 and change only what the CHANGE list names/);
+  assert.match(prompt, /Never zoom out, never widen the view, never show floor, wall or ceiling beyond the edges of image 1, never create extra floor area/);
+  assert.match(prompt, /every window, roof window and door at its exact size and position/);
   // P4 und P5 vom 25.09.: ohne den Abgleich am Schluss kam bei "keine Fenster" ein Fenster dazu.
   assert.match(prompt, /BEFORE YOU DRAW, compare with image 1: the same viewpoint and framing, the same walls and ceiling, no window at all, the same door and, at the edge of the picture, the same door leaf or frame in the foreground if image 1 has one, every fixture where image 1 has it/);
   assert.match(prompt, /never show more of the room than image 1 shows\.$/);
   assert.match(prompt, /Photorealistic, bright, even light, no people/);
   assert.doesNotMatch(prompt, /daylight/);
-  assert.match(prompt, /POSITIONS: every fixture keeps its wall and its place along it, measured against the corners, the door and the window/);
+  assert.match(prompt, /KEEP THE POSITIONS\. .*Every fixture keeps the wall or low wall it stands against in image 1 and its place along it, measured against the corners, the door and the window next to it\. .*The washbasin keeps its wall and its place/);
   // Ein Muretto ist Raum, keine Einrichtung: es bleibt stehen.
-  assert.match(prompt, /A low wall or boxed pre-wall that a fixture stands against is part of the room: it stays, and the fixture stays on it/);
+  assert.match(prompt, /A half-height wall, a low built wall or a boxed pre-wall that a fixture stands against is part of the room, not furniture: it keeps its place, its length, its height and its depth, and the fixture stays mounted on it/);
   // Die Duscharmatur stand ueber dem WC statt in der Dusche.
   assert.match(prompt, /All shower fittings sit together on one wall inside the shower area, never next to the toilet or the washbasin/);
 });
@@ -325,7 +330,7 @@ test('der Grundriss aus der Vorpruefung steht im Prompt, was wo steht', async ()
   assert.match(photoCheck, /name the wall each sanitary fixture stands against/);
   const prompt = h.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
   assert.match(prompt, /WHAT IMAGE 1 SHOWS, seen from the camera: the toilet on the back wall facing the camera, the washbasin on the back wall facing the camera, the shower on the right wall; from left to right: washbasin, toilet, shower; closest to the camera: the washbasin\./);
-  assert.match(prompt, /nothing else moves\.\nKEEP from image 1/);
+  assert.match(prompt, /nothing else moves\.\nThis is an edit of image 1/);
 });
 
 test('ohne lesbaren Grundriss wird ohne ihn gerendert, nicht abgewiesen', async () => {
@@ -590,7 +595,7 @@ test('der Prompt haelt den Vordergrund und den Waschtischunterbau fest', async (
   assert.match(prompt, /the same door and, at the edge of the picture, the same door leaf or frame in the foreground if image 1 has one/);
   // P5 vom 25.09.: "Keep the radiators" brachte einen Heizkoerper, den das Foto nicht hat.
   assert.match(prompt, /a radiator only where image 1 has one/);
-  assert.match(prompt, /every window keeps its share of the picture/);
+  assert.match(prompt, /Every window keeps the same share of the picture it has in image 1/);
   // "Loose furniture is gone" hat im Gaeste-WC den Waschtischunterbau mitgenommen.
   assert.match(prompt, /The vanity unit is not loose furniture and stays/);
   assert.doesNotMatch(prompt, /Loose furniture, clutter/);
@@ -621,7 +626,7 @@ test('ein neues Muretto, eine Ablage oder eine Nische steht als Hinweis in der L
   const prompt = harness();
   await prompt.invoke();
   const text = prompt.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
-  assert.match(text, /nothing is built that image 1 does not show: no new wall, low wall, ledge, shelf or niche/);
+  assert.match(text, /NO NEW WALLS: never add a wall, a partition, a half-height wall, a boxed pre-wall, a ledge, a shelf or a niche that image 1 does not show/);
   assert.match(text, /no ledge, no shelf, no capping and no step/);
 });
 
@@ -846,7 +851,7 @@ test('the toilet keeps its wall, also under a sloping ceiling, and a flat ceilin
   };
   // Zweimal gesehen: unter der Dachschraege wandert das WC an die gerade Wand.
   const sloped = await promptFor('sloped');
-  assert.match(sloped, /The toilet's drain cannot move: the toilet stays on its wall at its place, also under the sloping ceiling/);
+  assert.match(sloped, /The toilet keeps its wall and its place because its drain cannot be moved: under the sloping ceiling it stays under that sloping ceiling/);
   assert.match(sloped, /The ceiling slopes exactly as in image 1, at the same angle and height/);
   // P4 vom 25.09.: aus der flachen Decke eines Gaeste-WCs wurde eine Dachschraege mit Dachfenster.
   const flat = await promptFor('flat');
@@ -1376,7 +1381,7 @@ test('the image prompt carries no leftover source code (quote, plus, indentation
   const prompt = gen.body.contents[0].parts[0].text;
   // Seit 637f03a stand mitten im Prompt woertlich: "\n    + " (aus einem Template-String).
   assert.doesNotMatch(prompt, /"\s*\n\s*\+\s*"/);
-  assert.match(prompt, /never add floor, wall or ceiling beyond its edges, and every window keeps its share of the picture\./);
+  assert.match(prompt, /never create extra floor area\. Whatever stands in the immediate foreground/);
 });
 
 test('beide Pruefungen denken wenig, das Bildmodell bleibt unveraendert', async () => {
@@ -1426,8 +1431,8 @@ test('ein zugemauerter Ruecksprung in der Wand steht als Hinweis in der Lead-Mai
   assert.equal(gens.length, 1);
   assert.match(JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails').body),
     /Hinweis: a recess, alcove, niche or step of the wall that is in the photo was filled in/);
-  assert.match(gens[0].body.contents[0].parts[0].text, /every wall where it stands with every recess, alcove, step, projection, low wall and pre-wall it has, at the same size/);
-  assert.match(gens[0].body.contents[0].parts[0].text, /A shower or bathtub in a recess stays inside it, and the tiles follow the recess round its corners/);
+  assert.match(gens[0].body.contents[0].parts[0].text, /NOTHING IS FILLED IN EITHER: every recess, alcove, niche, wall offset, corner step and wall projection that image 1 shows stays exactly where it is/);
+  assert.match(gens[0].body.contents[0].parts[0].text, /A shower or bathtub that stands in a recess or alcove stays inside it, and the new tiles follow the wall into the recess and around its corners/);
   const question = h.calls.find((call) => /wall_element_lost/.test(call.body?.contents?.[0]?.parts?.[0]?.text || '')).body.contents[0].parts[0].text;
   assert.match(question, /no longer has because it was filled in/);
   // Colore 20.09., 13:01: der erhaltene Ruecksprung darf nicht als neue Nische gelten.
@@ -1678,7 +1683,8 @@ test('der Prompt bleibt kurz, und jede genannte Bildnummer hat ihr Bild', async 
   const parts = h.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts;
   const prompt = parts[0].text;
   const words = prompt.split(/\s+/).length;
-  assert.ok(words < 1700, `der Prompt hat ${words} Woerter`);
+  // Bewahren und Positionen stehen seit dem 25.09. wieder im Wortlaut der Website (dort 1954 Woerter fuer P1).
+  assert.ok(words < 2100, `der Prompt hat ${words} Woerter`);
   assert.match(prompt, /WHAT IMAGE 1 SHOWS/);
   // Foto, Platte, Akzent, Waschtisch (ein oder zwei Muster), Modul, Armaturen: jede Nummer im Text hat ihr Bild.
   const images = parts.filter((part) => part.inlineData).length;
