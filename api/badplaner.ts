@@ -1070,11 +1070,12 @@ function tapDescription(
   series: { label: string; prompt: string } | undefined,
   seriesText: string,
 ): { prompt: string; label: string } {
-  // Atelier = Treemme Aurelia (Diego, 20.09.). Form aus den Treemme-Zeichnungen, nur in Worten, keine Fotos:
-  // RWIT 2CA5 (Platte 200x75, Auslauf 187), RWIT 2CC2 (Rosetten 75), IT RTBR 380 (Kopfbrause 300, Arm 400), RWIT 2705.
+  // Atelier = Treemme Aurelia (Diego, 20.09.; Artikel vom 25.09., Masse aus den 3D-Modellen): Waschtisch RWIT 2CC5 CC 01
+  // (Auslauf und Hebel auf zwei Rosetten 75 uebereinander, Auslauf 215 ab Wand), Dusche RWIT 2CD9 CC 01 (drei Rosetten 75
+  // in einer Reihe: Brauseanschluss mit Halter und Stabhandbrause, Mischer, Umsteller), Kopfbrause IT RTBR 376 CC (500 x 200).
   if (pkg === 'atelier') {
     return {
-      prompt: `concealed built-in (Unterputz) Treemme Aurelia fittings in ${finish.prompt}, with no exposed mixer body: at the washbasin a thin flat rectangular wall plate with sharp corners (about 20 × 7.5 cm) above the basin, with a long slim spout with flat facets on its left that bends down in a smooth arc, and on its right a short cylindrical handle with a flat paddle lever hanging straight down; in a shower small round wall rosettes (about 7.5 cm), one with the same handle and lever and one above it with a round diverter knob, a thin round overhead shower (about 30 cm) with a finely ribbed rim on a flat blade-shaped wall arm, and a slim cylindrical stick hand shower in a small round wall holder`,
+      prompt: `concealed built-in (Unterputz) Treemme Aurelia fittings in ${finish.prompt}, with no exposed mixer body: at the washbasin two separate small round wall rosettes (about 7.5 cm) one above the other above the basin, no wall plate: from the upper one a long slim spout with flat facets runs about 20 cm out from the wall and bends gently down at its end, and the lower one carries the mixer, a short cylinder with a flat paddle lever; in a shower three small round wall rosettes (about 7.5 cm) in one row at the same height: one at the end of the row carries the hose outlet and the holder of a slim cylindrical stick hand shower on its hose, the other two each a short cylinder with the same flat lever; above them on the same wall, just below the ceiling, a thin flat rectangular overhead shower plate (about 50 × 20 cm) that sticks straight out from the wall, fixed to it by its short end, with its nozzles facing down`,
       label: `${finish.label}, ${seriesText}`,
     };
   }
@@ -1158,7 +1159,7 @@ function buildPrompt(v: {
     sample(v.baseImageNumber, 'a colour sample for the front and body of the vanity unit');
   }
   sample(v.moduleImageNumber, 'a product photo of the sanitary module on a white background');
-  sample(v.tapsImageNumber, 'a product photo of the tap fittings on a white background, in chrome: copy their shapes, their finish is the one named under CHANGE');
+  sample(v.tapsImageNumber, 'a product photo of the tap fittings on a white background, in chrome, the washbasin fittings at the top and the shower fittings below: copy their shapes, their finish is the one named under CHANGE');
   const references = samples.length ? ` ${samples.join(' ')} These images show materials and products, never a room or a layout.` : '';
   const asIn = (n: number) => (n ? ` as in image ${n}` : '');
   const colourOf = (n: number) => (n ? ` in the colour and finish of image ${n}` : '');

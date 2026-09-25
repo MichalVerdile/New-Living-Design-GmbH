@@ -1520,12 +1520,14 @@ test('Armaturen: Atelier zeigt die Form von Treemme Aurelia in der gewaehlten Ob
   assert.equal(res.statusCode, 200, `unexpected status ${res.statusCode}: ${JSON.stringify(res.body).slice(0, 200)}`);
   const prompt = h.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
   assert.match(prompt, /Treemme Aurelia fittings in brushed brass/);
-  assert.match(prompt, /rectangular wall plate .*spout with flat facets .*flat paddle lever hanging straight down/);
-  assert.match(prompt, /round overhead shower .*finely ribbed .*blade-shaped wall arm.*stick hand shower/);
+  // Artikel vom 25.09.: Waschtisch RWIT 2CC5 (zwei Rosetten statt Platte), Dusche RWIT 2CD9 mit Kopfbrause IT RTBR 376.
+  assert.match(prompt, /two separate small round wall rosettes .*one above the other .*no wall plate: .*spout with flat facets .*flat paddle lever/);
+  assert.match(prompt, /three small round wall rosettes .*in one row .*stick hand shower .*thin flat rectangular overhead shower plate \(about 50 × 20 cm\)/);
+  assert.doesNotMatch(prompt, /rectangular wall plate|round overhead shower/);
   // Die Treemme-Produktfotos gehen als letzte Vorlage mit, nur fuer die Form.
   const parts = h.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts;
   const tapsImage = parts.filter((part) => part.inlineData).length;
-  assert.match(prompt, new RegExp(`Image ${tapsImage} is only a product photo of the tap fittings`));
+  assert.match(prompt, new RegExp(`Image ${tapsImage} is only a product photo of the tap fittings on a white background, in chrome, the washbasin fittings at the top`));
   assert.deepEqual(options.finishes.map((finish) => finish.id), ['treemme-cromo', 'treemme-nero-opaco', 'treemme-oro-spazzolato', 'treemme-nichel-spazzolato',
     'treemme-oro-rosa-spazzolato', 'treemme-nichel-lucido', 'treemme-oro', 'treemme-nero-cromo-lucido', 'treemme-nero-cromo-spazzolato', 'treemme-ottone-spazzolato']);
   // Lead und Kundenmail nennen die Serie.
