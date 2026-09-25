@@ -713,7 +713,6 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
     // Bild trotzdem; die Anfrage-Mail traegt das Bild dann nach.
     const draftDelivery = await sendLeadMail({
       subject: `Badplaner-Entwurf ohne Kontakt – ${isGuestWc ? 'Gäste-WC' : pkg.name} (${leadId})`,
-      noCc: true,
       intro: 'Ein Besucher hat im Badplaner ein Ideenbild erstellt und noch keine Kontaktangaben hinterlassen. Kommt die Anfrage, folgt eine Mail "Badplaner-Lead" mit derselben Lead-ID.',
       details,
       attachments: [
@@ -1569,8 +1568,6 @@ interface LeadMail {
   details: [string, string][];
   attachments: { filename: string; content: string }[];
   replyTo?: string;
-  /** Nur an BADPLANER_TO, ohne Kopie (Entwurf ohne Kontakt: nur an Diego). */
-  noCc?: boolean;
 }
 
 /**
@@ -1587,8 +1584,10 @@ async function sendLeadMail(mail: LeadMail, ctx: RequestContext): Promise<MailRe
         headers: { Authorization: `Bearer ${key}`, 'content-type': 'application/json' },
         body: JSON.stringify({
           from: mailFrom(),
-          to: [env.BADPLANER_TO || business.email],
-          cc: mail.noCc ? undefined : [env.BADPLANER_CC || business.emailSecondary],
+          // Jede Mail des Badplaners an Diego, Emanuel in Kopie, auch in der Vorschau, wo die
+          // beiden Variablen fehlen (Diego, 25.09.). Bis dahin ging die Vorschau nur an Emanuel.
+          to: [env.BADPLANER_TO || business.emailSecondary],
+          cc: [env.BADPLANER_CC || business.email],
           reply_to: mail.replyTo,
           subject: mail.subject,
           html: leadHtml(mail),
