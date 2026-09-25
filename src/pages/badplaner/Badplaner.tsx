@@ -19,14 +19,11 @@ import { resizeImageFile, fileToBase64, readFileNow, type ResizedImage } from '.
 import { MAX_PLAN_BASE64, MAX_SOURCE_IMAGE_BYTES } from './imageValidation';
 
 /*
- * Badplaner: Paket wählen, Ausstattung wählen, Foto machen, Kontakt angeben,
- * Ideenbild erhalten. Die Bilderzeugung und der E-Mail-Versand laufen in
- * api/badplaner.ts. Beim Prerendering (ohne Browser) wird nur der Startzustand
- * gerendert; alles mit Datei, Kamera oder Fenster passiert in Handlern.
- *
- * Schritt 2 zeigt zuerst die wichtigsten Auswahlen. Umfangreiche Materialfamilien
- * und die optionalen Details sind einklappbar; alle Werte bleiben vorbelegt und
- * jede bisherige Option bleibt erreichbar.
+ * Badplaner: Raum und Paket wählen, Ausstattung wählen, Foto machen, Ideenbild
+ * als Vorschau ansehen, dann mit den Kontaktangaben anfragen. Die Bilderzeugung
+ * und der E-Mail-Versand laufen in api/badplaner.ts. Beim Prerendering (ohne
+ * Browser) wird nur der Startzustand gerendert; alles mit Datei, Kamera oder
+ * Fenster passiert in Handlern. Alle Auswahlen sind vorbelegt.
  */
 
 const PAGE_URL = `${business.siteUrl}/badplaner`;
@@ -1516,7 +1513,7 @@ function DateiWaehlen({ id, onChange, disabled, onRetry }: { id: string; onChang
 
 function friendlyHttpError(status: number): string {
   if (status === 413) return 'Das Bild ist zu gross für den Upload. Bitte ein kleineres Foto wählen.';
-  if (status === 429) return 'Tageslimit erreicht (3 Ideenbilder). Rufen Sie uns an oder kommen Sie in die Ausstellung.';
+  if (status === 429) return 'Tageslimit erreicht. Rufen Sie uns an oder kommen Sie in die Ausstellung.';
   if (status === 503) return 'Der Badplaner ist im Moment nicht verfügbar.';
   return 'Das hat nicht geklappt. Bitte in einer Minute noch einmal versuchen.';
 }
