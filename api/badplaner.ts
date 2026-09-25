@@ -2,51 +2,58 @@
  * Badplaner-API (Vercel Serverless Function, Node-Runtime).
  *
  * POST /api/badplaner mit JSON-Body:
- *   kind: 'render'     Foto + Ausstattung -> Ideenbild (Gemini); Lead-Mail an NLD,
- *                      Kundenmail mit dem Ideenbild, auf Wunsch Newsletter-Eintrag
- *   kind: 'render' mit stage: 'vorschau'
- *                      Ideenbild VOR den Kontaktangaben: nur Einwilligung, kein Name.
- *                      Mail "Badplaner-Entwurf" mit Foto und Bild an NLD, Antwort mit
- *                      Bild und Ticket (HMAC ueber Lead-ID, Auswahl und SHA-256 des Bildes).
+ *   kind: 'render', stage: 'vorschau'
+ *                      Foto + Ausstattung -> Ideenbild (Gemini), VOR den Kontaktangaben:
+ *                      nur Einwilligung, kein Name. Mail "Badplaner-Entwurf" mit Foto und
+ *                      Bild an NLD; Antwort mit Bild und Ticket (HMAC ueber Lead-ID,
+ *                      Auswahl und SHA-256 des Bildes). So laeuft die Seite heute.
+ *   kind: 'render'     dasselbe mit Kontakt im selben Schritt: Lead-Mail an NLD,
+ *                      Kundenmail mit dem Ideenbild, auf Wunsch Newsletter-Eintrag.
+ *                      Die Seite nutzt diesen Weg nicht mehr; die Tests laufen darueber.
  *   kind: 'anfrage'    Kontakt nach der Vorschau, als Binaerkoerper (siehe handleAnfrage):
- *                      Lead-Mail an NLD und Kundenmail mit demselben, vom Ticket
- *                      bestaetigten Bild. Keine zweite Bilderzeugung, keine Speicherung.
- *   kind: 'grundriss'  Grundriss/m²/Bemerkung zu einem bestehenden Lead per E-Mail
+ *                      Lead- und Kundenmail mit demselben, vom Ticket bestaetigten Bild.
+ *   kind: 'beratung'   persoenliche Beratung ohne Ideenbild, auf Wunsch mit Foto oder Plan.
+ *   kind: 'grundriss'  Grundriss, m² oder Bemerkung zu einem bestehenden Lead.
  *
  * Ablauf bei kind: 'render'
- *   1. Pflichtfelder, alle aktiven Ausstattungs-IDs und Bildheader streng prüfen.
- *      Bekannte Legacy-Feldnamen bleiben gültig; widersprüchliche Auswahl-IDs nicht.
- *   2. Grenzen prüfen: Cookie 3 Ideenbilder pro Gerät und Tag, 6 pro IP, Tagesdeckel.
- *   3. Musterbild der Wandplatte laden, Prompt bauen, Ideenbild bei Gemini erzeugen.
- *   4. Fensterprüfung: abgelehnte Bilder werden verworfen. Ist der Prüfdienst auch
- *      nach einem kurzen Retry nicht erreichbar, wird das Bild mit Warnhinweis zugestellt.
- *   5. Lead-Mail an NLD; bei eindeutigem HTTP-Fehler Formspree ohne Bilder.
- *      Ohne bestätigte Provider-Annahme kein Erfolg. Unklare Zustellung nicht blind wiederholen.
- *   6. Kundenmail/Newsletter mit separatem Zustellstatus, kein falsches Versandversprechen.
- *   Alle Netzwerkaufrufe einschliesslich Body-Lesen unter einer 110-Sekunden-Deadline.
+ *   1. Pflichtfelder, alle Ausstattungs-IDs und Bildheader streng pruefen
+ *      (server/badplaner/validation.ts). Alte Feldnamen bleiben gueltig.
+ *   2. Grenzen: 5 Ideenbilder pro Geraet (Cookie) und 10 pro IP und Tag, Tagesdeckel.
+ *   3. Gleichzeitig: Muster laden (Platte, Boden, Akzent, Waschtisch) und das Foto
+ *      pruefen (ein Bad? was steht wo?). Kein Bad: kein Bild, Lead mit Foto an NLD.
+ *   4. Prompt bauen, Ideenbild bei Gemini erzeugen, dann pruefen lassen (checkOpenings):
+ *      Fenster, Tueren, Waende, WC, Waschtisch, Dusche und Wanne wie bestellt?
+ *      Abgelehnt: ein zweiter Versuch, wenn die Zeit reicht. Ein abgelehntes Bild sieht
+ *      der Kunde nie; NLD bekommt es mit dem Lead. Ist die Pruefung nicht erreichbar,
+ *      geht das Bild mit Vermerk in der Lead-Mail hinaus.
+ *   5. Lead-Mail an NLD (Resend mit Anhaengen; bei eindeutigem Fehler Formspree ohne
+ *      Bilder). Ohne bestaetigte Annahme kein Erfolg; unklare Zustellung wird nicht
+ *      blind wiederholt.
+ *   6. Kundenmail und Newsletter mit eigenem Zustellstatus.
+ *   Alle Netzwerkaufrufe einschliesslich Body-Lesen laufen unter einer Deadline von
+ *   220 s (TOTAL_TIMEOUT_MS, knapp unter maxDuration 230 in vercel.json).
  *
  * Umgebungsvariablen (Vercel > Settings > Environment Variables):
- *   GEMINI_API_KEY       Pflicht. API-Schlüssel von Google AI Studio (Bildmodell).
- *   RESEND_API_KEY       E-Mail-Versand mit Anhängen über Resend. Fehlt er oder
+ *   GEMINI_API_KEY       Pflicht. API-Schluessel von Google AI Studio (Bildmodell).
+ *   RESEND_API_KEY       E-Mail-Versand mit Anhaengen ueber Resend. Fehlt er oder
  *                        wird der Versand eindeutig abgelehnt, geht der Lead ohne Bilder
  *                        an Formspree. Fehlende Kundenmail wird im Ergebnis ausgewiesen.
- *   RESEND_AUDIENCE_ID   Audience bei Resend für den Newsletter. Ohne diese Variable
+ *   RESEND_AUDIENCE_ID   Audience bei Resend fuer den Newsletter. Ohne diese Variable
  *                        wird die Einwilligung nur im Lead-Mail vermerkt.
- *   BADPLANER_TO         Empfänger (Default diego.verdile@newlivingdesign.ch)
+ *   BADPLANER_TO         Empfaenger (Default diego.verdile@newlivingdesign.ch)
  *   BADPLANER_CC         Kopie (Default emanuel.verdile@newlivingdesign.ch)
- *   BADPLANER_FROM       Absender für Lead- und Kundenmail (Default
+ *   BADPLANER_FROM       Absender fuer Lead- und Kundenmail (Default
  *                        "Badplaner <badplaner@newlivingdesign.ch>",
  *                        Domain muss bei Resend verifiziert sein)
  *   BADPLANER_DAILY_CAP  Maximale Ideenbilder pro Tag insgesamt (Default 60)
- *   BADPLANER_MODEL      Gemini-Modell (Default gemini-3-pro-image, das genaueste)
- *   BADPLANER_CHECK_MODEL Gemini-Textmodell für die Fensterprüfung (Default gemini-3.6-flash);
- *                        leer lassen = Prüfung bewusst deaktiviert
+ *   BADPLANER_MODEL      Gemini-Bildmodell (Default gemini-3-pro-image)
+ *   BADPLANER_CHECK_MODEL Gemini-Textmodell fuer Foto- und Bildpruefung (Default
+ *                        gemini-3.6-flash); leer lassen = Pruefung bewusst deaktiviert
  *
  * Fotos und Ideenbilder werden NICHT gespeichert (kein Blob, kein KV): sie gehen
- * nur an Google zur Bilderzeugung und per E-Mail an uns und an den Kunden.
- * Diese synchrone Zwischenlösung bietet KEINE durable Speicherung oder Idempotenz.
- * Provider-Annahme ist kein Nachweis der Postfachzustellung. Siehe docs/BADPLANER_PR1.md.
- * Siehe /datenschutz#badplaner.
+ * nur an Google zur Bilderzeugung und per E-Mail an uns und an den Kunden. Es gibt
+ * darum auch keine dauerhafte Lead-Ablage und keine Idempotenz; die Annahme durch
+ * den Mail-Anbieter ist kein Nachweis der Zustellung. Siehe /datenschutz#badplaner.
  */
 /* eslint-disable @typescript-eslint/no-explicit-any -- keine @vercel/node-Typen im Projekt, req/res sind deshalb any */
 import { type PackageId } from '../src/data/badplaner.js';
@@ -67,7 +74,6 @@ export const config = { maxDuration: 230 };
 
 /* ---------- Grenzen ---------- */
 
-const MAX_FILE_BASE64 = MAX_PLAN_BASE64;
 const MAX_REQUEST_BYTES = 4 * 1024 * 1024;
 // Ein 2K-Ideenbild ist ein Vielfaches eines 1K-Bildes. Diese drei Grenzen waren
 // auf 1K zugeschnitten und haben das erste Pro-Bild nach 25 s weggeworfen.
@@ -339,7 +345,7 @@ async function handler(req: any, res: any) {
   try {
     if (body.kind === 'render') return await handleRender(req, res, body as RenderBody, ctx);
     if (body.kind === 'beratung') return await handleBeratung(req, res, body as BeratungBody, ctx);
-    if (body.kind === 'grundriss') return await handleGrundriss(req, res, body as GrundrissBody, ctx);
+    if (body.kind === 'grundriss') return await handleGrundriss(res, body as GrundrissBody, ctx);
     return res.status(400).json({ ok: false, error: 'Unbekannte Anfrage.' });
   } catch (err: any) {
     if (err instanceof ValidationError) return res.status(400).json({ ok: false, code: 'INVALID_SELECTION', field: err.field, error: err.message });
@@ -356,7 +362,7 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
     tapSeriesOption, finish, sanitary, wall, shower, bathtub, basin, mirror, look, format,
     floorFormat, accentMode, placement, accent, requiresQuote } = normalizeSelection(body as unknown as Record<string, unknown>);
 
-  // 3. Fenster und Kontakt (Pflichtfelder)
+  // Fenster und Kontakt (Pflichtfelder)
   const windows = text(body.windows, 4);
   if (!/^[0-3]$/.test(windows)) return bad(res, 'Bitte geben Sie an, wie viele Fenster auf dem Foto zu sehen sind.');
   // Vorschau: das Bild kommt vor den Kontaktangaben, die folgen mit kind 'anfrage'.
@@ -372,7 +378,7 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   }
   if (body.consent !== true) return bad(res, 'Bitte bestätigen Sie die Datenschutzerklärung.');
 
-  // 4. Foto: neu als data-URL im Feld `foto`, alt als { mime, data } im Feld `photo`
+  // Foto: neu als data-URL im Feld `foto`, alt als { mime, data } im Feld `photo`
   const photo = readPhoto(body);
   if (!photo) return bad(res, 'Bitte ein Foto Ihres Bads (JPEG, PNG oder WebP) hochladen.');
   let photoRatio = '';
@@ -386,7 +392,7 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
     return res.status(503).json({ ok: false, code: 'SERVICE_UNAVAILABLE', error: 'Der Badplaner ist im Moment nicht verfügbar. Rufen Sie uns an: ' + business.phone.display });
   }
 
-  // 5. Limits
+  // Limits
   const today = new Date(dependencies.clock.now()).toISOString().slice(0, 10);
   const cookie = readCounterCookie(req.headers?.cookie, today);
   if (cookie >= PER_DEVICE_PER_DAY) {
@@ -417,14 +423,12 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   let delivered = false;
   try {
 
-  // 6. Swatch (Materialprobe der Wandplatte) laden: zuerst unsere Kopie, sonst Lieferant, sonst ohne.
-  //    Gleichzeitig die Vorpruefung des Fotos (zeigt es ein Bad, und wo steht was):
-  //    beides sind Wartezeiten auf fremde Server, nacheinander kosten sie doppelt.
-  //    Dazu die Muster von Waschtischplatte und Unterbau: nur mit dem Namen ("Stone Color
-  //    Diamante") kennt das Modell die Farbe nicht und nahm am 19.09. fuer die Platte den
-  //    Marmor der Wand. Teilen sich beide dieselbe Datei, geht sie nur einmal mit.
-  //    Eine eigene Bodenplatte und das Akzentmaterial gehen ebenso als Muster mit:
-  //    der Kunde hat sie am Bild gewaehlt, das Modell bekam bis dahin nur den Namen.
+  // Muster laden (Platte, eigene Bodenplatte, Akzent, Waschtischplatte, Unterbau): zuerst unsere
+  // Kopie, sonst der Lieferant, sonst ohne. Gleichzeitig die Vorpruefung des Fotos (ein Bad? was
+  // steht wo?): beides sind Wartezeiten auf fremde Server, nacheinander kosten sie doppelt.
+  // Nur mit dem Namen ("Stone Color Diamante") kannte das Modell die Farbe nicht und nahm am
+  // 19.09. fuer die Platte den Marmor der Wand. Teilen sich Platte und Unterbau dieselbe Datei,
+  // geht sie nur einmal mit.
   const vanityImages = [...new Set([top.image, base.image])];
   const [swatch, photoCheck, floorSwatch, accentSwatch, ...vanitySwatches] = await Promise.all([
     loadSwatch(tile.image, tile.src || '', ctx),
@@ -437,11 +441,11 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   const baseSwatch = vanitySwatches[vanityImages.indexOf(base.image)];
   if (photoCheck.status === 'ok') console.info('[badplaner] Grundriss laut Foto', photoCheck.layout ? JSON.stringify(photoCheck.layout) : 'nicht lesbar');
 
-  // 6b. Nur bei Aufputz: Produktfoto des Sanitärmoduls als weitere Vorlage.
+  // Nur bei Aufputz: Produktfoto des Sanitärmoduls als weitere Vorlage.
   // Beschreiben allein genügt dem Modell nicht, es baut sonst eine verkleidete
   // Vorwand. Das Bild liegt im Code, darum kann es weder fehlen noch Zeit kosten.
   const moduleImage = cistern === 'aufputz' ? SANITARY_MODULE_PHOTO : null;
-  // 6c. Atelier: Treemme Aurelia als Produktfoto, weil die Worte allein am 20.09. nur
+  // Atelier: Treemme Aurelia als Produktfoto, weil die Worte allein am 20.09. nur
   // allgemeine Armaturen ergaben. Nur Armaturen auf weissem Grund, kein Raum.
   const tapsImage = isAtelier && !isGuestWc ? AURELIA_TAPS_PHOTO : null;
 
@@ -450,11 +454,11 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   const references = [swatch, floorSwatch, accentSwatch, topSwatch, baseSwatch === topSwatch ? null : baseSwatch, moduleImage, tapsImage];
   const imageNumber = (image: Photo | null) => (image ? 2 + references.filter(Boolean).indexOf(image) : 0);
 
-  // 7. Armaturen: Essenza Aufputz verchromt, Colore in der gewählten Serie und Oberfläche,
-  //    Atelier Unterputz in der gewählten Oberfläche.
+  // Armaturen: Essenza Aufputz verchromt, Colore in der gewählten Serie und Oberfläche,
+  // Atelier Unterputz in der gewählten Oberfläche.
   const taps = tapDescription(pkg.id as PackageId, finish, tapSeriesOption, opts.tapSeries);
 
-  // 8. Prompt (englisch; Vorlage aus dem Test, mit eingesetzten Wahlwerten)
+  // Prompt (englisch; Vorlage aus dem Test, mit eingesetzten Wahlwerten)
   const prompt = buildPrompt({
     packageName: pkg.name,
     room,
@@ -491,7 +495,7 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
     layout: photoCheck.status === 'ok' ? photoCheck.layout : undefined,
   });
 
-  // 9. Auswahl in Klartext: dieselben Zeilen für Lead- und Kundenmail. Sie
+  // Auswahl in Klartext: dieselben Zeilen für Lead- und Kundenmail. Sie
   // werden vor der Prüfung aufgebaut, damit NLD den bereits erfassten Lead
   // auch dann erhält, wenn kein Ideenbild sicher angezeigt werden darf.
   const packageLabel = requiresQuote
@@ -549,7 +553,7 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
 
   // Der zweite Versuch wird weiter unten an der gemessenen Dauer des ersten
   // Durchgangs entschieden, nicht an den Höchstwerten.
-  // 9b. Zeigt das Foto ueberhaupt ein Bad? Spart bei einem falschen Foto zwei
+  // Zeigt das Foto ueberhaupt ein Bad? Spart bei einem falschen Foto zwei
   // Generierungen und sagt dem Kunden, was wirklich fehlt.
   if (photoCheck.status === 'wrong_room') {
     console.warn('[badplaner] Foto zeigt kein Bad', photoCheck.reason);
@@ -698,7 +702,7 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   if (check.status === 'disabled') checkNote = 'deaktiviert';
   console.log('[badplaner] Fensterprüfung:', checkNote);
 
-  // 11. Lead-Mail an NLD (Resend mit Anhängen, sonst Formspree ohne Bilder)
+  // Lead-Mail an NLD (Resend mit Anhängen, sonst Formspree ohne Bilder)
   const imageName = gen.mime === 'image/png' ? 'ideenbild.png' : 'ideenbild.jpg';
   const details = leadDetails(checkNote);
   if (preview) {
@@ -749,10 +753,10 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
     image: { mime: gen.mime, data: gen.data, filename: imageName },
   }, ctx);
 
-  // 13. Newsletter (nur wenn angehakt und RESEND_AUDIENCE_ID gesetzt ist)
+  // Newsletter (nur wenn angehakt und RESEND_AUDIENCE_ID gesetzt ist)
   const newsletterDelivery = newsletter ? await subscribeNewsletter(email, name, ctx) : { status: 'skipped' as const };
 
-  // 14. Antwort mit Tageszähler-Cookie
+  // Antwort mit Tageszähler-Cookie
   res.setHeader('Set-Cookie', counterCookie(cookie + 1, today));
   delivered = true;
   return res.status(200).json({ ok: true, leadId, image: { mime: gen.mime, data: gen.data }, delivery: {
@@ -914,20 +918,11 @@ async function handleBeratung(req: any, res: any, body: BeratungBody, ctx: Reque
   const attachments: { filename: string; content: string }[] = [];
   let fileLabel = 'keine Datei';
   if (body.file) {
-    const f = body.file;
-    if (typeof f.data !== 'string' || f.data.length > MAX_FILE_BASE64) return bad(res, 'Die Datei ist zu gross (übertragen max. 3 MB).');
-    if (!/^(image\/(jpeg|png|webp)|application\/pdf)$/.test(f.mime || '')) return bad(res, 'Bitte ein Bild (JPEG, PNG, WebP) oder ein PDF hochladen.');
-    try {
-      f.data = normalizeBase64(f.data, MAX_FILE_BASE64);
-      const bytes = Buffer.from(f.data, 'base64');
-      if (f.mime === 'application/pdf') {
-        if (bytes.length < 8 || bytes.subarray(0, 5).toString('ascii') !== '%PDF-') throw new Error('Invalid PDF');
-      } else validateImageBytes(bytes, f.mime);
-    } catch { return bad(res, 'Die Datei ist ungültig oder zu gross.'); }
-    if (imageWanted && !f.mime.startsWith('image/')) return bad(res, 'Für ein Ideenbild benötigen wir ein Foto des Raums.');
-    const ext = f.mime === 'application/pdf' ? 'pdf' : f.mime === 'image/png' ? 'png' : f.mime === 'image/webp' ? 'webp' : 'jpg';
-    fileLabel = `beratung.${ext}`;
-    attachments.push({ filename: fileLabel, content: f.data });
+    const file = readAttachment(body.file, 'beratung');
+    if (typeof file === 'string') return bad(res, file);
+    if (imageWanted && !body.file.mime.startsWith('image/')) return bad(res, 'Für ein Ideenbild benötigen wir ein Foto des Raums.');
+    fileLabel = file.filename;
+    attachments.push(file);
   }
   if (imageWanted && attachments.length === 0) return bad(res, 'Für ein Ideenbild benötigen wir ein Foto des Raums.');
 
@@ -969,7 +964,7 @@ async function handleBeratung(req: any, res: any, body: BeratungBody, ctx: Reque
 
 /* ---------- kind: grundriss ---------- */
 
-async function handleGrundriss(req: any, res: any, body: GrundrissBody, ctx: RequestContext) {
+async function handleGrundriss(res: any, body: GrundrissBody, ctx: RequestContext) {
   const name = text(body.name, 120);
   const phone = text(body.telefon ?? body.phone, 60);
   const leadId = text(body.leadId, 40);
@@ -980,18 +975,9 @@ async function handleGrundriss(req: any, res: any, body: GrundrissBody, ctx: Req
 
   const attachments: { filename: string; content: string }[] = [];
   if (body.file) {
-    const f = body.file;
-    if (typeof f.data !== 'string' || f.data.length > MAX_FILE_BASE64) return bad(res, 'Die Datei ist zu gross (übertragen max. 3 MB).');
-    if (!/^(image\/(jpeg|png|webp)|application\/pdf)$/.test(f.mime || '')) return bad(res, 'Bitte ein Bild (JPEG, PNG, WebP) oder ein PDF hochladen.');
-    try {
-      f.data = normalizeBase64(f.data, MAX_FILE_BASE64);
-      const bytes = Buffer.from(f.data, 'base64');
-      if (f.mime === 'application/pdf') {
-        if (bytes.length < 8 || bytes.subarray(0, 5).toString('ascii') !== '%PDF-') throw new Error('Invalid PDF');
-      } else validateImageBytes(bytes, f.mime);
-    } catch { return bad(res, 'Die Datei ist ungültig oder zu gross.'); }
-    const ext = f.mime === 'application/pdf' ? 'pdf' : f.mime === 'image/png' ? 'png' : f.mime === 'image/webp' ? 'webp' : 'jpg';
-    attachments.push({ filename: `grundriss.${ext}`, content: f.data });
+    const file = readAttachment(body.file, 'grundriss');
+    if (typeof file === 'string') return bad(res, file);
+    attachments.push(file);
   }
 
   const details: [string, string][] = [
@@ -1022,6 +1008,22 @@ async function handleGrundriss(req: any, res: any, body: GrundrissBody, ctx: Req
 /** Lieferant, Serie und Farbe, ohne Doppelung wenn die Serie so heisst wie die Farbe. */
 function tileName(t: { supplier: string; series: string; color: string }): string {
   return t.series === t.color ? `${t.supplier} ${t.series}` : `${t.supplier} ${t.series} ${t.color}`;
+}
+
+/** Foto oder PDF zu Beratung und Grundriss: Groesse, Typ und Signatur. Fehler als Text fuer den Kunden. */
+function readAttachment(f: { mime: string; data: string }, baseName: string): { filename: string; content: string } | string {
+  if (typeof f.data !== 'string' || f.data.length > MAX_PLAN_BASE64) return 'Die Datei ist zu gross (übertragen max. 3 MB).';
+  if (!/^(image\/(jpeg|png|webp)|application\/pdf)$/.test(f.mime || '')) return 'Bitte ein Bild (JPEG, PNG, WebP) oder ein PDF hochladen.';
+  let content: string;
+  try {
+    content = normalizeBase64(f.data, MAX_PLAN_BASE64);
+    const bytes = Buffer.from(content, 'base64');
+    if (f.mime === 'application/pdf') {
+      if (bytes.length < 8 || bytes.subarray(0, 5).toString('ascii') !== '%PDF-') throw new Error('Invalid PDF');
+    } else validateImageBytes(bytes, f.mime);
+  } catch { return 'Die Datei ist ungültig oder zu gross.'; }
+  const ext = f.mime === 'application/pdf' ? 'pdf' : f.mime === 'image/png' ? 'png' : f.mime === 'image/webp' ? 'webp' : 'jpg';
+  return { filename: `${baseName}.${ext}`, content };
 }
 
 /** Foto aus dem neuen Feld `foto` (data-URL) oder aus dem alten Feld `photo`. */
@@ -1306,6 +1308,32 @@ const order = (value: any): Fixture[] | null => {
 const nearest = (value: any): Fixture | 'none' | null =>
   value === 'none' || FIXTURES.includes(value) ? value : null;
 
+/** Pruefmodell fuer Foto und Ideenbild; BADPLANER_CHECK_MODEL leer = Pruefungen bewusst aus. */
+const checkModel = (): string => (env.BADPLANER_CHECK_MODEL ?? 'gemini-3.6-flash').trim();
+
+/**
+ * Eine Frage mit Bildern an das Pruefmodell, Antwort als JSON. Liefert die gelesene
+ * Antwort oder den Grund, warum keine kam; der Grund steht so in der Lead-Mail.
+ */
+async function askCheckModel(model: string, question: string, images: Photo[], timeoutMs: number, ctx: RequestContext): Promise<{ answer: any } | { detail: string }> {
+  try {
+    const r = await request(ctx, `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+      method: 'POST',
+      headers: { 'x-goog-api-key': env.GEMINI_API_KEY || '', 'content-type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ role: 'user', parts: [{ text: question }, ...images.map((image) => ({ inlineData: { mimeType: image.mime, data: image.data } }))] }],
+        generationConfig: { temperature: 0, responseMimeType: 'application/json', ...checkThinking(model) },
+      }),
+    }, Math.min(timeoutMs, Math.max(0, ctx.budget.remaining() - DELIVERY_RESERVE_MS)));
+    if (!r.ok) return { detail: `HTTP ${r.status}` };
+    const candidate = r.json?.candidates?.[0];
+    if (candidate?.finishReason !== 'STOP') return { detail: `Abbruch: ${candidate?.finishReason || 'unbekannt'}` };
+    return { answer: JSON.parse(candidate.content?.parts?.map((p: any) => p.text || '').join('') || '') };
+  } catch (err: any) {
+    return { detail: err && (err.name === 'AbortError' || err.name === 'TimeoutError') ? 'Timeout' : String(err?.message || err).slice(0, 120) };
+  }
+}
+
 /**
  * Fragt ein Gemini-Textmodell, ob das Ideenbild eine Öffnung (Fenster, Dachfenster,
  * Tür, Glasfläche) enthält, die im Foto nicht da ist. Nicht verfügbare oder
@@ -1319,9 +1347,8 @@ async function checkOpenings(
   ctx: RequestContext,
   timeoutMs = CHECK_TIMEOUT_MS,
 ): Promise<CheckResult> {
-  const model = env.BADPLANER_CHECK_MODEL === undefined ? 'gemini-3.6-flash' : env.BADPLANER_CHECK_MODEL;
-  if (!model?.trim()) return { status: 'disabled' };
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+  const model = checkModel();
+  if (!model) return { status: 'disabled' };
   const question =
     'Image 1 is a room before renovation. Image 2 is the edited result. Report only what you can see, do not judge whether it is good. ' +
     'For image 1 and for image 2, name the wall each sanitary fixture stands against, seen from the camera: "left", "right", "back", "front", or "none" when that fixture is not visible at all. ' +
@@ -1355,107 +1382,82 @@ async function checkOpenings(
     '"toilet_on_low_wall_before":false,"toilet_on_low_wall_after":false,"new_wall_element":false,"wall_element_lost":false,' +
     '"foreground_object_before":false,"foreground_object_after":false,"window_much_bigger":false,"point_drain":false,"drain_on_long_side":false,"shower_fittings_split":false,"drain_wall":"none","fittings_wall":"none","shower_wider_than_deep":false,' +
     '"extra_openings":false,"view_changed":false,"reason":"short English note, max 25 words"}';
-  try {
-    const r = await request(ctx, url, {
-      method: 'POST',
-      headers: { 'x-goog-api-key': env.GEMINI_API_KEY || '', 'content-type': 'application/json' },
-      body: JSON.stringify({
-        contents: [
-          {
-            role: 'user',
-            parts: [
-              { text: question },
-              { inlineData: { mimeType: photo.mime, data: photo.data } },
-              { inlineData: { mimeType: gen.mime, data: gen.data } },
-            ],
-          },
-        ],
-        generationConfig: { temperature: 0, responseMimeType: 'application/json', ...checkThinking(model) },
-      }),
-    }, Math.min(timeoutMs, Math.max(0, ctx.budget.remaining() - DELIVERY_RESERVE_MS)));
-    const json = r.json;
-    if (!r.ok) {
-      console.error('[badplaner] Fensterprüfung fehlgeschlagen', r.status);
-      return { status: 'unavailable', detail: `HTTP ${r.status}` };
-    }
-    const textOut: string = json?.candidates?.[0]?.content?.parts?.map((p: any) => p.text || '').join('') || '';
-    if (json?.candidates?.[0]?.finishReason !== 'STOP') return { status: 'unavailable', detail: `Abbruch: ${json?.candidates?.[0]?.finishReason || 'unbekannt'}` };
-    const parsed = JSON.parse(textOut);
-    const keys = ['before', 'after', 'order_before', 'order_after', 'nearest_before', 'nearest_after',
-      'toilet_on_low_wall_before', 'toilet_on_low_wall_after', 'new_wall_element', 'wall_element_lost', 'foreground_object_before', 'foreground_object_after',
-      'window_much_bigger', 'point_drain', 'drain_on_long_side', 'shower_fittings_split', 'drain_wall', 'fittings_wall', 'shower_wider_than_deep',
-      'extra_openings', 'view_changed', 'reason'];
-    // Die zwei Vermerke zur Rinne und zu den Armaturen sind neu; fehlen sie, gilt "nein".
-    const optionalFlag = (key: string) => parsed?.[key] === undefined || typeof parsed[key] === 'boolean';
-    const optionalWall = (key: string) => parsed?.[key] === undefined || WALLS.includes(parsed[key]);
-    const before = inventory(parsed?.before);
-    const after = inventory(parsed?.after);
-    const orderBefore = order(parsed?.order_before);
-    const orderAfter = order(parsed?.order_after);
-    const nearestBefore = nearest(parsed?.nearest_before);
-    const nearestAfter = nearest(parsed?.nearest_after);
-    if (!parsed || Array.isArray(parsed) || !before || !after || !orderBefore || !orderAfter || !nearestBefore || !nearestAfter
-      || typeof parsed.toilet_on_low_wall_before !== 'boolean' || typeof parsed.toilet_on_low_wall_after !== 'boolean'
-      || typeof parsed.new_wall_element !== 'boolean' || typeof parsed.wall_element_lost !== 'boolean' || typeof parsed.point_drain !== 'boolean'
-      || typeof parsed.foreground_object_before !== 'boolean' || typeof parsed.foreground_object_after !== 'boolean'
-      || typeof parsed.window_much_bigger !== 'boolean' || !optionalFlag('drain_on_long_side') || !optionalFlag('shower_fittings_split')
-      || !optionalFlag('shower_wider_than_deep') || !optionalWall('drain_wall') || !optionalWall('fittings_wall')
-      || typeof parsed.extra_openings !== 'boolean' || typeof parsed.view_changed !== 'boolean'
-      || typeof parsed.reason !== 'string' || !parsed.reason.trim() || parsed.reason.length > 200
-      || Object.keys(parsed).some((key) => !keys.includes(key))) return { status: 'unavailable', detail: 'Antwort unlesbar' };
-    const wallAnswers = Object.fromEntries(['toilet_on_low_wall_before', 'toilet_on_low_wall_after', 'new_wall_element', 'wall_element_lost',
-      'foreground_object_before', 'foreground_object_after', 'window_much_bigger'].map((key) => [key, parsed[key] as boolean]));
-    const flags: CheckFlags = { extra_openings: parsed.extra_openings, view_changed: parsed.view_changed, before, after, orderBefore, orderAfter, nearestBefore, nearestAfter, wallAnswers };
-    const lowWallLost = parsed.toilet_on_low_wall_before && !parsed.toilet_on_low_wall_after
-      ? 'the low wall the toilet stood against is gone, so the toilet no longer sits where it did'
-      : null;
-    // Ein Muretto, das im Foto nicht da ist, gibt es im Umbau nicht (Diego, 19.09.). Beim Aufputz-
-    // Spuelkasten zaehlt das Glasmodul nicht: die Pruefung liest es manchmal als Vorwand.
-    const wallAdded = parsed.new_wall_element || (wanted.cistern === 'unterputz' && !parsed.toilet_on_low_wall_before && parsed.toilet_on_low_wall_after)
-      ? 'a low wall, ledge, shelf or niche that is not in the photo was added; where the photo shows a flat wall, the result must show the same flat wall'
-      : null;
-    const wallLost = parsed.wall_element_lost
-      ? 'a recess, alcove, niche or step of the wall that is in the photo was filled in or straightened; every recess and wall step of the photo must stay'
-      : null;
-    // Steht im Foto vorne am Bildrand die offene Tuer und fehlt sie im Ideenbild,
-    // hat das Modell den Blickwinkel gedreht: der Kunde erkennt sein Bad nicht wieder.
-    const foregroundLost = parsed.foreground_object_before && !parsed.foreground_object_after
-      ? 'what stood in the foreground of the photo, at the edge of the picture, is gone, so the view is no longer the same'
-      : null;
-    const zoomedIn = parsed.window_much_bigger
-      ? 'the window takes up much more of the result than of the photo, so the camera moved closer'
-      : null;
-    const fault = compareInventory(before, after, wanted)
-      || compareOrder(orderBefore, orderAfter)
-      || compareDepth(before, after, nearestBefore, nearestAfter)
-      || lowWallLost
-      || wallAdded
-      || wallLost
-      || foregroundLost
-      || zoomedIn;
-    if (flags.extra_openings) return { status: 'rejected', reason: `an opening was added or lost (${parsed.reason.slice(0, 120)})`, flags };
-    if (fault) return { status: 'rejected', reason: fault, flags };
-    // Ein anderer Bildausschnitt allein ist kein Grund, dem Kunden nichts zu zeigen:
-    // Fenster, WC, Wände und Ausstattung stimmen dann ja. Er wird nur vermerkt.
-    // Rinne und Armaturen der Walk-in-Dusche werden nur vermerkt (siehe handleRender).
-    // Die Rinne gehoert an den Fuss der Armaturenwand; bei einer Dusche breiter als tief nie an die Rueckwand.
-    const drainWall: Wall | undefined = parsed.drain_wall;
-    const fittingsWall: Wall | undefined = parsed.fittings_wall;
-    const drainOnLongSide = parsed.drain_on_long_side === true
-      || (!!drainWall && drainWall !== 'none' && !!fittingsWall && fittingsWall !== 'none' && drainWall !== fittingsWall)
-      || (parsed.shower_wider_than_deep === true && drainWall === 'back');
-    if (wanted.linearDrain) console.info('[badplaner] Walk-in:', `Rinne ${drainWall ?? '-'}, Armaturen ${fittingsWall ?? '-'}, breiter als tief ${parsed.shower_wider_than_deep ?? '-'}`);
-    const hints = wanted.linearDrain ? [
-      parsed.point_drain && 'Punktablauf statt Duschrinne gezeichnet',
-      drainOnLongSide && 'Duschrinne an der Längsseite statt an der Schmalseite',
-      parsed.shower_fittings_split === true && 'Duscharmaturen an zwei Wänden statt alle an der Schmalseite',
-    ].filter((hint): hint is string => !!hint) : [];
-    return flags.view_changed ? { status: 'approved', note: parsed.reason.slice(0, 200), hints } : { status: 'approved', hints };
-  } catch (err: any) {
-    const detail = err && (err.name === 'AbortError' || err.name === 'TimeoutError') ? 'Timeout' : String(err?.message || err).slice(0, 120);
-    console.error('[badplaner] Fensterprüfung nicht möglich', detail);
-    return { status: 'unavailable', detail };
+  const reply = await askCheckModel(model, question, [photo, gen], timeoutMs, ctx);
+  if ('detail' in reply) {
+    console.error('[badplaner] Fensterprüfung nicht möglich', reply.detail);
+    return { status: 'unavailable', detail: reply.detail };
   }
+  const parsed = reply.answer;
+  const keys = ['before', 'after', 'order_before', 'order_after', 'nearest_before', 'nearest_after',
+    'toilet_on_low_wall_before', 'toilet_on_low_wall_after', 'new_wall_element', 'wall_element_lost', 'foreground_object_before', 'foreground_object_after',
+    'window_much_bigger', 'point_drain', 'drain_on_long_side', 'shower_fittings_split', 'drain_wall', 'fittings_wall', 'shower_wider_than_deep',
+    'extra_openings', 'view_changed', 'reason'];
+  // Die zwei Vermerke zur Rinne und zu den Armaturen sind neu; fehlen sie, gilt "nein".
+  const optionalFlag = (key: string) => parsed?.[key] === undefined || typeof parsed[key] === 'boolean';
+  const optionalWall = (key: string) => parsed?.[key] === undefined || WALLS.includes(parsed[key]);
+  const before = inventory(parsed?.before);
+  const after = inventory(parsed?.after);
+  const orderBefore = order(parsed?.order_before);
+  const orderAfter = order(parsed?.order_after);
+  const nearestBefore = nearest(parsed?.nearest_before);
+  const nearestAfter = nearest(parsed?.nearest_after);
+  if (!parsed || Array.isArray(parsed) || !before || !after || !orderBefore || !orderAfter || !nearestBefore || !nearestAfter
+    || typeof parsed.toilet_on_low_wall_before !== 'boolean' || typeof parsed.toilet_on_low_wall_after !== 'boolean'
+    || typeof parsed.new_wall_element !== 'boolean' || typeof parsed.wall_element_lost !== 'boolean' || typeof parsed.point_drain !== 'boolean'
+    || typeof parsed.foreground_object_before !== 'boolean' || typeof parsed.foreground_object_after !== 'boolean'
+    || typeof parsed.window_much_bigger !== 'boolean' || !optionalFlag('drain_on_long_side') || !optionalFlag('shower_fittings_split')
+    || !optionalFlag('shower_wider_than_deep') || !optionalWall('drain_wall') || !optionalWall('fittings_wall')
+    || typeof parsed.extra_openings !== 'boolean' || typeof parsed.view_changed !== 'boolean'
+    || typeof parsed.reason !== 'string' || !parsed.reason.trim() || parsed.reason.length > 200
+    || Object.keys(parsed).some((key) => !keys.includes(key))) return { status: 'unavailable', detail: 'Antwort unlesbar' };
+  const wallAnswers = Object.fromEntries(['toilet_on_low_wall_before', 'toilet_on_low_wall_after', 'new_wall_element', 'wall_element_lost',
+    'foreground_object_before', 'foreground_object_after', 'window_much_bigger'].map((key) => [key, parsed[key] as boolean]));
+  const flags: CheckFlags = { extra_openings: parsed.extra_openings, view_changed: parsed.view_changed, before, after, orderBefore, orderAfter, nearestBefore, nearestAfter, wallAnswers };
+  const lowWallLost = parsed.toilet_on_low_wall_before && !parsed.toilet_on_low_wall_after
+    ? 'the low wall the toilet stood against is gone, so the toilet no longer sits where it did'
+    : null;
+  // Ein Muretto, das im Foto nicht da ist, gibt es im Umbau nicht (Diego, 19.09.). Beim Aufputz-
+  // Spuelkasten zaehlt das Glasmodul nicht: die Pruefung liest es manchmal als Vorwand.
+  const wallAdded = parsed.new_wall_element || (wanted.cistern === 'unterputz' && !parsed.toilet_on_low_wall_before && parsed.toilet_on_low_wall_after)
+    ? 'a low wall, ledge, shelf or niche that is not in the photo was added; where the photo shows a flat wall, the result must show the same flat wall'
+    : null;
+  const wallLost = parsed.wall_element_lost
+    ? 'a recess, alcove, niche or step of the wall that is in the photo was filled in or straightened; every recess and wall step of the photo must stay'
+    : null;
+  // Steht im Foto vorne am Bildrand die offene Tuer und fehlt sie im Ideenbild,
+  // hat das Modell den Blickwinkel gedreht: der Kunde erkennt sein Bad nicht wieder.
+  const foregroundLost = parsed.foreground_object_before && !parsed.foreground_object_after
+    ? 'what stood in the foreground of the photo, at the edge of the picture, is gone, so the view is no longer the same'
+    : null;
+  const zoomedIn = parsed.window_much_bigger
+    ? 'the window takes up much more of the result than of the photo, so the camera moved closer'
+    : null;
+  const fault = compareInventory(before, after, wanted)
+    || compareOrder(orderBefore, orderAfter)
+    || compareDepth(after, nearestBefore, nearestAfter)
+    || lowWallLost
+    || wallAdded
+    || wallLost
+    || foregroundLost
+    || zoomedIn;
+  if (flags.extra_openings) return { status: 'rejected', reason: `an opening was added or lost (${parsed.reason.slice(0, 120)})`, flags };
+  if (fault) return { status: 'rejected', reason: fault, flags };
+  // Ein anderer Bildausschnitt allein ist kein Grund, dem Kunden nichts zu zeigen:
+  // Fenster, WC, Wände und Ausstattung stimmen dann ja. Er wird nur vermerkt.
+  // Rinne und Armaturen der Walk-in-Dusche werden nur vermerkt (siehe handleRender).
+  // Die Rinne gehoert an den Fuss der Armaturenwand; bei einer Dusche breiter als tief nie an die Rueckwand.
+  const drainWall: Wall | undefined = parsed.drain_wall;
+  const fittingsWall: Wall | undefined = parsed.fittings_wall;
+  const drainOnLongSide = parsed.drain_on_long_side === true
+    || (!!drainWall && drainWall !== 'none' && !!fittingsWall && fittingsWall !== 'none' && drainWall !== fittingsWall)
+    || (parsed.shower_wider_than_deep === true && drainWall === 'back');
+  if (wanted.linearDrain) console.info('[badplaner] Walk-in:', `Rinne ${drainWall ?? '-'}, Armaturen ${fittingsWall ?? '-'}, breiter als tief ${parsed.shower_wider_than_deep ?? '-'}`);
+  const hints = wanted.linearDrain ? [
+    parsed.point_drain && 'Punktablauf statt Duschrinne gezeichnet',
+    drainOnLongSide && 'Duschrinne an der Längsseite statt an der Schmalseite',
+    parsed.shower_fittings_split === true && 'Duscharmaturen an zwei Wänden statt alle an der Schmalseite',
+  ].filter((hint): hint is string => !!hint) : [];
+  return flags.view_changed ? { status: 'approved', note: parsed.reason.slice(0, 200), hints } : { status: 'approved', hints };
 }
 
 /**
@@ -1472,9 +1474,8 @@ interface Layout { walls: Inventory; order: Fixture[]; nearest: Fixture | 'none'
 type PhotoCheck = { status: 'ok'; layout?: Layout } | { status: 'wrong_room'; reason: string } | { status: 'unavailable' };
 
 async function checkPhoto(photo: Photo, room: 'badezimmer' | 'gaeste-wc', ctx: RequestContext): Promise<PhotoCheck> {
-  const model = env.BADPLANER_CHECK_MODEL === undefined ? 'gemini-3.6-flash' : env.BADPLANER_CHECK_MODEL;
-  if (!model?.trim()) return { status: 'unavailable' };
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+  const model = checkModel();
+  if (!model) return { status: 'unavailable' };
   const question =
     `A customer uploaded this photo as the ${room === 'gaeste-wc' ? 'guest WC' : 'bathroom'} they want renovated. ` +
     'Set is_bathroom true if it shows the inside of a bathroom or a WC, or a room being stripped or built as one: a toilet, a washbasin, a shower, a bathtub, a bidet, a tiled wet area or exposed sanitary pipes is enough. ' +
@@ -1484,36 +1485,21 @@ async function checkPhoto(photo: Photo, room: 'badezimmer' | 'gaeste-wc', ctx: R
     'List the visible fixtures in the order you see them from left to right, each at most once, and name the one closest to the camera, or "none" when you cannot tell. ' +
     'Answer with JSON only, no markdown and exactly these keys: {"is_bathroom":true,"reason":"short English reason, max 25 words",' +
     '"walls":{"toilet":"left","washbasin":"left","shower":"none","bathtub":"none","bidet":"none"},"order":["washbasin","toilet"],"nearest":"toilet"}';
-  try {
-    const r = await request(ctx, url, {
-      method: 'POST',
-      headers: { 'x-goog-api-key': env.GEMINI_API_KEY || '', 'content-type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: question }, { inlineData: { mimeType: photo.mime, data: photo.data } }] }],
-        generationConfig: { temperature: 0, responseMimeType: 'application/json', ...checkThinking(model) },
-      }),
-    }, Math.min(PHOTO_CHECK_TIMEOUT_MS, Math.max(0, ctx.budget.remaining() - DELIVERY_RESERVE_MS)));
-    if (!r.ok) {
-      console.error('[badplaner] Fotopruefung fehlgeschlagen', r.status);
-      return { status: 'unavailable' };
-    }
-    const json = r.json;
-    if (json?.candidates?.[0]?.finishReason !== 'STOP') return { status: 'unavailable' };
-    const textOut: string = json?.candidates?.[0]?.content?.parts?.map((p: any) => p.text || '').join('') || '';
-    const parsed = JSON.parse(textOut);
-    if (!parsed || Array.isArray(parsed) || typeof parsed.is_bathroom !== 'boolean' || typeof parsed.reason !== 'string'
-      || !parsed.reason.trim() || parsed.reason.length > 200
-      || Object.keys(parsed).some((key) => !['is_bathroom', 'reason', 'walls', 'order', 'nearest'].includes(key))) return { status: 'unavailable' };
-    if (!parsed.is_bathroom) return { status: 'wrong_room', reason: parsed.reason.slice(0, 200) };
-    // Der Grundriss ist eine Zugabe: fehlt er oder ist er unlesbar, wird ohne ihn gerendert.
-    const walls = inventory(parsed.walls);
-    const seen = order(parsed.order);
-    const near = nearest(parsed.nearest);
-    return walls && seen && near ? { status: 'ok', layout: { walls, order: seen, nearest: near } } : { status: 'ok' };
-  } catch {
-    console.error('[badplaner] Fotopruefung nicht moeglich');
+  const reply = await askCheckModel(model, question, [photo], PHOTO_CHECK_TIMEOUT_MS, ctx);
+  if ('detail' in reply) {
+    console.error('[badplaner] Fotopruefung nicht moeglich', reply.detail);
     return { status: 'unavailable' };
   }
+  const parsed = reply.answer;
+  if (!parsed || Array.isArray(parsed) || typeof parsed.is_bathroom !== 'boolean' || typeof parsed.reason !== 'string'
+    || !parsed.reason.trim() || parsed.reason.length > 200
+    || Object.keys(parsed).some((key) => !['is_bathroom', 'reason', 'walls', 'order', 'nearest'].includes(key))) return { status: 'unavailable' };
+  if (!parsed.is_bathroom) return { status: 'wrong_room', reason: parsed.reason.slice(0, 200) };
+  // Der Grundriss ist eine Zugabe: fehlt er oder ist er unlesbar, wird ohne ihn gerendert.
+  const walls = inventory(parsed.walls);
+  const seen = order(parsed.order);
+  const near = nearest(parsed.nearest);
+  return walls && seen && near ? { status: 'ok', layout: { walls, order: seen, nearest: near } } : { status: 'ok' };
 }
 
 /**
@@ -1537,7 +1523,6 @@ function compareOrder(before: Fixture[], after: Fixture[]): string | null {
  * Ein weggeraeumtes Stueck loest die Regel nicht aus.
  */
 function compareDepth(
-  before: Inventory,
   after: Inventory,
   nearestBefore: Fixture | 'none',
   nearestAfter: Fixture | 'none',
