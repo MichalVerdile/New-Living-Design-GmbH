@@ -535,7 +535,7 @@ test('der zweite Versuch bekommt die ganze Liste noch einmal mit', async () => {
   assert.ok(retryPrompt.startsWith(generations[0].body.contents[0].parts[0].text));
   assert.match(retryPrompt, /A previous attempt failed the check because the toilet moved from the left wall to the right wall\. Start again from image 1 and correct exactly that/);
   assert.match(retryPrompt, /The vanity unit is not loose furniture and stays/);
-  assert.match(retryPrompt, /Whatever stands in the immediate foreground at the edge of image 1/);
+  assert.match(retryPrompt, /Whatever is built in the immediate foreground at the edge of image 1/);
 });
 
 test('eine verschwundene Tuer im Vordergrund loest den zweiten Versuch aus', async () => {
@@ -576,6 +576,8 @@ test('die Pruefung fragt nach dem Vordergrund, der ganz verschwindet, nicht nach
     .map((call) => call.body.contents[0].parts[0].text).find((text) => text.includes('foreground_object_after'));
   assert.match(question, /still visible at the edge of image 2 at any size, even as a narrow strip/);
   assert.match(question, /foreground_object_after is false only when it is gone completely/);
+  // Ein loses Moebel vorne soll weg (Jonathan, 25.09.): es zaehlt nicht als Vordergrund.
+  assert.match(question, /an open door leaf, a door frame or the near edge of a wall; loose furniture does not count/);
 });
 
 test('ein Vordergrund, der im Foto gar nicht da war, ist kein Fehler', async () => {
@@ -591,7 +593,10 @@ test('der Prompt haelt den Vordergrund und den Waschtischunterbau fest', async (
   await h.invoke();
   const prompt = h.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
   // Der Tuerfluegel im Vordergrund gehoert zum Bild.
-  assert.match(prompt, /Whatever stands in the immediate foreground at the edge of image 1 belongs to the picture and stays: an open door leaf, a door frame, the edge of a wall, a piece of furniture cut off by the border\. It keeps its place and takes up the same part of the picture as before, and is never removed to show more of the room/);
+  assert.match(prompt, /Whatever is built in the immediate foreground at the edge of image 1 belongs to the picture and stays: an open door leaf, a door frame, the edge of a wall\. It keeps its place and takes up the same part of the picture as before, and is never removed to show more of the room/);
+  // Jonathan am 25.09.: der lose Schrank vorne sollte bleiben und zugleich weg. Er geht, die Kamera bleibt.
+  assert.match(prompt, /A loose piece of furniture at the edge is removed like all loose furniture: .*the camera stays exactly where it is/);
+  assert.match(prompt, /loose furniture, also a cabinet or shelf cut off at the edge of the picture/);
   assert.match(prompt, /the same door and, at the edge of the picture, the same door leaf or frame in the foreground if image 1 has one/);
   // P5 vom 25.09.: "Keep the radiators" brachte einen Heizkoerper, den das Foto nicht hat.
   assert.match(prompt, /a radiator only where image 1 has one/);
@@ -1382,7 +1387,7 @@ test('the image prompt carries no leftover source code (quote, plus, indentation
   const prompt = gen.body.contents[0].parts[0].text;
   // Seit 637f03a stand mitten im Prompt woertlich: "\n    + " (aus einem Template-String).
   assert.doesNotMatch(prompt, /"\s*\n\s*\+\s*"/);
-  assert.match(prompt, /never create extra floor area\. Whatever stands in the immediate foreground/);
+  assert.match(prompt, /never create extra floor area\. Whatever is built in the immediate foreground/);
 });
 
 test('beide Pruefungen denken wenig, das Bildmodell bleibt unveraendert', async () => {
