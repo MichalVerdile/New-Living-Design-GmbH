@@ -598,6 +598,26 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
         : 'Auf Ihrem Foto erkennen wir kein Bad und kein WC. Ihre Angaben und Ihr Foto sind bei uns. Wir melden uns persönlich bei Ihnen.',
     });
   }
+  // Jonathan am 25.09.: Gaeste-WC gewaehlt, im Foto aber ein Bad mit Wanne oder Dusche. Das Modell behielt
+  // sie oder raeumte sie weg, und die Pruefung verwarf alle vier Bilder. Das sagt der Badplaner jetzt vorher.
+  const photoWalls = photoCheck.status === 'ok' ? photoCheck.layout?.walls : undefined;
+  const bath = photoWalls ? [photoWalls.bathtub !== 'none' && 'eine Badewanne', photoWalls.shower !== 'none' && 'eine Dusche'].filter(Boolean).join(' und ') : '';
+  if (isGuestWc && bath) {
+    console.warn('[badplaner] Gaeste-WC gewaehlt, Foto zeigt', bath);
+    const bathDelivery = await sendLeadMail({
+      subject: preview ? 'Badplaner-Fehler ohne Kontakt – Gäste-WC – Foto zeigt ein Bad' : `Badplaner-Lead: ${name} - Gaeste-WC - Foto zeigt ein Bad`,
+      replyTo: email || undefined,
+      intro: `Gäste-WC gewählt, auf dem Foto ist aber ${bath} zu sehen. Es wurde kein Ideenbild erzeugt; der Besucher wurde gebeten, «Badezimmer» zu wählen. Foto und Auswahl liegen bei.`,
+      details: leadDetails(`nicht nötig: Gäste-WC gewählt, Foto zeigt ${bath}`, 'nicht erzeugt: Foto zeigt ein Bad, kein Gäste-WC'),
+      attachments: [{ filename: photoName, content: photo.data }],
+    }, ctx);
+    delivered = true;
+    return res.status(422).json({
+      ok: false, code: 'GUEST_WC_WITH_BATH',
+      delivery: { lead: bathDelivery.status, leadProvider: bathDelivery.provider, leadAttachments: bathDelivery.attachments },
+      error: `Auf Ihrem Foto sehen wir ${bath}. Das Gäste-WC planen wir ohne Dusche und Badewanne. Bitte wählen Sie in Schritt 1 «Badezimmer» und laden Sie das Foto danach nochmals hoch.`,
+    });
+  }
 
   console.info('[badplaner] Seitenverhältnis', photoRatio || 'automatisch');
   // Wenn der Bilddienst nichts liefert, war der Kunde trotzdem da: Name, Telefon

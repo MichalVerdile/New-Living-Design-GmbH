@@ -1621,6 +1621,25 @@ test('Gaeste-WC: dieselbe Armaturenserie wie im Bad, nur am Waschtisch, mit Bild
   assert.doesNotMatch(ran.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text, /product photo of the washbasin/);
 });
 
+test('Gaeste-WC gewaehlt, im Foto aber Wanne oder Dusche: Hinweis statt Bild', async () => {
+  // Jonathan am 25.09.: vier Gaeste-WC-Versuche mit Fotos von Baedern, vier verworfene Bilder.
+  const guest = previewPayload({ raum: 'gaeste-wc', dusche: '', badewanne: '', waschtisch: 'einzel' });
+  const photo = (walls) => () => photoChecked(true, JSON.stringify({ is_bathroom: true, reason: 'bathroom', walls: inv(walls), order: ['washbasin', 'toilet'], nearest: 'toilet' }));
+  const h = harness({ photoChecks: [photo({ bathtub: 'left' })] });
+  const res = await h.invoke(guest);
+  assert.equal(res.statusCode, 422);
+  assert.equal(res.body.code, 'GUEST_WC_WITH_BATH');
+  assert.match(res.body.error, /^Auf Ihrem Foto sehen wir eine Badewanne\. .*«Badezimmer»/);
+  assert.deepEqual(h.counts(), { generation: 0, checks: 0, mail: 1 });
+  assert.equal(res.headers['Set-Cookie'], undefined, 'kein Tagesversuch verbraucht');
+  const mail = h.calls.find((call) => call.url === 'https://api.resend.com/emails');
+  assert.match(mail.body.subject, /Gäste-WC – Foto zeigt ein Bad/);
+  assert.match(JSON.stringify(mail.body), /Foto zeigt eine Badewanne/);
+  // Ein echtes Gaeste-WC und ein Bad mit Dusche laufen weiter wie bisher.
+  assert.equal((await harness({ photoChecks: [photo({})] }).invoke(guest)).statusCode, 200);
+  assert.equal((await harness({ photoChecks: [photo({ shower: 'back' })] }).invoke(previewPayload())).statusCode, 200);
+});
+
 test('Bodenplatte und Akzent gehen als eigene Muster mit, mit ihrer Bildnummer im Prompt', async () => {
   // Der Kunde waehlt beide am Bild; das Modell bekam bis zum 25.09. nur ihren Namen.
   const image = () => new Response(Buffer.from(PNG, 'base64'), { status: 200, headers: { 'content-type': 'image/png' } });
