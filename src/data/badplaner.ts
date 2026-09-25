@@ -827,8 +827,8 @@ export const basinOptions: ChoiceOption[] = [
 export const mirrorOptions: ChoiceOption[] = [
   // Jonathan am 25.09.: mit einem Wort zeichnete das Modell in 10 von 12 Proben den alten Spiegel nach. Der neue
   // wird beschrieben, der alte ausdruecklich entfernt; das Bild dazu kommt aus server/badplaner/spiegel.ts.
-  { id: 'spiegelschrank', label: 'Spiegelschrank', prompt: 'new rectangular mirror cabinet as wide as the vanity, softly lighting the wall and the washbasin from its underside, with flush mirror doors and a slim LED light line on its front along the top and down both sides' },
-  { id: 'spiegel', label: 'Spiegel mit LED-Licht', prompt: 'new frameless rectangular mirror without a cabinet, as wide as the vanity, with a slim LED light line in the glass near its top edge' },
+  { id: 'spiegelschrank', label: 'Spiegelschrank', prompt: 'new rectangular mirror cabinet as wide as the vanity, softly lighting the wall and washbasin from its underside, with flush mirror doors and a slim LED light line on its front along the top and both sides' },
+  { id: 'spiegel', label: 'Spiegel mit LED-Licht', prompt: 'new frameless rectangular mirror without a cabinet, as wide as the vanity, that softly lights the wall above and below it with hidden LED light along its top and bottom edges' },
 ];
 
 /* ---------- Hilfen ---------- */

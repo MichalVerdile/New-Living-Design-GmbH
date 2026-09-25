@@ -1695,8 +1695,8 @@ test('ohne Dusche kein Duschset, die Wanne mit eigener Armatur', async () => {
 test('der neue Spiegel geht als Bild mit, der alte wird ausdruecklich entfernt', async () => {
   // Jonathan am 25.09.: mit einem Wort zeichnete das Modell in 10 von 12 Proben den alten Spiegel nach.
   for (const [spiegel, words] of [
-    ['spiegelschrank', /with new rectangular mirror cabinet as wide as the vanity, softly lighting the wall and the washbasin from its underside, with flush mirror doors and a slim LED light line on its front along the top and down both sides as in image \d+ above it, which replaces the old mirror or mirror cabinet and its lamp completely/],
-    ['spiegel', /with new frameless rectangular mirror without a cabinet, as wide as the vanity, with a slim LED light line in the glass near its top edge as in image \d+ above it, which replaces/],
+    ['spiegelschrank', /with new rectangular mirror cabinet as wide as the vanity, softly lighting the wall and washbasin from its underside, with flush mirror doors and a slim LED light line on its front along the top and both sides as in image \d+ above it, which replaces the old mirror or mirror cabinet and its lamp completely/],
+    ['spiegel', /with new frameless rectangular mirror without a cabinet, as wide as the vanity, that softly lights the wall above and below it with hidden LED light along its top and bottom edges as in image \d+ above it, which replaces/],
   ]) {
     const h = harness();
     await h.invoke(payload({ spiegel }));
