@@ -1664,6 +1664,21 @@ test('Gaeste-WC: dieselbe Armaturenserie wie im Bad, nur am Waschtisch, mit Bild
   assert.doesNotMatch(ranParts[0].text, /in a shower |overhead shower|hand shower/);
 });
 
+test('Armaturen: Colore mit Up+ hat in der Dusche drei runde Rosetten, keine Platte und keine Brausestange', async () => {
+  // Diego, 26.09.: Unterputz mit drei Rosetten (Brauseanschluss mit Handbrause, Mischer, Umsteller), wie bei Aurelia.
+  const colore = optionsForPackage('colore');
+  const h = harness({ checks: [() => checkedInv({}, { shower: 'back' })] });
+  await h.invoke(payload({ paket: 'colore', format: colore.formats[0], platte: colore.tiles[0].id, unterbau: colore.bases[0].id,
+    top: colore.tops[0].id, becken: 'aufsatz', armaturenserie: 'treemme-up', finish: colore.finishes[0].id, keramik: colore.sanitary[0].id,
+    wall: colore.walls[0].id, waschtisch: 'einzel', spiegel: colore.mirrors[0].id, dusche: 'walk-in', badewanne: 'keine' }));
+  const parts = h.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts;
+  assert.match(parts[0].text, /in a shower three small round wall rosettes in one row at the same height: .*stick hand shower .*thin pin lever hanging down, .*thin round overhead shower on a round tube arm/);
+  assert.doesNotMatch(parts[0].text, /rectangular wall plate|slide bar/);
+  const images = parts.filter((part) => part.inlineData);
+  assert.match(parts[0].text, new RegExp(`Image ${images.length} is only a product photo of the washbasin and shower fittings`));
+  assert.ok(images[images.length - 1].inlineData.data.startsWith('/9j/'));
+});
+
 test('Armaturen: Colore mit Ran zeigt die Renderings von Treemme, mit Dusche und mit Wanne', async () => {
   // Diego, 26.09.: vier Renderings von Ran. In T7 und T8 vom 25.09. zeichnete das Modell ohne Bild den Mischer aus dem Foto nach.
   const colore = optionsForPackage('colore');
