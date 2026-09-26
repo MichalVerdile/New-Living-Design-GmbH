@@ -1175,7 +1175,7 @@ function tapDescription(
   // am 26.09. drei Hebel und den Anschluss dazu, Katalog S. 16), Kopfbrause IT RTBR 376 CC (500 x 200).
   if (pkg === 'atelier') {
     return {
-      prompt: `concealed built-in (Unterputz) Treemme Aurelia fittings in ${finish.prompt}: at the washbasin exactly two separate small round wall rosettes (about 7.5 cm) side by side above the basin, no wall plate, no third handle: from the left one a long slim spout with flat facets runs about 20 cm out from the wall and bends gently down at its end, and the right one carries the only mixer, a short cylinder with a flat paddle lever hanging down; in a shower in one row at the same height: the hose outlet, a small round wall piece holding a slim stick hand shower upright on its hose, and beside it exactly two small round wall rosettes, each a short cylinder with the same flat lever, and above them on the same wall, just below the ceiling, a thin flat rectangular overhead shower plate (about 50 × 20 cm) that sticks straight out from the wall, fixed to it by its short end, with its nozzles facing down`,
+      prompt: `concealed built-in (Unterputz) Treemme Aurelia wall fittings in ${finish.prompt}: at each washbasin exactly two separate small round wall rosettes (about 7.5 cm) side by side above the basin, no wall plate and nothing between them: from the left one a long slim spout with flat facets runs about 20 cm out from the wall and bends gently down at its end, and the right one carries the only lever: a short cylinder with a flat paddle lever hanging down; in a shower in one row at the same height: the hose outlet, a small round wall piece holding a slim stick hand shower upright on its hose, and beside it exactly two small round wall rosettes, each a short cylinder with the same flat lever, and above them on the same wall, just below the ceiling, a thin flat rectangular overhead shower plate (about 50 × 20 cm) that sticks straight out from the wall, fixed to it by its short end, with its nozzles facing down`,
       label: `${finish.label}, ${seriesText}`,
     };
   }
@@ -1267,7 +1267,8 @@ function buildPrompt(v: {
     ? 'a product photo of the washbasin tap on a plain background, in chrome: copy its shape, its finish is the one named under CHANGE'
     // P1 vom 26.09.: das Modell setzte die zwei Hebel der Dusche an den Waschtisch, den Auslauf in die Mitte.
     : 'a product photo of the washbasin fittings and, apart, the shower fittings on a plain background, in chrome: copy their shapes, each only at its own place; their finish is the one named under CHANGE');
-  sample(v.bathImageNumber, 'a product photo of the bath mixer on a plain background: copy its shape, not its colour; its finish is the one named under CHANGE');
+  // Die Aurelia-Wannenplatte hat den Auslauf in der Mitte und zwei Hebel, wie der falsche Waschtisch in P1 vom 26.09.
+  sample(v.bathImageNumber, 'a product photo of the bath mixer on a plain background: copy its shape, not its colour, only at the bathtub; its finish is the one named under CHANGE');
   sample(v.mirrorImageNumber, 'a product photo of the new mirror on a plain background: copy its shape, its doors and its light; it replaces the old mirror of image 1');
   const references = samples.length ? ` ${samples.join(' ')} These images show materials and products, never a room or a layout.` : '';
   const asIn = (n: number) => (n ? ` as in image ${n}` : '');

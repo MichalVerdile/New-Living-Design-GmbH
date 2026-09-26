@@ -1667,10 +1667,10 @@ test('Armaturen: Atelier zeigt die Form von Treemme Aurelia in der gewaehlten Ob
   }));
   assert.equal(res.statusCode, 200, `unexpected status ${res.statusCode}: ${JSON.stringify(res.body).slice(0, 200)}`);
   const prompt = h.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
-  assert.match(prompt, /Treemme Aurelia fittings in brushed brass/);
+  assert.match(prompt, /Treemme Aurelia wall fittings in brushed brass/);
   // Artikel vom 25.09.: Waschtisch RWIT 2CC5 (zwei Rosetten statt Platte), Dusche RWIT 2CD9 mit Kopfbrause IT RTBR 376.
   // Nebeneinander, nicht uebereinander (Rendering von Treemme, Diego 26.09.).
-  assert.match(prompt, /exactly two separate small round wall rosettes .*side by side above the basin, no wall plate, no third handle: from the left one .*spout with flat facets .*the right one carries the only mixer, .*flat paddle lever hanging down/);
+  assert.match(prompt, /at each washbasin exactly two separate small round wall rosettes .*side by side above the basin, no wall plate and nothing between them: from the left one .*spout with flat facets .*the right one carries the only lever: .*flat paddle lever hanging down/);
   assert.doesNotMatch(prompt, /one above the other/);
   // Dusche RWIT 2CD9: der Brauseanschluss mit Handbrause und zwei Rosetten; mit "drei Rosetten" kamen am 26.09. drei Hebel und der Anschluss (P1).
   assert.match(prompt, /in a shower in one row at the same height: the hose outlet, a small round wall piece holding a slim stick hand shower upright on its hose, and beside it exactly two small round wall rosettes, each a short cylinder with the same flat lever, .*thin flat rectangular overhead shower plate \(about 50 × 20 cm\)/);
@@ -1714,7 +1714,7 @@ test('Gaeste-WC: dieselbe Armaturenserie wie im Bad, nur am Waschtisch, mit Bild
       spiegel: colore.mirrors[0].id }, /Treemme Up\+ fittings .*at the washbasin a slim cylindrical single-lever mixer/, 'a product photo of the washbasin tap'],
     [{ ...guest, paket: 'atelier', look: atelier.tiles[0].look, format: atelier.tiles[0].format, platte: atelier.tiles[0].id, kombination: 'einheitlich',
       unterbau: atelier.bases[0].id, top: atelier.tops[0].id, becken: atelier.basinTypes[0].id, finish: atelier.finishes[0].id,
-      keramik: atelier.sanitary[0].id, wall: atelier.walls[0].id, spiegel: atelier.mirrors[0].id }, /Treemme Aurelia fittings .*two separate small round wall rosettes/, 'a product photo of the washbasin tap'],
+      keramik: atelier.sanitary[0].id, wall: atelier.walls[0].id, spiegel: atelier.mirrors[0].id }, /Treemme Aurelia wall fittings .*two separate small round wall rosettes/, 'a product photo of the washbasin tap'],
     [{ ...guest }, /Treemme Up\+ fittings .*at the washbasin a slim cylindrical single-lever mixer/, 'a product photo of the washbasin tap'],
   ];
   for (const [body, series, sample] of cases) {
@@ -1772,7 +1772,7 @@ test('Armaturen: Colore mit Ran zeigt die Renderings von Treemme, mit Dusche und
   const bathImages = bath.filter((part) => part.inlineData);
   assert.match(bath[0].text, /four small square wall plates with rounded corners in one row just above the rim/);
   assert.match(bath[0].text, new RegExp(`Image ${bathImages.length - 1} is only a product photo of the washbasin tap`));
-  assert.match(bath[0].text, new RegExp(`Image ${bathImages.length} is only a product photo of the bath mixer on a plain background: copy its shape, not its colour`));
+  assert.match(bath[0].text, new RegExp(`Image ${bathImages.length} is only a product photo of the bath mixer on a plain background: copy its shape, not its colour, only at the bathtub`));
   assert.doesNotMatch(bath[0].text, /in a shower |overhead shower on/);
 });
 
