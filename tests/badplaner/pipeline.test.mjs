@@ -9,6 +9,9 @@ const moduleUrl = (name) => pathToFileURL(path.join(process.env.BADPLANER_TEST_B
 const { createHandler, nearestAspectRatio } = await import(moduleUrl('api/badplaner.js'));
 const { optionsForPackage } = await import(moduleUrl('src/data/badplaner.js'));
 const { Budget, TimeoutError } = await import(moduleUrl('server/badplaner/budget.js'));
+const aurelia = await import(moduleUrl('server/badplaner/aurelia.js'));
+const up = await import(moduleUrl('server/badplaner/up.js'));
+const ran = await import(moduleUrl('server/badplaner/ran.js'));
 const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jX1EAAAAASUVORK5CYII=';
 
 function payload(changes = {}) {
@@ -1688,10 +1691,13 @@ test('Armaturen: Atelier zeigt die Form von Treemme Aurelia in der gewaehlten Ob
   assert.match(prompt, /in a shower in one row at the same height: the hose outlet, a small round wall piece holding a slim stick hand shower upright on its hose, and beside it exactly two small round wall rosettes, each a short cylinder with the same flat lever, .*thin flat rectangular overhead shower plate \(about 50 × 20 cm\)/);
   assert.doesNotMatch(prompt, /three small round wall rosettes \(about 7\.5 cm\)/);
   assert.doesNotMatch(prompt, /rectangular wall plate|round overhead shower/);
-  // Die Treemme-Produktfotos gehen als letzte Vorlage mit, nur fuer die Form.
+  // Die Treemme-Produktfotos gehen als letzte Vorlagen mit, nur fuer die Form: Waschtisch und Dusche je als eigenes Bild
+  // (Diego, 26.09.: im gemeinsamen Bild setzte das Modell in P1 die Hebel der Dusche an den Waschtisch).
   const parts = h.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts;
-  const tapsImage = parts.filter((part) => part.inlineData).length;
-  assert.match(prompt, new RegExp(`Image ${tapsImage} is only a product photo of the washbasin fittings and, apart, the shower fittings on a plain background, in chrome: copy their shapes, each only at its own place`));
+  const images = parts.filter((part) => part.inlineData);
+  assert.match(prompt, new RegExp(`Image ${images.length - 1} is only a product photo of the washbasin tap: copy its shape, not its finish\\.`));
+  assert.match(prompt, new RegExp(`Image ${images.length} is only a product photo of the shower fittings: copy their shapes, not their finish\\.`));
+  assert.deepEqual(images.slice(-2).map((part) => part.inlineData.data), [aurelia.AURELIA_BASIN_PHOTO.data, aurelia.AURELIA_SHOWER_PHOTO.data]);
   assert.deepEqual(options.finishes.map((finish) => finish.id), ['treemme-cromo', 'treemme-nero-opaco', 'treemme-oro-spazzolato', 'treemme-nichel-spazzolato',
     'treemme-oro-rosa-spazzolato', 'treemme-nichel-lucido', 'treemme-oro', 'treemme-nero-cromo-lucido', 'treemme-nero-cromo-spazzolato', 'treemme-ottone-spazzolato']);
   // Lead und Kundenmail nennen die Serie.
@@ -1711,8 +1717,9 @@ test('Armaturen: Essenza zeigt die Form von Treemme Up+, nicht irgendeine Armatu
   assert.match(prompt, /exposed shower column: .*standing clearly out from the tiles .*not a flat concealed plate.*riser pipe .*large thin round overhead shower/);
   // Die Produktbilder von Treemme gehen als letzte Vorlage mit (P3 vom 25.09.: ohne Bild kein Up+).
   const images = parts.filter((part) => part.inlineData);
-  assert.match(prompt, new RegExp(`Image ${images.length} is only a product photo of the washbasin fittings and, apart, the shower fittings`));
-  assert.ok(images[images.length - 1].inlineData.data.startsWith('/9j/'));
+  assert.match(prompt, new RegExp(`Image ${images.length - 1} is only a product photo of the washbasin tap`));
+  assert.match(prompt, new RegExp(`Image ${images.length} is only a product photo of the shower fittings`));
+  assert.deepEqual(images.slice(-2).map((part) => part.inlineData.data), [up.UP_BASIN_PHOTO.data, up.UP_AUFPUTZ_SHOWER_PHOTO.data]);
 });
 
 test('Gaeste-WC: dieselbe Armaturenserie wie im Bad, nur am Waschtisch, mit Bild nur des Waschtischs', async () => {
@@ -1759,8 +1766,8 @@ test('Armaturen: Colore mit Up+ hat in der Dusche drei runde Rosetten, keine Pla
   assert.match(parts[0].text, /in a shower three small round wall rosettes in one row at the same height: .*stick hand shower .*thin pin lever hanging down, .*thin round overhead shower on a round tube arm/);
   assert.doesNotMatch(parts[0].text, /rectangular wall plate|slide bar/);
   const images = parts.filter((part) => part.inlineData);
-  assert.match(parts[0].text, new RegExp(`Image ${images.length} is only a product photo of the washbasin fittings and, apart, the shower fittings`));
-  assert.ok(images[images.length - 1].inlineData.data.startsWith('/9j/'));
+  assert.match(parts[0].text, new RegExp(`Image ${images.length} is only a product photo of the shower fittings`));
+  assert.deepEqual(images.slice(-2).map((part) => part.inlineData.data), [up.UP_BASIN_PHOTO.data, up.UP_SHOWER_PHOTO.data]);
 });
 
 test('Armaturen: Colore mit Ran zeigt die Renderings von Treemme, mit Dusche und mit Wanne', async () => {
@@ -1777,8 +1784,8 @@ test('Armaturen: Colore mit Ran zeigt die Renderings von Treemme, mit Dusche und
   const shower = await partsOf({ dusche: 'walk-in', badewanne: 'keine' }, { shower: 'back' });
   const images = shower.filter((part) => part.inlineData);
   assert.match(shower[0].text, /Treemme Ran fittings in matte black, round bodies .*in a shower small square wall plates with rounded corners, one carrying the concealed mixer/);
-  assert.match(shower[0].text, new RegExp(`Image ${images.length} is only a product photo of the washbasin fittings and, apart, the shower fittings`));
-  assert.ok(images[images.length - 1].inlineData.data.startsWith('/9j/'));
+  assert.match(shower[0].text, new RegExp(`Image ${images.length} is only a product photo of the shower fittings`));
+  assert.deepEqual(images.slice(-2).map((part) => part.inlineData.data), [ran.RAN_BASIN_PHOTO.data, ran.RAN_SHOWER_PHOTO.data]);
   // Einbauwanne ohne Dusche: das Bild des Waschtischmischers und das der Wannenarmatur, im Text die vier Platten.
   const bath = await partsOf({ dusche: 'keine', badewanne: 'einbau' }, { bathtub: 'back' });
   const bathImages = bath.filter((part) => part.inlineData);
@@ -1845,7 +1852,7 @@ test('ohne Dusche kein Duschset, die Wanne mit eigener Armatur', async () => {
   // Mit Dusche bleibt das Duschset, die Wanne bekommt ihre Armatur dazu.
   const both = await promptOf({ dusche: 'walk-in', badewanne: 'einbau' }, { shower: 'back', bathtub: 'left' });
   assert.match(both, /in a shower .*; at the bathtub, on the wall at its tap end/);
-  assert.match(both, /is only a product photo of the washbasin fittings and, apart, the shower fittings/);
+  assert.match(both, /is only a product photo of the washbasin tap: .*is only a product photo of the shower fittings: .*is only a product photo of the bath mixer/);
   // Essenza: die Wannenarmatur sichtbar an der Wand, wie das Duschsystem, mit dem Rendering von Treemme (Diego, 26.09.).
   const essenza = harness({ checks: [() => checkedInv({}, { bathtub: 'back' })] });
   await essenza.invoke(payload({ dusche: 'keine', badewanne: 'einbau' }));

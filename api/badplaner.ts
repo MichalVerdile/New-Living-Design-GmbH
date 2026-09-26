@@ -68,9 +68,9 @@ import { normalizeBase64, validateImageBytes, MAX_PHOTO_BASE64, MAX_PLAN_BASE64 
 import { SANITARY_MODULE_PHOTO } from '../server/badplaner/sanitaermodul.js';
 import { FLUSH_PLATE_PHOTO, WC_PHOTO } from '../server/badplaner/wc.js';
 import { LED_MIRROR_PHOTO, MIRROR_CABINET_PHOTO } from '../server/badplaner/spiegel.js';
-import { AURELIA_BASIN_PHOTO, AURELIA_BATH_FLOOR_PHOTO, AURELIA_BATH_WALL_PHOTO, AURELIA_TAPS_PHOTO } from '../server/badplaner/aurelia.js';
-import { UP_AUFPUTZ_BATH_PHOTO, UP_AUFPUTZ_PHOTO, UP_BASIN_PHOTO, UP_BATH_PHOTO, UP_UNTERPUTZ_PHOTO } from '../server/badplaner/up.js';
-import { RAN_BASIN_PHOTO, RAN_BATH_PHOTO, RAN_UNTERPUTZ_PHOTO } from '../server/badplaner/ran.js';
+import { AURELIA_BASIN_PHOTO, AURELIA_BATH_FLOOR_PHOTO, AURELIA_BATH_WALL_PHOTO, AURELIA_SHOWER_PHOTO } from '../server/badplaner/aurelia.js';
+import { UP_AUFPUTZ_BATH_PHOTO, UP_AUFPUTZ_SHOWER_PHOTO, UP_BASIN_PHOTO, UP_BATH_PHOTO, UP_SHOWER_PHOTO } from '../server/badplaner/up.js';
+import { RAN_BASIN_PHOTO, RAN_BATH_PHOTO, RAN_SHOWER_PHOTO } from '../server/badplaner/ran.js';
 
 // Node-Globals ohne @types/node (api/tsconfig.json ist auf Edge ausgelegt)
 declare const process: any;
@@ -470,9 +470,11 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   // Ran (Colore): Renderings von Diego, 26.09.; in T7 und T8 vom 25.09. kam ohne Bild der Mischer aus dem Foto.
   const ranSeries = tapSeriesOption?.id === 'treemme-ran';
   const noShower = !shower || shower.id === 'keine';
-  const tapsImage = isAtelier ? (noShower ? AURELIA_BASIN_PHOTO : AURELIA_TAPS_PHOTO)
-    : ranSeries ? (noShower ? RAN_BASIN_PHOTO : RAN_UNTERPUTZ_PHOTO)
-    : !upSeries ? null : noShower ? UP_BASIN_PHOTO : pkg.id === 'essenza' ? UP_AUFPUTZ_PHOTO : UP_UNTERPUTZ_PHOTO;
+  // Waschtisch und Dusche je als eigenes Bild (Diego, 26.09.): im gemeinsamen Bild folgte das Modell in P2, P5 und P9 dem
+  // Waschtisch, nicht der Dusche, und in P1 setzte es die Hebel der Dusche an den Waschtisch.
+  const tapsImage = isAtelier ? AURELIA_BASIN_PHOTO : ranSeries ? RAN_BASIN_PHOTO : upSeries ? UP_BASIN_PHOTO : null;
+  const showerImage = noShower ? null : isAtelier ? AURELIA_SHOWER_PHOTO : ranSeries ? RAN_SHOWER_PHOTO
+    : !upSeries ? null : pkg.id === 'essenza' ? UP_AUFPUTZ_SHOWER_PHOTO : UP_SHOWER_PHOTO;
   // Die Wannenarmatur als eigenes Bild, fuer Aurelia, Ran und Up+ (Bilder von Diego, 25. und 26.09.).
   const upColore = upSeries && pkg.id === 'colore';
   const bathImage = !bathtub || bathtub.id === 'keine' ? null
@@ -482,8 +484,8 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   const mirrorImage = mirror.id === 'spiegelschrank' ? MIRROR_CABINET_PHOTO : mirror.id === 'spiegel' ? LED_MIRROR_PHOTO : null;
 
   // Bilder an Gemini, in dieser Reihenfolge: 1 Foto, dann Platte, Bodenplatte, Akzent,
-  // Waschtischplatte, Unterbau (dieselbe Datei nur einmal), Spiegel, Modul, Armaturen, Wannenarmatur. Die Nummern stehen so im Prompt.
-  const references = [swatch, floorSwatch, accentSwatch, topSwatch, baseSwatch === topSwatch ? null : baseSwatch, mirrorImage, moduleImage, wcImage, plateImage, tapsImage, bathImage];
+  // Waschtischplatte, Unterbau (dieselbe Datei nur einmal), Spiegel, Modul, WC, Platte, Waschtisch, Dusche, Wannenarmatur. Die Nummern stehen so im Prompt.
+  const references = [swatch, floorSwatch, accentSwatch, topSwatch, baseSwatch === topSwatch ? null : baseSwatch, mirrorImage, moduleImage, wcImage, plateImage, tapsImage, showerImage, bathImage];
   const imageNumber = (image: Photo | null) => (image ? 2 + references.filter(Boolean).indexOf(image) : 0);
 
   // Armaturen: Essenza Aufputz verchromt, Colore in der gewählten Serie und Oberfläche,
@@ -554,6 +556,7 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
     plateImageNumber: imageNumber(plateImage),
     plateFinish: finish.prompt,
     tapsImageNumber: imageNumber(tapsImage),
+    showerImageNumber: imageNumber(showerImage),
     bathImageNumber: imageNumber(bathImage),
     mirrorImageNumber: imageNumber(mirrorImage),
     windows,
@@ -1249,6 +1252,7 @@ function buildPrompt(v: {
   plateImageNumber?: number;
   plateFinish?: string;
   tapsImageNumber?: number;
+  showerImageNumber?: number;
   bathImageNumber?: number;
   mirrorImageNumber?: number;
   windows: string;
@@ -1277,10 +1281,8 @@ function buildPrompt(v: {
   sample(v.moduleImageNumber, 'a product photo of the sanitary module on a white background');
   sample(v.wcImageNumber, 'a product photo of the new toilet bowl: copy its shape, not its colour');
   sample(v.plateImageNumber, 'a product photo of the new flush plate on a plain background: copy its shape, not its finish; its finish is the one named under CHANGE');
-  sample(v.tapsImageNumber, !v.wantsShower
-    ? 'a product photo of the washbasin tap on a plain background, in chrome: copy its shape, its finish is the one named under CHANGE'
-    // P1 vom 26.09.: das Modell setzte die zwei Hebel der Dusche an den Waschtisch, den Auslauf in die Mitte.
-    : 'a product photo of the washbasin fittings and, apart, the shower fittings on a plain background, in chrome: copy their shapes, each only at its own place; their finish is the one named under CHANGE');
+  sample(v.tapsImageNumber, 'a product photo of the washbasin tap: copy its shape, not its finish');
+  sample(v.showerImageNumber, 'a product photo of the shower fittings: copy their shapes, not their finish');
   // Die Aurelia-Wannenplatte hat den Auslauf in der Mitte und zwei Hebel, wie der falsche Waschtisch in P1 vom 26.09.
   sample(v.bathImageNumber, 'a product photo of the bath mixer on a plain background: copy its shape, not its colour, only at the bathtub; its finish is the one named under CHANGE');
   sample(v.mirrorImageNumber, 'a product photo of the new mirror on a plain background: copy its shape, its doors and its light; it replaces the old mirror of image 1');
