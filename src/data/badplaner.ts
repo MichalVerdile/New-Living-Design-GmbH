@@ -796,18 +796,21 @@ export const wallOptions: ChoiceOption[] = [
 ];
 
 /**
- * Regel von Diego (20.09., PR 53; am 25.09. auf die Duschwanne ausgedehnt): die Rinne liegt an der
- * kurzen Stirnwand, am Fuss der Wand mit den Armaturen, und alle Duscharmaturen sitzen an derselben
- * Stirnwand. Wortlaut vom 20.09.: die gekuerzte Fassung vom 23.09. setzte die Armaturen an die lange Wand.
+ * Regel von Diego (20.09., PR 53): alle Duscharmaturen an der kurzen Stirnwand, an der langen Wand nichts.
+ * Die Rinne gehoert nur zum Walk-in: am Fuss der Wand mit den Armaturen (Wortlaut vom 20.09.). Die Duschwanne
+ * ist eine sichtbare Wanne mit eigenem Ablauf (Diego, 26.09.: P2 bekam eine Wanne mit Rinne, P3 statt der Wanne
+ * einen gefliesten Boden mit Rinne; beide hatten bis dahin denselben Text wie der Walk-in).
  */
-const SHOWER_LAYOUT = 'The shower area is a rectangle; one of its two SHORT ends is a solid wall, the end wall. ALL shower fittings sit together on that short end wall: the mixer, the overhead shower with its wall arm and the hand shower in its holder; the long wall of the shower carries no fitting at all, only tiles. The drain starts from the fittings: a linear channel drain (Duschrinne) lies in the floor at the foot of the very wall that carries the mixer and the hand shower, directly below them, and runs along the foot of that same wall for its whole length inside the shower: one long narrow slot with a slim tiled-in or brushed stainless steel cover, and the shower floor slopes towards it. When the shower is wider than it is deep, this drain runs through the full depth of the shower, from the back wall towards the glass panel, that is towards the camera: it is perpendicular to the back wall and never runs along it; never a central point drain, never a round or square grate in the shower floor, never a drain along the long wall or at the foot of any wall without fittings. A fixed glass panel; every wall around the entire shower-floor perimeter is tiled continuously to the ceiling';
+const SHOWER_FITTINGS = 'The shower area is a rectangle; one of its two SHORT ends is a solid wall, the end wall. ALL shower fittings sit together on that short end wall: the mixer, the overhead shower with its wall arm and the hand shower in its holder; the long wall of the shower carries no fitting at all, only tiles.';
+const CHANNEL_DRAIN = 'The drain starts from the fittings: a linear channel drain (Duschrinne) lies in the floor at the foot of the very wall that carries the mixer and the hand shower, directly below them, and runs along the foot of that same wall for its whole length inside the shower: one long narrow slot with a slim tiled-in or brushed stainless steel cover, and the shower floor slopes towards it. When the shower is wider than it is deep, this drain runs through the full depth of the shower, from the back wall towards the glass panel, that is towards the camera: it is perpendicular to the back wall and never runs along it; never a central point drain, never a round or square grate in the shower floor, never a drain along the long wall or at the foot of any wall without fittings.';
+const SHOWER_GLASS = 'A fixed glass panel; every wall around the entire shower-floor perimeter is tiled continuously to the ceiling';
 
 export const showerOptions: ChoiceOption[] = [
   { id: 'keine', label: 'Keine Dusche', prompt: 'no shower, shower tray, shower enclosure or shower controls' },
-  // P3 vom 25.09.: mit "tray" allein zeichnete das Modell noch einen Rand. Vorbild ist das Foto im Katalog Aurelia, S. 16.
-  { id: 'duschwanne', label: 'Dusche mit Duschwanne', prompt: `shower with a flat white shower tray laid into the floor like one large floor tile: its surface is exactly level with the floor tiles around it, with no step, no kerb, no rim, no raised edge and no platform. ${SHOWER_LAYOUT}` },
+  // Vorbild ist das Foto im Katalog Aurelia, S. 16: eine duenne flache weisse Wanne, buendig mit dem Boden.
+  { id: 'duschwanne', label: 'Dusche mit Duschwanne', prompt: `shower with a flat white shower tray: one smooth white piece without tile joints, set into the floor so that its surface is exactly level with the floor tiles around it, with no step, no kerb, no rim, no raised edge and no platform; it has its own small round drain with a round cover in its surface, and no channel drain and no slot at the foot of any wall. ${SHOWER_FITTINGS} ${SHOWER_GLASS}` },
   // Rinne von den Armaturen aus beschrieben (a1, 14:38); ein Satz ueber die Seitenwaende (a3) schob die Armaturen an die Rueckwand.
-  { id: 'walk-in', label: 'Gefälledusche / Walk-in, bodeneben gefliest', prompt: `floor-level walk-in shower whose tiled floor is flush with the bathroom floor, with no step, no kerb and no raised platform. ${SHOWER_LAYOUT}` },
+  { id: 'walk-in', label: 'Gefälledusche / Walk-in, bodeneben gefliest', prompt: `floor-level walk-in shower without a tray: the bathroom floor tiles continue into it, with no step, no kerb and no raised platform. ${SHOWER_FITTINGS} ${CHANNEL_DRAIN} ${SHOWER_GLASS}` },
 ];
 
 export const bathtubOptions: ChoiceOption[] = [
