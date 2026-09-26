@@ -307,8 +307,12 @@ test('der Prompt ist eine Bearbeitung, keine Neuzeichnung', async () => {
   assert.match(prompt, /KEEP THE POSITIONS\. .*Every fixture keeps the wall or low wall it stands against in image 1 and its place along it, measured against the corners, the door and the window next to it\. .*The washbasin keeps its wall and its place/);
   // Ein Muretto ist Raum, keine Einrichtung: es bleibt stehen.
   assert.match(prompt, /A half-height wall, a low built wall or a boxed pre-wall that a fixture stands against is part of the room, not furniture: it keeps its place, its length, its height and its depth, and the fixture stays mounted on it/);
-  // Die Duscharmatur stand ueber dem WC statt in der Dusche.
-  assert.match(prompt, /All shower fittings sit together on one wall inside the shower area, never next to the toilet or the washbasin/);
+  // Die Duscharmatur stand ueber dem WC statt in der Dusche. Der Satz steht nur mit Dusche (26.09.).
+  assert.doesNotMatch(prompt, /All shower fittings sit together/);
+  const withShower = harness();
+  await withShower.invoke(payload({ dusche: 'walk-in' }));
+  assert.match(withShower.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text,
+    /All shower fittings sit together on one wall inside the shower area, never next to the toilet or the washbasin/);
 });
 
 test('das Glas der alten Duschkabine ist im Prompt kein Fenster', async () => {
@@ -1812,6 +1816,8 @@ test('ohne Dusche kein Duschset, die Wanne mit eigener Armatur', async () => {
   const freeParts = await partsOf({ dusche: 'keine', badewanne: 'freistehend' }, { bathtub: 'back' });
   const free = freeParts[0].text;
   assert.doesNotMatch(free, /in a shower /);
+  // Ohne Dusche auch kein allgemeiner Satz zu den Duscharmaturen (Gegenpruefung vom 26.09.).
+  assert.doesNotMatch(free, /All shower fittings sit together/);
   // Die freistehende Wanne kommt immer, wenn gewaehlt (Diego, 25.09.): kein "nur wenn Platz" mehr.
   assert.match(free, /a freestanding bathtub standing free on the floor in the place of the old bathtub .*never a built-in bathtub/);
   assert.doesNotMatch(free, /enough space/);
