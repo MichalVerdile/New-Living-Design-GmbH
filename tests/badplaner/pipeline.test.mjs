@@ -1776,12 +1776,13 @@ test('ohne Dusche kein Duschset, die Wanne mit eigener Armatur', async () => {
   const both = await promptOf({ dusche: 'walk-in', badewanne: 'einbau' }, { shower: 'back', bathtub: 'left' });
   assert.match(both, /in a shower .*; at the bathtub, on the wall at its tap end/);
   assert.match(both, /is only a product photo of the washbasin and shower fittings/);
-  // Essenza: die Wannenarmatur sichtbar an der Wand, wie das Duschsystem.
+  // Essenza: die Wannenarmatur sichtbar an der Wand, wie das Duschsystem, mit dem Rendering von Treemme (Diego, 26.09.).
   const essenza = harness({ checks: [() => checkedInv({}, { bathtub: 'back' })] });
   await essenza.invoke(payload({ dusche: 'keine', badewanne: 'einbau' }));
   const essenzaPrompt = essenza.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
-  assert.match(essenzaPrompt, /a bath mixer of the same series and finish, exposed on the wall with its spout, and a hand shower on a hose/);
-  assert.doesNotMatch(essenzaPrompt, /product photo of the bath mixer/, 'fuer Up+ Aufputz gibt es noch kein Bild der Wannenarmatur');
+  assert.match(essenzaPrompt, /a bath mixer of the same series and finish: an exposed horizontal round bar mixer on two short wall connections just above the rim, .*slim stick hand shower on its hose in a small separate wall holder/);
+  const essenzaParts = essenza.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts;
+  assert.match(essenzaPrompt, new RegExp(`Image ${essenzaParts.filter((part) => part.inlineData).length} is only a product photo of the bath mixer`));
   // Colore mit Up+ (Unterputz): das Rendering der Wannenarmatur von Treemme (Diego, 26.09.), vier runde Rosetten.
   const colore = optionsForPackage('colore');
   const up = harness({ checks: [() => checkedInv({}, { bathtub: 'back' })] });
