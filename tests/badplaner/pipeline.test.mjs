@@ -1750,7 +1750,16 @@ test('ohne Dusche kein Duschset, die Wanne mit eigener Armatur', async () => {
   await essenza.invoke(payload({ dusche: 'keine', badewanne: 'einbau' }));
   const essenzaPrompt = essenza.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
   assert.match(essenzaPrompt, /a bath mixer of the same series and finish, exposed on the wall with its spout, and a hand shower on a hose/);
-  assert.doesNotMatch(essenzaPrompt, /product photo of the bath mixer/, 'fuer Up+ gibt es noch kein Bild der Wannenarmatur');
+  assert.doesNotMatch(essenzaPrompt, /product photo of the bath mixer/, 'fuer Up+ Aufputz gibt es noch kein Bild der Wannenarmatur');
+  // Colore mit Up+ (Unterputz): das Rendering der Wannenarmatur von Treemme (Diego, 26.09.), vier runde Rosetten.
+  const colore = optionsForPackage('colore');
+  const up = harness({ checks: [() => checkedInv({}, { bathtub: 'back' })] });
+  await up.invoke(payload({ paket: 'colore', format: colore.formats[0], platte: colore.tiles[0].id, unterbau: colore.bases[0].id,
+    top: colore.tops[0].id, becken: 'aufsatz', armaturenserie: 'treemme-up', finish: colore.finishes[0].id, keramik: colore.sanitary[0].id,
+    wall: colore.walls[0].id, waschtisch: 'einzel', spiegel: colore.mirrors[0].id, dusche: 'keine', badewanne: 'einbau' }));
+  const upParts = up.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts;
+  assert.match(upParts[0].text, /four small round wall rosettes in one row just above the rim, .*thin pin lever, a round tube spout/);
+  assert.match(upParts[0].text, new RegExp(`Image ${upParts.filter((part) => part.inlineData).length} is only a product photo of the bath mixer`));
 });
 
 test('der neue Spiegel geht als Bild mit, der alte wird ausdruecklich entfernt', async () => {
