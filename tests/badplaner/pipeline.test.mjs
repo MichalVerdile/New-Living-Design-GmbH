@@ -1539,9 +1539,8 @@ test('Dusche: Rinne und Armaturen an der Stirnwand im Prompt, falsch gezeichnet 
   assert.equal(h.counts().generation, 1);
   assert.match(JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails').body),
     /Fensterprüfung.*ok, Hinweis: the shower has a point drain; it needs a linear channel drain at the foot of the wall with the fittings/);
-  // Rinne nicht am Fuss der Armaturenwand, Armaturen an zwei Waenden, Stufe: ebenfalls nur ein Hinweis.
+  // Armaturen an zwei Waenden, Stufe: ebenfalls nur ein Hinweis.
   for (const [flags, reason] of [
-    [{ drain_wall: 'back', fittings_wall: 'left' }, /the channel drain lies at the foot of the back wall; it belongs at the foot of the left wall, directly below the fittings/],
     [{ shower_fittings_split: true }, /the shower fittings are spread over two walls/],
     [{ shower_step: true }, /the shower floor is raised above the bathroom floor/],
   ]) {
@@ -1550,11 +1549,13 @@ test('Dusche: Rinne und Armaturen an der Stirnwand im Prompt, falsch gezeichnet 
     assert.equal(w.counts().generation, 1, JSON.stringify(flags));
     assert.match(JSON.stringify(w.calls.find((call) => call.url === 'https://api.resend.com/emails').body), reason);
   }
-  // Rinne und Armaturen zusammen an einer Wand: richtig, kein zweiter Versuch.
-  const right = harness({ checks: [() => checkedInv({ shower: 'back' }, { shower: 'back' }, { drain_wall: 'left', fittings_wall: 'left', shower_floor_after: 'tiles' })] });
-  await right.invoke(payload({ dusche: 'walk-in', badewanne: 'keine' }));
-  assert.equal(right.counts().generation, 1);
-  assert.doesNotMatch(JSON.stringify(right.calls.find((call) => call.url === 'https://api.resend.com/emails').body), /Hinweis/);
+  // An welcher Wand Rinne und Armaturen stehen, sagt kein Hinweis mehr: in P9 vom 26.09. waren beide falsch (Diego).
+  for (const walls of [{ drain_wall: 'left', fittings_wall: 'left' }, { drain_wall: 'back', fittings_wall: 'left' }]) {
+    const right = harness({ checks: [() => checkedInv({ shower: 'back' }, { shower: 'back' }, { ...walls, shower_floor_after: 'tiles' })] });
+    await right.invoke(payload({ dusche: 'walk-in', badewanne: 'keine' }));
+    assert.equal(right.counts().generation, 1);
+    assert.doesNotMatch(JSON.stringify(right.calls.find((call) => call.url === 'https://api.resend.com/emails').body), /Hinweis/);
+  }
   // Die Duschwanne ist bodeneben, eine sichtbare Wanne mit eigenem Ablauf, ohne Rinne (Diego, 26.09.: P2 Wanne mit
   // Rinne, P3 gefliester Boden mit Rinne statt der Wanne). Die Armaturen stehen wie beim Walk-in an der Stirnwand.
   const tray = harness({ checks: [() => checkedInv({ shower: 'back' }, { shower: 'back' }, { shower_step: true })] });
@@ -1592,7 +1593,7 @@ test('Dusche: Rinne und Armaturen an der Stirnwand im Prompt, falsch gezeichnet 
   assert.doesNotMatch(JSON.stringify(none.calls.find((call) => call.url === 'https://api.resend.com/emails').body), /Hinweis/);
 });
 
-test('Dusche: die Stirnwand sagt die Vorpruefung im Foto, der Prompt nennt sie, die Pruefung vergleicht mit ihr', async () => {
+test('Dusche: die Stirnwand sagt die Vorpruefung im Foto, der Prompt nennt sie', async () => {
   // P2 und P5 vom 25.09.: Rinne und Armaturen richtig an der kurzen Rueckwand, trotzdem "long side" und ein zweiter
   // Versuch, weil die Pruefung die Dusche im Ergebnis fuer breiter als tief hielt. P1 und P3: Rinne hinten, Armaturen links.
   const photo = (end) => () => photoChecked(true, JSON.stringify({ is_bathroom: true, reason: 'bathroom', walls: inv({ bathtub: 'left' }), order: ['bathtub', 'washbasin', 'toilet'], nearest: 'toilet', shower_end_wall: end }));
@@ -1615,9 +1616,8 @@ test('Dusche: die Stirnwand sagt die Vorpruefung im Foto, der Prompt nennt sie, 
   assert.equal((await wrong.invoke(body)).statusCode, 200);
   assert.equal(wrong.counts().generation, 1);
   assert.match(wrong.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text, /When the shower is wider than it is deep, this drain runs through the full depth/);
-  // Beide Fehler stehen als Hinweis in der Mail (Entscheidung A vom 26.09.).
-  assert.match(JSON.stringify(wrong.calls.find((call) => call.url === 'https://api.resend.com/emails').body),
-    /Hinweis: the shower fittings are on the back wall; they belong on the left wall, the short end of the shower, Hinweis: the channel drain lies at the foot of the back wall; it belongs at the foot of the left wall/);
+  // Rinne und Armaturen an einer anderen Wand als der Stirnwand: kein Hinweis mehr (P9 vom 26.09., beide falsch).
+  assert.doesNotMatch(JSON.stringify(wrong.calls.find((call) => call.url === 'https://api.resend.com/emails').body), /Hinweis/);
   // Ohne Wanne oder Dusche im Foto (oder ein unbekanntes Wort) nennt der Prompt keine Wand.
   const none = harness({ photoChecks: [photo('diagonal')], checks: [result('back', 'back')] });
   await none.invoke(body);
@@ -1839,6 +1839,8 @@ test('ohne Dusche kein Duschset, die Wanne mit eigener Armatur', async () => {
   // Wannen gibt es in jeder Groesse (Diego, 25.09.): die Wanne passt sich an, der Raum bleibt.
   assert.match(free, /in the length that fits that place: .*the room is never enlarged for it/);
   assert.match(free, /beside the freestanding bathtub a floor-standing bath mixer of the same series and finish: a slim round column on a round floor base/);
+  // P7 vom 26.09.: die Standarmatur kam als Up+; Hebel und Auslauf von Aurelia sind flach und eckig.
+  assert.match(free, /flat rectangular paddle lever lying level \(not a thin pin\), .*spout of flat square section .*\(not a round tube\)/);
   assert.match(free, /no overhead shower, no shower rail and no shower mixer anywhere/);
   // Aurelia: Waschtisch und Wannenarmatur je als eigenes Bild (Bilder von Diego, 25.09.).
   const images = freeParts.filter((part) => part.inlineData);
@@ -1885,6 +1887,8 @@ test('der neue Spiegel geht als Bild mit, der alte wird ausdruecklich entfernt',
     const number = Number(/Image (\d+) is only a product photo of the new mirror on a plain background/.exec(prompt)?.[1]);
     assert.ok(number >= 2, spiegel);
     assert.match(prompt, new RegExp(`as in image ${number} above it, which replaces the old mirror`), spiegel);
+    // P7 vom 26.09.: der alte Spiegel blieb; er steht auch in der Liste dessen, was weg muss.
+    assert.match(prompt, /REMOVE: .*; the old mirror or mirror cabinet and its lamp;/, spiegel);
     assert.ok(parts.filter((part) => part.inlineData)[number - 1].inlineData.data.startsWith('/9j/'), spiegel);
   }
 });
