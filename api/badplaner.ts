@@ -1286,7 +1286,7 @@ function buildPrompt(v: {
   sample(v.showerImageNumber, 'a product photo of the shower fittings: copy their shapes, not their finish');
   // Die Aurelia-Wannenplatte hat den Auslauf in der Mitte und zwei Hebel, wie der falsche Waschtisch in P1 vom 26.09.
   sample(v.bathImageNumber, 'a product photo of the bath mixer on a plain background: copy its shape, not its colour, only at the bathtub; its finish is the one named under CHANGE');
-  sample(v.mirrorImageNumber, 'a product photo of the new mirror on a plain background: copy its shape and its light');
+  sample(v.mirrorImageNumber, 'a product photo of the new mirror: copy its shape and its light');
   const references = samples.length ? ` ${samples.join(' ')} These images show materials and products, never a room or a layout.` : '';
   const asIn = (n: number) => (n ? ` as in image ${n}` : '');
   const colourOf = (n: number) => (n ? ` in the colour and finish of image ${n}` : '');
@@ -1327,7 +1327,7 @@ function buildPrompt(v: {
   // Die Wahl des Kunden entscheidet (Diego, 26.09.): Aufputz heisst Modul. Bis dahin galt das Foto ("nur eine Platte,
   // dann kein Modul"); das Modell las die Bedingung falsch und stellte in P3 trotzdem ein Modul.
   const toilet = v.cistern === 'aufputz'
-    ? `the old surface-mounted cistern with its casing, or the old flush plate, is removed completely; directly behind the toilet, flat against the wall, stands the sanitary module of image ${v.moduleImageNumber}: a factory-made glass and steel panel about 50 cm wide, 115 cm high and 11 cm deep, from the floor up, with a white glass front in two parts, a narrow brushed steel edge and a small oval push button in the glass front near its top, not tiled or boxed in; the toilet is ${seat}, and hangs on the module at exactly the old toilet position; the wall behind stays where it is`
+    ? `the old surface-mounted cistern with its casing, or the old flush plate, is removed completely; behind the toilet, flat against the wall or low wall it hangs on, stands the sanitary module of image ${v.moduleImageNumber}: a factory-made glass and steel panel about 50 cm wide, 115 cm high and 11 cm deep, from the floor up, with a white glass front in two parts, a narrow brushed steel edge and a small oval push button in the glass front near its top, not tiled or boxed in; the toilet is ${seat}, and hangs on the module at exactly the old toilet position; the wall behind stays where it is`
     // Diegos Befund vom 17.09.: das WC haengt an einem Muretto, das den Spuelkasten traegt;
     // das Modell hatte es eingeebnet. Am 19.09. baute es umgekehrt eines vor eine flache Wand.
     : `the cistern stays hidden in the wall where it is, and no sanitary module is added. A toilet on a flat full-height wall stays on that flat wall, which is only newly tiled. A toilet that hangs on a low wall or boxed pre-wall in image 1 stays on its front, and that low wall stays with the same place, length, height and depth, only newly tiled; the toilet is not pushed back to the wall behind. The toilet is ${seat}, at its existing position${v.plateImageNumber ? `, and its old flush plate is replaced, at the same place on the wall, by the new flush plate of image ${v.plateImageNumber} in ${v.plateFinish}` : ''}`;
@@ -1602,7 +1602,6 @@ async function checkOpenings(
     || typeof parsed.foreground_object_before !== 'boolean' || typeof parsed.foreground_object_after !== 'boolean'
     || typeof parsed.window_much_bigger !== 'boolean' || !optionalFlag('shower_fittings_split')
     || !optionalWall('drain_wall') || !optionalWall('fittings_wall')
-    || !(parsed.shower_floor_after === undefined || ['tray', 'tiles', 'none'].includes(parsed.shower_floor_after))
     || !optionalFlag('shower_step') || !optionalFlag('ceiling_changed') || !optionalCount('windows_before') || !optionalCount('windows_after')
     || typeof parsed.extra_openings !== 'boolean' || typeof parsed.view_changed !== 'boolean'
     || typeof parsed.reason !== 'string' || !parsed.reason.trim() || parsed.reason.length > 200
@@ -1660,11 +1659,13 @@ async function checkOpenings(
   const endWall = wanted.showerWall;
   const tray = wanted.shower && wanted.showerType === 'duschwanne';
   const walkIn = wanted.shower && !tray;
-  if (wanted.shower) console.info('[badplaner] Dusche:', `${tray ? 'Duschwanne' : 'Walk-in'}, Boden ${parsed.shower_floor_after ?? '-'}, Rinne ${drainWall ?? '-'}, Armaturen ${fittingsWall ?? '-'}, Stirnwand laut Foto ${endWall ?? '-'}, Stufe ${parsed.shower_step ?? '-'}`);
+  // Ein unbekannter Wert zaehlt nicht, wie bei der Wahl des Kunden; ein Objekt warf sonst im Log nach dem bezahlten Bild.
+  const showerFloor = ['tray', 'tiles', 'none'].includes(parsed.shower_floor_after) ? parsed.shower_floor_after as string : undefined;
+  if (wanted.shower) console.info('[badplaner] Dusche:', `${tray ? 'Duschwanne' : 'Walk-in'}, Boden ${showerFloor ?? '-'}, Rinne ${drainWall ?? '-'}, Armaturen ${fittingsWall ?? '-'}, Stirnwand laut Foto ${endWall ?? '-'}, Stufe ${parsed.shower_step ?? '-'}`);
   hints.push(...[
     wanted.shower && parsed.shower_step === true && `the shower floor is raised above the bathroom floor; ${tray ? 'the shower tray must lie level with the floor tiles, with no step or kerb' : 'it must be flush with the floor, with no step, kerb or tray edge'}`,
-    walkIn && parsed.shower_floor_after === 'tray' && 'the shower has a shower tray, but a walk-in shower with the floor tiles continuing into it was chosen',
-    tray && parsed.shower_floor_after === 'tiles' && 'the shower floor is tiled, but a shower with a shower tray was chosen',
+    walkIn && showerFloor === 'tray' && 'the shower has a shower tray, but a walk-in shower with the floor tiles continuing into it was chosen',
+    tray && showerFloor === 'tiles' && 'the shower floor is tiled, but a shower with a shower tray was chosen',
     tray && seen(drainWall) && 'the shower has a channel drain; the shower tray needs its own small round drain',
     walkIn && parsed.point_drain && 'the shower has a point drain; it needs a linear channel drain at the foot of the wall with the fittings',
     wanted.shower && parsed.shower_fittings_split === true && 'the shower fittings are spread over two walls; they all belong together on one wall',

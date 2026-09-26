@@ -149,7 +149,8 @@ test('Aufputz and Unterputz produce explicit, exclusive toilet branches', async 
     const checkPrompt = checker.body.contents[0].parts[0].text;
     if (cistern === 'aufputz') {
       // P3 und P5: im Foto ein Wand-WC mit Platte, kein Aufputzkasten; das Modul steht hinter dem WC, die alte Platte geht weg.
-      assert.match(prompt, /the old surface-mounted cistern with its casing, or the old flush plate, is removed completely; directly behind the toilet, flat against the wall, stands the sanitary module/);
+      // Ein Muretto, an dem das WC haengt, bleibt (Diego, 17.09.): das Modul steht vor ihm.
+      assert.match(prompt, /the old surface-mounted cistern with its casing, or the old flush plate, is removed completely; behind the toilet, flat against the wall or low wall it hangs on, stands the sanitary module/);
       // Die Wahl des Kunden entscheidet (Diego, 26.09.): keine Bedingung "nur eine Platte im Foto" mehr, die das Modell falsch las.
       assert.doesNotMatch(prompt, /only a flush plate|no module is added/);
       assert.match(prompt, /stands the sanitary module of image \d: a factory-made glass and steel panel/);
@@ -1809,14 +1810,17 @@ test('Armaturen: Colore mit Ran zeigt die Renderings von Treemme, mit Dusche und
   assert.doesNotMatch(bath[0].text, /in a shower |overhead shower on/);
 });
 
-test('ein Objekt als Duschboden in der Pruefung ist unlesbar, kein Fehler nach dem bezahlten Bild', async () => {
+test('ein unbekannter Duschboden in der Pruefung zaehlt nicht, kein Fehler nach dem bezahlten Bild', async () => {
   // Gegenpruefung vom 26.09.: ein Objekt mit eigenem toString warf beim Log einen TypeError, nach dem Bild und vor der
   // Mail; der Tagesversuch wurde zurueckgezaehlt und der Lead ging verloren.
-  const bad = () => checkedInv({ shower: 'back' }, { shower: 'back' }, { shower_floor_after: { toString: 1 } });
-  const h = harness({ checks: [bad, bad] });
-  const res = await h.invoke(payload({ dusche: 'walk-in', badewanne: 'keine' }));
-  assert.equal(res.statusCode, 200);
-  assert.match(JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails').body), /nicht möglich \(Antwort unlesbar\)/);
+  const odd = (extra) => () => checkedInv({ shower: 'back' }, { shower: 'back' }, extra);
+  const h = harness({ checks: [odd({ shower_floor_after: { toString: 1 } })] });
+  assert.equal((await h.invoke(payload({ dusche: 'walk-in', badewanne: 'keine' }))).statusCode, 200);
+  assert.match(JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails').body), /Fensterprüfung.{0,80}>ok</);
+  // Wie bei der Wahl des Kunden macht ein unbekanntes Wort die Pruefung nicht ungueltig: eine neue Oeffnung verwirft weiter.
+  const opening = odd({ shower_floor_after: 'walk-in', extra_openings: true });
+  const rejected = harness({ checks: [opening, opening] });
+  assert.equal((await rejected.invoke(payload({ dusche: 'walk-in', badewanne: 'keine' }))).statusCode, 502);
 });
 
 test('Gaeste-WC gewaehlt, im Foto aber Wanne oder Dusche: Hinweis statt Bild', async () => {
@@ -1911,7 +1915,7 @@ test('der neue Spiegel geht als Bild mit, der alte wird ausdruecklich entfernt',
     const parts = h.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts;
     const prompt = parts[0].text;
     assert.match(prompt, words, spiegel);
-    const number = Number(/Image (\d+) is only a product photo of the new mirror on a plain background/.exec(prompt)?.[1]);
+    const number = Number(/Image (\d+) is only a product photo of the new mirror/.exec(prompt)?.[1]);
     assert.ok(number >= 2, spiegel);
     // Der Spiegel mit LED-Licht hat keine Tueren: der Satz zum Bild nennt keine (Gegenpruefung vom 26.09.).
     assert.doesNotMatch(prompt, /copy its shape, its doors/, spiegel);
