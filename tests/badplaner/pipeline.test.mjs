@@ -1599,7 +1599,9 @@ test('Armaturen: Atelier zeigt die Form von Treemme Aurelia in der gewaehlten Ob
   const prompt = h.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
   assert.match(prompt, /Treemme Aurelia fittings in brushed brass/);
   // Artikel vom 25.09.: Waschtisch RWIT 2CC5 (zwei Rosetten statt Platte), Dusche RWIT 2CD9 mit Kopfbrause IT RTBR 376.
-  assert.match(prompt, /two separate small round wall rosettes .*one above the other .*no wall plate: .*spout with flat facets .*flat paddle lever/);
+  // Nebeneinander, nicht uebereinander (Rendering von Treemme, Diego 26.09.).
+  assert.match(prompt, /two separate small round wall rosettes .*side by side above the basin, no wall plate: from the left one .*spout with flat facets .*the right one carries the mixer, .*flat paddle lever hanging down/);
+  assert.doesNotMatch(prompt, /one above the other/);
   assert.match(prompt, /three small round wall rosettes .*in one row .*stick hand shower .*thin flat rectangular overhead shower plate \(about 50 × 20 cm\)/);
   assert.doesNotMatch(prompt, /rectangular wall plate|round overhead shower/);
   // Die Treemme-Produktfotos gehen als letzte Vorlage mit, nur fuer die Form.
