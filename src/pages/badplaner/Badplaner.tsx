@@ -85,6 +85,8 @@ interface Result {
   leadId: string;
   dataUrl: string;
   mime: string;
+  /** Die Produkte, mit denen das Bild entstand; die Auswahl darueber kann sich danach noch aendern. */
+  originals: { label: string; image: string; name: string }[];
   /** Vorschau: das Bild ist da, die Kontaktangaben noch nicht. Danach fehlt dieses Feld. */
   preview?: { ticket: string; exp: number; auswahl: [string, string][]; paket: unknown; bytes: Blob };
   delivery?: {
@@ -557,6 +559,7 @@ const Badplaner: React.FC = () => {
           leadId: json.leadId || '',
           mime,
           dataUrl: `data:${mime};base64,${json.image.data}`,
+          originals,
           preview: { ticket: json.ticket, exp: json.exp, auswahl: json.auswahl || [], paket: json.paket, bytes: new Blob([bytes], { type: mime }) },
         });
         setStatus('idle');
@@ -618,6 +621,7 @@ const Badplaner: React.FC = () => {
           leadId: result.leadId,
           mime: result.mime,
           dataUrl: result.dataUrl,
+          originals: result.originals,
           delivery: {
             lead: 'accepted',
             customer: known.includes(answer.delivery.customer) ? answer.delivery.customer : 'unknown',
@@ -912,7 +916,7 @@ const Badplaner: React.FC = () => {
         ...original('Akzent', sel?.accentMode === 'kombination' ? chosen.accent : undefined),
         ...original('Unterbau', chosen.base),
         ...original('Waschtisch\u00adplatte', chosen.top), // weiches Trennzeichen fuer schmale Bildschirme
-        ...(pkg === 'colore' ? [chosen.tapSeries] : isAtelier ? options?.tapSeriesOptions ?? [] : pkg === 'essenza' ? [essenzaTaps] : []).flatMap((t) => original('Armaturen', t)),
+        ...(pkg === 'colore' ? [chosen.tapSeries] : isAtelier ? (options?.tapSeriesOptions ?? []).filter((t) => t.id !== 'treemme-aurelia-dusche' || (!!chosen.shower && chosen.shower.id !== 'keine')) : pkg === 'essenza' ? [essenzaTaps] : []).flatMap((t) => original('Armaturen', t)),
         ...original('Keramik', chosen.sanitary),
       ]
     : [];
@@ -1343,11 +1347,11 @@ const Badplaner: React.FC = () => {
                 <img src={result.dataUrl} alt={`Ideenbild Ihres Bads im Paket ${pkgInfo.name}`} className={styles.resultImage} />
               </div>
               <span className={styles.badge}>{result.preview ? 'Vorschau · Ideenbild, kein Plan' : 'Ideenbild, kein Plan'}</span>
-              {originals.length > 0 && (
+              {result.originals.length > 0 && (
                 <div className={styles.originals}>
                   <p>Die gewählten Produkte im Original. Das Ideenbild zeigt die Stimmung; Form und Details der Produkte sehen Sie hier und in unserer Ausstellung.</p>
                   <ul>
-                    {originals.map((o) => (
+                    {result.originals.map((o) => (
                       <li key={`${o.label}-${o.image}`}>
                         <Swatch image={o.image} label={o.name} />
                         <strong>{o.label}</strong>
