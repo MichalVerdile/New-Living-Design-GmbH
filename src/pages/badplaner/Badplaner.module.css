@@ -198,7 +198,8 @@
 .card:hover { border-color: rgba(0,0,0,.4); }
 .cardSelected { border-color: #111; box-shadow: 0 0 0 3px rgba(17,17,17,.12); }
 .card input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
-.cardImg { width: 100%; aspect-ratio: 3 / 2; object-fit: cover; border-radius: .7rem; display: block; background: #e5e7eb; }
+/* height: auto, sonst macht das Attribut height="320" am <img> jede Karte 320 px hoch und aspect-ratio greift nie. */
+.cardImg { width: 100%; height: auto; aspect-ratio: 3 / 2; object-fit: cover; border-radius: .7rem; display: block; background: #e5e7eb; }
 .cardImgDiagram { aspect-ratio: 4 / 3; object-fit: contain; background: #fff; border: 1px solid rgba(0,0,0,.08); }
 .coverFallback { display: grid; place-items: center; font-size: .8rem; font-weight: 700; color: rgba(0,0,0,.55); background: #d1d5db; }
 .cardText { display: block; padding: 0 .35rem .35rem; overflow-wrap: anywhere; }
