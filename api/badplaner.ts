@@ -1170,11 +1170,12 @@ function tapDescription(
   // Atelier = Treemme Aurelia (Diego, 20.09.; Artikel vom 25.09., Masse aus den 3D-Modellen): Waschtisch RWIT 2CC5 CC 01
   // (Auslauf und Hebel auf zwei Rosetten 75 nebeneinander, 110 auseinander, Auslauf 215 ab Wand; bis zum 26.09. stand hier
   // "uebereinander": das 3D-Modell hat die Hochachse in x, gerendert war es um 90 Grad gedreht. Das Rendering von Treemme
-  // und das Foto auf rubinetterie3m.it zeigen beide nebeneinander, Diego 26.09.), Dusche RWIT 2CD9 CC 01 (drei Rosetten 75
-  // in einer Reihe: Brauseanschluss mit Halter und Stabhandbrause, Mischer, Umsteller), Kopfbrause IT RTBR 376 CC (500 x 200).
+  // und das Foto auf rubinetterie3m.it zeigen beide nebeneinander, Diego 26.09.), Dusche RWIT 2CD9 CC 01 (in einer Reihe:
+  // Brauseanschluss mit Halter und Stabhandbrause, daneben zwei Rosetten 75 mit Hebel; mit "drei Rosetten" zeichnete das Modell
+  // am 26.09. drei Hebel und den Anschluss dazu, Katalog S. 16), Kopfbrause IT RTBR 376 CC (500 x 200).
   if (pkg === 'atelier') {
     return {
-      prompt: `concealed built-in (Unterputz) Treemme Aurelia fittings in ${finish.prompt}, with no exposed mixer body: at the washbasin two separate small round wall rosettes (about 7.5 cm) side by side above the basin, no wall plate: from the left one a long slim spout with flat facets runs about 20 cm out from the wall and bends gently down at its end, and the right one carries the mixer, a short cylinder with a flat paddle lever hanging down; in a shower three small round wall rosettes (about 7.5 cm) in one row at the same height: one at the end of the row carries the hose outlet and the holder of a slim cylindrical stick hand shower on its hose, the other two each a short cylinder with the same flat lever, and above them on the same wall, just below the ceiling, a thin flat rectangular overhead shower plate (about 50 × 20 cm) that sticks straight out from the wall, fixed to it by its short end, with its nozzles facing down`,
+      prompt: `concealed built-in (Unterputz) Treemme Aurelia fittings in ${finish.prompt}: at the washbasin exactly two separate small round wall rosettes (about 7.5 cm) side by side above the basin, no wall plate, no third handle: from the left one a long slim spout with flat facets runs about 20 cm out from the wall and bends gently down at its end, and the right one carries the only mixer, a short cylinder with a flat paddle lever hanging down; in a shower in one row at the same height: the hose outlet, a small round wall piece holding a slim stick hand shower upright on its hose, and beside it exactly two small round wall rosettes, each a short cylinder with the same flat lever, and above them on the same wall, just below the ceiling, a thin flat rectangular overhead shower plate (about 50 × 20 cm) that sticks straight out from the wall, fixed to it by its short end, with its nozzles facing down`,
       label: `${finish.label}, ${seriesText}`,
     };
   }
@@ -1264,7 +1265,8 @@ function buildPrompt(v: {
   sample(v.moduleImageNumber, 'a product photo of the sanitary module on a white background');
   sample(v.tapsImageNumber, !v.wantsShower
     ? 'a product photo of the washbasin tap on a plain background, in chrome: copy its shape, its finish is the one named under CHANGE'
-    : 'a product photo of the washbasin and shower fittings on a plain background, in chrome: copy their shapes, their finish is the one named under CHANGE');
+    // P1 vom 26.09.: das Modell setzte die zwei Hebel der Dusche an den Waschtisch, den Auslauf in die Mitte.
+    : 'a product photo of the washbasin fittings and, apart, the shower fittings on a plain background, in chrome: copy their shapes, each only at its own place; their finish is the one named under CHANGE');
   sample(v.bathImageNumber, 'a product photo of the bath mixer on a plain background: copy its shape, not its colour; its finish is the one named under CHANGE');
   sample(v.mirrorImageNumber, 'a product photo of the new mirror on a plain background: copy its shape, its doors and its light; it replaces the old mirror of image 1');
   const references = samples.length ? ` ${samples.join(' ')} These images show materials and products, never a room or a layout.` : '';
