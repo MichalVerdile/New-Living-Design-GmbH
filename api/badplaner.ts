@@ -66,6 +66,7 @@ import { Budget, TimeoutError, type Clock } from '../server/badplaner/budget.js'
 import { normalizeSelection, ValidationError } from '../server/badplaner/validation.js';
 import { normalizeBase64, validateImageBytes, MAX_PHOTO_BASE64, MAX_PLAN_BASE64 } from '../src/pages/badplaner/imageValidation.js';
 import { SANITARY_MODULE_PHOTO } from '../server/badplaner/sanitaermodul.js';
+import { FLUSH_PLATE_PHOTO, WC_PHOTO } from '../server/badplaner/wc.js';
 import { LED_MIRROR_PHOTO, MIRROR_CABINET_PHOTO } from '../server/badplaner/spiegel.js';
 import { AURELIA_BASIN_PHOTO, AURELIA_BATH_FLOOR_PHOTO, AURELIA_BATH_WALL_PHOTO, AURELIA_TAPS_PHOTO } from '../server/badplaner/aurelia.js';
 import { UP_AUFPUTZ_BATH_PHOTO, UP_AUFPUTZ_PHOTO, UP_BASIN_PHOTO, UP_BATH_PHOTO, UP_UNTERPUTZ_PHOTO } from '../server/badplaner/up.js';
@@ -457,6 +458,10 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   // Beschreiben allein genügt dem Modell nicht, es baut sonst eine verkleidete
   // Vorwand. Das Bild liegt im Code, darum kann es weder fehlen noch Zeit kosten.
   const moduleImage = cistern === 'aufputz' ? SANITARY_MODULE_PHOTO : null;
+  // Das neue WC und bei Unterputz die neue Platte als Bild (Diego, 26.09.): mit Worten allein blieb in P4 und P8 ein
+  // WC wie das alte, in P4 samt der alten Platte.
+  const wcImage = WC_PHOTO;
+  const plateImage = cistern === 'unterputz' ? FLUSH_PLATE_PHOTO : null;
   // Die Armaturen als Produktfoto, weil die Worte allein nur allgemeine Armaturen ergaben (Aurelia am 20.09.,
   // Up+ in P3 und P4 vom 25.09.). Nur Armaturen, kein Raum. Ohne Dusche nur die Waschtischarmatur, im Bild wie
   // im Text: mit dem Duschset zeichnete das Modell am 25.09. (Jonathan, Atelier ohne Dusche) ueber der
@@ -478,7 +483,7 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
 
   // Bilder an Gemini, in dieser Reihenfolge: 1 Foto, dann Platte, Bodenplatte, Akzent,
   // Waschtischplatte, Unterbau (dieselbe Datei nur einmal), Spiegel, Modul, Armaturen, Wannenarmatur. Die Nummern stehen so im Prompt.
-  const references = [swatch, floorSwatch, accentSwatch, topSwatch, baseSwatch === topSwatch ? null : baseSwatch, mirrorImage, moduleImage, tapsImage, bathImage];
+  const references = [swatch, floorSwatch, accentSwatch, topSwatch, baseSwatch === topSwatch ? null : baseSwatch, mirrorImage, moduleImage, wcImage, plateImage, tapsImage, bathImage];
   const imageNumber = (image: Photo | null) => (image ? 2 + references.filter(Boolean).indexOf(image) : 0);
 
   // Armaturen: Essenza Aufputz verchromt, Colore in der gewählten Serie und Oberfläche,
@@ -545,6 +550,9 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
     topImageNumber: imageNumber(topSwatch),
     baseImageNumber: imageNumber(baseSwatch),
     moduleImageNumber: imageNumber(moduleImage),
+    wcImageNumber: imageNumber(wcImage),
+    plateImageNumber: imageNumber(plateImage),
+    plateFinish: finish.prompt,
     tapsImageNumber: imageNumber(tapsImage),
     bathImageNumber: imageNumber(bathImage),
     mirrorImageNumber: imageNumber(mirrorImage),
@@ -602,7 +610,8 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
     ['Muster', `Platte ${swatch ? 'geladen' : 'nicht geladen'}, Waschtisch ${topSwatch && baseSwatch ? 'geladen' : 'nicht geladen'}`
       + (floorTile ? `, Boden ${floorSwatch ? 'geladen' : 'nicht geladen'}` : '')
       + (accent ? `, Akzent ${accentSwatch ? 'geladen' : 'nicht geladen'}` : '')],
-    ...(cistern === 'aufputz' ? [['Sanitärmodul', 'OLI QR INOX Sospeso, Vorlagebild mitgeschickt'] as [string, string]] : []),
+    ...(cistern === 'aufputz' ? [['Sanitärmodul', 'OLI QR INOX Sospeso, Vorlagebild mitgeschickt'] as [string, string]]
+      : [['Betätigungsplatte', `OLI Blink, ${finish.label}, Vorlagebild mitgeschickt`] as [string, string]]),
     ['Foto', photoOrigin(body.fotoInfo, photoSent)],
     ['Fensterprüfung', checkStatus],
     ...(imageStatus ? [['Ideenbild', imageStatus] as [string, string]] : []),
@@ -1236,6 +1245,9 @@ function buildPrompt(v: {
   topImageNumber: number;
   baseImageNumber: number;
   moduleImageNumber: number;
+  wcImageNumber?: number;
+  plateImageNumber?: number;
+  plateFinish?: string;
   tapsImageNumber?: number;
   bathImageNumber?: number;
   mirrorImageNumber?: number;
@@ -1263,6 +1275,8 @@ function buildPrompt(v: {
     sample(v.baseImageNumber, 'a colour sample for the front and body of the vanity unit');
   }
   sample(v.moduleImageNumber, 'a product photo of the sanitary module on a white background');
+  sample(v.wcImageNumber, 'a product photo of the new toilet bowl: copy its shape, not its colour');
+  sample(v.plateImageNumber, 'a product photo of the new flush plate on a plain background: copy its shape, not its finish; its finish is the one named under CHANGE');
   sample(v.tapsImageNumber, !v.wantsShower
     ? 'a product photo of the washbasin tap on a plain background, in chrome: copy its shape, its finish is the one named under CHANGE'
     // P1 vom 26.09.: das Modell setzte die zwei Hebel der Dusche an den Waschtisch, den Auslauf in die Mitte.
@@ -1306,14 +1320,14 @@ function buildPrompt(v: {
         v.wantsBathtub ? `a ${v.bathtubPrompt}` : 'no bathtub and no bath filler', // die Wannen nennen ihren Platz selbst
       ].join('; ');
   // Ein Holzsitz auf weisser Keramik war einer der Befunde vom 16.09.
-  const seat = `wall-hung and rimless in ${v.sanitaryPrompt}, with seat and lid in the same ${v.sanitaryPrompt}, not wood`;
+  const seat = `${v.wcImageNumber ? `the new toilet of image ${v.wcImageNumber}, never shaped like the old one, ` : ''}wall-hung and rimless in ${v.sanitaryPrompt}, with seat and lid in the same ${v.sanitaryPrompt}, not wood`;
   // Die Wahl des Kunden entscheidet (Diego, 26.09.): Aufputz heisst Modul. Bis dahin galt das Foto ("nur eine Platte,
   // dann kein Modul"); das Modell las die Bedingung falsch und stellte in P3 trotzdem ein Modul.
   const toilet = v.cistern === 'aufputz'
-    ? `the old surface-mounted cistern and its casing are removed completely; in their place, flat against the same wall, stands the sanitary module of image ${v.moduleImageNumber}: a factory-made glass and steel panel about 50 cm wide, 115 cm high and 11 cm deep, from the floor up, with a white glass front in two parts, a narrow brushed steel edge and a small oval push button set into the glass front near its top, with nothing on its top edge, not tiled or boxed in; the toilet is ${seat}, and hangs on the module at exactly the old toilet position; the wall behind stays where it is`
+    ? `the old surface-mounted cistern and its casing are removed completely; in their place, flat against the same wall, stands the sanitary module of image ${v.moduleImageNumber}: a factory-made glass and steel panel about 50 cm wide, 115 cm high and 11 cm deep, from the floor up, with a white glass front in two parts, a narrow brushed steel edge and a small oval push button in the glass front near its top, not tiled or boxed in; the toilet is ${seat}, and hangs on the module at exactly the old toilet position; the wall behind stays where it is`
     // Diegos Befund vom 17.09.: das WC haengt an einem Muretto, das den Spuelkasten traegt;
     // das Modell hatte es eingeebnet. Am 19.09. baute es umgekehrt eines vor eine flache Wand.
-    : `the cistern stays hidden in the wall where it is, and no sanitary module is added. A toilet on a flat full-height wall stays on that flat wall, which is only newly tiled. A toilet that hangs on a low wall or boxed pre-wall in image 1 stays on its front, and that low wall stays with the same place, length, height and depth, only newly tiled; the toilet is not pushed back to the wall behind. The toilet is ${seat}, at its existing position`;
+    : `the cistern stays hidden in the wall where it is, and no sanitary module is added. A toilet on a flat full-height wall stays on that flat wall, which is only newly tiled. A toilet that hangs on a low wall or boxed pre-wall in image 1 stays on its front, and that low wall stays with the same place, length, height and depth, only newly tiled; the toilet is not pushed back to the wall behind. The toilet is ${seat}, at its existing position${v.plateImageNumber ? `, and its old flush plate is replaced, at the same place on the wall, by the new flush plate of image ${v.plateImageNumber} in ${v.plateFinish}` : ''}`;
   // Die gewaehlte Sanitaerkeramik gilt fuer WC und Waschbecken. Ohne das hier
   // blieb das Becken weiss, waehrend das WC farbig war: zwei Farben in einem Bad.
   const basinColour = v.basinIsCeramic ? `, the basin in the same ${v.sanitaryPrompt} as the toilet` : '';

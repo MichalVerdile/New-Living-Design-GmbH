@@ -150,8 +150,10 @@ test('Aufputz and Unterputz produce explicit, exclusive toilet branches', async 
       assert.match(prompt, /stands the sanitary module of image \d: a factory-made glass and steel panel/);
       assert.match(prompt, /about 50 cm wide, 115 cm high and 11 cm deep/);
       // P3 vom 26.09.: eine Platte oben auf dem Modul, zur Wand hin. Der Knopf sitzt in der Glasfront (OLI QR Sospeso).
-      assert.match(prompt, /a small oval push button set into the glass front near its top, with nothing on its top edge/);
-      assert.match(prompt, /the toilet is wall-hung and rimless in .*hangs on the module at exactly the old toilet position/);
+      assert.match(prompt, /a small oval push button in the glass front near its top, not tiled/);
+      // P4 und P8 vom 26.09.: ein WC wie das alte. Das neue WC geht als Bild mit (Glam Twist 5203/TW).
+      assert.match(prompt, /the toilet is the new toilet of image \d+, never shaped like the old one, wall-hung and rimless in .*hangs on the module at exactly the old toilet position/);
+      assert.doesNotMatch(prompt, /new flush plate/);
       // Ein Holzsitz auf weisser Keramik war einer der Befunde vom 16.09.
       assert.match(prompt, /with seat and lid in the same .*, not wood/);
       assert.match(prompt, /the wall behind stays where it is/);
@@ -167,6 +169,10 @@ test('Aufputz and Unterputz produce explicit, exclusive toilet branches', async 
       // 19.09.: "often has a shelf on top" hat bei einer flachen Wand ein Muretto mit Ablage erzeugt.
       assert.doesNotMatch(prompt, /shelf on top/);
       assert.match(prompt, /A toilet on a flat full-height wall stays on that flat wall, which is only newly tiled/);
+      // Unterputz: die neue Platte OLI Blink in der Oberflaeche der Armaturen (Diego, 26.09.).
+      assert.match(prompt, /its old flush plate is replaced, at the same place on the wall, by the new flush plate of image \d+ in polished chrome/);
+      assert.match(prompt, /Image \d+ is only a product photo of the new flush plate on a plain background: copy its shape, not its finish/);
+      assert.match(JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails').body), /Betätigungsplatte.{0,80}OLI Blink/);
     }
   }
 });
@@ -770,15 +776,16 @@ test('the sanitary module travels as its own reference image', async () => {
   const options = optionsForPackage('essenza');
   const vanity = new Set([options.tops[0].image, options.bases[0].image]).size;
   const images = parts.filter((part) => part.inlineData);
-  assert.equal(images.length, 2 + vanity + 3); // dazu der neue Spiegel
-  const module = images[images.length - 2].inlineData;
+  assert.equal(images.length, 2 + vanity + 4); // dazu der neue Spiegel und das neue WC
+  const module = images[images.length - 3].inlineData;
   assert.equal(module.mimeType, 'image/jpeg');
   // Ein echtes JPEG, kein Platzhalter: Base64 eines Bildes von einigen Kilobyte.
   assert.ok(module.data.startsWith('/9j/'), 'module image is not a JPEG');
   assert.ok(module.data.length > 2000, `module image too small: ${module.data.length}`);
   const prompt = parts[0].text;
-  assert.match(prompt, new RegExp(`Image ${images.length - 1} is only a product photo of the sanitary module`));
-  assert.match(prompt, new RegExp(`stands the sanitary module of image ${images.length - 1}:`));
+  assert.match(prompt, new RegExp(`Image ${images.length - 2} is only a product photo of the sanitary module`));
+  assert.match(prompt, new RegExp(`stands the sanitary module of image ${images.length - 2}:`));
+  assert.match(prompt, new RegExp(`Image ${images.length - 1} is only a product photo of the new toilet bowl: copy its shape, not its colour`));
   // Ohne Dusche (Standardauswahl) nur die Waschtischarmatur.
   assert.match(prompt, new RegExp(`Image ${images.length} is only a product photo of the washbasin tap`));
   assert.match(prompt, /not tiled or boxed in/);
@@ -793,7 +800,7 @@ test('the module image needs no network call and none is made for it', async () 
   assert.equal(h.calls.filter((call) => call.url.includes('oli-world')).length, 0);
   const generation = h.calls.find((call) => call.body?.generationConfig?.responseModalities);
   // Plattenmuster fehlt hier (404), Modul und Armaturen sind trotzdem dabei: Foto + Modul + Armaturen.
-  assert.equal(generation.body.contents[0].parts.filter((part) => part.inlineData).length, 4); // Spiegel, Modul, Armaturen
+  assert.equal(generation.body.contents[0].parts.filter((part) => part.inlineData).length, 5); // Spiegel, Modul, WC, Armaturen
   assert.match(generation.body.contents[0].parts[0].text, /Image 3 is only a product photo of the sanitary module/);
 });
 
@@ -802,8 +809,8 @@ test('Unterputz carries no module image and forbids a module in front of the wal
   const res = await h.invoke(payload({ cistern: 'unterputz' }));
   assert.equal(res.statusCode, 200);
   const generation = h.calls.find((call) => call.body?.generationConfig?.responseModalities);
-  // Foto und Armaturen, kein Modul.
-  assert.equal(generation.body.contents[0].parts.filter((part) => part.inlineData).length, 3);
+  // Foto, Spiegel, WC, Platte und Armaturen, kein Modul.
+  assert.equal(generation.body.contents[0].parts.filter((part) => part.inlineData).length, 5);
   const prompt = generation.body.contents[0].parts[0].text;
   assert.doesNotMatch(prompt, /product photo of the sanitary module/);
   assert.match(prompt, /no sanitary module is added/);
@@ -849,7 +856,7 @@ test('Waschtischplatte und Unterbau gehen als Muster mit, die Platte nimmt nie d
   // Dieselbe Datei wird einmal geladen und einmal mitgeschickt: Foto, Platte, Diamante, dazu die Armaturen Up+.
   assert.equal(h.calls.filter((call) => call.url.endsWith(top.image)).length, 1);
   const generation = h.calls.find((call) => call.body?.generationConfig?.responseModalities);
-  assert.equal(generation.body.contents[0].parts.filter((part) => part.inlineData).length, 5);
+  assert.equal(generation.body.contents[0].parts.filter((part) => part.inlineData).length, 7); // dazu WC und Platte
   const prompt = generation.body.contents[0].parts[0].text;
   assert.match(prompt, /Image 3 is only a colour sample for the whole vanity unit: its front, its body and its countertop/);
   assert.ok(prompt.includes(`countertop in ${top.prompt} in the colour and finish of image 3`), 'Platte ohne Verweis auf ihr Muster');
@@ -864,8 +871,8 @@ test('ohne ladbares Muster bleibt es bei der Beschreibung, ohne Bildnummer', asy
   const res = await h.invoke();
   assert.equal(res.statusCode, 200);
   const generation = h.calls.find((call) => call.body?.generationConfig?.responseModalities);
-  // Foto und die Armaturen, die im Code liegen.
-  assert.equal(generation.body.contents[0].parts.filter((part) => part.inlineData).length, 3);
+  // Foto und die Vorlagen, die im Code liegen: Spiegel, WC, Platte, Armaturen.
+  assert.equal(generation.body.contents[0].parts.filter((part) => part.inlineData).length, 5);
   const prompt = generation.body.contents[0].parts[0].text;
   assert.doesNotMatch(prompt, /colour sample for|sample of the countertop/);
   assert.match(prompt, /not cut from the wall or floor tiles/);
@@ -1200,7 +1207,7 @@ test('current large catalog originals below 5 MiB retain their visual reference'
   const generation = h.calls.find((call) => call.body?.generationConfig?.responseModalities);
   // Text, Foto, Plattenmuster, dann die Muster von Waschtischplatte und Unterbau (hier eine Datei), zuletzt die Armaturen.
   const options = optionsForPackage('essenza');
-  assert.equal(generation.body.contents[0].parts.length, 5 + new Set([options.tops[0].image, options.bases[0].image]).size);
+  assert.equal(generation.body.contents[0].parts.length, 7 + new Set([options.tops[0].image, options.bases[0].image]).size); // dazu WC und Platte
   assert.equal(Buffer.from(generation.body.contents[0].parts[2].inlineData.data, 'base64').length, bytes.length);
   const leadMail = h.calls.find((call) => call.url === 'https://api.resend.com/emails');
   assert.match(JSON.stringify(leadMail.body), /Muster/);
