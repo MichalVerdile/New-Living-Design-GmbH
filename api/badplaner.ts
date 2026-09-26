@@ -497,7 +497,7 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
     : bathtub.id === 'freistehend'
       ? `; beside the freestanding bathtub a floor-standing bath mixer of the same series and finish: ${isAtelier
         // P7 vom 26.09.: mit "flat paddle lever" und "faceted spout" kam die Standarmatur von Up+ (Stifthebel, Rundrohr).
-        ? 'a slim round column on a round floor base at one end of the tub, with on its top a flat rectangular paddle lever lying level (not a thin pin), below it a spout of flat square section that runs straight out level and then curves down over the rim (not a round tube), below the spout a round knurled diverter knob sticking out sideways, and beside the column a second thin rod, joined to it near the top, holding a slim stick hand shower upright'
+        ? 'a slim round column on a round floor base at one end of the tub, with on its top a flat rectangular paddle lever lying level (not a thin pin), below it a spout of flat square section that runs straight out level and then curves down over the rim (not a round tube), below the spout a round knurled diverter knob sticking out sideways, and beside the column a slim stick hand shower standing upright in a holder fixed to the column just below the spout, its top rising above the column and its hose looping down to the floor base'
         : 'a slim column rising from the floor at one end of the tub, with a spout that bends over the rim and a hand shower in a holder on the column'}, and no fitting on the walls around the bathtub`
       : `; at the bathtub, on the wall at its tap end, a bath mixer of the same series and finish${isAtelier
         ? ': a long flat horizontal wall plate in the same finish just above the rim, carrying from left to right the hand shower outlet with a slim stick hand shower in its holder and a hose, a short cylindrical handle with a flat paddle lever hanging down, a faceted spout that bends down over the rim and a second handle with a paddle lever'
@@ -1188,7 +1188,7 @@ function tapDescription(
   // am 26.09. drei Hebel und den Anschluss dazu, Katalog S. 16), Kopfbrause IT RTBR 376 CC (500 x 200).
   if (pkg === 'atelier') {
     return {
-      prompt: `concealed built-in (Unterputz) Treemme Aurelia wall fittings in ${finish.prompt}: at each washbasin exactly two separate small round wall rosettes (about 7.5 cm) side by side above the basin, no wall plate and nothing between them: from the left one a long slim spout with flat facets runs about 20 cm out from the wall and bends gently down at its end, and the right one carries the only lever: a short cylinder with a flat paddle lever hanging down; in a shower in one row at the same height: the hose outlet, a small round wall piece holding a slim stick hand shower upright on its hose, and beside it exactly two small round wall rosettes, each a short cylinder with the same flat lever, and above them on the same wall, just below the ceiling, a thin flat rectangular overhead shower plate (about 50 × 20 cm) that sticks straight out from the wall, fixed to it by its short end, with its nozzles facing down`,
+      prompt: `concealed built-in (Unterputz) Treemme Aurelia wall fittings in ${finish.prompt}: at each washbasin exactly two separate small round wall rosettes (about 7.5 cm) side by side above the basin, no wall plate and nothing between them: from the left one a long slim spout with flat facets runs about 20 cm out from the wall and bends gently down at its end, and the right one carries the only lever: a short cylinder with a flat paddle lever hanging down; in a shower in one row at the same height: the hose outlet in one small round wall piece that also holds a slim stick hand shower upright on its hose, and beside it exactly two small round wall rosettes, each a short cylinder with the same flat lever, and above them on the same wall, just below the ceiling, a thin flat rectangular overhead shower plate (about 50 × 20 cm) that sticks straight out from the wall, fixed to it by its short end, with its nozzles facing down`,
       label: `${finish.label}, ${seriesText}`,
     };
   }
@@ -1279,14 +1279,14 @@ function buildPrompt(v: {
     sample(v.topImageNumber, 'a sample of the countertop material');
     sample(v.baseImageNumber, 'a colour sample for the front and body of the vanity unit');
   }
-  sample(v.moduleImageNumber, 'a product photo of the sanitary module on a white background');
+  sample(v.moduleImageNumber, 'a product photo of the sanitary module');
   sample(v.wcImageNumber, 'a product photo of the new toilet bowl: copy its shape, not its colour');
   sample(v.plateImageNumber, 'a product photo of the new flush plate on a plain background: copy its shape, not its finish; its finish is the one named under CHANGE');
   sample(v.tapsImageNumber, 'a product photo of the washbasin tap: copy its shape, not its finish');
   sample(v.showerImageNumber, 'a product photo of the shower fittings: copy their shapes, not their finish');
   // Die Aurelia-Wannenplatte hat den Auslauf in der Mitte und zwei Hebel, wie der falsche Waschtisch in P1 vom 26.09.
   sample(v.bathImageNumber, 'a product photo of the bath mixer on a plain background: copy its shape, not its colour, only at the bathtub; its finish is the one named under CHANGE');
-  sample(v.mirrorImageNumber, 'a product photo of the new mirror on a plain background: copy its shape, its doors and its light');
+  sample(v.mirrorImageNumber, 'a product photo of the new mirror on a plain background: copy its shape and its light');
   const references = samples.length ? ` ${samples.join(' ')} These images show materials and products, never a room or a layout.` : '';
   const asIn = (n: number) => (n ? ` as in image ${n}` : '');
   const colourOf = (n: number) => (n ? ` in the colour and finish of image ${n}` : '');
@@ -1327,7 +1327,7 @@ function buildPrompt(v: {
   // Die Wahl des Kunden entscheidet (Diego, 26.09.): Aufputz heisst Modul. Bis dahin galt das Foto ("nur eine Platte,
   // dann kein Modul"); das Modell las die Bedingung falsch und stellte in P3 trotzdem ein Modul.
   const toilet = v.cistern === 'aufputz'
-    ? `the old surface-mounted cistern and its casing are removed completely; in their place, flat against the same wall, stands the sanitary module of image ${v.moduleImageNumber}: a factory-made glass and steel panel about 50 cm wide, 115 cm high and 11 cm deep, from the floor up, with a white glass front in two parts, a narrow brushed steel edge and a small oval push button in the glass front near its top, not tiled or boxed in; the toilet is ${seat}, and hangs on the module at exactly the old toilet position; the wall behind stays where it is`
+    ? `the old surface-mounted cistern with its casing, or the old flush plate, is removed completely; directly behind the toilet, flat against the wall, stands the sanitary module of image ${v.moduleImageNumber}: a factory-made glass and steel panel about 50 cm wide, 115 cm high and 11 cm deep, from the floor up, with a white glass front in two parts, a narrow brushed steel edge and a small oval push button in the glass front near its top, not tiled or boxed in; the toilet is ${seat}, and hangs on the module at exactly the old toilet position; the wall behind stays where it is`
     // Diegos Befund vom 17.09.: das WC haengt an einem Muretto, das den Spuelkasten traegt;
     // das Modell hatte es eingeebnet. Am 19.09. baute es umgekehrt eines vor eine flache Wand.
     : `the cistern stays hidden in the wall where it is, and no sanitary module is added. A toilet on a flat full-height wall stays on that flat wall, which is only newly tiled. A toilet that hangs on a low wall or boxed pre-wall in image 1 stays on its front, and that low wall stays with the same place, length, height and depth, only newly tiled; the toilet is not pushed back to the wall behind. The toilet is ${seat}, at its existing position${v.plateImageNumber ? `, and its old flush plate is replaced, at the same place on the wall, by the new flush plate of image ${v.plateImageNumber} in ${v.plateFinish}` : ''}`;
@@ -1413,8 +1413,10 @@ async function generateImage(prompt: string, photo: Photo, references: (Photo | 
   // 2K kostet bei diesem Modell gleich viel wie 1K, also 2K.
   const model = env.BADPLANER_MODEL || 'gemini-3-pro-image';
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
-  const parts: any[] = [{ text: prompt }, { inlineData: { mimeType: photo.mime, data: photo.data } }];
-  for (const image of references) if (image) parts.push({ inlineData: { mimeType: image.mime, data: image.data } });
+  // Vor jedem Bild seine Nummer (Diego, 26.09.: jedes Bild einzeln): bei 9 bis 11 Bildern muss das Modell sonst zaehlen,
+  // welches "Image 8" ist. Dieselbe Reihenfolge wie imageNumber(), leere Stellen fallen weg.
+  const images = [photo, ...references].filter((image): image is Photo => !!image);
+  const parts: any[] = [{ text: prompt }, ...images.flatMap((image, index) => [{ text: `Image ${index + 1}:` }, { inlineData: { mimeType: image.mime, data: image.data } }])];
 
   try {
     const r = await request(ctx, url, {
@@ -1541,7 +1543,7 @@ async function checkOpenings(
     'Set shower_step true if the floor of the shower in image 2 stands higher than the bathroom floor around it: a raised shower tray with a visible side face or step, a kerb or a platform; a shower tray level with the floor tiles is not raised, even though its outline shows; false when it is flush with the floor or there is no shower. ' +
     // P1 vom 26.09.: Walk-in gewaehlt, eine Wanne gezeichnet; P3: Wanne gewaehlt, ein gefliester Boden.
     // Am Aussehen, nicht an Fugen: grosse Platten (Atelier 120 x 278) haben im Walk-in kaum Fugen.
-    'Set shower_floor_after to what the floor inside the shower of image 2 is: "tray" for a shower tray, raised or level with the floor: a separate smooth plate, usually white, that looks different from the floor around it and has an outline of its own; "tiles" when the tiles or slabs of the room floor, or other tiles, run on across the shower floor; "none" when there is no shower or you cannot see its floor. ' +
+    'Set shower_floor_after to what the floor inside the shower of image 2 is: "tray" for a shower tray, raised or level with the floor: a separate smooth plate that looks different from the floor around it and has an outline of its own; "tiles" when the tiles or slabs of the room floor, or other tiles, run on across the shower floor; "none" when there is no shower or you cannot see its floor. ' +
     // Rinne an der Laengsseite sah die Pruefung am 20.09. nur 1 von 5 Mal: sie beschreibt jetzt die Waende, der Code entscheidet.
     // Laenger oder breiter liest das Pruefmodell im Bild unzuverlaessig (P2 und P5 vom 25.09.): es sagt nur die Waende.
     'For the shower in image 2, look at its floor: set drain_wall to the wall, seen from the camera, at whose foot its channel drain lies ("left", "right", "back", "front", or "none" when there is no channel drain or you cannot see it; a small round drain is not a channel drain), and set fittings_wall to the wall that carries its mixer and hand shower (same words). ' +
@@ -1600,6 +1602,7 @@ async function checkOpenings(
     || typeof parsed.foreground_object_before !== 'boolean' || typeof parsed.foreground_object_after !== 'boolean'
     || typeof parsed.window_much_bigger !== 'boolean' || !optionalFlag('shower_fittings_split')
     || !optionalWall('drain_wall') || !optionalWall('fittings_wall')
+    || !(parsed.shower_floor_after === undefined || ['tray', 'tiles', 'none'].includes(parsed.shower_floor_after))
     || !optionalFlag('shower_step') || !optionalFlag('ceiling_changed') || !optionalCount('windows_before') || !optionalCount('windows_after')
     || typeof parsed.extra_openings !== 'boolean' || typeof parsed.view_changed !== 'boolean'
     || typeof parsed.reason !== 'string' || !parsed.reason.trim() || parsed.reason.length > 200
