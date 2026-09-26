@@ -1551,18 +1551,24 @@ test('Dusche: die Stirnwand sagt die Vorpruefung im Foto, der Prompt nennt sie, 
   const ok = harness({ photoChecks: [photo('back')], checks: [result('back', 'back')] });
   assert.equal((await ok.invoke(body)).statusCode, 200);
   assert.equal(ok.counts().generation, 1);
-  assert.match(ok.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text,
-    /The short end wall of the shower is the back wall seen from the camera: the mixer, the overhead shower and the hand shower sit on it, and the channel drain lies along its foot\./);
+  const okPrompt = ok.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
+  assert.match(okPrompt, /The short end wall of the shower is the back wall seen from the camera: the mixer, the overhead shower and the hand shower sit on it, and the channel drain lies along its foot\./);
+  // Stirnwand hinten: kein Satz mehr, der die Rinne quer zur Rueckwand verlangt (Widerspruch in P2 und P5 vom 25.09.).
+  assert.doesNotMatch(okPrompt, /wider than it is deep|perpendicular to the back wall/);
+  assert.match(okPrompt, /slopes towards it\. Never a central point drain, never a round or square grate/);
   const wrong = harness({ photoChecks: [photo('left')], checks: [result('back', 'back')] });
   assert.equal((await wrong.invoke(body)).statusCode, 200);
   assert.equal(wrong.counts().generation, 1);
+  assert.match(wrong.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text, /When the shower is wider than it is deep, this drain runs through the full depth/);
   // Beide Fehler stehen als Hinweis in der Mail (Entscheidung A vom 26.09.).
   assert.match(JSON.stringify(wrong.calls.find((call) => call.url === 'https://api.resend.com/emails').body),
     /Hinweis: the shower fittings are on the back wall; they belong on the left wall, the short end of the shower, Hinweis: the channel drain lies at the foot of the back wall; it belongs at the foot of the left wall/);
   // Ohne Wanne oder Dusche im Foto (oder ein unbekanntes Wort) nennt der Prompt keine Wand.
   const none = harness({ photoChecks: [photo('diagonal')], checks: [result('back', 'back')] });
   await none.invoke(body);
-  assert.doesNotMatch(none.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text, /short end wall of the shower is the/);
+  const nonePrompt = none.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
+  assert.doesNotMatch(nonePrompt, /short end wall of the shower is the/);
+  assert.match(nonePrompt, /When the shower is wider than it is deep, this drain runs through the full depth/);
   assert.equal(none.counts().generation, 1);
   // Die Vorpruefung fragt danach.
   const question = ok.calls.find((call) => /shower_end_wall/.test(call.body?.contents?.[0]?.parts?.[0]?.text || '')).body.contents[0].parts[0].text;

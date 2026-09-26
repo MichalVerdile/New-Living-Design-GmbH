@@ -520,7 +520,9 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
     accentPlacementPrompt: accent ? placement?.prompt : undefined,
     accentPrompt: accent ? accent.prompt : undefined,
     wallPrompt: wall.prompt,
-    showerPrompt: shower?.prompt,
+    // Stirnwand hinten laut Foto (P2 und P5 vom 25.09.): der Satz zur breiten Dusche verlangte die Rinne dann quer zur
+    // Rueckwand, die Stirnwand an ihrem Fuss. Er faellt dort weg; links, rechts und ohne Stirnwand passt er und bleibt.
+    showerPrompt: showerWall === 'back' ? shower?.prompt.replace(/When the shower is wider than it is deep[^;]*; never/, 'Never') : shower?.prompt,
     bathtubPrompt: bathtub?.prompt,
     wantsShower: shower ? shower.id !== 'keine' : false,
     wantsBathtub: bathtub ? bathtub.id !== 'keine' : false,
