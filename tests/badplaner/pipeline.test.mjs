@@ -1268,6 +1268,22 @@ function anfrageBody(fields, imageBytes) {
 
 const contactFields = { name: 'Walter Test Vorschau (bitte ignorieren)', email: 'fixture@example.invalid', telefon: '+41 00 000 00 00', place: '4800 Zofingen', consent: true };
 
+test('die Mail an NLD sagt, ob das Foto aus der Kamera oder der Galerie kam und wie gross es war', async () => {
+  // Diego, 26.09.: scheitern Fotos aus der Galerie oefter? Bisher wusste es der Server nicht.
+  const mailOf = async (changes) => {
+    const h = harness();
+    assert.equal((await h.invoke(previewPayload(changes))).statusCode, 200);
+    return JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails').body);
+  };
+  assert.match(await mailOf({ fotoInfo: { quelle: 'galerie', breite: 4032, hoehe: 3024, bytes: 2400000 } }), /Galerie, Original 4032×3024 \(2\.4 MB\), gesendet \d+×\d+/);
+  assert.match(await mailOf({ fotoInfo: { quelle: 'kamera', breite: 3000, hoehe: 4000, bytes: 0 } }), /Kamera, Original 3000×4000, gesendet \d+×\d+/);
+  // Eine alte Seite ohne die Angabe, oder unsinnige Werte: nur die gesendete Groesse.
+  assert.match(await mailOf({}), /Quelle unbekannt, gesendet \d+×\d+/);
+  const odd = await mailOf({ fotoInfo: { quelle: 'constructor', breite: -1, hoehe: 'x', bytes: 1e12 } });
+  assert.match(odd, /Quelle unbekannt, gesendet \d+×\d+/);
+  assert.doesNotMatch(odd, /function|Original/);
+});
+
 test('Vorschau: Bild ohne Kontaktangaben, Entwurf-Mail mit Foto und Bild an NLD, keine Kundenmail', async () => {
   const h = harness();
   const res = await h.invoke(previewPayload());

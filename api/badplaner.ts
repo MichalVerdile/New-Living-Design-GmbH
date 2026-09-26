@@ -150,6 +150,7 @@ interface RenderBody {
   windows?: string;
   cistern?: string;
   foto?: string;                // data-URL
+  fotoInfo?: unknown;           // Kamera oder Galerie, Groesse vor dem Verkleinern; nur fuer die Mail an NLD
   photo?: { mime: string; data: string };   // alt
   name?: string;
   email?: string;
@@ -391,10 +392,12 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   const photo = readPhoto(body);
   if (!photo) return bad(res, 'Bitte ein Foto Ihres Bads (JPEG, PNG oder WebP) hochladen.');
   let photoRatio = '';
+  let photoSent = '';
   try {
     photo.data = normalizeBase64(photo.data, MAX_PHOTO_BASE64);
     const size = validateImageBytes(Buffer.from(photo.data, 'base64'), photo.mime);
     photoRatio = nearestAspectRatio(size.width, size.height);
+    photoSent = `${size.width}×${size.height}`;
   } catch { return bad(res, 'Das Foto ist ungültig oder zu gross. Bitte JPEG, PNG oder WebP wählen.'); }
   if (!env.GEMINI_API_KEY) {
     console.error('[badplaner] Bilddienst nicht konfiguriert');
@@ -595,6 +598,7 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
       + (floorTile ? `, Boden ${floorSwatch ? 'geladen' : 'nicht geladen'}` : '')
       + (accent ? `, Akzent ${accentSwatch ? 'geladen' : 'nicht geladen'}` : '')],
     ...(cistern === 'aufputz' ? [['Sanitärmodul', 'OLI QR INOX Sospeso, Vorlagebild mitgeschickt'] as [string, string]] : []),
+    ['Foto', photoOrigin(body.fotoInfo, photoSent)],
     ['Fensterprüfung', checkStatus],
     ...(imageStatus ? [['Ideenbild', imageStatus] as [string, string]] : []),
     ['Newsletter', newsletter ? 'ja' : 'nein'],
@@ -1121,6 +1125,16 @@ function readAttachment(f: { mime: string; data: string }, baseName: string): { 
 }
 
 /** Foto aus dem neuen Feld `foto` (data-URL) oder aus dem alten Feld `photo`. */
+/** Woher das Foto kam und wie gross es vorher war (Diego, 26.09.: scheitern Fotos aus der Galerie oefter?). Nur fuer NLD. */
+function photoOrigin(info: unknown, sent: string): string {
+  const i = (info && typeof info === 'object' ? info : {}) as Record<string, unknown>;
+  const source = new Map([['kamera', 'Kamera'], ['galerie', 'Galerie'], ['datei', 'Datei']]).get(String(i.quelle)) ?? 'Quelle unbekannt';
+  const size = (value: unknown) => (Number.isSafeInteger(value) && (value as number) > 0 && (value as number) <= 50_000_000 ? value as number : 0);
+  const [width, height, bytes] = [size(i.breite), size(i.hoehe), size(i.bytes)];
+  const original = width && height ? `Original ${width}×${height}${bytes ? ` (${(bytes / 1e6).toFixed(1)} MB)` : ''}, ` : '';
+  return `${source}, ${original}gesendet ${sent}`;
+}
+
 function readPhoto(body: RenderBody): Photo | null {
   if (typeof body.foto === 'string' && body.foto) {
     const m = body.foto.match(/^data:(image\/(?:jpeg|jpg|png|webp));base64,([\s\S]+)$/i);

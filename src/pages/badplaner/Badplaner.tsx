@@ -284,6 +284,7 @@ const Badplaner: React.FC = () => {
   const [showFailureConsultation, setShowFailureConsultation] = useState(false);
 
   const [photo, setPhoto] = useState<ResizedImage | null>(null);
+  const [photoSource, setPhotoSource] = useState(''); // kamera, galerie oder datei: steht in der Mail an NLD
   const PHOTO_INPUTS = ['bp-foto-kamera', 'bp-foto-galerie', 'bp-foto-kamera-neu', 'bp-foto-galerie-neu', 'bp-foto-datei'];
   const removePhoto = () => {
     setPhoto(null);
@@ -472,6 +473,7 @@ const Badplaner: React.FC = () => {
     const input = e.target;
     const file = input.files?.[0];
     if (!file) return;
+    setPhotoSource(input.id.replace(/^bp-foto-|-neu$/g, ''));
     await loadPhoto(file); // die Datei zuerst lesen, das Feld erst danach leeren
     input.value = ''; // gleiche Datei darf erneut gewählt werden
   };
@@ -542,6 +544,7 @@ const Badplaner: React.FC = () => {
           windows,
           cistern,
           foto: photo.dataUrl,
+          fotoInfo: { quelle: photoSource, breite: photo.sourceWidth, hoehe: photo.sourceHeight, bytes: photo.sourceBytes },
           consent: contact.consent,
           website: '',
         }),
