@@ -1132,7 +1132,8 @@ function readAttachment(f: { mime: string; data: string }, baseName: string): { 
 /** Woher das Foto kam und wie gross es vorher war (Diego, 26.09.: scheitern Fotos aus der Galerie oefter?). Nur fuer NLD. */
 function photoOrigin(info: unknown, sent: string): string {
   const i = (info && typeof info === 'object' ? info : {}) as Record<string, unknown>;
-  const source = new Map([['kamera', 'Kamera'], ['galerie', 'Galerie'], ['datei', 'Datei']]).get(String(i.quelle)) ?? 'Quelle unbekannt';
+  // Ohne String(): ein Objekt als quelle wuerde nach dem bezahlten Bild werfen, und die Tageslimits zaehlten nicht.
+  const source = new Map([['kamera', 'Kamera'], ['galerie', 'Galerie'], ['datei', 'Datei']]).get(i.quelle as string) ?? 'Quelle unbekannt';
   const size = (value: unknown) => (Number.isSafeInteger(value) && (value as number) > 0 && (value as number) <= 50_000_000 ? value as number : 0);
   const [width, height, bytes] = [size(i.breite), size(i.hoehe), size(i.bytes)];
   const original = width && height ? `Original ${width}×${height}${bytes ? ` (${(bytes / 1e6).toFixed(1)} MB)` : ''}, ` : '';

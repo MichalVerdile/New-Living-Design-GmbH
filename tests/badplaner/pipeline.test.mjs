@@ -1282,6 +1282,8 @@ test('die Mail an NLD sagt, ob das Foto aus der Kamera oder der Galerie kam und 
   const odd = await mailOf({ fotoInfo: { quelle: 'constructor', breite: -1, hoehe: 'x', bytes: 1e12 } });
   assert.match(odd, /Quelle unbekannt, gesendet \d+×\d+/);
   assert.doesNotMatch(odd, /function|Original/);
+  // Ein Objekt, das sich nicht in Text wandeln laesst: kein Fehler nach dem bezahlten Bild (sonst zaehlen die Limits nicht).
+  assert.match(await mailOf({ fotoInfo: { quelle: { toString: 1 } } }), /Quelle unbekannt, gesendet \d+×\d+/);
 });
 
 test('Vorschau: Bild ohne Kontaktangaben, Entwurf-Mail mit Foto und Bild an NLD, keine Kundenmail', async () => {
