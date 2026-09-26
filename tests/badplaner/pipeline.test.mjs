@@ -204,7 +204,8 @@ test('shower prompt tiles the full tray or sloped-floor perimeter to the ceiling
   const res = await h.invoke(payload({ dusche: 'walk-in', badewanne: 'keine', wall: 'halbhoch' }));
   assert.equal(res.statusCode, 200);
   const generation = h.calls.find((call) => call.body?.generationConfig?.responseModalities);
-  assert.match(generation.body.contents[0].parts[0].text, /entire perimeter of the shower tray or sloped tiled shower floor/);
+  // Nur "shower floor": "tray or sloped tiled floor" nannte beiden Duscharten die andere (Gegenpruefung vom 26.09.).
+  assert.match(generation.body.contents[0].parts[0].text, /around the entire perimeter of the shower floor is continuously tiled/);
   assert.match(generation.body.contents[0].parts[0].text, /every wall around the entire shower-floor perimeter is tiled continuously to the ceiling/);
 });
 
@@ -1515,6 +1516,7 @@ test('Dusche: Rinne und Armaturen an der Stirnwand im Prompt, falsch gezeichnet 
   assert.doesNotMatch(prompt, /side walls on its left and right/, 'a3: der Satz schob die Armaturen an die Rueckwand');
   // P1 vom 26.09.: Walk-in gewaehlt, eine Wanne gezeichnet. Der Walk-in hat keine Wanne, die Bodenplatten laufen hinein.
   assert.match(prompt, /walk-in shower without a tray: the bathroom floor tiles continue into it, with no step, no kerb and no raised platform/);
+  assert.doesNotMatch(prompt, /shower tray/);
   assert.match(prompt, /never a central point drain, never a round or square grate/);
   // Diego, 26.09. (Entscheidung A): der zweite Versuch hatte 0 von 6 Duschen gerichtet; jetzt nur ein Hinweis.
   assert.equal(h.counts().generation, 1);
@@ -1532,9 +1534,10 @@ test('Dusche: Rinne und Armaturen an der Stirnwand im Prompt, falsch gezeichnet 
     assert.match(JSON.stringify(w.calls.find((call) => call.url === 'https://api.resend.com/emails').body), reason);
   }
   // Rinne und Armaturen zusammen an einer Wand: richtig, kein zweiter Versuch.
-  const right = harness({ checks: [() => checkedInv({ shower: 'back' }, { shower: 'back' }, { drain_wall: 'left', fittings_wall: 'left' })] });
+  const right = harness({ checks: [() => checkedInv({ shower: 'back' }, { shower: 'back' }, { drain_wall: 'left', fittings_wall: 'left', shower_floor_after: 'tiles' })] });
   await right.invoke(payload({ dusche: 'walk-in', badewanne: 'keine' }));
   assert.equal(right.counts().generation, 1);
+  assert.doesNotMatch(JSON.stringify(right.calls.find((call) => call.url === 'https://api.resend.com/emails').body), /Hinweis/);
   // Die Duschwanne ist bodeneben, eine sichtbare Wanne mit eigenem Ablauf, ohne Rinne (Diego, 26.09.: P2 Wanne mit
   // Rinne, P3 gefliester Boden mit Rinne statt der Wanne). Die Armaturen stehen wie beim Walk-in an der Stirnwand.
   const tray = harness({ checks: [() => checkedInv({ shower: 'back' }, { shower: 'back' }, { shower_step: true })] });
@@ -1545,7 +1548,7 @@ test('Dusche: Rinne und Armaturen an der Stirnwand im Prompt, falsch gezeichnet 
   assert.match(trayPrompt, /flat white shower tray: one smooth white piece without tile joints, set into the floor so that its surface is exactly level with the floor tiles around it, with no step/);
   assert.match(trayPrompt, /its own small round drain with a round cover in its surface, and no channel drain/);
   assert.match(trayPrompt, /ALL shower fittings sit together on that short end wall/);
-  assert.doesNotMatch(trayPrompt, /Duschrinne|slopes towards it|like one large floor tile/);
+  assert.doesNotMatch(trayPrompt, /Duschrinne|slopes towards it|sloped|like one large floor tile/);
   // Wanne gefliest oder mit Rinne gezeichnet: Hinweise. Ein runder Ablauf ist bei der Wanne richtig.
   const trayMail = async (flags) => {
     const w = harness({ checks: [() => checkedInv({ shower: 'back' }, { shower: 'back' }, flags)] });
@@ -1553,7 +1556,7 @@ test('Dusche: Rinne und Armaturen an der Stirnwand im Prompt, falsch gezeichnet 
     assert.equal(w.counts().generation, 1);
     return JSON.stringify(w.calls.find((call) => call.url === 'https://api.resend.com/emails').body);
   };
-  const tiled = await trayMail({ shower_floor_after: 'tiles', drain_wall: 'left', fittings_wall: 'left' });
+  const tiled = await trayMail({ shower_floor_after: 'tiles', drain_wall: 'back', fittings_wall: 'left' });
   assert.match(tiled, /Hinweis: the shower floor is tiled, but a shower with a shower tray was chosen/);
   assert.match(tiled, /Hinweis: the shower has a channel drain; the shower tray needs its own small round drain/);
   assert.doesNotMatch(tiled, /belongs at the foot of/);
@@ -1564,9 +1567,10 @@ test('Dusche: Rinne und Armaturen an der Stirnwand im Prompt, falsch gezeichnet 
   assert.match(JSON.stringify(withTray.calls.find((call) => call.url === 'https://api.resend.com/emails').body),
     /Hinweis: the shower has a shower tray, but a walk-in shower with the floor tiles continuing into it was chosen/);
   // Ohne bestellte Dusche wird an der Dusche nichts geprueft.
-  const none = harness({ checks: [() => checkedInv({ bathtub: 'back' }, { bathtub: 'back' }, { point_drain: true, shower_step: true })] });
+  const none = harness({ checks: [() => checkedInv({ bathtub: 'back' }, { bathtub: 'back' }, { point_drain: true, shower_step: true, shower_floor_after: 'tray' })] });
   await none.invoke(payload({ dusche: 'keine', badewanne: 'einbau' }));
   assert.equal(none.counts().generation, 1);
+  assert.doesNotMatch(JSON.stringify(none.calls.find((call) => call.url === 'https://api.resend.com/emails').body), /Hinweis/);
 });
 
 test('Dusche: die Stirnwand sagt die Vorpruefung im Foto, der Prompt nennt sie, die Pruefung vergleicht mit ihr', async () => {

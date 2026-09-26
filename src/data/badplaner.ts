@@ -786,7 +786,7 @@ export const wallOptions: ChoiceOption[] = [
     id: 'halbhoch',
     label: 'Im ganzen Dusch- und Wannenbereich raumhoch, übrige Wände bis ca. 120 cm',
     prompt:
-      'the walls tiled with the same tiles only up to about 120 cm height, the wall above painted plain matte white; the tiles simply end there in a straight line in the same plane as the wall, with no ledge, no shelf, no capping and no step, and the wall stays as flat as in image 1; inside the shower, every wall surface around the entire perimeter of the shower tray or sloped tiled shower floor is continuously tiled with the same wall tiles all the way up to the ceiling, including every side wall and return; every wall surface in the bathtub wet area is also tiled all the way up to the ceiling',
+      'the walls tiled with the same tiles only up to about 120 cm height, the wall above painted plain matte white; the tiles simply end there in a straight line in the same plane as the wall, with no ledge, no shelf, no capping and no step, and the wall stays as flat as in image 1; inside the shower, every wall surface around the entire perimeter of the shower floor is continuously tiled with the same wall tiles all the way up to the ceiling, including every side wall and return; every wall surface in the bathtub wet area is also tiled all the way up to the ceiling',
   },
   {
     id: 'raumhoch',
@@ -807,7 +807,8 @@ const SHOWER_GLASS = 'A fixed glass panel; every wall around the entire shower-f
 
 export const showerOptions: ChoiceOption[] = [
   { id: 'keine', label: 'Keine Dusche', prompt: 'no shower, shower tray, shower enclosure or shower controls' },
-  // Vorbild ist das Foto im Katalog Aurelia, S. 16: eine duenne flache weisse Wanne, buendig mit dem Boden.
+  // Die duenne flache weisse Wanne, buendig mit dem Boden, wie im Katalog Aurelia, S. 16; den runden Ablauf will Diego
+  // (26.09., P2), dort hat die Wanne hinten einen kurzen Schlitz.
   { id: 'duschwanne', label: 'Dusche mit Duschwanne', prompt: `shower with a flat white shower tray: one smooth white piece without tile joints, set into the floor so that its surface is exactly level with the floor tiles around it, with no step, no kerb, no rim, no raised edge and no platform; it has its own small round drain with a round cover in its surface, and no channel drain and no slot at the foot of any wall. ${SHOWER_FITTINGS} ${SHOWER_GLASS}` },
   // Rinne von den Armaturen aus beschrieben (a1, 14:38); ein Satz ueber die Seitenwaende (a3) schob die Armaturen an die Rueckwand.
   { id: 'walk-in', label: 'Gefälledusche / Walk-in, bodeneben gefliest', prompt: `floor-level walk-in shower without a tray: the bathroom floor tiles continue into it, with no step, no kerb and no raised platform. ${SHOWER_FITTINGS} ${CHANNEL_DRAIN} ${SHOWER_GLASS}` },
