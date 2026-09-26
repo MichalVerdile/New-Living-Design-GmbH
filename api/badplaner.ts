@@ -692,7 +692,13 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   };
   let check = await checkWithUnavailableRetry(gen);
   let checkAttempt = 1;
-  if (check.status === 'rejected') logRejectedCheck(check, checkAttempt);
+  // Diego, 25.09.: die Mail nannte nur den Grund des letzten Versuchs, ob es einen zweiten gab, war nicht
+  // zu sehen. Jetzt steht jeder abgelehnte Versuch mit seinem Grund in der Mail, oder warum keiner mehr lief.
+  const tries: string[] = [];
+  if (check.status === 'rejected') {
+    logRejectedCheck(check, checkAttempt);
+    tries.push(`1. Versuch: ${check.reason}`);
+  }
   // Ein zweiter Durchgang dauert ungefähr so lange wie der erste. Die alte Schranke
   // rechnete mit den Höchstwerten (95 s) und liess den zweiten Versuch nie zu; mit
   // 110 s Budget lief er nur nach einem schnellen ersten Durchgang. Mit 220 s passt er
@@ -715,22 +721,26 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
       check = await checkWithUnavailableRetry(second);
       gen = second;
       checkAttempt = 2;
-      if (check.status === 'rejected') logRejectedCheck(check, checkAttempt);
+      if (check.status === 'rejected') {
+        logRejectedCheck(check, checkAttempt);
+        tries.push(`2. Versuch: ${check.reason}`);
+      }
       if (check.status === 'approved') checkNote = `1. Versuch verworfen (${first.check.reason}), 2. Versuch ok`;
-    }
+    } else tries.push(`2. Versuch: Bilddienst: ${second.detail}`);
     if (first.check.correctable && (second.ok === false || (check.status === 'rejected' && !check.correctable))) {
       gen = first.gen;
       check = first.check;
+      checkAttempt = 1;
     }
-  }
+  } else if (check.status === 'rejected') tries.push('kein 2. Versuch (zu wenig Zeit)');
   // Nur Dusche oder Vordergrund sind falsch: nach dem zweiten Versuch wird das Bild trotzdem
   // gezeigt, mit dem Grund in der Lead-Mail, damit der Kunde nicht ohne Bild dasteht.
   if (check.status === 'rejected' && check.correctable) {
-    checkNote = `Mangel${checkAttempt === 2 ? ' (auch nach dem 2. Versuch)' : ''}: ${check.reason}`;
+    checkNote = `Mangel im gezeigten Bild (${checkAttempt}. Versuch) – ${tries.join(' | ')}`;
     check = { status: 'approved', hints: check.hints };
   }
   if (check.status === 'rejected') {
-    const rejectedNote = `abgelehnt: ${check.reason}`;
+    const rejectedNote = `abgelehnt – ${tries.join(' | ')}`;
     const leadDelivery = await sendLeadMail({
       subject: preview
         ? `Badplaner-Fehler ohne Kontakt – ${isGuestWc ? 'Gäste-WC' : pkg.name} – Ideenbild abgelehnt`
@@ -770,7 +780,7 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
     checkNote = checkNote + ', Hinweis: ' + hint;
     console.info('[badplaner]', hint);
   }
-  if (check.status === 'unavailable') checkNote = `nicht möglich (${check.detail})`;
+  if (check.status === 'unavailable') checkNote = [`nicht möglich (${check.detail})`, ...tries].join(' | ');
   if (check.status === 'disabled') checkNote = 'deaktiviert';
   console.log('[badplaner] Fensterprüfung:', checkNote);
 

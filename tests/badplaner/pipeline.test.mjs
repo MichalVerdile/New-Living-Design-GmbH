@@ -552,7 +552,7 @@ test('eine verschwundene Tuer im Vordergrund loest den zweiten Versuch aus', asy
   // Bleibt sie auch im zweiten Versuch weg, kommt das Bild trotzdem, mit Vermerk.
   const twice = harness({ checks: [turned, turned] });
   assert.equal((await twice.invoke()).statusCode, 200);
-  assert.match(JSON.stringify(twice.calls.find((call) => call.url === 'https://api.resend.com/emails').body), /Mangel \(auch nach dem 2\. Versuch\): what stands in the foreground/);
+  assert.match(JSON.stringify(twice.calls.find((call) => call.url === 'https://api.resend.com/emails').body), /Mangel im gezeigten Bild \(2\. Versuch\) – 1\. Versuch: what stands in the foreground.* \| 2\. Versuch: what stands in the foreground/);
 });
 
 test('ein Fenster, das viel groesser wird, steht als Hinweis in der Lead-Mail', async () => {
@@ -956,6 +956,8 @@ test('second rejected result is never returned, while the lead and original phot
   assert.deepEqual(leadMail.body.attachments.map(({ filename }) => filename), ['foto.png', 'verworfen.jpg']);
   // Der zweite, ebenfalls verworfene Versuch ist der, den wir zu sehen bekommen.
   assert.ok(leadMail.body.attachments[1].content.length > 0);
+  // Diego, 25.09.: beide Gruende stehen in der Mail, nicht nur der letzte.
+  assert.match(JSON.stringify(leadMail.body), /abgelehnt – 1\. Versuch: an opening was added or lost.* \| 2\. Versuch: an opening was added or lost/);
 });
 
 test('second approved result replaces first rejected result', async () => {
@@ -1052,6 +1054,8 @@ test('retry is skipped when a second pass of the measured length cannot fit', as
   const h = harness({ generateDelays: [60000], checkDelays: [19000, 19000], checks: [() => response({}, 503), () => checked(true)] });
   const res = await h.invoke();
   assert.equal(res.body.code, 'RENDER_REJECTED'); assert.deepEqual(h.counts(), { generation: 1, checks: 2, mail: 1 });
+  assert.match(JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails').body),
+    /abgelehnt – 1\. Versuch: an opening was added or lost.* \| kein 2\. Versuch \(zu wenig Zeit\)/);
 });
 
 test('der zweite Versuch laeuft auch nach dem langsamsten ersten Durchgang', async () => {
@@ -1526,7 +1530,7 @@ test('bleibt die Dusche auch im zweiten Versuch falsch, sieht der Kunde das Bild
   assert.equal(res.statusCode, 200);
   assert.equal(h.counts().generation, 2);
   assert.match(JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails').body),
-    /Mangel \(auch nach dem 2\. Versuch\): the shower floor is raised/);
+    /Mangel im gezeigten Bild \(2\. Versuch\) – 1\. Versuch: the shower floor is raised.* \| 2\. Versuch: the shower floor is raised/);
 });
 
 test('zeigt der zweite Versuch einen groben Fehler, gilt wieder das erste Bild, das nur an der Dusche irrte', async () => {
@@ -1539,7 +1543,7 @@ test('zeigt der zweite Versuch einen groben Fehler, gilt wieder das erste Bild, 
   assert.equal(res.statusCode, 200);
   assert.equal(res.body.image.data, first);
   assert.match(JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails').body),
-    /Mangel \(auch nach dem 2\. Versuch\): the shower has a point drain/);
+    /Mangel im gezeigten Bild \(1\. Versuch\) – 1\. Versuch: the shower has a point drain.* \| 2\. Versuch: an opening was added or lost/);
   // Scheitert der zweite Versuch ganz, ebenso.
   const failed = harness({
     generations: [() => generated(first), () => response({ error: 'boom' }, 500)],
@@ -1548,6 +1552,8 @@ test('zeigt der zweite Versuch einen groben Fehler, gilt wieder das erste Bild, 
   const failedRes = await failed.invoke(payload({ dusche: 'walk-in', badewanne: 'keine' }));
   assert.equal(failedRes.statusCode, 200);
   assert.equal(failedRes.body.image.data, first);
+  assert.match(JSON.stringify(failed.calls.find((call) => call.url === 'https://api.resend.com/emails').body),
+    /Mangel im gezeigten Bild \(1\. Versuch\) – 1\. Versuch: the shower floor is raised.* \| 2\. Versuch: Bilddienst: HTTP 500/);
 });
 
 test('Armaturen: Atelier zeigt die Form von Treemme Aurelia in der gewaehlten Oberflaeche', async () => {
