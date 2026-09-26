@@ -27,8 +27,10 @@
  *      bestellt, Bidet noch da): zweiter Versuch, wenn die Zeit reicht; ein grob falsches
  *      Bild sieht der Kunde nie, NLD bekommt es mit dem Lead. Dusche falsch (Stufe, Rinne,
  *      Armaturen) oder der Vordergrund weg: ebenfalls ein zweiter Versuch, danach wird das
- *      Bild trotzdem gezeigt, mit Vermerk. Feineres (Muretto, Nische) steht nur als Hinweis
- *      in der Lead-Mail. Ist die Pruefung nicht erreichbar, geht das Bild mit Vermerk hinaus.
+ *      Bild trotzdem gezeigt, mit Vermerk. Feineres (Muretto, Nische) und was von der Wahl
+ *      des Kunden abweicht (Wannenart, Kopfbrause, Zahl und Art der Becken, Spiegel) steht
+ *      nur als Hinweis in der Lead-Mail. Ist die Pruefung nicht erreichbar, geht das Bild
+ *      mit Vermerk hinaus.
  *   5. Lead-Mail an NLD (Resend mit Anhaengen; bei eindeutigem Fehler Formspree ohne
  *      Bilder). Ohne bestaetigte Annahme kein Erfolg; unklare Zustellung wird nicht
  *      blind wiederholt.
@@ -677,7 +679,8 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   if (gen.ok === false) return res.status(502).json(await leadWithoutImage(`Bilddienst: ${gen.detail}`));
   const firstGenerationMs = dependencies.clock.now() - passStarted;
   let checkNote = 'ok';
-  const wantedFixtures = { room, shower: shower ? shower.id !== 'keine' : false, bathtub: bathtub ? bathtub.id !== 'keine' : false, cistern, windows, showerWall };
+  const wantedFixtures = { room, shower: shower ? shower.id !== 'keine' : false, bathtub: bathtub ? bathtub.id !== 'keine' : false, cistern, windows, showerWall,
+    bathtubType: bathtub?.id, basin: basin.id, basinType: basinType?.id, mirror: mirror.id };
   const checkWithUnavailableRetry = async (image: { mime: string; data: string }): Promise<CheckResult> => {
     let result = await checkOpenings(photo, image, wantedFixtures, ctx);
     if (result.status === 'unavailable'
@@ -1452,7 +1455,8 @@ async function askCheckModel(model: string, question: string, images: Photo[], t
 async function checkOpenings(
   photo: Photo,
   gen: { mime: string; data: string },
-  wanted: { room: 'badezimmer' | 'gaeste-wc'; shower: boolean; bathtub: boolean; cistern: 'aufputz' | 'unterputz'; windows: string; showerWall?: EndWall },
+  wanted: { room: 'badezimmer' | 'gaeste-wc'; shower: boolean; bathtub: boolean; cistern: 'aufputz' | 'unterputz'; windows: string; showerWall?: EndWall;
+    bathtubType?: string; basin?: string; basinType?: string; mirror?: string },
   ctx: RequestContext,
   timeoutMs = CHECK_TIMEOUT_MS,
 ): Promise<CheckResult> {
@@ -1490,6 +1494,15 @@ async function checkOpenings(
     'Count the windows in each image, roof windows and skylights included; a glass shower panel, a glass door, a mirror or a picture is not a window. Set windows_before and windows_after to those two numbers. ' +
     'Set ceiling_changed true if the ceiling of image 2 has another shape than the ceiling of image 1: a slope, an attic, beams or a roof window that image 1 does not have, or a slope of image 1 that is gone. ' +
     'Set view_changed true if camera position, angle, lens or framing changed, or if image 2 shows floor, wall or ceiling area that lies outside image 1. ' +
+    // Diego, 25.09. (Punkt c): die Wahl des Kunden wird nur abgelesen, ein Unterschied steht als Hinweis in der Mail,
+    // nie als Ablehnung, damit wir sehen, wie oft es vorkommt. Proben vom 25.09.: Einbau- statt freistehender Wanne,
+    // Kopfbrause ohne Dusche, ein Becken statt zwei, Aufsatz- statt Einbaubecken, der alte Spiegel.
+    'For image 2 only: set washbasins_after to the number of washbasin bowls you can see (0 when none is visible); ' +
+    'set basin_on_top_after true if the washbasin is a separate bowl standing on the countertop, false if it is set into the countertop or moulded into it; ' +
+    'set mirror_after to what hangs above the washbasin: "cabinet" for a mirror cabinet with mirror doors, "mirror" for a flat mirror without a cabinet, "none" when there is none or you cannot see it; ' +
+    'set mirror_kept true if that mirror or mirror cabinet is still the one of image 1, with the same shape, frame and lamp; ' +
+    'set bathtub_after to "freestanding" if the bathtub stands free on the floor with its own finished shell all round, "built_in" if it is built in against the walls with a tiled or panelled front, "none" when there is no bathtub; ' +
+    'set overhead_shower_after true if there is an overhead or rain shower head anywhere; a hand shower on a hose does not count. ' +
     'Answer with JSON only, no markdown and exactly these keys: ' +
     '{"before":{"toilet":"left","washbasin":"left","shower":"none","bathtub":"none","bidet":"none"},' +
     '"after":{"toilet":"left","washbasin":"left","shower":"none","bathtub":"none","bidet":"none"},' +
@@ -1498,6 +1511,7 @@ async function checkOpenings(
     '"toilet_on_low_wall_before":false,"toilet_on_low_wall_after":false,"new_wall_element":false,"wall_element_lost":false,' +
     '"foreground_object_before":false,"foreground_object_after":false,"window_much_bigger":false,"point_drain":false,"shower_fittings_split":false,"drain_wall":"none","fittings_wall":"none",' +
     '"shower_step":false,"windows_before":0,"windows_after":0,"ceiling_changed":false,' +
+    '"washbasins_after":0,"basin_on_top_after":false,"mirror_after":"none","mirror_kept":false,"bathtub_after":"none","overhead_shower_after":false,' +
     '"extra_openings":false,"view_changed":false,"reason":"short English note, max 25 words"}';
   const reply = await askCheckModel(model, question, [photo, gen], timeoutMs, ctx);
   if ('detail' in reply) {
@@ -1508,7 +1522,8 @@ async function checkOpenings(
   const keys = ['before', 'after', 'order_before', 'order_after', 'nearest_before', 'nearest_after',
     'toilet_on_low_wall_before', 'toilet_on_low_wall_after', 'new_wall_element', 'wall_element_lost', 'foreground_object_before', 'foreground_object_after',
     'window_much_bigger', 'point_drain', 'shower_fittings_split', 'drain_wall', 'fittings_wall',
-    'shower_step', 'windows_before', 'windows_after', 'ceiling_changed', 'extra_openings', 'view_changed', 'reason'];
+    'shower_step', 'windows_before', 'windows_after', 'ceiling_changed', 'extra_openings', 'view_changed', 'reason',
+    'washbasins_after', 'basin_on_top_after', 'mirror_after', 'mirror_kept', 'bathtub_after', 'overhead_shower_after'];
   // Die spaeter dazugekommenen Antworten sind freiwillig; fehlt eine, wird sie nicht geprueft.
   const optionalFlag = (key: string) => parsed?.[key] === undefined || typeof parsed[key] === 'boolean';
   const optionalWall = (key: string) => parsed?.[key] === undefined || WALLS.includes(parsed[key]);
@@ -1556,6 +1571,20 @@ async function checkOpenings(
       && 'a low wall, ledge, shelf or niche that is not in the photo was added',
     parsed.wall_element_lost && 'a recess, alcove, niche or step of the wall that is in the photo was filled in or straightened',
     parsed.window_much_bigger && 'the window takes up much more of the result than of the photo',
+    // Die Wahl des Kunden (Punkt c): ein unlesbarer Wert zaehlt nicht, die Pruefung bleibt trotzdem gueltig.
+    wanted.basin && Number.isInteger(parsed.washbasins_after) && parsed.washbasins_after > 0
+      && parsed.washbasins_after !== (wanted.basin === 'doppel' ? 2 : 1)
+      && `${parsed.washbasins_after} washbasin bowl(s), but a ${wanted.basin === 'doppel' ? 'double' : 'single'} washbasin was chosen`,
+    wanted.basinType && after.washbasin !== 'none' && typeof parsed.basin_on_top_after === 'boolean'
+      && parsed.basin_on_top_after !== (wanted.basinType === 'aufsatz')
+      && (parsed.basin_on_top_after ? 'the washbasin is a bowl standing on the countertop, but a basin set into the top was chosen'
+        : 'the washbasin is set into the countertop, but a bowl standing on it was chosen'),
+    wanted.mirror === 'spiegelschrank' && parsed.mirror_after === 'mirror' && 'a flat mirror hangs above the washbasin, but a mirror cabinet was chosen',
+    wanted.mirror === 'spiegel' && parsed.mirror_after === 'cabinet' && 'a mirror cabinet hangs above the washbasin, but a flat mirror was chosen',
+    parsed.mirror_kept === true && 'the mirror above the washbasin is still the old one of the photo',
+    wanted.bathtubType === 'freistehend' && parsed.bathtub_after === 'built_in' && 'the bathtub is built in, but a freestanding bathtub was chosen',
+    wanted.bathtubType === 'einbau' && parsed.bathtub_after === 'freestanding' && 'the bathtub stands free, but a built-in bathtub was chosen',
+    !wanted.shower && parsed.overhead_shower_after === true && 'there is an overhead shower, but no shower was chosen',
   ].filter((hint): hint is string => !!hint);
   // Das richtet ein zweiter Versuch, alles in einem Satz (Diego, 25.09.): die Dusche bodeneben, alle Armaturen
   // an der Stirnwand und die Rinne an ihrem Fuss; der Vordergrund bleibt, die Tuer eingeschlossen. Welche Wand

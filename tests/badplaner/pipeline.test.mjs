@@ -555,6 +555,37 @@ test('eine verschwundene Tuer im Vordergrund loest den zweiten Versuch aus', asy
   assert.match(JSON.stringify(twice.calls.find((call) => call.url === 'https://api.resend.com/emails').body), /Mangel im gezeigten Bild \(2\. Versuch\) – 1\. Versuch: what stands in the foreground.* \| 2\. Versuch: what stands in the foreground/);
 });
 
+test('die Wahl des Kunden wird abgelesen, ein Unterschied steht nur als Hinweis in der Mail', async () => {
+  // Diego, 25.09. (Punkt c): Proben mit Einbau- statt freistehender Wanne, Kopfbrause ohne Dusche, einem Becken
+  // statt zwei und dem alten Spiegel. Das Bild kommt trotzdem, ohne zweiten Versuch; wir sehen, wie oft es vorkommt.
+  const atelier = optionsForPackage('atelier');
+  const tile = atelier.tiles[0];
+  const choice = payload({ paket: 'atelier', look: tile.look, format: tile.format, platte: tile.id, kombination: 'einheitlich',
+    unterbau: atelier.bases[0].id, top: atelier.tops[0].id, becken: 'einbau', finish: atelier.finishes[0].id,
+    keramik: atelier.sanitary[0].id, wall: atelier.walls[0].id, dusche: 'keine', badewanne: 'freistehend',
+    waschtisch: 'doppel', spiegel: 'spiegelschrank' });
+  const mailOf = async (answers) => {
+    const h = harness({ checks: [() => checkedInv({ bathtub: 'back' }, { bathtub: 'back' }, answers)] });
+    assert.equal((await h.invoke(choice)).statusCode, 200);
+    assert.equal(h.counts().generation, 1);
+    return JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails').body);
+  };
+  const wrong = await mailOf({ washbasins_after: 1, basin_on_top_after: true, mirror_after: 'mirror', mirror_kept: true,
+    bathtub_after: 'built_in', overhead_shower_after: true });
+  for (const hint of [/1 washbasin bowl\(s\), but a double washbasin was chosen/,
+    /the washbasin is a bowl standing on the countertop, but a basin set into the top was chosen/,
+    /a flat mirror hangs above the washbasin, but a mirror cabinet was chosen/,
+    /the mirror above the washbasin is still the old one of the photo/,
+    /the bathtub is built in, but a freestanding bathtub was chosen/,
+    /there is an overhead shower, but no shower was chosen/]) assert.match(wrong, hint);
+  const right = await mailOf({ washbasins_after: 2, basin_on_top_after: false, mirror_after: 'cabinet', mirror_kept: false,
+    bathtub_after: 'freestanding', overhead_shower_after: false });
+  assert.match(right, /Fensterprüfung.{0,80}>ok</);
+  assert.doesNotMatch(right, /was chosen|old one of the photo/);
+  // Ein unlesbarer Wert zaehlt nicht, die Pruefung bleibt gueltig.
+  assert.doesNotMatch(await mailOf({ mirror_after: 'big', washbasins_after: 'two' }), /nicht möglich|was chosen/);
+});
+
 test('ein Fenster, das viel groesser wird, steht als Hinweis in der Lead-Mail', async () => {
   // Dasselbe Bild von aussen gemessen: das Fenster nimmt im Ideenbild viel mehr Platz
   // ein als im Foto, die Kamera ist also naeher herangegangen.
