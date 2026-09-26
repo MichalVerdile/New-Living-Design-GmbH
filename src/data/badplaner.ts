@@ -807,9 +807,10 @@ const SHOWER_GLASS = 'A fixed glass panel; every wall around the entire shower-f
 
 export const showerOptions: ChoiceOption[] = [
   { id: 'keine', label: 'Keine Dusche', prompt: 'no shower, shower tray, shower enclosure or shower controls' },
-  // Die duenne flache weisse Wanne, buendig mit dem Boden, wie im Katalog Aurelia, S. 16; den runden Ablauf will Diego
+  // Die duenne flache Wanne, buendig mit dem Boden, wie im Katalog Aurelia, S. 16, in der Farbe des WC (Diego, 26.09.:
+  // "di solito lo facciamo"); den runden Ablauf will Diego
   // (26.09., P2), dort hat die Wanne hinten einen kurzen Schlitz.
-  { id: 'duschwanne', label: 'Dusche mit Duschwanne', prompt: `shower with a flat white shower tray: one smooth white piece without tile joints, set into the floor so that its surface is exactly level with the floor tiles around it, with no step, no kerb, no rim, no raised edge and no platform; it covers the whole shower floor, its outline shows clearly against the floor tiles, and it has its own small round drain with a round cover in its surface, and no channel drain and no slot at the foot of any wall. ${SHOWER_FITTINGS} ${SHOWER_GLASS}` },
+  { id: 'duschwanne', label: 'Dusche mit Duschwanne', prompt: `shower with a flat shower tray in the same colour as the toilet: one smooth piece without tile joints, set into the floor so that its surface is exactly level with the floor tiles around it, with no step, no kerb, no rim, no raised edge and no platform; it covers the whole shower floor, its outline shows clearly against the floor tiles, and it has its own small round drain with a round cover in its surface, and no channel drain and no slot at the foot of any wall. ${SHOWER_FITTINGS} ${SHOWER_GLASS}` },
   // Rinne von den Armaturen aus beschrieben (a1, 14:38); ein Satz ueber die Seitenwaende (a3) schob die Armaturen an die Rueckwand.
   { id: 'walk-in', label: 'Gefälledusche / Walk-in, bodeneben gefliest', prompt: `floor-level walk-in shower without a tray: the bathroom floor tiles continue into it, with no step, no kerb and no raised platform. ${SHOWER_FITTINGS} ${CHANNEL_DRAIN} ${SHOWER_GLASS}` },
 ];
