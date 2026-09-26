@@ -235,6 +235,8 @@ test('a file the browser cannot read byte by byte is still decoded', async (t) =
   assert.equal(image.width, 400);
   assert.equal(image.height, 300);
   assert.equal(image.base64, realImages['image/jpeg']);
+  // Groesse vor dem Verkleinern fuer die Mail an NLD; die Bytes waren nicht lesbar.
+  assert.deepEqual([image.sourceWidth, image.sourceHeight, image.sourceBytes], [800, 600, 0]);
 });
 
 test('an unreadable file that no decoder opens reports it in German', async (t) => {
@@ -260,8 +262,9 @@ test('bytes are read before file.size is touched (Android snapshot bug)', async 
     get size() { order.push('size'); return bytes.length; },
     arrayBuffer: async () => { order.push('read'); return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.length); },
   };
-  await resizeImageFile(file, 400);
+  const image = await resizeImageFile(file, 400);
   assert.deepEqual(order.slice(0, 1), ['read']);
+  assert.deepEqual([image.sourceWidth, image.sourceHeight, image.sourceBytes], [10, 10, bytes.length]);
   order.length = 0;
   const copy = await readFileNow({ name: 'bad.JPG', type: 'image/jpeg', get size() { order.push('size'); return 1; }, arrayBuffer: file.arrayBuffer });
   assert.deepEqual(order, ['read']);

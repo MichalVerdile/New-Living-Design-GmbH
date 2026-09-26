@@ -9,6 +9,10 @@ const moduleUrl = (name) => pathToFileURL(path.join(process.env.BADPLANER_TEST_B
 const { createHandler, nearestAspectRatio } = await import(moduleUrl('api/badplaner.js'));
 const { optionsForPackage } = await import(moduleUrl('src/data/badplaner.js'));
 const { Budget, TimeoutError } = await import(moduleUrl('server/badplaner/budget.js'));
+const aurelia = await import(moduleUrl('server/badplaner/aurelia.js'));
+const up = await import(moduleUrl('server/badplaner/up.js'));
+const ran = await import(moduleUrl('server/badplaner/ran.js'));
+const wc = await import(moduleUrl('server/badplaner/wc.js'));
 const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jX1EAAAAASUVORK5CYII=';
 
 function payload(changes = {}) {
@@ -144,27 +148,41 @@ test('Aufputz and Unterputz produce explicit, exclusive toilet branches', async 
       && call.body.contents[0].parts.filter((part) => part.inlineData).length === 2);
     const checkPrompt = checker.body.contents[0].parts[0].text;
     if (cistern === 'aufputz') {
-      assert.match(prompt, /is completely removed and must not survive in any form/);
-      assert.match(prompt, /exactly the sanitary module of image \d, copied part for part/);
-      assert.match(prompt, /clearly more than twice as tall as it is wide/);
-      assert.match(prompt, /flush button on the glass front near the top, never on the top surface/);
-      assert.match(prompt, /the toilet is wall-hung, rimless, in .*hanging on the front of that module/);
+      // P3 und P5: im Foto ein Wand-WC mit Platte, kein Aufputzkasten; das Modul steht hinter dem WC, die alte Platte geht weg.
+      // Ein Muretto, an dem das WC haengt, bleibt (Diego, 17.09.): das Modul steht vor ihm.
+      assert.match(prompt, /the old surface-mounted cistern with its casing, or the old flush plate, is removed completely; behind the toilet, flat against the wall or low wall it hangs on, stands the sanitary module/);
+      // Die Wahl des Kunden entscheidet (Diego, 26.09.): keine Bedingung "nur eine Platte im Foto" mehr, die das Modell falsch las.
+      assert.doesNotMatch(prompt, /only a flush plate|no module is added/);
+      assert.match(prompt, /stands the sanitary module of image \d: a factory-made glass and steel panel/);
+      assert.match(prompt, /about 50 cm wide, 115 cm high and 11 cm deep/);
+      // P3 vom 26.09.: eine Platte oben auf dem Modul, zur Wand hin. Der Knopf sitzt in der Glasfront (OLI QR Sospeso).
+      assert.match(prompt, /a small oval push button in the glass front near its top, not tiled/);
+      // P4 und P8 vom 26.09.: ein WC wie das alte. Das neue WC geht als Bild mit (Glam Twist 5203/TW).
+      assert.match(prompt, /the toilet is the new toilet of image \d+, never shaped like the old one, wall-hung and rimless in .*hangs on the module at exactly the old toilet position/);
+      assert.doesNotMatch(prompt, /new flush plate/);
       // Ein Holzsitz auf weisser Keramik war einer der Befunde vom 16.09.
-      assert.match(prompt, /its seat and lid are in the very same .*never wood, never a contrasting colour/);
-      assert.match(prompt, /wall behind is neither moved nor opened/);
+      assert.match(prompt, /with seat and lid in the same .*, not wood/);
+      assert.match(prompt, /the wall behind stays where it is/);
       // Das Modul steht an der Wand dahinter: die Pruefung darf es nicht als eigene Wand lesen.
       assert.match(checkPrompt, /a pre-wall or a sanitary module directly behind the toilet belongs to the wall it stands in front of/);
       assert.match(checkPrompt, /a flat glass sanitary module behind the toilet and the line where tiles end on a flat wall are not wall elements/);
+      // Duschwanne und Walk-in (26.09.): die Pruefung erkennt die Wanne am Aussehen, auch in der Farbe des WC.
+      assert.match(checkPrompt, /Set shower_floor_after to what the floor inside the shower of image 2 is: "tray" for a shower tray, raised or level with the floor: a separate smooth plate that looks different/);
+      assert.match(checkPrompt, /a shower tray level with the floor tiles is not raised/);
+      assert.match(checkPrompt, /a small round drain is not a channel drain/);
     } else {
-      assert.match(prompt, /the cistern stays hidden exactly where it already is/);
-      assert.match(prompt, /no new free-standing module is added/);
+      assert.match(prompt, /the cistern stays hidden in the wall where it is, and no sanitary module is added/);
       // Diegos Befund vom 17.09.: das WC haengt an einem Muretto, das die Spuelkasten
       // traegt. Das Modell hat es eingeebnet und das WC an die Wand dahinter geschoben.
-      assert.match(prompt, /that low wall is part of the room and stays: same place, same length, same height, same depth, only newly tiled/);
-      assert.match(prompt, /do not push the toilet back against the wall behind it/);
+      assert.match(prompt, /that low wall stays with the same place, length, height and depth, only newly tiled/);
+      assert.match(prompt, /the toilet is not pushed back to the wall behind/);
       // 19.09.: "often has a shelf on top" hat bei einer flachen Wand ein Muretto mit Ablage erzeugt.
       assert.doesNotMatch(prompt, /shelf on top/);
-      assert.match(prompt, /that wall stays one flat, full-height wall, only newly tiled: nothing is built in front of it/);
+      assert.match(prompt, /A toilet on a flat full-height wall stays on that flat wall, which is only newly tiled/);
+      // Unterputz: die neue Platte OLI Blink in der Oberflaeche der Armaturen (Diego, 26.09.).
+      assert.match(prompt, /its old flush plate is replaced, at the same place on the wall, by the new flush plate of image \d+ in polished chrome/);
+      assert.match(prompt, /Image \d+ is only a product photo of the new flush plate on a plain background: copy its shape, not its finish/);
+      assert.match(JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails').body), /Betätigungsplatte.{0,80}OLI Blink/);
     }
   }
 });
@@ -181,7 +199,7 @@ test('Colore uses the selected tap series and finish in prompt and lead mail', a
   }));
   assert.equal(res.statusCode, 200);
   const generation = h.calls.find((call) => call.body?.generationConfig?.responseModalities);
-  assert.match(generation.body.contents[0].parts[0].text, /Treemme Ran fittings in matte black, flat and square-edged: at the washbasin .*flat blade-shaped spout/);
+  assert.match(generation.body.contents[0].parts[0].text, /Treemme Ran fittings in matte black, round bodies with flat blade-shaped parts: at the washbasin a tall slender round column .*thin flat blade spout of rectangular section/);
   const lead = JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails')?.body);
   assert.match(lead, /Treemme Ran, Nero Opaco/);
   assert.doesNotMatch(lead, /Armaturenserie/);
@@ -194,7 +212,7 @@ test('Gäste-WC prompt and checker require no shower or bathtub', async () => {
   const generation = h.calls.find((call) => call.body?.generationConfig?.responseModalities);
   const checker = h.calls.find((call) => call.body?.generationConfig?.responseMimeType
     && call.body.contents[0].parts.filter((part) => part.inlineData).length === 2);
-  assert.match(generation.body.contents[0].parts[0].text, /guest WC: the result must contain NO shower/);
+  assert.match(generation.body.contents[0].parts[0].text, /this is a guest WC: it has no shower, shower tray, shower controls, bathtub or bath filler/);
   assert.match(checker.body.contents[0].parts[0].text, /name the wall each sanitary fixture stands against/);
 });
 
@@ -203,7 +221,8 @@ test('shower prompt tiles the full tray or sloped-floor perimeter to the ceiling
   const res = await h.invoke(payload({ dusche: 'walk-in', badewanne: 'keine', wall: 'halbhoch' }));
   assert.equal(res.statusCode, 200);
   const generation = h.calls.find((call) => call.body?.generationConfig?.responseModalities);
-  assert.match(generation.body.contents[0].parts[0].text, /entire perimeter of the shower tray or sloped tiled shower floor/);
+  // Nur "shower floor": "tray or sloped tiled floor" nannte beiden Duscharten die andere (Gegenpruefung vom 26.09.).
+  assert.match(generation.body.contents[0].parts[0].text, /around the entire perimeter of the shower floor is continuously tiled/);
   assert.match(generation.body.contents[0].parts[0].text, /every wall around the entire shower-floor perimeter is tiled continuously to the ceiling/);
 });
 
@@ -260,8 +279,7 @@ test('das Bidet wird weggeraeumt, und ein stehengebliebenes Bidet wird verworfen
   const h = harness();
   await h.invoke();
   const prompt = h.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
-  assert.match(prompt, /If image 1 shows a bidet, it is gone/);
-  assert.match(prompt, /nothing standing in its place/);
+  assert.match(prompt, /the bidet, if image 1 has one: its place is finished like the rest of the room, with nothing standing there/);
 
   const left = () => checkedInv({ bidet: 'right' }, { bidet: 'right' });
   const second = harness({ checks: [left, left] });
@@ -290,17 +308,28 @@ test('der Prompt ist eine Bearbeitung, keine Neuzeichnung', async () => {
   await h.invoke();
   const prompt = h.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
   // 19.09.: aus Diegos engem Bad wurde ein Ausstellungsbad mit anderer Kamera und
-  // einem Fenster. Zuerst steht, was das Ergebnis ist, zuletzt der Abgleich.
+  // einem Fenster. Zuerst steht, was das Ergebnis ist.
   assert.match(prompt, /^PHOTO EDITING TASK, not a design task\. Image 1 is a photograph of the customer's existing bathroom\. The result is that same photograph after the renovation/);
-  assert.match(prompt, /BEFORE YOU DRAW, compare with image 1: the same viewpoint and framing, the same walls and ceiling, no window at all, the same door, every fixture where image 1 has it/);
+  assert.match(prompt, /Do not design a new bathroom and do not show a showroom/);
+  assert.match(prompt, /Image 1 shows NO window and no roof window: the result must not contain any window or glass opening at all, every wall stays a solid wall\./);
+  // 25.09.: mit der gekuerzten Fassung zeichnete das Modell P2 und P5 aus einer anderen Kamera; der Wortlaut der Website hielt sie.
+  assert.match(prompt, /This is an edit of image 1, not a new picture\. Keep image 1 and change only what the CHANGE list names/);
+  assert.match(prompt, /Never zoom out, never widen the view, never show floor, wall or ceiling beyond the edges of image 1, never create extra floor area/);
+  assert.match(prompt, /every window, roof window and door at its exact size and position/);
+  // P4 und P5 vom 25.09.: ohne den Abgleich am Schluss kam bei "keine Fenster" ein Fenster dazu.
+  assert.match(prompt, /BEFORE YOU DRAW, compare with image 1: the same viewpoint and framing, the same walls and ceiling, no window at all, the same door and, at the edge of the picture, the same door leaf or frame in the foreground if image 1 has one, every fixture where image 1 has it/);
   assert.match(prompt, /never show more of the room than image 1 shows\.$/);
-  assert.match(prompt, /This is an edit of image 1, not a new picture/);
-  assert.match(prompt, /KEEP THE POSITIONS/);
-  assert.match(prompt, /its place along it, measured against the corners, the door and the window/);
+  assert.match(prompt, /Photorealistic, bright, even light, no people/);
+  assert.doesNotMatch(prompt, /daylight/);
+  assert.match(prompt, /KEEP THE POSITIONS\. .*Every fixture keeps the wall or low wall it stands against in image 1 and its place along it, measured against the corners, the door and the window next to it\. .*The washbasin keeps its wall and its place/);
   // Ein Muretto ist Raum, keine Einrichtung: es bleibt stehen.
-  assert.match(prompt, /A half-height wall, a low built wall or a boxed pre-wall that a fixture stands against is part of the room, not furniture/);
-  // Die Duscharmatur stand ueber dem WC statt in der Dusche.
-  assert.match(prompt, /Every shower fitting[^.]*sits inside the shower area, all together on one and the same wall of the shower[^.]*never split over two walls and never on a wall next to the toilet or the washbasin/);
+  assert.match(prompt, /A half-height wall, a low built wall or a boxed pre-wall that a fixture stands against is part of the room, not furniture: it keeps its place, its length, its height and its depth, and the fixture stays mounted on it/);
+  // Die Duscharmatur stand ueber dem WC statt in der Dusche. Der Satz steht nur mit Dusche (26.09.).
+  assert.doesNotMatch(prompt, /All shower fittings sit together/);
+  const withShower = harness();
+  await withShower.invoke(payload({ dusche: 'walk-in' }));
+  assert.match(withShower.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text,
+    /All shower fittings sit together on one wall inside the shower area, never next to the toilet or the washbasin/);
 });
 
 test('das Glas der alten Duschkabine ist im Prompt kein Fenster', async () => {
@@ -478,7 +507,7 @@ test('ein weggeraeumtes Stueck aendert die Reihenfolge nicht', async () => {
   assert.equal(res.statusCode, 200);
 });
 
-test('das WC darf an seiner Wand nicht nach hinten rutschen', async () => {
+test('rutscht das WC an seiner Wand nach hinten, steht es als Hinweis in der Lead-Mail', async () => {
   // Probe vom 17.09., zweimal am selben Foto: im Foto steht das WC vorne bei der
   // Tuer, im Ideenbild weiter hinten. Gleiche Wand, gleiche Reihenfolge, also
   // hat weder die Wand- noch die Reihenfolgepruefung etwas gemerkt.
@@ -490,26 +519,28 @@ test('das WC darf an seiner Wand nicht nach hinten rutschen', async () => {
     foreground_object_before: false, foreground_object_after: false, window_much_bigger: false,
     extra_openings: false, view_changed: false, reason: 'inventory',
   }) }] }, finishReason: 'STOP' }] });
-  const h = harness({ checks: [shifted, shifted] });
+  // Seit dem 25.09. nur ein Hinweis: "am naechsten" liest die Pruefung oft unsicher.
+  const h = harness({ checks: [shifted] });
   const res = await h.invoke(payload({ dusche: 'walk-in', badewanne: 'keine' }));
-  assert.equal(res.statusCode, 502);
+  assert.equal(res.statusCode, 200);
+  assert.equal(h.counts().generation, 1);
   const leadMail = h.calls.find((call) => call.url === 'https://api.resend.com/emails');
-  assert.match(JSON.stringify(leadMail.body), /in the photo the toilet is closest to the camera, in the result the washbasin/);
+  assert.match(JSON.stringify(leadMail.body), /Hinweis: in the photo the toilet is closest to the camera, in the result the washbasin/);
 });
 
-test('ein verschwundenes Muretto unter dem WC wird verworfen', async () => {
+test('ein verschwundenes Muretto unter dem WC steht als Hinweis in der Lead-Mail', async () => {
   // Diegos Befund vom 17.09.: das WC haengt rechts neben der Tuer an einem niedrigen
   // Mauerstueck, das die Spuelkasten traegt. Das Modell hat das Mauerstueck eingeebnet
   // und das WC an die Wand dahinter geschoben. Wand, Reihenfolge und Tiefe bleiben
   // dabei gleich, also merkt es keine der anderen Pruefungen.
   const flattened = () => checkedInv({ toilet: 'right' }, { toilet: 'right' },
     { toilet_on_low_wall_before: true, toilet_on_low_wall_after: false });
-  const h = harness({ checks: [flattened, flattened] });
+  const h = harness({ checks: [flattened] });
   const res = await h.invoke();
-  assert.equal(res.statusCode, 502);
-  assert.equal(res.body.code, 'RENDER_REJECTED');
+  assert.equal(res.statusCode, 200);
+  assert.equal(h.counts().generation, 1);
   const leadMail = h.calls.find((call) => call.url === 'https://api.resend.com/emails');
-  assert.match(JSON.stringify(leadMail.body), /the low wall the toilet stood against is gone/);
+  assert.match(JSON.stringify(leadMail.body), /Hinweis: the low wall the toilet stood against is gone/);
 });
 
 test('der zweite Versuch bekommt die ganze Liste noch einmal mit', async () => {
@@ -522,32 +553,75 @@ test('der zweite Versuch bekommt die ganze Liste noch einmal mit', async () => {
   const generations = h.calls.filter((call) => call.body?.generationConfig?.responseModalities);
   assert.equal(generations.length, 2);
   const retryPrompt = generations[1].body.contents[0].parts[0].text;
-  assert.match(retryPrompt, /the washbasin on its own vanity unit with the mirror above it/);
-  assert.match(retryPrompt, /everything in the foreground at the edge of the picture/);
+  // Der ganze erste Prompt geht wieder mit, dazu der Grund der Ablehnung.
+  assert.ok(retryPrompt.startsWith(generations[0].body.contents[0].parts[0].text));
+  assert.match(retryPrompt, /A previous attempt failed the check because the toilet moved from the left wall to the right wall\. Start again from image 1 and correct exactly that/);
+  assert.match(retryPrompt, /The vanity unit is not loose furniture and stays/);
+  assert.match(retryPrompt, /Whatever is built in the immediate foreground at the edge of image 1/);
 });
 
-test('eine verschwundene Tuer im Vordergrund wird verworfen', async () => {
+test('eine verschwundene Tuer im Vordergrund loest den zweiten Versuch aus', async () => {
   // Probe vom 17.09.: im Foto steht links vorne der offene Tuerfluegel und nimmt ein
   // Viertel des Bildes ein. Im Ideenbild ist er weg, das Modell hat die Kamera gedreht.
-  // Waende, Reihenfolge, Tiefe und Muretto blieben dabei gleich.
+  // Bis zum 25.09. nur ein Hinweis; dann fehlte die Tuer in P2, P4 und P5, und Diego will das Foto mit der Tuer.
   const turned = () => checkedInv({}, {}, { foreground_object_before: true, foreground_object_after: false });
-  const h = harness({ checks: [turned, turned] });
+  const h = harness({ checks: [turned] });
   const res = await h.invoke();
-  assert.equal(res.statusCode, 502);
-  assert.equal(res.body.code, 'RENDER_REJECTED');
-  const leadMail = h.calls.find((call) => call.url === 'https://api.resend.com/emails');
-  assert.match(JSON.stringify(leadMail.body), /what stood in the foreground of the photo, at the edge of the picture, is gone/);
+  assert.equal(res.statusCode, 200);
+  assert.equal(h.counts().generation, 2);
+  assert.match(h.calls.filter((call) => call.body?.generationConfig?.responseModalities)[1].body.contents[0].parts[0].text,
+    /failed the check because what stands in the foreground at the edge of image 1 \(an open door leaf, a door frame or the edge of a wall\) is gone/);
+  // Bleibt sie auch im zweiten Versuch weg, kommt das Bild trotzdem, mit Vermerk.
+  // Hat sich dabei auch der Bildausschnitt verschoben, steht das ebenfalls in der Mail (Pruefung vom 26.09.).
+  const turnedView = () => checkedInv({}, {}, { foreground_object_before: true, foreground_object_after: false, view_changed: true, reason: 'camera turned to the right' });
+  const twice = harness({ checks: [turned, turnedView] });
+  assert.equal((await twice.invoke()).statusCode, 200);
+  const twiceMail = JSON.stringify(twice.calls.find((call) => call.url === 'https://api.resend.com/emails').body);
+  assert.match(twiceMail, /Mangel im gezeigten Bild \(2\. Versuch\) – 1\. Versuch: what stands in the foreground.* \| 2\. Versuch: what stands in the foreground/);
+  assert.match(twiceMail, /Bildausschnitt verändert: camera turned to the right/);
 });
 
-test('ein Fenster, das viel groesser wird, wird verworfen', async () => {
+test('die Wahl des Kunden wird abgelesen, ein Unterschied steht nur als Hinweis in der Mail', async () => {
+  // Diego, 25.09. (Punkt c): Proben mit Einbau- statt freistehender Wanne, Kopfbrause ohne Dusche, einem Becken
+  // statt zwei und dem alten Spiegel. Das Bild kommt trotzdem, ohne zweiten Versuch; wir sehen, wie oft es vorkommt.
+  const atelier = optionsForPackage('atelier');
+  const tile = atelier.tiles[0];
+  const choice = payload({ paket: 'atelier', look: tile.look, format: tile.format, platte: tile.id, kombination: 'einheitlich',
+    unterbau: atelier.bases[0].id, top: atelier.tops[0].id, becken: 'einbau', finish: atelier.finishes[0].id,
+    keramik: atelier.sanitary[0].id, wall: atelier.walls[0].id, dusche: 'keine', badewanne: 'freistehend',
+    waschtisch: 'doppel', spiegel: 'spiegelschrank' });
+  const mailOf = async (answers) => {
+    const h = harness({ checks: [() => checkedInv({ bathtub: 'back' }, { bathtub: 'back' }, answers)] });
+    assert.equal((await h.invoke(choice)).statusCode, 200);
+    assert.equal(h.counts().generation, 1);
+    return JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails').body);
+  };
+  const wrong = await mailOf({ washbasins_after: 1, basin_on_top_after: true, mirror_after: 'mirror', mirror_kept: true,
+    bathtub_after: 'built_in', overhead_shower_after: true });
+  for (const hint of [/1 washbasin bowl\(s\), but a double washbasin was chosen/,
+    /the washbasin is a bowl standing on the countertop, but a basin set into the top was chosen/,
+    /a flat mirror hangs above the washbasin, but a mirror cabinet was chosen/,
+    /the mirror above the washbasin is still the old one of the photo/,
+    /the bathtub is built in, but a freestanding bathtub was chosen/,
+    /there is an overhead shower, but no shower was chosen/]) assert.match(wrong, hint);
+  const right = await mailOf({ washbasins_after: 2, basin_on_top_after: false, mirror_after: 'cabinet', mirror_kept: false,
+    bathtub_after: 'freestanding', overhead_shower_after: false });
+  assert.match(right, /Fensterprüfung.{0,80}>ok</);
+  assert.doesNotMatch(right, /was chosen|old one of the photo/);
+  // Ein unlesbarer Wert zaehlt nicht, die Pruefung bleibt gueltig.
+  assert.doesNotMatch(await mailOf({ mirror_after: 'big', washbasins_after: 'two' }), /nicht möglich|was chosen/);
+});
+
+test('ein Fenster, das viel groesser wird, steht als Hinweis in der Lead-Mail', async () => {
   // Dasselbe Bild von aussen gemessen: das Fenster nimmt im Ideenbild viel mehr Platz
   // ein als im Foto, die Kamera ist also naeher herangegangen.
   const zoomed = () => checkedInv({}, {}, { window_much_bigger: true });
-  const h = harness({ checks: [zoomed, zoomed] });
+  const h = harness({ checks: [zoomed] });
   const res = await h.invoke();
-  assert.equal(res.statusCode, 502);
+  assert.equal(res.statusCode, 200);
+  assert.equal(h.counts().generation, 1);
   const leadMail = h.calls.find((call) => call.url === 'https://api.resend.com/emails');
-  assert.match(JSON.stringify(leadMail.body), /the window takes up much more of the result than of the photo/);
+  assert.match(JSON.stringify(leadMail.body), /Hinweis: the window takes up much more of the result than of the photo/);
 });
 
 test('die Pruefung fragt nach dem Vordergrund, der ganz verschwindet, nicht nach dem, der kleiner wird', async () => {
@@ -559,6 +633,8 @@ test('die Pruefung fragt nach dem Vordergrund, der ganz verschwindet, nicht nach
     .map((call) => call.body.contents[0].parts[0].text).find((text) => text.includes('foreground_object_after'));
   assert.match(question, /still visible at the edge of image 2 at any size, even as a narrow strip/);
   assert.match(question, /foreground_object_after is false only when it is gone completely/);
+  // Ein loses Moebel vorne soll weg (Jonathan, 25.09.): es zaehlt nicht als Vordergrund.
+  assert.match(question, /an open door leaf, a door frame or the near edge of a wall; loose furniture does not count/);
 });
 
 test('ein Vordergrund, der im Foto gar nicht da war, ist kein Fehler', async () => {
@@ -574,10 +650,16 @@ test('der Prompt haelt den Vordergrund und den Waschtischunterbau fest', async (
   await h.invoke();
   const prompt = h.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
   // Der Tuerfluegel im Vordergrund gehoert zum Bild.
-  assert.match(prompt, /Whatever stands in the immediate foreground at the edge of image 1 belongs to the picture and stays/);
+  assert.match(prompt, /Whatever is built in the immediate foreground at the edge of image 1 belongs to the picture and stays: an open door leaf, a door frame, the edge of a wall\. It keeps its place and takes up the same part of the picture as before, and is never removed to show more of the room/);
+  // Jonathan am 25.09.: der lose Schrank vorne sollte bleiben und zugleich weg. Er geht, die Kamera bleibt.
+  assert.match(prompt, /A loose piece of furniture at the edge is removed like all loose furniture: .*the camera stays exactly where it is/);
+  assert.match(prompt, /loose furniture, also a cabinet or shelf cut off at the edge of the picture/);
+  assert.match(prompt, /the same door and, at the edge of the picture, the same door leaf or frame in the foreground if image 1 has one/);
+  // P5 vom 25.09.: "Keep the radiators" brachte einen Heizkoerper, den das Foto nicht hat.
+  assert.match(prompt, /a radiator only where image 1 has one/);
   assert.match(prompt, /Every window keeps the same share of the picture it has in image 1/);
   // "Loose furniture is gone" hat im Gaeste-WC den Waschtischunterbau mitgenommen.
-  assert.match(prompt, /the washbasin's own vanity unit is not loose furniture and is always there/);
+  assert.match(prompt, /The vanity unit is not loose furniture and stays/);
   assert.doesNotMatch(prompt, /Loose furniture, clutter/);
 });
 
@@ -588,7 +670,7 @@ test('ein erhaltenes Muretto ist kein Fehler', async () => {
   assert.equal(res.statusCode, 200);
 });
 
-test('ein neues Muretto, eine Ablage oder eine Nische wird verworfen', async () => {
+test('ein neues Muretto, eine Ablage oder eine Nische steht als Hinweis in der Lead-Mail', async () => {
   // Diegos Test vom 19.09.: flache, raumhoch geplattete Wand, Spuelplatte buendig, im
   // Ideenbild ein halbhohes Muretto mit Ablage hinter Waschtisch, WC und Dusche.
   for (const flags of [
@@ -596,12 +678,12 @@ test('ein neues Muretto, eine Ablage oder eine Nische wird verworfen', async () 
     { toilet_on_low_wall_before: false, toilet_on_low_wall_after: true },
   ]) {
     const added = () => checkedInv({ toilet: 'right' }, { toilet: 'right' }, flags);
-    const h = harness({ checks: [added, added] });
+    const h = harness({ checks: [added] });
     const res = await h.invoke();
-    assert.equal(res.statusCode, 502);
-    assert.equal(res.body.code, 'RENDER_REJECTED');
-    const retry = h.calls.filter((call) => call.body?.generationConfig?.responseModalities)[1].body.contents[0].parts[0].text;
-    assert.match(retry, /a low wall, ledge, shelf or niche that is not in the photo was added/);
+    assert.equal(res.statusCode, 200);
+    assert.equal(h.counts().generation, 1);
+    const leadMail = h.calls.find((call) => call.url === 'https://api.resend.com/emails');
+    assert.match(JSON.stringify(leadMail.body), /Hinweis: a low wall, ledge, shelf or niche that is not in the photo was added/);
   }
   const prompt = harness();
   await prompt.invoke();
@@ -700,20 +782,24 @@ test('the sanitary module travels as its own reference image', async () => {
   const generation = h.calls.find((call) => call.body?.generationConfig?.responseModalities);
   const parts = generation.body.contents[0].parts;
   // Foto, Plattenmuster, Muster von Waschtischplatte und Unterbau (eine Datei, wenn beide
-  // dieselbe haben), Sanitärmodul: das Modul kommt zuletzt.
+  // dieselbe haben), Sanitärmodul, Armaturen: das Modul kommt vor den Armaturen.
   const options = optionsForPackage('essenza');
   const vanity = new Set([options.tops[0].image, options.bases[0].image]).size;
   const images = parts.filter((part) => part.inlineData);
-  assert.equal(images.length, 2 + vanity + 1);
-  const module = images[images.length - 1].inlineData;
+  assert.equal(images.length, 2 + vanity + 4); // dazu der neue Spiegel und das neue WC
+  const module = images[images.length - 3].inlineData;
   assert.equal(module.mimeType, 'image/jpeg');
   // Ein echtes JPEG, kein Platzhalter: Base64 eines Bildes von einigen Kilobyte.
   assert.ok(module.data.startsWith('/9j/'), 'module image is not a JPEG');
   assert.ok(module.data.length > 2000, `module image too small: ${module.data.length}`);
   const prompt = parts[0].text;
-  assert.match(prompt, new RegExp(`Image ${images.length} is ONLY a product photo of one sanitary module`));
-  assert.match(prompt, new RegExp(`exactly the sanitary module of image ${images.length}, copied part for part`));
-  assert.match(prompt, /never tiled, never clad and never boxed in/);
+  assert.match(prompt, new RegExp(`Image ${images.length - 2} is only a product photo of the sanitary module`));
+  assert.match(prompt, new RegExp(`stands the sanitary module of image ${images.length - 2}:`));
+  assert.match(prompt, new RegExp(`Image ${images.length - 1} is only a product photo of the new toilet bowl: copy its shape, not its colour`));
+  assert.equal(images[images.length - 2].inlineData.data, wc.WC_PHOTO.data);
+  // Ohne Dusche (Standardauswahl) nur die Waschtischarmatur.
+  assert.match(prompt, new RegExp(`Image ${images.length} is only a product photo of the washbasin tap`));
+  assert.match(prompt, /not tiled or boxed in/);
   const leadMail = h.calls.find((call) => call.url === 'https://api.resend.com/emails');
   assert.match(JSON.stringify(leadMail.body), /OLI QR INOX Sospeso/);
 });
@@ -724,9 +810,9 @@ test('the module image needs no network call and none is made for it', async () 
   assert.equal(res.statusCode, 200);
   assert.equal(h.calls.filter((call) => call.url.includes('oli-world')).length, 0);
   const generation = h.calls.find((call) => call.body?.generationConfig?.responseModalities);
-  // Plattenmuster fehlt hier (404), das Modul ist trotzdem dabei: Foto + Modul.
-  assert.equal(generation.body.contents[0].parts.filter((part) => part.inlineData).length, 2);
-  assert.match(generation.body.contents[0].parts[0].text, /Image 2 is ONLY a product photo of one sanitary module/);
+  // Plattenmuster fehlt hier (404), Modul und Armaturen sind trotzdem dabei: Foto + Modul + Armaturen.
+  assert.equal(generation.body.contents[0].parts.filter((part) => part.inlineData).length, 5); // Spiegel, Modul, WC, Armaturen
+  assert.match(generation.body.contents[0].parts[0].text, /Image 3 is only a product photo of the sanitary module/);
 });
 
 test('Unterputz carries no module image and forbids a module in front of the wall', async () => {
@@ -734,10 +820,11 @@ test('Unterputz carries no module image and forbids a module in front of the wal
   const res = await h.invoke(payload({ cistern: 'unterputz' }));
   assert.equal(res.statusCode, 200);
   const generation = h.calls.find((call) => call.body?.generationConfig?.responseModalities);
-  assert.equal(generation.body.contents[0].parts.filter((part) => part.inlineData).length, 1);
+  // Foto, Spiegel, WC, Platte und Armaturen, kein Modul.
+  assert.equal(generation.body.contents[0].parts.filter((part) => part.inlineData).length, 5);
   const prompt = generation.body.contents[0].parts[0].text;
-  assert.doesNotMatch(prompt, /product photo of one sanitary module/);
-  assert.match(prompt, /In both cases no new free-standing module is added/);
+  assert.doesNotMatch(prompt, /product photo of the sanitary module/);
+  assert.match(prompt, /no sanitary module is added/);
 });
 
 test('the washbasin gets the same ceramic colour as the toilet', async () => {
@@ -755,7 +842,7 @@ test('the washbasin gets the same ceramic colour as the toilet', async () => {
   const generation = h.calls.find((call) => call.body?.generationConfig?.responseModalities);
   const prompt = generation.body.contents[0].parts[0].text;
   // Ein Bad mit farbigem WC und weissem Becken ist eine Farbe zu viel.
-  assert.ok(prompt.includes(`in the same ${coloured.prompt} as the toilet, exactly the same colour and finish`),
+  assert.ok(prompt.includes(`the basin in the same ${coloured.prompt} as the toilet`),
     'washbasin does not carry the ceramic colour');
 });
 
@@ -777,15 +864,15 @@ test('Waschtischplatte und Unterbau gehen als Muster mit, die Platte nimmt nie d
     waschtisch: options.basins[0].id, spiegel: options.mirrors[0].id,
   }));
   assert.equal(res.statusCode, 200);
-  // Dieselbe Datei wird einmal geladen und einmal mitgeschickt: Foto, Platte, Diamante.
+  // Dieselbe Datei wird einmal geladen und einmal mitgeschickt: Foto, Platte, Diamante, dazu die Armaturen Up+.
   assert.equal(h.calls.filter((call) => call.url.endsWith(top.image)).length, 1);
   const generation = h.calls.find((call) => call.body?.generationConfig?.responseModalities);
-  assert.equal(generation.body.contents[0].parts.filter((part) => part.inlineData).length, 3);
+  assert.equal(generation.body.contents[0].parts.filter((part) => part.inlineData).length, 7); // dazu WC und Platte
   const prompt = generation.body.contents[0].parts[0].text;
-  assert.match(prompt, /Image 3 is ONLY a small colour sample for the vanity unit: its front, its body and its countertop/);
-  assert.ok(prompt.includes(`countertop in ${top.prompt}, exactly the colour and finish of image 3`), 'Platte ohne Verweis auf ihr Muster');
-  assert.ok(prompt.includes(`front and body in ${base.prompt}, exactly the colour and finish of image 3`), 'Unterbau ohne Verweis auf sein Muster');
-  assert.match(prompt, /the countertop is its own material, never cut from the wall or floor tiles and never copying their pattern or veining/);
+  assert.match(prompt, /Image 3 is only a colour sample for the whole vanity unit: its front, its body and its countertop/);
+  assert.ok(prompt.includes(`countertop in ${top.prompt} in the colour and finish of image 3`), 'Platte ohne Verweis auf ihr Muster');
+  assert.ok(prompt.includes(`front and body in ${base.prompt} in the colour and finish of image 3`), 'Unterbau ohne Verweis auf sein Muster');
+  assert.match(prompt, /the countertop is its own material, not cut from the wall or floor tiles/);
   const leadMail = h.calls.find((call) => call.url === 'https://api.resend.com/emails');
   assert.match(JSON.stringify(leadMail.body), /Platte geladen, Waschtisch geladen/);
 });
@@ -795,10 +882,11 @@ test('ohne ladbares Muster bleibt es bei der Beschreibung, ohne Bildnummer', asy
   const res = await h.invoke();
   assert.equal(res.statusCode, 200);
   const generation = h.calls.find((call) => call.body?.generationConfig?.responseModalities);
-  assert.equal(generation.body.contents[0].parts.filter((part) => part.inlineData).length, 1);
+  // Foto und die Vorlagen, die im Code liegen: Spiegel, WC, Platte, Armaturen.
+  assert.equal(generation.body.contents[0].parts.filter((part) => part.inlineData).length, 5);
   const prompt = generation.body.contents[0].parts[0].text;
   assert.doesNotMatch(prompt, /colour sample for|sample of the countertop/);
-  assert.match(prompt, /never cut from the wall or floor tiles/);
+  assert.match(prompt, /not cut from the wall or floor tiles/);
 });
 
 test('an integrated washbasin keeps the countertop material, not the ceramic colour', async () => {
@@ -815,18 +903,27 @@ test('an integrated washbasin keeps the countertop material, not the ceramic col
   }));
   assert.equal(res.statusCode, 200, `unexpected status ${res.statusCode}: ${JSON.stringify(res.body).slice(0, 200)}`);
   const generation = h.calls.find((call) => call.body?.generationConfig?.responseModalities);
-  assert.doesNotMatch(generation.body.contents[0].parts[0].text, /as the toilet, exactly the same colour and finish/);
+  assert.doesNotMatch(generation.body.contents[0].parts[0].text, /the basin in the same .* as the toilet/);
 });
 
-test('the toilet keeps its wall, also under a sloping ceiling', async () => {
-  const h = harness();
-  const res = await h.invoke(payload());
-  assert.equal(res.statusCode, 200);
-  const generation = h.calls.find((call) => call.body?.generationConfig?.responseModalities);
-  const prompt = generation.body.contents[0].parts[0].text;
+test('the toilet keeps its wall, also under a sloping ceiling, and a flat ceiling stays flat', async () => {
+  const withCeiling = (ceiling) => () => photoChecked(true, JSON.stringify({ is_bathroom: true, reason: 'bathroom', walls: inv(), order: ['washbasin', 'toilet'], nearest: 'toilet', ceiling }));
+  const promptFor = async (ceiling) => {
+    const h = harness({ photoChecks: [withCeiling(ceiling)] });
+    const res = await h.invoke(payload());
+    assert.equal(res.statusCode, 200);
+    return h.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
+  };
   // Zweimal gesehen: unter der Dachschraege wandert das WC an die gerade Wand.
-  assert.match(prompt, /The toilet keeps its wall and its place because its drain cannot be moved/);
-  assert.match(prompt, /never moved to a straight or rear wall to gain headroom/);
+  const sloped = await promptFor('sloped');
+  assert.match(sloped, /The toilet keeps its wall and its place because its drain cannot be moved: under the sloping ceiling it stays under that sloping ceiling/);
+  assert.match(sloped, /The ceiling slopes exactly as in image 1, at the same angle and height/);
+  // P4 vom 25.09.: aus der flachen Decke eines Gaeste-WCs wurde eine Dachschraege mit Dachfenster.
+  const flat = await promptFor('flat');
+  assert.match(flat, /The ceiling is flat and horizontal exactly as in image 1: no slope, no attic, no beams and no roof window/);
+  assert.doesNotMatch(flat, /sloping ceiling/);
+  const unknown = await promptFor('unknown');
+  assert.match(unknown, /The ceiling keeps exactly the shape and height it has in image 1: never add a slope, an attic or a roof window/);
 });
 
 test('an Unterputz toilet also keeps seat and lid in the ceramic colour', async () => {
@@ -834,7 +931,7 @@ test('an Unterputz toilet also keeps seat and lid in the ceramic colour', async 
   const res = await h.invoke(payload({ cistern: 'unterputz' }));
   assert.equal(res.statusCode, 200);
   const generation = h.calls.find((call) => call.body?.generationConfig?.responseModalities);
-  assert.match(generation.body.contents[0].parts[0].text, /with seat and lid in the very same .*never wood/);
+  assert.match(generation.body.contents[0].parts[0].text, /with seat and lid in the same .*, not wood/);
 });
 
 test('kein Auswahlname traegt italienischen Katalogtext oder ein doppeltes Wort', () => {
@@ -918,6 +1015,8 @@ test('second rejected result is never returned, while the lead and original phot
   assert.deepEqual(leadMail.body.attachments.map(({ filename }) => filename), ['foto.png', 'verworfen.jpg']);
   // Der zweite, ebenfalls verworfene Versuch ist der, den wir zu sehen bekommen.
   assert.ok(leadMail.body.attachments[1].content.length > 0);
+  // Diego, 25.09.: beide Gruende stehen in der Mail, nicht nur der letzte.
+  assert.match(JSON.stringify(leadMail.body), /abgelehnt – 1\. Versuch: an opening was added or lost.* \| 2\. Versuch: an opening was added or lost/);
 });
 
 test('second approved result replaces first rejected result', async () => {
@@ -925,7 +1024,7 @@ test('second approved result replaces first rejected result', async () => {
   const res = await h.invoke();
   assert.equal(res.statusCode, 200); assert.deepEqual(h.counts(), { generation: 2, checks: 2, mail: 2 });
   const retry = h.calls.filter((call) => call.body?.generationConfig?.responseModalities)[1];
-  assert.match(retry.body.contents[0].parts[0].text, /failed the structural and fixture check/);
+  assert.match(retry.body.contents[0].parts[0].text, /A previous attempt failed the check because/);
 });
 
 test('second generation failure after rejection still fails closed', async () => {
@@ -1014,6 +1113,8 @@ test('retry is skipped when a second pass of the measured length cannot fit', as
   const h = harness({ generateDelays: [60000], checkDelays: [19000, 19000], checks: [() => response({}, 503), () => checked(true)] });
   const res = await h.invoke();
   assert.equal(res.body.code, 'RENDER_REJECTED'); assert.deepEqual(h.counts(), { generation: 1, checks: 2, mail: 1 });
+  assert.match(JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails').body),
+    /abgelehnt – 1\. Versuch: an opening was added or lost.* \| kein 2\. Versuch \(zu wenig Zeit\)/);
 });
 
 test('der zweite Versuch laeuft auch nach dem langsamsten ersten Durchgang', async () => {
@@ -1115,10 +1216,15 @@ test('current large catalog originals below 5 MiB retain their visual reference'
   const h = harness({ swatch: () => new Response(bytes, { headers: { 'content-type': 'image/png' } }) });
   const res = await h.invoke(); assert.equal(res.statusCode, 200);
   const generation = h.calls.find((call) => call.body?.generationConfig?.responseModalities);
-  // Text, Foto, Plattenmuster, dann die Muster von Waschtischplatte und Unterbau (hier eine Datei).
+  // Text, Foto, Plattenmuster, dann die Muster von Waschtischplatte und Unterbau (hier eine Datei), zuletzt die Armaturen.
   const options = optionsForPackage('essenza');
-  assert.equal(generation.body.contents[0].parts.length, 3 + new Set([options.tops[0].image, options.bases[0].image]).size);
-  assert.equal(Buffer.from(generation.body.contents[0].parts[2].inlineData.data, 'base64').length, bytes.length);
+  const images = generation.body.contents[0].parts.filter((part) => part.inlineData);
+  assert.equal(images.length, 6 + new Set([options.tops[0].image, options.bases[0].image]).size); // dazu WC und Platte
+  assert.equal(Buffer.from(images[1].inlineData.data, 'base64').length, bytes.length);
+  // Vor jedem Bild steht seine Nummer, wie im Prompt (Diego, 26.09.: jedes Bild einzeln).
+  assert.deepEqual(generation.body.contents[0].parts.slice(1).filter((part) => part.text).map((part) => part.text),
+    images.map((_, index) => `Image ${index + 1}:`));
+  assert.ok(generation.body.contents[0].parts.slice(1).every((part, index) => (index % 2 === 0) === !!part.text));
   const leadMail = h.calls.find((call) => call.url === 'https://api.resend.com/emails');
   assert.match(JSON.stringify(leadMail.body), /Muster/);
   assert.match(JSON.stringify(leadMail.body), /geladen/);
@@ -1194,6 +1300,24 @@ function anfrageBody(fields, imageBytes) {
 }
 
 const contactFields = { name: 'Walter Test Vorschau (bitte ignorieren)', email: 'fixture@example.invalid', telefon: '+41 00 000 00 00', place: '4800 Zofingen', consent: true };
+
+test('die Mail an NLD sagt, ob das Foto aus der Kamera oder der Galerie kam und wie gross es war', async () => {
+  // Diego, 26.09.: scheitern Fotos aus der Galerie oefter? Bisher wusste es der Server nicht.
+  const mailOf = async (changes) => {
+    const h = harness();
+    assert.equal((await h.invoke(previewPayload(changes))).statusCode, 200);
+    return JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails').body);
+  };
+  assert.match(await mailOf({ fotoInfo: { quelle: 'galerie', breite: 4032, hoehe: 3024, bytes: 2400000 } }), /Galerie, Original 4032×3024 \(2\.4 MB\), gesendet \d+×\d+/);
+  assert.match(await mailOf({ fotoInfo: { quelle: 'kamera', breite: 3000, hoehe: 4000, bytes: 0 } }), /Kamera, Original 3000×4000, gesendet \d+×\d+/);
+  // Eine alte Seite ohne die Angabe, oder unsinnige Werte: nur die gesendete Groesse.
+  assert.match(await mailOf({}), /Quelle unbekannt, gesendet \d+×\d+/);
+  const odd = await mailOf({ fotoInfo: { quelle: 'constructor', breite: -1, hoehe: 'x', bytes: 1e12 } });
+  assert.match(odd, /Quelle unbekannt, gesendet \d+×\d+/);
+  assert.doesNotMatch(odd, /function|Original/);
+  // Ein Objekt, das sich nicht in Text wandeln laesst: kein Fehler nach dem bezahlten Bild (sonst zaehlen die Limits nicht).
+  assert.match(await mailOf({ fotoInfo: { quelle: { toString: 1 } } }), /Quelle unbekannt, gesendet \d+×\d+/);
+});
 
 test('Vorschau: Bild ohne Kontaktangaben, Entwurf-Mail mit Foto und Bild an NLD, keine Kundenmail', async () => {
   const h = harness();
@@ -1349,7 +1473,7 @@ test('the image prompt carries no leftover source code (quote, plus, indentation
   const prompt = gen.body.contents[0].parts[0].text;
   // Seit 637f03a stand mitten im Prompt woertlich: "\n    + " (aus einem Template-String).
   assert.doesNotMatch(prompt, /"\s*\n\s*\+\s*"/);
-  assert.match(prompt, /never create extra floor area\. Whatever stands in the immediate foreground/);
+  assert.match(prompt, /never create extra floor area\. Whatever is built in the immediate foreground/);
 });
 
 test('beide Pruefungen denken wenig, das Bildmodell bleibt unveraendert', async () => {
@@ -1389,16 +1513,18 @@ test('nach einem Timeout der Pruefung folgt ein kurzer zweiter Anlauf von hoechs
   assert.match(JSON.stringify(slow.calls.find((call) => call.url === 'https://api.resend.com/emails').body), /Fensterprüfung.*nicht möglich \(Timeout\)/);
 });
 
-test('ein zugemauerter Ruecksprung in der Wand wird verworfen', async () => {
+test('ein zugemauerter Ruecksprung in der Wand steht als Hinweis in der Lead-Mail', async () => {
   // Diegos Test vom 20.09., 09:56 (bp-mu9iv1yy-bdzji9): die Nische bei der Dusche war weg.
   const lost = () => checkedInv({ shower: 'back' }, { shower: 'back' }, { wall_element_lost: true });
-  const h = harness({ checks: [lost, () => checkedInv({ shower: 'back' }, { shower: 'back' })] });
+  const h = harness({ checks: [lost] });
   const res = await h.invoke(payload({ dusche: 'walk-in', badewanne: 'keine' }));
   assert.equal(res.statusCode, 200);
   const gens = h.calls.filter((call) => call.body?.generationConfig?.responseModalities);
-  assert.equal(gens.length, 2);
-  assert.match(gens[1].body.contents[0].parts[0].text, /a recess, alcove, niche or step of the wall that is in the photo was filled in/);
-  assert.match(gens[0].body.contents[0].parts[0].text, /Never fill a recess, never close an alcove, never tile a niche over flush/);
+  assert.equal(gens.length, 1);
+  assert.match(JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails').body),
+    /Hinweis: a recess, alcove, niche or step of the wall that is in the photo was filled in/);
+  assert.match(gens[0].body.contents[0].parts[0].text, /NOTHING IS FILLED IN EITHER: every recess, alcove, niche, wall offset, corner step and wall projection that image 1 shows stays exactly where it is/);
+  assert.match(gens[0].body.contents[0].parts[0].text, /A shower or bathtub that stands in a recess or alcove stays inside it, and the new tiles follow the wall into the recess and around its corners/);
   const question = h.calls.find((call) => /wall_element_lost/.test(call.body?.contents?.[0]?.parts?.[0]?.text || '')).body.contents[0].parts[0].text;
   assert.match(question, /no longer has because it was filled in/);
   // Colore 20.09., 13:01: der erhaltene Ruecksprung darf nicht als neue Nische gelten.
@@ -1406,63 +1532,187 @@ test('ein zugemauerter Ruecksprung in der Wand wird verworfen', async () => {
   assert.match(question, /tiles simply end at mid-height with paint above is still a full-height wall/);
 });
 
-test('Walk-in: Duschrinne im Prompt, ein Punktablauf wird nur vermerkt', async () => {
-  const drain = () => checkedInv({ shower: 'back' }, { shower: 'back' }, { point_drain: true });
-  const h = harness({ checks: [drain] });
+test('Dusche: Rinne und Armaturen an der Stirnwand im Prompt, falsch gezeichnet steht als Hinweis in der Mail', async () => {
+  const h = harness({ checks: [() => checkedInv({ shower: 'back' }, { shower: 'back' }, { point_drain: true })] });
   const res = await h.invoke(payload({ dusche: 'walk-in', badewanne: 'keine' }));
-  assert.equal(res.statusCode, 200); assert.equal(h.counts().generation, 1, 'kein zweites Bild wegen des Ablaufs');
+  assert.equal(res.statusCode, 200);
   const prompt = h.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
   assert.match(prompt, /ALL shower fittings sit together on that short end wall/);
   // Diego, 20.09.: die Rinne wird von den Armaturen aus beschrieben, bei breiter Dusche nie entlang der Rueckwand.
   assert.match(prompt, /The drain starts from the fittings: a linear channel drain \(Duschrinne\) lies in the floor at the foot of the very wall that carries the mixer and the hand shower/);
   assert.match(prompt, /When the shower is wider than it is deep, this drain runs through the full depth of the shower, from the back wall towards the glass panel, that is towards the camera: it is perpendicular to the back wall and never runs along it/);
   assert.doesNotMatch(prompt, /side walls on its left and right/, 'a3: der Satz schob die Armaturen an die Rueckwand');
-  assert.match(prompt, /flush with the bathroom floor, with no step, no kerb and no raised platform/);
+  // P1 vom 26.09.: Walk-in gewaehlt, eine Wanne gezeichnet. Der Walk-in hat keine Wanne, die Bodenplatten laufen hinein.
+  assert.match(prompt, /walk-in shower without a tray: the bathroom floor tiles continue into it, with no step, no kerb and no raised platform/);
+  // Nur der Satz, der die alte Wanne entfernt, nennt beim Walk-in eine Wanne.
+  assert.match(prompt, /So is an old shower tray, its kerb or platform\./);
+  assert.doesNotMatch(prompt.replace('So is an old shower tray, its kerb or platform.', ''), /shower tray/);
   assert.match(prompt, /never a central point drain, never a round or square grate/);
-  assert.match(JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails').body), /Punktablauf statt Duschrinne/);
-  // Rinne an der Laengsseite und Armaturen an zwei Waenden: ebenfalls nur Vermerke (Diego, 20.09.).
-  const side = harness({ checks: [() => checkedInv({ shower: 'back' }, { shower: 'back' }, { drain_on_long_side: true, shower_fittings_split: true })] });
-  const sideRes = await side.invoke(payload({ dusche: 'walk-in', badewanne: 'keine' }));
-  assert.equal(sideRes.statusCode, 200); assert.equal(side.counts().generation, 1);
-  const sideMail = JSON.stringify(side.calls.find((call) => call.url === 'https://api.resend.com/emails').body);
-  assert.match(sideMail, /Duschrinne an der Längsseite statt an der Schmalseite/);
-  assert.match(sideMail, /Duscharmaturen an zwei Wänden statt alle an der Schmalseite/);
-  // Die Pruefung nennt nur die Waende (a1: Armaturen links, Rinne hinten), der Code vermerkt die Laengsseite.
-  for (const walls of [{ drain_wall: 'back', fittings_wall: 'left' }, { drain_wall: 'back', fittings_wall: 'back', shower_wider_than_deep: true }]) {
-    const w = harness({ checks: [() => checkedInv({ shower: 'back' }, { shower: 'back' }, walls)] });
+  // Diego, 26.09. (Entscheidung A): der zweite Versuch hatte 0 von 6 Duschen gerichtet; jetzt nur ein Hinweis.
+  assert.equal(h.counts().generation, 1);
+  assert.match(JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails').body),
+    /Fensterprüfung.*ok, Hinweis: the shower has a point drain; it needs a linear channel drain at the foot of the wall with the fittings/);
+  // Armaturen an zwei Waenden, Stufe: ebenfalls nur ein Hinweis.
+  for (const [flags, reason] of [
+    [{ shower_fittings_split: true }, /the shower fittings are spread over two walls/],
+    [{ shower_step: true }, /the shower floor is raised above the bathroom floor/],
+  ]) {
+    const w = harness({ checks: [() => checkedInv({ shower: 'back' }, { shower: 'back' }, flags)] });
     assert.equal((await w.invoke(payload({ dusche: 'walk-in', badewanne: 'keine' }))).statusCode, 200);
-    assert.match(JSON.stringify(w.calls.find((call) => call.url === 'https://api.resend.com/emails').body), /Duschrinne an der L.ngsseite/);
+    assert.equal(w.counts().generation, 1, JSON.stringify(flags));
+    assert.match(JSON.stringify(w.calls.find((call) => call.url === 'https://api.resend.com/emails').body), reason);
   }
-  const right = harness({ checks: [() => checkedInv({ shower: 'back' }, { shower: 'back' }, { drain_wall: 'left', fittings_wall: 'left', shower_wider_than_deep: true })] });
-  await right.invoke(payload({ dusche: 'walk-in', badewanne: 'keine' }));
-  assert.doesNotMatch(JSON.stringify(right.calls.find((call) => call.url === 'https://api.resend.com/emails').body), /L.ngsseite/);
-  // Mit Duschwanne gibt es keine Rinne: kein Vermerk.
-  const tray = harness({ checks: [drain] });
+  // An welcher Wand Rinne und Armaturen stehen, sagt kein Hinweis mehr: in P9 vom 26.09. waren beide falsch (Diego).
+  for (const walls of [{ drain_wall: 'left', fittings_wall: 'left' }, { drain_wall: 'back', fittings_wall: 'left' }]) {
+    const right = harness({ checks: [() => checkedInv({ shower: 'back' }, { shower: 'back' }, { ...walls, shower_floor_after: 'tiles' })] });
+    await right.invoke(payload({ dusche: 'walk-in', badewanne: 'keine' }));
+    assert.equal(right.counts().generation, 1);
+    assert.doesNotMatch(JSON.stringify(right.calls.find((call) => call.url === 'https://api.resend.com/emails').body), /Hinweis/);
+  }
+  // Die Duschwanne ist bodeneben, eine sichtbare Wanne mit eigenem Ablauf, ohne Rinne (Diego, 26.09.: P2 Wanne mit
+  // Rinne, P3 gefliester Boden mit Rinne statt der Wanne). Die Armaturen stehen wie beim Walk-in an der Stirnwand.
+  const tray = harness({ checks: [() => checkedInv({ shower: 'back' }, { shower: 'back' }, { shower_step: true })] });
   await tray.invoke(payload({ dusche: 'duschwanne', badewanne: 'keine' }));
-  assert.doesNotMatch(JSON.stringify(tray.calls.find((call) => call.url === 'https://api.resend.com/emails').body), /Punktablauf/);
+  assert.equal(tray.counts().generation, 1);
+  assert.match(JSON.stringify(tray.calls.find((call) => call.url === 'https://api.resend.com/emails').body), /Hinweis: the shower floor is raised above the bathroom floor; the shower tray must lie level with the floor tiles/);
+  const trayPrompt = tray.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
+  assert.match(trayPrompt, /flat shower tray in the same colour as the toilet: one smooth piece without tile joints, set into the floor so that its surface is exactly level with the floor tiles around it, with no step/);
+  assert.match(trayPrompt, /it covers the whole shower floor, its outline shows clearly against the floor tiles, and it has its own small round drain with a round cover in its surface, and no channel drain/);
+  assert.match(trayPrompt, /ALL shower fittings sit together on that short end wall/);
+  // P2 vom 26.09.: die alte erhoehte Wanne blieb; bisher ging nur die Badewanne bis zum Boden weg (Gegenpruefung).
+  assert.match(trayPrompt, /removed down to the floor\. So is an old shower tray, its kerb or platform\./);
+  assert.doesNotMatch(trayPrompt, /Duschrinne|slopes towards it|sloped|like one large floor tile/);
+  // Wanne gefliest oder mit Rinne gezeichnet: Hinweise. Ein runder Ablauf ist bei der Wanne richtig.
+  const trayMail = async (flags) => {
+    const w = harness({ checks: [() => checkedInv({ shower: 'back' }, { shower: 'back' }, flags)] });
+    assert.equal((await w.invoke(payload({ dusche: 'duschwanne', badewanne: 'keine' }))).statusCode, 200);
+    assert.equal(w.counts().generation, 1);
+    return JSON.stringify(w.calls.find((call) => call.url === 'https://api.resend.com/emails').body);
+  };
+  const tiled = await trayMail({ shower_floor_after: 'tiles', drain_wall: 'back', fittings_wall: 'left' });
+  assert.match(tiled, /Hinweis: the shower floor is tiled, but a shower with a shower tray was chosen/);
+  assert.match(tiled, /Hinweis: the shower has a channel drain; the shower tray needs its own small round drain/);
+  assert.doesNotMatch(tiled, /belongs at the foot of/);
+  assert.doesNotMatch(await trayMail({ shower_floor_after: 'tray', point_drain: true }), /Hinweis/);
+  // Walk-in mit Wanne gezeichnet (P1): Hinweis.
+  const withTray = harness({ checks: [() => checkedInv({ shower: 'back' }, { shower: 'back' }, { shower_floor_after: 'tray' })] });
+  await withTray.invoke(payload({ dusche: 'walk-in', badewanne: 'keine' }));
+  assert.match(JSON.stringify(withTray.calls.find((call) => call.url === 'https://api.resend.com/emails').body),
+    /Hinweis: the shower has a shower tray, but a walk-in shower with the floor tiles continuing into it was chosen/);
+  // Ohne bestellte Dusche wird an der Dusche nichts geprueft.
+  const none = harness({ checks: [() => checkedInv({ bathtub: 'back' }, { bathtub: 'back' }, { point_drain: true, shower_step: true, shower_floor_after: 'tray' })] });
+  await none.invoke(payload({ dusche: 'keine', badewanne: 'einbau' }));
+  assert.equal(none.counts().generation, 1);
+  assert.doesNotMatch(JSON.stringify(none.calls.find((call) => call.url === 'https://api.resend.com/emails').body), /Hinweis/);
+});
+
+test('Dusche: die Stirnwand sagt die Vorpruefung im Foto, der Prompt nennt sie', async () => {
+  // P2 und P5 vom 25.09.: Rinne und Armaturen richtig an der kurzen Rueckwand, trotzdem "long side" und ein zweiter
+  // Versuch, weil die Pruefung die Dusche im Ergebnis fuer breiter als tief hielt. P1 und P3: Rinne hinten, Armaturen links.
+  const photo = (end) => () => photoChecked(true, JSON.stringify({ is_bathroom: true, reason: 'bathroom', walls: inv({ bathtub: 'left' }), order: ['bathtub', 'washbasin', 'toilet'], nearest: 'toilet', shower_end_wall: end }));
+  const result = (drain, fittings) => () => checkedInv({ bathtub: 'left' }, { shower: 'left' }, { drain_wall: drain, fittings_wall: fittings });
+  // Die Rinne gehoert seit dem 26.09. nur zum Walk-in; die Duschwanne bekommt den Satz ohne Rinne.
+  const body = payload({ dusche: 'walk-in', badewanne: 'keine' });
+  const trayWall = harness({ photoChecks: [photo('back')], checks: [result('back', 'back')] });
+  await trayWall.invoke(payload({ dusche: 'duschwanne', badewanne: 'keine' }));
+  assert.match(trayWall.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text,
+    /The short end wall of the shower is the back wall seen from the camera: the mixer, the overhead shower and the hand shower sit on it\. /);
+  const ok = harness({ photoChecks: [photo('back')], checks: [result('back', 'back')] });
+  assert.equal((await ok.invoke(body)).statusCode, 200);
+  assert.equal(ok.counts().generation, 1);
+  const okPrompt = ok.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
+  assert.match(okPrompt, /The short end wall of the shower is the back wall seen from the camera: the mixer, the overhead shower and the hand shower sit on it, and the channel drain lies along its foot\./);
+  // Stirnwand hinten: kein Satz mehr, der die Rinne quer zur Rueckwand verlangt (Widerspruch in P2 und P5 vom 25.09.).
+  assert.doesNotMatch(okPrompt, /wider than it is deep|perpendicular to the back wall/);
+  assert.match(okPrompt, /slopes towards it\. Never a central point drain, never a round or square grate/);
+  const wrong = harness({ photoChecks: [photo('left')], checks: [result('back', 'back')] });
+  assert.equal((await wrong.invoke(body)).statusCode, 200);
+  assert.equal(wrong.counts().generation, 1);
+  assert.match(wrong.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text, /When the shower is wider than it is deep, this drain runs through the full depth/);
+  // Rinne und Armaturen an einer anderen Wand als der Stirnwand: kein Hinweis mehr (P9 vom 26.09., beide falsch).
+  assert.doesNotMatch(JSON.stringify(wrong.calls.find((call) => call.url === 'https://api.resend.com/emails').body), /Hinweis/);
+  // Ohne Wanne oder Dusche im Foto (oder ein unbekanntes Wort) nennt der Prompt keine Wand.
+  const none = harness({ photoChecks: [photo('diagonal')], checks: [result('back', 'back')] });
+  await none.invoke(body);
+  const nonePrompt = none.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
+  assert.doesNotMatch(nonePrompt, /short end wall of the shower is the/);
+  assert.match(nonePrompt, /When the shower is wider than it is deep, this drain runs through the full depth/);
+  assert.equal(none.counts().generation, 1);
+  // Die Vorpruefung fragt danach.
+  const question = ok.calls.find((call) => /shower_end_wall/.test(call.body?.contents?.[0]?.parts?.[0]?.text || '')).body.contents[0].parts[0].text;
+  assert.match(question, /set shower_end_wall to the wall, seen from the camera, at one of its two narrow ends/);
+});
+
+test('eine falsche Dusche kostet keinen zweiten Versuch, der Kunde sieht das Bild, NLD liest den Hinweis', async () => {
+  // Diego, 26.09. (Entscheidung A): in zwei Proben richtete der zweite Versuch 0 von 6 Duschen, je CHF 0.12 und 35 s.
+  const step = () => checkedInv({ shower: 'back' }, { shower: 'back' }, { shower_step: true });
+  const h = harness({ checks: [step] });
+  const res = await h.invoke(payload({ dusche: 'walk-in', badewanne: 'keine' }));
+  assert.equal(res.statusCode, 200);
+  assert.equal(h.counts().generation, 1);
+  assert.match(JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails').body),
+    /Fensterprüfung.*ok, Hinweis: the shower floor is raised/);
+});
+
+test('zeigt der zweite Versuch einen groben Fehler, gilt wieder das erste Bild, das nur den Vordergrund verlor', async () => {
+  const first = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAADElEQVQImWP4z8AAAAMBAQCc479ZAAAAAElFTkSuQmCC';
+  const doorGone = () => checkedInv({}, {}, { foreground_object_before: true, foreground_object_after: false });
+  const h = harness({ generations: [() => generated(first), () => generated()], checks: [doorGone, () => checked(true)] });
+  const res = await h.invoke();
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.body.image.data, first);
+  assert.match(JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails').body),
+    /Mangel im gezeigten Bild \(1\. Versuch\) – 1\. Versuch: what stands in the foreground.* \| 2\. Versuch: an opening was added or lost/);
+  // Scheitert der zweite Versuch ganz, ebenso.
+  const failed = harness({ generations: [() => generated(first), () => response({ error: 'boom' }, 500)], checks: [doorGone] });
+  const failedRes = await failed.invoke();
+  assert.equal(failedRes.statusCode, 200);
+  assert.equal(failedRes.body.image.data, first);
+  assert.match(JSON.stringify(failed.calls.find((call) => call.url === 'https://api.resend.com/emails').body),
+    /Mangel im gezeigten Bild \(1\. Versuch\) – 1\. Versuch: what stands in the foreground.* \| 2\. Versuch: Bilddienst: HTTP 500/);
+  // Laesst sich das zweite Bild nicht pruefen, ebenso: das erste hat alle groben Pruefungen bestanden (Pruefung vom 26.09.).
+  const busy = () => response({ error: 'busy' }, 503);
+  const unchecked = harness({ generations: [() => generated(first), () => generated()], checks: [doorGone, busy, busy, busy, busy] });
+  const uncheckedRes = await unchecked.invoke();
+  assert.equal(uncheckedRes.statusCode, 200);
+  assert.equal(uncheckedRes.body.image.data, first);
+  assert.match(JSON.stringify(unchecked.calls.find((call) => call.url === 'https://api.resend.com/emails').body),
+    /Mangel im gezeigten Bild \(1\. Versuch\) – 1\. Versuch: what stands in the foreground.* \| 2\. Versuch: Prüfung nicht möglich/);
 });
 
 test('Armaturen: Atelier zeigt die Form von Treemme Aurelia in der gewaehlten Oberflaeche', async () => {
   const options = optionsForPackage('atelier');
   assert.equal(options.tapSeries, 'Treemme Aurelia, Unterputz');
   const tile = options.tiles[0];
-  const h = harness();
+  // Mit Dusche: nur dann gehen Duschset und Duschtext mit.
+  const h = harness({ checks: [() => checkedInv({}, { shower: 'back' })] });
   const res = await h.invoke(payload({
     paket: 'atelier', look: tile.look, format: tile.format, platte: tile.id, kombination: 'einheitlich',
     unterbau: options.bases[0].id, top: options.tops[0].id, becken: options.basinTypes[0].id,
     finish: 'treemme-ottone-spazzolato', keramik: options.sanitary[0].id,
-    wall: options.walls[0].id, dusche: options.showers[0].id, badewanne: options.bathtubs[0].id,
+    wall: options.walls[0].id, dusche: 'walk-in', badewanne: options.bathtubs[0].id,
     waschtisch: options.basins[0].id, spiegel: options.mirrors[0].id,
   }));
   assert.equal(res.statusCode, 200, `unexpected status ${res.statusCode}: ${JSON.stringify(res.body).slice(0, 200)}`);
   const prompt = h.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
-  assert.match(prompt, /Treemme Aurelia fittings in brushed brass/);
-  assert.match(prompt, /rectangular wall plate .*spout with flat facets .*flat paddle lever hanging straight down/);
-  assert.match(prompt, /round overhead shower .*finely ribbed .*blade-shaped wall arm .*stick hand shower/);
-  // Die Treemme-Produktfotos gehen als letzte Vorlage mit, nur fuer die Form.
+  assert.match(prompt, /Treemme Aurelia wall fittings in brushed brass/);
+  // Die Platte OLI Blink in der Oberflaeche der Armaturen, nicht immer verchromt (Diego, 26.09.).
+  assert.match(prompt, /by the new flush plate of image \d+ in brushed brass/);
+  // Artikel vom 25.09.: Waschtisch RWIT 2CC5 (zwei Rosetten statt Platte), Dusche RWIT 2CD9 mit Kopfbrause IT RTBR 376.
+  // Nebeneinander, nicht uebereinander (Rendering von Treemme, Diego 26.09.).
+  assert.match(prompt, /at each washbasin exactly two separate small round wall rosettes .*side by side above the basin, no wall plate and nothing between them: from the left one .*spout with flat facets .*the right one carries the only lever: .*flat paddle lever hanging down/);
+  assert.doesNotMatch(prompt, /one above the other/);
+  // Dusche RWIT 2CD9: der Brauseanschluss mit Handbrause und zwei Rosetten; mit "drei Rosetten" kamen am 26.09. drei Hebel und der Anschluss (P1).
+  assert.match(prompt, /in a shower in one row at the same height: the hose outlet in one small round wall piece that also holds a slim stick hand shower upright on its hose, and beside it exactly two small round wall rosettes, each a short cylinder with the same flat lever, .*thin flat rectangular overhead shower plate \(about 50 × 20 cm\)/);
+  assert.doesNotMatch(prompt, /three small round wall rosettes \(about 7\.5 cm\)/);
+  assert.doesNotMatch(prompt, /rectangular wall plate|round overhead shower/);
+  // Die Treemme-Produktfotos gehen als letzte Vorlagen mit, nur fuer die Form: Waschtisch und Dusche je als eigenes Bild
+  // (Diego, 26.09.: im gemeinsamen Bild setzte das Modell in P1 die Hebel der Dusche an den Waschtisch).
   const parts = h.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts;
-  const tapsImage = parts.filter((part) => part.inlineData).length;
-  assert.match(prompt, new RegExp(`Image ${tapsImage} is ONLY a product photo of the tap fittings`));
+  const images = parts.filter((part) => part.inlineData);
+  assert.match(prompt, new RegExp(`Image ${images.length - 1} is only a product photo of the washbasin tap: copy its shape, not its finish\\.`));
+  assert.match(prompt, new RegExp(`Image ${images.length} is only a product photo of the shower fittings: copy their shapes, not their finish\\.`));
+  assert.deepEqual(images.slice(-2).map((part) => part.inlineData.data), [aurelia.AURELIA_BASIN_PHOTO.data, aurelia.AURELIA_SHOWER_PHOTO.data]);
   assert.deepEqual(options.finishes.map((finish) => finish.id), ['treemme-cromo', 'treemme-nero-opaco', 'treemme-oro-spazzolato', 'treemme-nichel-spazzolato',
     'treemme-oro-rosa-spazzolato', 'treemme-nichel-lucido', 'treemme-oro', 'treemme-nero-cromo-lucido', 'treemme-nero-cromo-spazzolato', 'treemme-ottone-spazzolato']);
   // Lead und Kundenmail nennen die Serie.
@@ -1472,11 +1722,357 @@ test('Armaturen: Atelier zeigt die Form von Treemme Aurelia in der gewaehlten Ob
 });
 
 test('Armaturen: Essenza zeigt die Form von Treemme Up+, nicht irgendeine Armatur', async () => {
-  const h = harness(); await h.invoke();
-  const prompt = h.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
-  assert.match(prompt, /Treemme Up\+ fittings in polished chrome .*thin stick lever on top and a round tube spout/);
-  // Aufputz: am Waschtisch die Standarmatur, in der Dusche der sichtbare Mischer (Diego, 20.09.).
-  assert.match(prompt, /mixer standing on the washbasin or its countertop/);
-  assert.match(prompt, /exposed wall mixer that stands clearly out from the tiles.*never a flat concealed plate/);
-  assert.doesNotMatch(prompt, /product photo of the tap fittings/);
+  const h = harness({ checks: [() => checkedInv({}, { shower: 'back' })] }); await h.invoke(payload({ dusche: 'walk-in' }));
+  const parts = h.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts;
+  const prompt = parts[0].text;
+  // Artikel vom 25.09.: Waschtisch IT 6B18 (Stifthebel seitlich oben, langer Rohrauslauf), Dusche IT 6B60 Aufputz.
+  assert.match(prompt, /Treemme Up\+ fittings in polished chrome .*thin pin lever sticking out on its side near the top and just below it a long round tube spout that slopes down/);
+  assert.match(prompt, /mixer with a flat top standing on the countertop or the washbasin/);
+  // Aufputz: in der Dusche der sichtbare Mischer (Diego, 20.09.), mit Steigrohr und runder Kopfbrause.
+  assert.match(prompt, /exposed shower column: .*standing clearly out from the tiles .*not a flat concealed plate.*riser pipe .*large thin round overhead shower/);
+  // Die Produktbilder von Treemme gehen als letzte Vorlage mit (P3 vom 25.09.: ohne Bild kein Up+).
+  const images = parts.filter((part) => part.inlineData);
+  assert.match(prompt, new RegExp(`Image ${images.length - 1} is only a product photo of the washbasin tap`));
+  assert.match(prompt, new RegExp(`Image ${images.length} is only a product photo of the shower fittings`));
+  assert.deepEqual(images.slice(-2).map((part) => part.inlineData.data), [up.UP_BASIN_PHOTO.data, up.UP_AUFPUTZ_SHOWER_PHOTO.data]);
+});
+
+test('Gaeste-WC: dieselbe Armaturenserie wie im Bad, nur am Waschtisch, mit Bild nur des Waschtischs', async () => {
+  // P4 vom 25.09. (Colore mit Up+): im Prompt stand nur "washbasin tap", auf Vorschau und Website kein Up+.
+  const colore = optionsForPackage('colore');
+  const atelier = optionsForPackage('atelier');
+  const guest = { raum: 'gaeste-wc', dusche: '', badewanne: '', waschtisch: 'einzel' };
+  const cases = [
+    [{ ...guest, paket: 'colore', format: colore.formats[0], platte: colore.tiles[0].id, unterbau: colore.bases[0].id, top: colore.tops[0].id,
+      becken: 'aufsatz', armaturenserie: 'treemme-up', finish: colore.finishes[0].id, keramik: colore.sanitary[0].id, wall: colore.walls[0].id,
+      spiegel: colore.mirrors[0].id }, /Treemme Up\+ fittings .*at the washbasin a slim cylindrical single-lever mixer/, 'a product photo of the washbasin tap'],
+    [{ ...guest, paket: 'atelier', look: atelier.tiles[0].look, format: atelier.tiles[0].format, platte: atelier.tiles[0].id, kombination: 'einheitlich',
+      unterbau: atelier.bases[0].id, top: atelier.tops[0].id, becken: atelier.basinTypes[0].id, finish: atelier.finishes[0].id,
+      keramik: atelier.sanitary[0].id, wall: atelier.walls[0].id, spiegel: atelier.mirrors[0].id }, /Treemme Aurelia wall fittings .*two separate small round wall rosettes/, 'a product photo of the washbasin tap'],
+    [{ ...guest }, /Treemme Up\+ fittings .*at the washbasin a slim cylindrical single-lever mixer/, 'a product photo of the washbasin tap'],
+  ];
+  for (const [body, series, sample] of cases) {
+    const h = harness();
+    const res = await h.invoke(payload(body));
+    assert.equal(res.statusCode, 200, `${body.paket}: ${JSON.stringify(res.body).slice(0, 200)}`);
+    const parts = h.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts;
+    const prompt = parts[0].text;
+    assert.match(prompt, series, body.paket);
+    assert.doesNotMatch(prompt, /in a shower |overhead shower|hand shower/, body.paket);
+    assert.match(prompt, /no shower mixer, bath filler or shower controls/);
+    assert.match(prompt, new RegExp(`Image ${parts.filter((part) => part.inlineData).length} is only ${sample}`), body.paket);
+  }
+  // Ran hat seit dem 26.09. Bilder (Renderings von Diego): im Gaeste-WC nur das des Waschtischmischers.
+  const ran = harness();
+  await ran.invoke(payload({ ...cases[0][0], armaturenserie: 'treemme-ran' }));
+  const ranParts = ran.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts;
+  assert.match(ranParts[0].text, new RegExp(`Image ${ranParts.filter((part) => part.inlineData).length} is only a product photo of the washbasin tap`));
+  assert.doesNotMatch(ranParts[0].text, /in a shower |overhead shower|hand shower/);
+});
+
+test('Armaturen: Colore mit Up+ hat in der Dusche drei runde Rosetten, keine Platte und keine Brausestange', async () => {
+  // Diego, 26.09.: Unterputz mit drei Rosetten (Brauseanschluss mit Handbrause, Mischer, Umsteller), wie bei Aurelia.
+  const colore = optionsForPackage('colore');
+  const h = harness({ checks: [() => checkedInv({}, { shower: 'back' })] });
+  await h.invoke(payload({ paket: 'colore', format: colore.formats[0], platte: colore.tiles[0].id, unterbau: colore.bases[0].id,
+    top: colore.tops[0].id, becken: 'aufsatz', armaturenserie: 'treemme-up', finish: colore.finishes[0].id, keramik: colore.sanitary[0].id,
+    wall: colore.walls[0].id, waschtisch: 'einzel', spiegel: colore.mirrors[0].id, dusche: 'walk-in', badewanne: 'keine' }));
+  const parts = h.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts;
+  assert.match(parts[0].text, /in a shower three small round wall rosettes in one row at the same height: .*stick hand shower .*thin pin lever hanging down, .*thin round overhead shower on a round tube arm/);
+  assert.doesNotMatch(parts[0].text, /rectangular wall plate|slide bar/);
+  const images = parts.filter((part) => part.inlineData);
+  assert.match(parts[0].text, new RegExp(`Image ${images.length} is only a product photo of the shower fittings`));
+  assert.deepEqual(images.slice(-2).map((part) => part.inlineData.data), [up.UP_BASIN_PHOTO.data, up.UP_SHOWER_PHOTO.data]);
+});
+
+test('Armaturen: Colore mit Ran zeigt die Renderings von Treemme, mit Dusche und mit Wanne', async () => {
+  // Diego, 26.09.: vier Renderings von Ran. In T7 und T8 vom 25.09. zeichnete das Modell ohne Bild den Mischer aus dem Foto nach.
+  const colore = optionsForPackage('colore');
+  const base = { paket: 'colore', format: colore.formats[0], platte: colore.tiles[0].id, unterbau: colore.bases[0].id, top: colore.tops[0].id,
+    becken: 'aufsatz', armaturenserie: 'treemme-ran', finish: 'treemme-nero-opaco', keramik: colore.sanitary[0].id, wall: colore.walls[0].id,
+    waschtisch: 'einzel', spiegel: colore.mirrors[0].id };
+  const partsOf = async (changes, after) => {
+    const h = harness({ checks: [() => checkedInv({}, after)] });
+    assert.equal((await h.invoke(payload({ ...base, ...changes }))).statusCode, 200);
+    return h.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts;
+  };
+  const shower = await partsOf({ dusche: 'walk-in', badewanne: 'keine' }, { shower: 'back' });
+  const images = shower.filter((part) => part.inlineData);
+  assert.match(shower[0].text, /Treemme Ran fittings in matte black, round bodies .*in a shower small square wall plates with rounded corners, one carrying the concealed mixer/);
+  assert.match(shower[0].text, new RegExp(`Image ${images.length} is only a product photo of the shower fittings`));
+  assert.deepEqual(images.slice(-2).map((part) => part.inlineData.data), [ran.RAN_BASIN_PHOTO.data, ran.RAN_SHOWER_PHOTO.data]);
+  // Einbauwanne ohne Dusche: das Bild des Waschtischmischers und das der Wannenarmatur, im Text die vier Platten.
+  const bath = await partsOf({ dusche: 'keine', badewanne: 'einbau' }, { bathtub: 'back' });
+  const bathImages = bath.filter((part) => part.inlineData);
+  assert.match(bath[0].text, /four small square wall plates with rounded corners in one row just above the rim/);
+  assert.match(bath[0].text, new RegExp(`Image ${bathImages.length - 1} is only a product photo of the washbasin tap`));
+  assert.match(bath[0].text, new RegExp(`Image ${bathImages.length} is only a product photo of the bath mixer on a plain background: copy its shape, not its colour, only at the bathtub`));
+  assert.doesNotMatch(bath[0].text, /in a shower |overhead shower on/);
+});
+
+test('ein unbekannter Duschboden in der Pruefung zaehlt nicht, kein Fehler nach dem bezahlten Bild', async () => {
+  // Gegenpruefung vom 26.09.: ein Objekt mit eigenem toString warf beim Log einen TypeError, nach dem Bild und vor der
+  // Mail; der Tagesversuch wurde zurueckgezaehlt und der Lead ging verloren.
+  const odd = (extra) => () => checkedInv({ shower: 'back' }, { shower: 'back' }, extra);
+  const h = harness({ checks: [odd({ shower_floor_after: { toString: 1 } })] });
+  assert.equal((await h.invoke(payload({ dusche: 'walk-in', badewanne: 'keine' }))).statusCode, 200);
+  assert.match(JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails').body), /Fensterprüfung.{0,80}>ok</);
+  // Wie bei der Wahl des Kunden macht ein unbekanntes Wort die Pruefung nicht ungueltig: eine neue Oeffnung verwirft weiter.
+  const opening = odd({ shower_floor_after: 'walk-in', extra_openings: true });
+  const rejected = harness({ checks: [opening, opening] });
+  assert.equal((await rejected.invoke(payload({ dusche: 'walk-in', badewanne: 'keine' }))).statusCode, 502);
+});
+
+test('Gaeste-WC gewaehlt, im Foto aber Wanne oder Dusche: Hinweis statt Bild', async () => {
+  // Jonathan am 25.09.: vier Gaeste-WC-Versuche mit Fotos von Baedern, vier verworfene Bilder.
+  const guest = previewPayload({ raum: 'gaeste-wc', dusche: '', badewanne: '', waschtisch: 'einzel' });
+  const photo = (walls) => () => photoChecked(true, JSON.stringify({ is_bathroom: true, reason: 'bathroom', walls: inv(walls), order: ['washbasin', 'toilet'], nearest: 'toilet' }));
+  const h = harness({ photoChecks: [photo({ bathtub: 'left' })] });
+  const res = await h.invoke(guest);
+  assert.equal(res.statusCode, 422);
+  assert.equal(res.body.code, 'GUEST_WC_WITH_BATH');
+  assert.match(res.body.error, /^Auf Ihrem Foto sehen wir eine Badewanne\. .*«Badezimmer»/);
+  assert.deepEqual(h.counts(), { generation: 0, checks: 0, mail: 1 });
+  assert.equal(res.headers['Set-Cookie'], undefined, 'kein Tagesversuch verbraucht');
+  const mail = h.calls.find((call) => call.url === 'https://api.resend.com/emails');
+  assert.match(mail.body.subject, /Gäste-WC – Foto zeigt ein Bad/);
+  assert.match(JSON.stringify(mail.body), /Foto zeigt eine Badewanne/);
+  // Ein echtes Gaeste-WC und ein Bad mit Dusche laufen weiter wie bisher.
+  assert.equal((await harness({ photoChecks: [photo({})] }).invoke(guest)).statusCode, 200);
+  assert.equal((await harness({ photoChecks: [photo({ shower: 'back' })] }).invoke(previewPayload())).statusCode, 200);
+});
+
+test('ohne Dusche kein Duschset, die Wanne mit eigener Armatur', async () => {
+  // Jonathan am 25.09. (Atelier, keine Dusche, freistehende Wanne): mit dem Duschset in Bild und Text zeichnete
+  // das Modell Kopf- und Handbrause ueber der Wanne und zweimal eine Dusche statt der Wanne.
+  const atelier = optionsForPackage('atelier');
+  const tile = atelier.tiles[0];
+  const base = { paket: 'atelier', look: tile.look, format: tile.format, platte: tile.id, kombination: 'einheitlich',
+    unterbau: atelier.bases[0].id, top: atelier.tops[0].id, becken: atelier.basinTypes[0].id, finish: atelier.finishes[0].id,
+    keramik: atelier.sanitary[0].id, wall: atelier.walls[0].id, waschtisch: 'einzel', spiegel: atelier.mirrors[0].id };
+  const partsOf = async (changes, after) => {
+    const h = harness({ checks: [() => checkedInv({}, after)] });
+    await h.invoke(payload({ ...base, ...changes }));
+    return h.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts;
+  };
+  const promptOf = async (changes, after) => (await partsOf(changes, after))[0].text;
+  const freeParts = await partsOf({ dusche: 'keine', badewanne: 'freistehend' }, { bathtub: 'back' });
+  const free = freeParts[0].text;
+  assert.doesNotMatch(free, /in a shower /);
+  // Ohne Dusche auch kein allgemeiner Satz zu den Duscharmaturen (Gegenpruefung vom 26.09.).
+  assert.doesNotMatch(free, /All shower fittings sit together/);
+  // Die freistehende Wanne kommt immer, wenn gewaehlt (Diego, 25.09.): kein "nur wenn Platz" mehr.
+  assert.match(free, /a freestanding bathtub standing free on the floor in the place of the old bathtub .*never a built-in bathtub/);
+  assert.doesNotMatch(free, /enough space/);
+  // Wannen gibt es in jeder Groesse (Diego, 25.09.): die Wanne passt sich an, der Raum bleibt.
+  assert.match(free, /in the length that fits that place: .*the room is never enlarged for it/);
+  assert.match(free, /beside the freestanding bathtub a floor-standing bath mixer of the same series and finish: a slim round column on a round floor base/);
+  // P7 vom 26.09.: die Standarmatur kam als Up+; Hebel und Auslauf von Aurelia sind flach und eckig.
+  assert.match(free, /flat rectangular paddle lever lying level \(not a thin pin\), .*spout of flat square section .*\(not a round tube\)/);
+  // Neben der Saeule steht die Stabhandbrause selbst, keine zweite Stange (Gegenpruefung am Bild).
+  assert.match(free, /beside the column a slim stick hand shower standing upright in a holder fixed to the column just below the spout/);
+  assert.doesNotMatch(free, /second thin rod/);
+  assert.match(free, /no overhead shower, no shower rail and no shower mixer anywhere/);
+  // Aurelia: Waschtisch und Wannenarmatur je als eigenes Bild (Bilder von Diego, 25.09.).
+  const images = freeParts.filter((part) => part.inlineData);
+  assert.match(free, new RegExp(`Image ${images.length - 1} is only a product photo of the washbasin tap`));
+  assert.match(free, new RegExp(`Image ${images.length} is only a product photo of the bath mixer`));
+  assert.ok(images[images.length - 1].inlineData.data.startsWith('/9j/'));
+  const builtIn = await promptOf({ dusche: 'keine', badewanne: 'einbau' }, { bathtub: 'back' });
+  assert.doesNotMatch(builtIn, /in a shower /);
+  assert.match(builtIn, /at the bathtub, on the wall at its tap end, a bath mixer of the same series and finish: a long flat horizontal wall plate in the same finish/);
+  assert.match(builtIn, /is only a product photo of the bath mixer/);
+  // Mit Dusche bleibt das Duschset, die Wanne bekommt ihre Armatur dazu.
+  const both = await promptOf({ dusche: 'walk-in', badewanne: 'einbau' }, { shower: 'back', bathtub: 'left' });
+  assert.match(both, /in a shower .*; at the bathtub, on the wall at its tap end/);
+  assert.match(both, /is only a product photo of the washbasin tap: .*is only a product photo of the shower fittings: .*is only a product photo of the bath mixer/);
+  // Essenza: die Wannenarmatur sichtbar an der Wand, wie das Duschsystem, mit dem Rendering von Treemme (Diego, 26.09.).
+  const essenza = harness({ checks: [() => checkedInv({}, { bathtub: 'back' })] });
+  await essenza.invoke(payload({ dusche: 'keine', badewanne: 'einbau' }));
+  const essenzaPrompt = essenza.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
+  assert.match(essenzaPrompt, /a bath mixer of the same series and finish: an exposed horizontal round bar mixer on two short wall connections just above the rim, .*slim stick hand shower on its hose in a small separate wall holder/);
+  const essenzaParts = essenza.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts;
+  assert.match(essenzaPrompt, new RegExp(`Image ${essenzaParts.filter((part) => part.inlineData).length} is only a product photo of the bath mixer`));
+  // Colore mit Up+ (Unterputz): das Rendering der Wannenarmatur von Treemme (Diego, 26.09.), vier runde Rosetten.
+  const colore = optionsForPackage('colore');
+  const up = harness({ checks: [() => checkedInv({}, { bathtub: 'back' })] });
+  await up.invoke(payload({ paket: 'colore', format: colore.formats[0], platte: colore.tiles[0].id, unterbau: colore.bases[0].id,
+    top: colore.tops[0].id, becken: 'aufsatz', armaturenserie: 'treemme-up', finish: colore.finishes[0].id, keramik: colore.sanitary[0].id,
+    wall: colore.walls[0].id, waschtisch: 'einzel', spiegel: colore.mirrors[0].id, dusche: 'keine', badewanne: 'einbau' }));
+  const upParts = up.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts;
+  assert.match(upParts[0].text, /four small round wall rosettes in one row just above the rim, .*thin pin lever, a round tube spout/);
+  assert.match(upParts[0].text, new RegExp(`Image ${upParts.filter((part) => part.inlineData).length} is only a product photo of the bath mixer`));
+});
+
+test('der neue Spiegel geht als Bild mit, der alte wird ausdruecklich entfernt', async () => {
+  // Jonathan am 25.09.: mit einem Wort zeichnete das Modell in 10 von 12 Proben den alten Spiegel nach.
+  for (const [spiegel, words] of [
+    ['spiegelschrank', /with new rectangular mirror cabinet as wide as the vanity, softly lighting the wall and washbasin from its underside, with flush mirror doors and a slim LED light line on its front along the top and both sides as in image \d+ above it, which replaces the old mirror or mirror cabinet and its lamp completely/],
+    ['spiegel', /with new frameless rectangular mirror without a cabinet, as wide as the vanity, that softly lights the wall above and below it with hidden LED light along its top and bottom edges as in image \d+ above it, which replaces/],
+  ]) {
+    const h = harness();
+    await h.invoke(payload({ spiegel }));
+    const parts = h.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts;
+    const prompt = parts[0].text;
+    assert.match(prompt, words, spiegel);
+    const number = Number(/Image (\d+) is only a product photo of the new mirror/.exec(prompt)?.[1]);
+    assert.ok(number >= 2, spiegel);
+    // Der Spiegel mit LED-Licht hat keine Tueren: der Satz zum Bild nennt keine (Gegenpruefung vom 26.09.).
+    assert.doesNotMatch(prompt, /copy its shape, its doors/, spiegel);
+    assert.match(prompt, new RegExp(`as in image ${number} above it, which replaces the old mirror`), spiegel);
+    // P7 vom 26.09.: der alte Spiegel blieb; er steht auch in der Liste dessen, was weg muss.
+    assert.match(prompt, /REMOVE: .*; the old mirror or mirror cabinet and its lamp;/, spiegel);
+    assert.ok(parts.filter((part) => part.inlineData)[number - 1].inlineData.data.startsWith('/9j/'), spiegel);
+  }
+});
+
+test('Bodenplatte und Akzent gehen als eigene Muster mit, mit ihrer Bildnummer im Prompt', async () => {
+  // Der Kunde waehlt beide am Bild; das Modell bekam bis zum 25.09. nur ihren Namen.
+  const image = () => new Response(Buffer.from(PNG, 'base64'), { status: 200, headers: { 'content-type': 'image/png' } });
+  const colore = optionsForPackage('colore');
+  const floor = colore.tiles.find((entry) => entry.id !== colore.tiles[0].id);
+  const h = harness({ swatch: () => image() });
+  const res = await h.invoke(payload({
+    paket: 'colore', format: colore.formats[0], platte: colore.tiles[0].id, boden: floor.id,
+    unterbau: colore.bases[0].id, top: colore.tops[0].id, becken: 'aufsatz',
+    armaturenserie: 'treemme-up', finish: colore.finishes[0].id, keramik: colore.sanitary[0].id,
+    wall: colore.walls[0].id, dusche: colore.showers[0].id, badewanne: colore.bathtubs[0].id,
+    waschtisch: colore.basins[0].id, spiegel: colore.mirrors[0].id,
+  }));
+  assert.equal(res.statusCode, 200, JSON.stringify(res.body).slice(0, 200));
+  const floorPrompt = h.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
+  assert.match(floorPrompt, /Image 3 is only a close-up sample of the floor tile\./);
+  assert.match(floorPrompt, /and the floor in different .* tiles as in image 3;/);
+  assert.match(JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails').body), /Boden geladen/);
+
+  const atelier = optionsForPackage('atelier');
+  const tile = atelier.tiles[0];
+  const accent = atelier.accents.find((entry) => entry.placement.includes('waschtischwand'));
+  const a = harness({ swatch: () => image() });
+  const accentRes = await a.invoke(payload({
+    paket: 'atelier', look: tile.look, format: tile.format, platte: tile.id,
+    kombination: 'kombination', akzentFlaeche: 'waschtischwand', akzent: accent.id,
+    unterbau: atelier.bases[0].id, top: atelier.tops[0].id, becken: atelier.basinTypes[0].id,
+    finish: atelier.finishes[0].id, keramik: atelier.sanitary[0].id,
+    wall: atelier.walls[0].id, dusche: atelier.showers[0].id, badewanne: atelier.bathtubs[0].id,
+    waschtisch: atelier.basins[0].id, spiegel: atelier.mirrors[0].id,
+  }));
+  assert.equal(accentRes.statusCode, 200, JSON.stringify(accentRes.body).slice(0, 200));
+  const accentPrompt = a.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
+  assert.match(accentPrompt, /Image 3 is only a close-up sample of the accent material\./);
+  assert.match(accentPrompt, /covered with .* as in image 3; every other surface keeps the main material\./);
+  assert.match(JSON.stringify(a.calls.find((call) => call.url === 'https://api.resend.com/emails').body), /Akzent geladen/);
+});
+
+test('der Prompt bleibt kurz, und jede genannte Bildnummer hat ihr Bild', async () => {
+  // Bis zum 23.09. waren es fuer diese Auswahl rund 2200 Woerter mit rund 80 Verboten. Fenster,
+  // Decke und Dusche stehen seit dem 25.09. wieder im geprueften Wortlaut vom 19./20.09. (rund
+  // 1540 Woerter). Die schwerste Auswahl: Atelier mit Akzent, Walk-in, Aufputz, einem Fenster
+  // und dem Grundriss aus der Vorpruefung.
+  const image = () => new Response(Buffer.from(PNG, 'base64'), { status: 200, headers: { 'content-type': 'image/png' } });
+  const atelier = optionsForPackage('atelier');
+  const tile = atelier.tiles[0];
+  const accent = atelier.accents.find((entry) => entry.placement.includes('duschnische'));
+  const layout = () => photoChecked(true, JSON.stringify({ is_bathroom: true, reason: 'bathroom',
+    walls: inv({ shower: 'back' }), order: ['washbasin', 'toilet', 'shower'], nearest: 'washbasin' }));
+  const h = harness({ swatch: () => image(), photoChecks: [layout], checks: [() => checkedInv({ shower: 'back' }, { shower: 'back' })] });
+  const res = await h.invoke(payload({
+    paket: 'atelier', look: tile.look, format: tile.format, platte: tile.id,
+    kombination: 'kombination', akzentFlaeche: 'duschnische', akzent: accent.id,
+    unterbau: atelier.bases[0].id, top: atelier.tops[0].id, becken: atelier.basinTypes[0].id,
+    finish: atelier.finishes[0].id, keramik: atelier.sanitary[0].id, wall: 'halbhoch',
+    dusche: 'walk-in', badewanne: 'keine', waschtisch: atelier.basins[0].id, spiegel: atelier.mirrors[0].id,
+    cistern: 'aufputz', windows: '1',
+  }));
+  assert.equal(res.statusCode, 200, JSON.stringify(res.body).slice(0, 200));
+  const parts = h.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts;
+  const prompt = parts[0].text;
+  const words = prompt.split(/\s+/).length;
+  // Bewahren und Positionen stehen seit dem 25.09. wieder im Wortlaut der Website (dort 1954 Woerter fuer P1).
+  assert.ok(words < 2100, `der Prompt hat ${words} Woerter`);
+  assert.match(prompt, /WHAT IMAGE 1 SHOWS/);
+  // Foto, Platte, Akzent, Waschtisch (ein oder zwei Muster), Modul, Armaturen: jede Nummer im Text hat ihr Bild.
+  const images = parts.filter((part) => part.inlineData).length;
+  const named = [...new Set([...prompt.matchAll(/[Ii]mage (\d+)/g)].map((match) => Number(match[1])))].sort((x, y) => x - y);
+  assert.deepEqual(named, Array.from({ length: images }, (_, index) => index + 1));
+});
+
+test('mehr Fenster als der Kunde angegeben hat, oder eine andere Decke, loest den zweiten Versuch aus', async () => {
+  // P4 und P5 vom 25.09.: "keine Fenster", im Ideenbild einmal ein Dachfenster, einmal ein Fenster links.
+  const good = () => checkedInv({}, {}, { windows_before: 0, windows_after: 0 });
+  const added = harness({ checks: [() => checkedInv({}, {}, { windows_before: 0, windows_after: 1 }), good] });
+  assert.equal((await added.invoke(payload({ windows: '0' }))).statusCode, 200);
+  assert.equal(added.counts().generation, 2);
+  assert.match(added.calls.filter((call) => call.body?.generationConfig?.responseModalities)[1].body.contents[0].parts[0].text,
+    /failed the check because a window was added: the result shows 1 window\(s\) including roof windows, the photo none/);
+  // Zaehlt das Pruefmodell einen Spiegel als Fenster, dann in beiden Bildern: das Bild bleibt.
+  const mirror = harness({ checks: [() => checkedInv({}, {}, { windows_before: 1, windows_after: 1 })] });
+  assert.equal((await mirror.invoke(payload({ windows: '0' }))).statusCode, 200);
+  assert.equal(mirror.counts().generation, 1);
+  // Ein Fenster wie angegeben; bei "3 oder mehr" zaehlt das Foto.
+  for (const [windows, after] of [['1', 1], ['3', 5]]) {
+    const same = harness({ checks: [() => checkedInv({}, {}, { windows_before: after, windows_after: after })] });
+    assert.equal((await same.invoke(payload({ windows }))).statusCode, 200);
+    assert.equal(same.counts().generation, 1, `windows ${windows}`);
+  }
+  // "3 oder mehr", und das Pruefmodell nennt keine Zahl fuer das Foto: keine Obergrenze (Pruefung vom 26.09.).
+  const many = harness({ checks: [() => checkedInv({}, {}, { windows_after: 4 })] });
+  assert.equal((await many.invoke(payload({ windows: '3' }))).statusCode, 200);
+  assert.equal(many.counts().generation, 1);
+  const twoOfOne = harness({ checks: [() => checkedInv({}, {}, { windows_before: 1, windows_after: 2 }), good] });
+  await twoOfOne.invoke(payload({ windows: '1' }));
+  assert.equal(twoOfOne.counts().generation, 2);
+  // Decke: aus der flachen Decke wurde eine Dachschraege.
+  const ceiling = harness({ checks: [() => checkedInv({}, {}, { ceiling_changed: true }), () => checkedInv({}, {}, { ceiling_changed: true })] });
+  const res = await ceiling.invoke(payload());
+  assert.equal(res.statusCode, 502);
+  assert.equal(res.body.code, 'RENDER_REJECTED');
+  assert.match(JSON.stringify(ceiling.calls.find((call) => call.url === 'https://api.resend.com/emails').body), /the ceiling changed its shape/);
+  // Die Pruefung fragt nach der Zahl der Fenster und nach der Decke.
+  const question = ceiling.calls.find((call) => /windows_after/.test(call.body?.contents?.[0]?.parts?.[0]?.text || '')).body.contents[0].parts[0].text;
+  assert.match(question, /Count the windows in each image, roof windows and skylights included/);
+  assert.match(question, /Set ceiling_changed true if the ceiling of image 2 has another shape/);
+});
+
+test('jede Badplaner-Mail geht an Diego mit Emanuel in Kopie, auch der Entwurf und auch ohne Variablen', async () => {
+  // 25.09.: in der Vorschau (ohne BADPLANER_TO/CC) ging der Entwurf nur an Emanuel, auf der Website nur an Diego.
+  const h = harness();
+  await h.invoke(previewPayload());
+  const draft = h.calls.find((call) => call.url === 'https://api.resend.com/emails');
+  assert.match(draft.body.subject, /^Badplaner-Entwurf ohne Kontakt/);
+  assert.deepEqual(draft.body.to, ['diego.verdile@newlivingdesign.ch']);
+  assert.deepEqual(draft.body.cc, ['emanuel.verdile@newlivingdesign.ch']);
+  const lead = harness();
+  await lead.invoke(payload());
+  const leadMail = lead.calls.find((call) => call.url === 'https://api.resend.com/emails');
+  assert.deepEqual([leadMail.body.to, leadMail.body.cc], [['diego.verdile@newlivingdesign.ch'], ['emanuel.verdile@newlivingdesign.ch']]);
+  const configured = harness({ env: { BADPLANER_TO: 'to@example.invalid', BADPLANER_CC: 'cc@example.invalid' } });
+  await configured.invoke(previewPayload());
+  const configuredDraft = configured.calls.find((call) => call.url === 'https://api.resend.com/emails');
+  assert.deepEqual([configuredDraft.body.to, configuredDraft.body.cc], [['to@example.invalid'], ['cc@example.invalid']]);
+});
+
+test('zeigt das Muster einer Grossformat-Platte ein Mosaik, nimmt das Modell nur Farbe und Maserung', async () => {
+  // P1 vom 25.09.: fuer Dual Travertine White (120x278) ging das Mosaik 5x5 des Lieferanten als Muster mit.
+  const image = () => new Response(Buffer.from(PNG, 'base64'), { status: 200, headers: { 'content-type': 'image/png' } });
+  const atelier = optionsForPackage('atelier');
+  const promptFor = async (tileId) => {
+    const tile = atelier.tiles.find((entry) => entry.id === tileId);
+    const h = harness({ swatch: () => image() });
+    const res = await h.invoke(payload({
+      paket: 'atelier', look: tile.look, format: tile.format, platte: tile.id, kombination: 'einheitlich',
+      unterbau: atelier.bases[0].id, top: atelier.tops[0].id, becken: atelier.basinTypes[0].id,
+      finish: atelier.finishes[0].id, keramik: atelier.sanitary[0].id,
+      wall: atelier.walls[0].id, dusche: atelier.showers[0].id, badewanne: atelier.bathtubs[0].id,
+      waschtisch: atelier.basins[0].id, spiegel: atelier.mirrors[0].id,
+    }));
+    assert.equal(res.statusCode, 200, JSON.stringify(res.body).slice(0, 200));
+    return h.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
+  };
+  assert.match(await promptFor('emilceramica-dual-travertine-beige-travertin'),
+    /Image 2 is only a sample of the wall tile material shown as a small mosaic: take only its colour, stone pattern and finish; the tiles themselves are large slabs/);
+  // Fuer Dual Travertine White liegt seit dem 25.09. das offizielle Muster der Platte im Repo.
+  const white = await promptFor('emilceramica-dual-travertine-white-travertin');
+  assert.match(white, /Image 2 is only a close-up sample of the wall tile: take its colour, texture and finish/);
+  assert.equal(atelier.tiles.find((entry) => entry.id === 'emilceramica-dual-travertine-white-travertin').src, null);
 });
