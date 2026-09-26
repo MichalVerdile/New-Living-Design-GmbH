@@ -1546,7 +1546,7 @@ test('Dusche: Rinne und Armaturen an der Stirnwand im Prompt, falsch gezeichnet 
   assert.match(JSON.stringify(tray.calls.find((call) => call.url === 'https://api.resend.com/emails').body), /Hinweis: the shower floor is raised above the bathroom floor; the shower tray must lie level with the floor tiles/);
   const trayPrompt = tray.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
   assert.match(trayPrompt, /flat white shower tray: one smooth white piece without tile joints, set into the floor so that its surface is exactly level with the floor tiles around it, with no step/);
-  assert.match(trayPrompt, /its own small round drain with a round cover in its surface, and no channel drain/);
+  assert.match(trayPrompt, /it covers the whole shower floor, its outline shows clearly against the floor tiles, and it has its own small round drain with a round cover in its surface, and no channel drain/);
   assert.match(trayPrompt, /ALL shower fittings sit together on that short end wall/);
   assert.doesNotMatch(trayPrompt, /Duschrinne|slopes towards it|sloped|like one large floor tile/);
   // Wanne gefliest oder mit Rinne gezeichnet: Hinweise. Ein runder Ablauf ist bei der Wanne richtig.
