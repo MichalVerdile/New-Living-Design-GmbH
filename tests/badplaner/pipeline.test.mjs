@@ -1516,7 +1516,9 @@ test('Dusche: Rinne und Armaturen an der Stirnwand im Prompt, falsch gezeichnet 
   assert.doesNotMatch(prompt, /side walls on its left and right/, 'a3: der Satz schob die Armaturen an die Rueckwand');
   // P1 vom 26.09.: Walk-in gewaehlt, eine Wanne gezeichnet. Der Walk-in hat keine Wanne, die Bodenplatten laufen hinein.
   assert.match(prompt, /walk-in shower without a tray: the bathroom floor tiles continue into it, with no step, no kerb and no raised platform/);
-  assert.doesNotMatch(prompt, /shower tray/);
+  // Nur der Satz, der die alte Wanne entfernt, nennt beim Walk-in eine Wanne.
+  assert.match(prompt, /So is an old shower tray, its kerb or platform\./);
+  assert.doesNotMatch(prompt.replace('So is an old shower tray, its kerb or platform.', ''), /shower tray/);
   assert.match(prompt, /never a central point drain, never a round or square grate/);
   // Diego, 26.09. (Entscheidung A): der zweite Versuch hatte 0 von 6 Duschen gerichtet; jetzt nur ein Hinweis.
   assert.equal(h.counts().generation, 1);
@@ -1548,6 +1550,8 @@ test('Dusche: Rinne und Armaturen an der Stirnwand im Prompt, falsch gezeichnet 
   assert.match(trayPrompt, /flat white shower tray: one smooth white piece without tile joints, set into the floor so that its surface is exactly level with the floor tiles around it, with no step/);
   assert.match(trayPrompt, /it covers the whole shower floor, its outline shows clearly against the floor tiles, and it has its own small round drain with a round cover in its surface, and no channel drain/);
   assert.match(trayPrompt, /ALL shower fittings sit together on that short end wall/);
+  // P2 vom 26.09.: die alte erhoehte Wanne blieb; bisher ging nur die Badewanne bis zum Boden weg (Gegenpruefung).
+  assert.match(trayPrompt, /removed down to the floor\. So is an old shower tray, its kerb or platform\./);
   assert.doesNotMatch(trayPrompt, /Duschrinne|slopes towards it|sloped|like one large floor tile/);
   // Wanne gefliest oder mit Rinne gezeichnet: Hinweise. Ein runder Ablauf ist bei der Wanne richtig.
   const trayMail = async (flags) => {
