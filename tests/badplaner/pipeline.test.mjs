@@ -145,8 +145,8 @@ test('Aufputz and Unterputz produce explicit, exclusive toilet branches', async 
     const checkPrompt = checker.body.contents[0].parts[0].text;
     if (cistern === 'aufputz') {
       assert.match(prompt, /the old surface-mounted cistern and its casing are removed completely/);
-      // P3 vom 25.09.: im Foto nur die Betaetigungsplatte; das Modell stellte das WC samt Modul an die andere Wand.
-      assert.match(prompt, /If image 1 shows no cistern box but only a flush plate in the wall, the cistern is already in the wall: then no module is added, and the toilet keeps its wall, its place and its flush plate/);
+      // Die Wahl des Kunden entscheidet (Diego, 26.09.): keine Bedingung "nur eine Platte im Foto" mehr, die das Modell falsch las.
+      assert.doesNotMatch(prompt, /only a flush plate|no module is added/);
       assert.match(prompt, /stands the sanitary module of image \d: a factory-made glass and steel panel/);
       assert.match(prompt, /about 50 cm wide, 115 cm high and 11 cm deep/);
       assert.match(prompt, /a small flush button on the front near the top/);

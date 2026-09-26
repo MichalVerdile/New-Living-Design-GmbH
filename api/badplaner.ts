@@ -1306,10 +1306,10 @@ function buildPrompt(v: {
       ].join('; ');
   // Ein Holzsitz auf weisser Keramik war einer der Befunde vom 16.09.
   const seat = `wall-hung and rimless in ${v.sanitaryPrompt}, with seat and lid in the same ${v.sanitaryPrompt}, not wood`;
-  // P3 vom 25.09.: Aufputz gewaehlt, im Foto aber nur eine Betaetigungsplatte. Das Modell stellte das Modul
-  // dazu und das WC an die andere Wand. Bis Diego entscheidet, gilt das Foto.
+  // Die Wahl des Kunden entscheidet (Diego, 26.09.): Aufputz heisst Modul. Bis dahin galt das Foto ("nur eine Platte,
+  // dann kein Modul"); das Modell las die Bedingung falsch und stellte in P3 trotzdem ein Modul.
   const toilet = v.cistern === 'aufputz'
-    ? `the old surface-mounted cistern and its casing are removed completely; in their place, flat against the same wall, stands the sanitary module of image ${v.moduleImageNumber}: a factory-made glass and steel panel about 50 cm wide, 115 cm high and 11 cm deep, from the floor up, with a white glass front in two parts, a narrow brushed steel edge and a small flush button on the front near the top, not tiled or boxed in; the toilet is ${seat}, and hangs on the module at exactly the old toilet position; the wall behind stays where it is. If image 1 shows no cistern box but only a flush plate in the wall, the cistern is already in the wall: then no module is added, and the toilet keeps its wall, its place and its flush plate`
+    ? `the old surface-mounted cistern and its casing are removed completely; in their place, flat against the same wall, stands the sanitary module of image ${v.moduleImageNumber}: a factory-made glass and steel panel about 50 cm wide, 115 cm high and 11 cm deep, from the floor up, with a white glass front in two parts, a narrow brushed steel edge and a small flush button on the front near the top, not tiled or boxed in; the toilet is ${seat}, and hangs on the module at exactly the old toilet position; the wall behind stays where it is`
     // Diegos Befund vom 17.09.: das WC haengt an einem Muretto, das den Spuelkasten traegt;
     // das Modell hatte es eingeebnet. Am 19.09. baute es umgekehrt eines vor eine flache Wand.
     : `the cistern stays hidden in the wall where it is, and no sanitary module is added. A toilet on a flat full-height wall stays on that flat wall, which is only newly tiled. A toilet that hangs on a low wall or boxed pre-wall in image 1 stays on its front, and that low wall stays with the same place, length, height and depth, only newly tiled; the toilet is not pushed back to the wall behind. The toilet is ${seat}, at its existing position`;
