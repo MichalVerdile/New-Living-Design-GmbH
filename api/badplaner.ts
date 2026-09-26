@@ -525,6 +525,7 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
     showerPrompt: showerWall === 'back' ? shower?.prompt.replace(/When the shower is wider than it is deep[^;]*; never/, 'Never') : shower?.prompt,
     bathtubPrompt: bathtub?.prompt,
     wantsShower: shower ? shower.id !== 'keine' : false,
+    trayShower: shower?.id === 'duschwanne',
     wantsBathtub: bathtub ? bathtub.id !== 'keine' : false,
     sanitaryPrompt: sanitary.prompt,
     basinPrompt: basin.prompt,
@@ -697,7 +698,7 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   if (gen.ok === false) return res.status(502).json(await leadWithoutImage(`Bilddienst: ${gen.detail}`));
   const firstGenerationMs = dependencies.clock.now() - passStarted;
   let checkNote = 'ok';
-  const wantedFixtures = { room, shower: shower ? shower.id !== 'keine' : false, bathtub: bathtub ? bathtub.id !== 'keine' : false, cistern, windows, showerWall,
+  const wantedFixtures = { room, shower: shower ? shower.id !== 'keine' : false, showerType: shower?.id, bathtub: bathtub ? bathtub.id !== 'keine' : false, cistern, windows, showerWall,
     bathtubType: bathtub?.id, basin: basin.id, basinType: basinType?.id, mirror: mirror.id };
   const checkWithUnavailableRetry = async (image: { mime: string; data: string }): Promise<CheckResult> => {
     let result = await checkOpenings(photo, image, wantedFixtures, ctx);
@@ -1218,6 +1219,7 @@ function buildPrompt(v: {
   showerPrompt?: string;
   bathtubPrompt?: string;
   wantsShower: boolean;
+  trayShower?: boolean;
   wantsBathtub: boolean;
   sanitaryPrompt: string;
   basinPrompt: string;
@@ -1488,7 +1490,7 @@ async function askCheckModel(model: string, question: string, images: Photo[], t
 async function checkOpenings(
   photo: Photo,
   gen: { mime: string; data: string },
-  wanted: { room: 'badezimmer' | 'gaeste-wc'; shower: boolean; bathtub: boolean; cistern: 'aufputz' | 'unterputz'; windows: string; showerWall?: EndWall;
+  wanted: { room: 'badezimmer' | 'gaeste-wc'; shower: boolean; bathtub: boolean; cistern: 'aufputz' | 'unterputz'; windows: string; showerWall?: EndWall; showerType?: string;
     bathtubType?: string; basin?: string; basinType?: string; mirror?: string },
   ctx: RequestContext,
   timeoutMs = CHECK_TIMEOUT_MS,
