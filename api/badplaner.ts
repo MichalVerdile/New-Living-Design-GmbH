@@ -266,7 +266,7 @@ interface CheckFlags {
 }
 // correctable: nur der Vordergrund ist falsch. Das loest den zweiten Versuch aus; bleibt der Fehler, wird das
 // Bild trotzdem gezeigt (siehe handleRender).
-type CheckResult = { status: 'approved'; note?: string; hints?: string[] } | { status: 'rejected'; reason: string; flags: CheckFlags; correctable?: boolean; hints?: string[] } | { status: 'unavailable'; detail: string } | { status: 'disabled' };
+type CheckResult = { status: 'approved'; note?: string; hints?: string[] } | { status: 'rejected'; reason: string; flags: CheckFlags; correctable?: boolean; note?: string; hints?: string[] } | { status: 'unavailable'; detail: string } | { status: 'disabled' };
 
 /** Each factory owns its best-effort counters. Tests inject HTTP, clock and IDs. */
 export function createHandler(overrides: Partial<BadplanerDependencies> = {}) {
@@ -748,7 +748,9 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
       }
       if (check.status === 'approved') checkNote = `1. Versuch verworfen (${first.check.reason}), 2. Versuch ok`;
     } else tries.push(`2. Versuch: Bilddienst: ${second.detail}`);
-    if (first.check.correctable && (second.ok === false || (check.status === 'rejected' && !check.correctable))) {
+    // Laesst sich das zweite Bild nicht pruefen, gilt ebenfalls das erste: es hat alle groben Pruefungen bestanden.
+    if (first.check.correctable && check.status === 'unavailable') tries.push(`2. Versuch: Prüfung nicht möglich (${check.detail})`);
+    if (first.check.correctable && (second.ok === false || check.status === 'unavailable' || (check.status === 'rejected' && !check.correctable))) {
       gen = first.gen;
       check = first.check;
       checkAttempt = 1;
@@ -758,7 +760,7 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   // gezeigt, mit dem Grund in der Lead-Mail, damit der Kunde nicht ohne Bild dasteht.
   if (check.status === 'rejected' && check.correctable) {
     checkNote = `Mangel im gezeigten Bild (${checkAttempt}. Versuch) – ${tries.join(' | ')}`;
-    check = { status: 'approved', hints: check.hints };
+    check = { status: 'approved', note: check.note, hints: check.hints };
   }
   if (check.status === 'rejected') {
     const rejectedNote = `abgelehnt – ${tries.join(' | ')}`;
@@ -1585,7 +1587,8 @@ async function checkOpenings(
   // Erlaubt ist die groessere Zahl: die des Kunden ("3" heisst drei oder mehr) oder die im Foto gezaehlte.
   // Zaehlt das Pruefmodell einen Spiegel als Fenster, dann in beiden Bildern, und das Bild bleibt.
   const counts = [/^[0-3]$/.test(wanted.windows) ? Number(wanted.windows) : undefined, parsed.windows_before].filter((n): n is number => typeof n === 'number');
-  const allowedWindows = counts.length ? Math.max(...counts) : undefined;
+  // "3 oder mehr" ohne Zahl aus dem Foto: keine Obergrenze.
+  const allowedWindows = wanted.windows === '3' && typeof parsed.windows_before !== 'number' ? undefined : counts.length ? Math.max(...counts) : undefined;
   if (typeof parsed.windows_after === 'number' && allowedWindows !== undefined && parsed.windows_after > allowedWindows) {
     return { status: 'rejected', reason: `a window was added: the result shows ${parsed.windows_after} window(s) including roof windows, the photo ${allowedWindows === 0 ? 'none' : allowedWindows}`, flags };
   }
@@ -1638,7 +1641,7 @@ async function checkOpenings(
   ].filter((hint): hint is string => !!hint));
   // Der Vordergrund bleibt, die Tuer eingeschlossen: das richtet ein zweiter Versuch (Diego, 25.09.).
   if (parsed.foreground_object_before && !parsed.foreground_object_after) {
-    return { status: 'rejected', reason: 'what stands in the foreground at the edge of image 1 (an open door leaf, a door frame or the edge of a wall) is gone; it must stay at its place and size, exactly as in image 1', flags, correctable: true, hints };
+    return { status: 'rejected', reason: 'what stands in the foreground at the edge of image 1 (an open door leaf, a door frame or the edge of a wall) is gone; it must stay at its place and size, exactly as in image 1', flags, correctable: true, note: flags.view_changed ? parsed.reason.slice(0, 200) : undefined, hints };
   }
   // Ein anderer Bildausschnitt wird ebenso nur vermerkt.
   return flags.view_changed ? { status: 'approved', note: parsed.reason.slice(0, 200), hints } : { status: 'approved', hints };
