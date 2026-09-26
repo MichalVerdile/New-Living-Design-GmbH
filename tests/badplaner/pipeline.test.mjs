@@ -149,7 +149,8 @@ test('Aufputz and Unterputz produce explicit, exclusive toilet branches', async 
       assert.doesNotMatch(prompt, /only a flush plate|no module is added/);
       assert.match(prompt, /stands the sanitary module of image \d: a factory-made glass and steel panel/);
       assert.match(prompt, /about 50 cm wide, 115 cm high and 11 cm deep/);
-      assert.match(prompt, /a small flush button on the front near the top/);
+      // P3 vom 26.09.: eine Platte oben auf dem Modul, zur Wand hin. Der Knopf sitzt in der Glasfront (OLI QR Sospeso).
+      assert.match(prompt, /a small oval push button set into the glass front near its top, with nothing on its top edge/);
       assert.match(prompt, /the toilet is wall-hung and rimless in .*hangs on the module at exactly the old toilet position/);
       // Ein Holzsitz auf weisser Keramik war einer der Befunde vom 16.09.
       assert.match(prompt, /with seat and lid in the same .*, not wood/);
