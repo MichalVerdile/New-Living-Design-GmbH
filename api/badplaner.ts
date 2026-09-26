@@ -69,6 +69,7 @@ import { SANITARY_MODULE_PHOTO } from '../server/badplaner/sanitaermodul.js';
 import { LED_MIRROR_PHOTO, MIRROR_CABINET_PHOTO } from '../server/badplaner/spiegel.js';
 import { AURELIA_BASIN_PHOTO, AURELIA_BATH_FLOOR_PHOTO, AURELIA_BATH_WALL_PHOTO, AURELIA_TAPS_PHOTO } from '../server/badplaner/aurelia.js';
 import { UP_AUFPUTZ_PHOTO, UP_BASIN_PHOTO, UP_UNTERPUTZ_PHOTO } from '../server/badplaner/up.js';
+import { RAN_BASIN_PHOTO, RAN_BATH_PHOTO, RAN_UNTERPUTZ_PHOTO } from '../server/badplaner/ran.js';
 
 // Node-Globals ohne @types/node (api/tsconfig.json ist auf Edge ausgelegt)
 declare const process: any;
@@ -458,11 +459,16 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   // im Text: mit dem Duschset zeichnete das Modell am 25.09. (Jonathan, Atelier ohne Dusche) ueber der
   // freistehenden Wanne Kopf- und Handbrause und zweimal statt der Wanne eine Dusche.
   const upSeries = pkg.id === 'essenza' || tapSeriesOption?.id === 'treemme-up';
+  // Ran (Colore): Renderings von Diego, 26.09.; in T7 und T8 vom 25.09. kam ohne Bild der Mischer aus dem Foto.
+  const ranSeries = tapSeriesOption?.id === 'treemme-ran';
   const noShower = !shower || shower.id === 'keine';
   const tapsImage = isAtelier ? (noShower ? AURELIA_BASIN_PHOTO : AURELIA_TAPS_PHOTO)
+    : ranSeries ? (noShower ? RAN_BASIN_PHOTO : RAN_UNTERPUTZ_PHOTO)
     : !upSeries ? null : noShower ? UP_BASIN_PHOTO : pkg.id === 'essenza' ? UP_AUFPUTZ_PHOTO : UP_UNTERPUTZ_PHOTO;
-  // Die Wannenarmatur als eigenes Bild, bisher nur fuer Aurelia (Bilder von Diego, 25.09.).
-  const bathImage = !isAtelier || !bathtub || bathtub.id === 'keine' ? null : bathtub.id === 'freistehend' ? AURELIA_BATH_FLOOR_PHOTO : AURELIA_BATH_WALL_PHOTO;
+  // Die Wannenarmatur als eigenes Bild, fuer Aurelia und Ran (Bilder von Diego, 25. und 26.09.).
+  const bathImage = !bathtub || bathtub.id === 'keine' ? null
+    : isAtelier ? (bathtub.id === 'freistehend' ? AURELIA_BATH_FLOOR_PHOTO : AURELIA_BATH_WALL_PHOTO)
+    : ranSeries ? RAN_BATH_PHOTO : null;
   // Der neue Spiegel als Bild (Froidevaux): mit Worten allein kopierte das Modell in 10 von 12 Proben den alten (Jonathan, 25.09.).
   const mirrorImage = mirror.id === 'spiegelschrank' ? MIRROR_CABINET_PHOTO : mirror.id === 'spiegel' ? LED_MIRROR_PHOTO : null;
 
@@ -483,7 +489,9 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
         : 'a slim column rising from the floor at one end of the tub, with a spout that bends over the rim and a hand shower in a holder on the column'}, and no fitting on the walls around the bathtub`
       : `; at the bathtub, on the wall at its tap end, a bath mixer of the same series and finish${isAtelier
         ? ': a long flat horizontal wall plate in the same finish just above the rim, carrying from left to right the hand shower outlet with a slim stick hand shower in its holder and a hose, a short cylindrical handle with a flat paddle lever hanging down, a faceted spout that bends down over the rim and a second handle with a paddle lever'
-        : `${pkg.id === 'essenza' ? ', exposed on the wall with its spout' : ': a wall spout above the rim and the mixer on a flat wall plate, concealed in the wall'}, and a hand shower on a hose in a small wall holder`}`;
+        : ranSeries
+          ? ': four small square wall plates with rounded corners in one row just above the rim, from left to right the hose outlet with a slim round stick hand shower in its holder and a hose, the mixer with a flat bent blade lever, a thin flat blade spout over the rim and a second control with the same lever'
+          : `${pkg.id === 'essenza' ? ', exposed on the wall with its spout' : ': a wall spout above the rim and the mixer on a flat wall plate, concealed in the wall'}, and a hand shower on a hose in a small wall holder`}`;
   const basinTaps = taps.prompt.replace(/; in a shower [^;]*/, '');
   const tapPrompt = !noShower ? taps.prompt + bathFiller
     : bathFiller ? `${basinTaps}${bathFiller}; no overhead shower, no shower rail and no shower mixer anywhere`
@@ -1229,7 +1237,7 @@ function buildPrompt(v: {
   sample(v.tapsImageNumber, !v.wantsShower
     ? 'a product photo of the washbasin tap on a plain background, in chrome: copy its shape, its finish is the one named under CHANGE'
     : 'a product photo of the washbasin and shower fittings on a plain background, in chrome: copy their shapes, their finish is the one named under CHANGE');
-  sample(v.bathImageNumber, 'a product photo of the bath mixer on a plain background, in chrome: copy its shape, its finish is the one named under CHANGE');
+  sample(v.bathImageNumber, 'a product photo of the bath mixer on a plain background: copy its shape, not its colour; its finish is the one named under CHANGE');
   sample(v.mirrorImageNumber, 'a product photo of the new mirror on a plain background: copy its shape, its doors and its light; it replaces the old mirror of image 1');
   const references = samples.length ? ` ${samples.join(' ')} These images show materials and products, never a room or a layout.` : '';
   const asIn = (n: number) => (n ? ` as in image ${n}` : '');

@@ -182,7 +182,7 @@ test('Colore uses the selected tap series and finish in prompt and lead mail', a
   }));
   assert.equal(res.statusCode, 200);
   const generation = h.calls.find((call) => call.body?.generationConfig?.responseModalities);
-  assert.match(generation.body.contents[0].parts[0].text, /Treemme Ran fittings in matte black, flat and square-edged: at the washbasin .*flat blade-shaped spout/);
+  assert.match(generation.body.contents[0].parts[0].text, /Treemme Ran fittings in matte black, round bodies with flat blade-shaped parts: at the washbasin a tall slender round column .*thin flat blade spout of rectangular section/);
   const lead = JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails')?.body);
   assert.match(lead, /Treemme Ran, Nero Opaco/);
   assert.doesNotMatch(lead, /Armaturenserie/);
@@ -1654,10 +1654,37 @@ test('Gaeste-WC: dieselbe Armaturenserie wie im Bad, nur am Waschtisch, mit Bild
     assert.match(prompt, /no shower mixer, bath filler or shower controls/);
     assert.match(prompt, new RegExp(`Image ${parts.filter((part) => part.inlineData).length} is only ${sample}`), body.paket);
   }
-  // Ran bekommt kein Bild: dafuer gibt es keine Vorlage.
+  // Ran hat seit dem 26.09. Bilder (Renderings von Diego): im Gaeste-WC nur das des Waschtischmischers.
   const ran = harness();
   await ran.invoke(payload({ ...cases[0][0], armaturenserie: 'treemme-ran' }));
-  assert.doesNotMatch(ran.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text, /product photo of the washbasin/);
+  const ranParts = ran.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts;
+  assert.match(ranParts[0].text, new RegExp(`Image ${ranParts.filter((part) => part.inlineData).length} is only a product photo of the washbasin tap`));
+  assert.doesNotMatch(ranParts[0].text, /in a shower |overhead shower|hand shower/);
+});
+
+test('Armaturen: Colore mit Ran zeigt die Renderings von Treemme, mit Dusche und mit Wanne', async () => {
+  // Diego, 26.09.: vier Renderings von Ran. In T7 und T8 vom 25.09. zeichnete das Modell ohne Bild den Mischer aus dem Foto nach.
+  const colore = optionsForPackage('colore');
+  const base = { paket: 'colore', format: colore.formats[0], platte: colore.tiles[0].id, unterbau: colore.bases[0].id, top: colore.tops[0].id,
+    becken: 'aufsatz', armaturenserie: 'treemme-ran', finish: 'treemme-nero-opaco', keramik: colore.sanitary[0].id, wall: colore.walls[0].id,
+    waschtisch: 'einzel', spiegel: colore.mirrors[0].id };
+  const partsOf = async (changes, after) => {
+    const h = harness({ checks: [() => checkedInv({}, after)] });
+    assert.equal((await h.invoke(payload({ ...base, ...changes }))).statusCode, 200);
+    return h.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts;
+  };
+  const shower = await partsOf({ dusche: 'walk-in', badewanne: 'keine' }, { shower: 'back' });
+  const images = shower.filter((part) => part.inlineData);
+  assert.match(shower[0].text, /Treemme Ran fittings in matte black, round bodies .*in a shower small square wall plates with rounded corners, one carrying the concealed mixer/);
+  assert.match(shower[0].text, new RegExp(`Image ${images.length} is only a product photo of the washbasin and shower fittings`));
+  assert.ok(images[images.length - 1].inlineData.data.startsWith('/9j/'));
+  // Einbauwanne ohne Dusche: das Bild des Waschtischmischers und das der Wannenarmatur, im Text die vier Platten.
+  const bath = await partsOf({ dusche: 'keine', badewanne: 'einbau' }, { bathtub: 'back' });
+  const bathImages = bath.filter((part) => part.inlineData);
+  assert.match(bath[0].text, /four small square wall plates with rounded corners in one row just above the rim/);
+  assert.match(bath[0].text, new RegExp(`Image ${bathImages.length - 1} is only a product photo of the washbasin tap`));
+  assert.match(bath[0].text, new RegExp(`Image ${bathImages.length} is only a product photo of the bath mixer on a plain background: copy its shape, not its colour`));
+  assert.doesNotMatch(bath[0].text, /in a shower |overhead shower on/);
 });
 
 test('Gaeste-WC gewaehlt, im Foto aber Wanne oder Dusche: Hinweis statt Bild', async () => {
