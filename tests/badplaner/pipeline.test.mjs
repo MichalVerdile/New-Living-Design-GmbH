@@ -1481,9 +1481,8 @@ test('ein zugemauerter Ruecksprung in der Wand steht als Hinweis in der Lead-Mai
   assert.match(question, /tiles simply end at mid-height with paint above is still a full-height wall/);
 });
 
-test('Dusche: Rinne und Armaturen an der Stirnwand im Prompt, falsch gezeichnet loest den zweiten Versuch aus', async () => {
-  const good = () => checkedInv({ shower: 'back' }, { shower: 'back' });
-  const h = harness({ checks: [() => checkedInv({ shower: 'back' }, { shower: 'back' }, { point_drain: true }), good] });
+test('Dusche: Rinne und Armaturen an der Stirnwand im Prompt, falsch gezeichnet steht als Hinweis in der Mail', async () => {
+  const h = harness({ checks: [() => checkedInv({ shower: 'back' }, { shower: 'back' }, { point_drain: true })] });
   const res = await h.invoke(payload({ dusche: 'walk-in', badewanne: 'keine' }));
   assert.equal(res.statusCode, 200);
   const prompt = h.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
@@ -1494,20 +1493,19 @@ test('Dusche: Rinne und Armaturen an der Stirnwand im Prompt, falsch gezeichnet 
   assert.doesNotMatch(prompt, /side walls on its left and right/, 'a3: der Satz schob die Armaturen an die Rueckwand');
   assert.match(prompt, /flush with the bathroom floor, with no step, no kerb and no raised platform/);
   assert.match(prompt, /never a central point drain, never a round or square grate/);
-  // Diego, 25.09.: "non voglio la scritta ma la canalina al posto giusto" - ein zweiter Versuch, nicht nur ein Vermerk.
-  assert.equal(h.counts().generation, 2);
-  assert.match(h.calls.filter((call) => call.body?.generationConfig?.responseModalities)[1].body.contents[0].parts[0].text,
-    /failed the check because the shower has a point drain; it needs a linear channel drain at the foot of the wall with the fittings/);
-  assert.match(JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails').body), /1\. Versuch verworfen \(the shower has a point drain.*2\. Versuch ok/);
-  // Rinne nicht am Fuss der Armaturenwand, Armaturen an zwei Waenden, Stufe: ebenfalls ein zweiter Versuch.
+  // Diego, 26.09. (Entscheidung A): der zweite Versuch hatte 0 von 6 Duschen gerichtet; jetzt nur ein Hinweis.
+  assert.equal(h.counts().generation, 1);
+  assert.match(JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails').body),
+    /Fensterprüfung.*ok, Hinweis: the shower has a point drain; it needs a linear channel drain at the foot of the wall with the fittings/);
+  // Rinne nicht am Fuss der Armaturenwand, Armaturen an zwei Waenden, Stufe: ebenfalls nur ein Hinweis.
   for (const [flags, reason] of [
     [{ drain_wall: 'back', fittings_wall: 'left' }, /the channel drain lies at the foot of the back wall; it belongs at the foot of the left wall, directly below the fittings/],
     [{ shower_fittings_split: true }, /the shower fittings are spread over two walls/],
     [{ shower_step: true }, /the shower floor is raised above the bathroom floor/],
   ]) {
-    const w = harness({ checks: [() => checkedInv({ shower: 'back' }, { shower: 'back' }, flags), good] });
+    const w = harness({ checks: [() => checkedInv({ shower: 'back' }, { shower: 'back' }, flags)] });
     assert.equal((await w.invoke(payload({ dusche: 'walk-in', badewanne: 'keine' }))).statusCode, 200);
-    assert.equal(w.counts().generation, 2, JSON.stringify(flags));
+    assert.equal(w.counts().generation, 1, JSON.stringify(flags));
     assert.match(JSON.stringify(w.calls.find((call) => call.url === 'https://api.resend.com/emails').body), reason);
   }
   // Rinne und Armaturen zusammen an einer Wand: richtig, kein zweiter Versuch.
@@ -1515,9 +1513,10 @@ test('Dusche: Rinne und Armaturen an der Stirnwand im Prompt, falsch gezeichnet 
   await right.invoke(payload({ dusche: 'walk-in', badewanne: 'keine' }));
   assert.equal(right.counts().generation, 1);
   // Die Duschwanne ist seit dem 25.09. ebenfalls bodeneben, mit Rinne an der Stirnwand.
-  const tray = harness({ checks: [() => checkedInv({ shower: 'back' }, { shower: 'back' }, { shower_step: true }), good] });
+  const tray = harness({ checks: [() => checkedInv({ shower: 'back' }, { shower: 'back' }, { shower_step: true })] });
   await tray.invoke(payload({ dusche: 'duschwanne', badewanne: 'keine' }));
-  assert.equal(tray.counts().generation, 2);
+  assert.equal(tray.counts().generation, 1);
+  assert.match(JSON.stringify(tray.calls.find((call) => call.url === 'https://api.resend.com/emails').body), /Hinweis: the shower floor is raised/);
   const trayPrompt = tray.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
   assert.match(trayPrompt, /flat white shower tray laid into the floor like one large floor tile: its surface is exactly level with the floor tiles around it, with no step/);
   assert.match(trayPrompt, /ALL shower fittings sit together on that short end wall/);
@@ -1538,12 +1537,12 @@ test('Dusche: die Stirnwand sagt die Vorpruefung im Foto, der Prompt nennt sie, 
   assert.equal(ok.counts().generation, 1);
   assert.match(ok.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text,
     /The short end wall of the shower is the back wall seen from the camera: the mixer, the overhead shower and the hand shower sit on it, and the channel drain lies along its foot\./);
-  const wrong = harness({ photoChecks: [photo('left')], checks: [result('back', 'back'), result('left', 'left')] });
+  const wrong = harness({ photoChecks: [photo('left')], checks: [result('back', 'back')] });
   assert.equal((await wrong.invoke(body)).statusCode, 200);
-  assert.equal(wrong.counts().generation, 2);
-  // Beide Fehler in einem Satz, damit der zweite Versuch beides richtet.
-  assert.match(wrong.calls.filter((call) => call.body?.generationConfig?.responseModalities)[1].body.contents[0].parts[0].text,
-    /failed the check because the shower fittings are on the back wall; they belong on the left wall, the short end of the shower; and the channel drain lies at the foot of the back wall; it belongs at the foot of the left wall/);
+  assert.equal(wrong.counts().generation, 1);
+  // Beide Fehler stehen als Hinweis in der Mail (Entscheidung A vom 26.09.).
+  assert.match(JSON.stringify(wrong.calls.find((call) => call.url === 'https://api.resend.com/emails').body),
+    /Hinweis: the shower fittings are on the back wall; they belong on the left wall, the short end of the shower, Hinweis: the channel drain lies at the foot of the back wall; it belongs at the foot of the left wall/);
   // Ohne Wanne oder Dusche im Foto (oder ein unbekanntes Wort) nennt der Prompt keine Wand.
   const none = harness({ photoChecks: [photo('diagonal')], checks: [result('back', 'back')] });
   await none.invoke(body);
@@ -1554,37 +1553,33 @@ test('Dusche: die Stirnwand sagt die Vorpruefung im Foto, der Prompt nennt sie, 
   assert.match(question, /set shower_end_wall to the wall, seen from the camera, at one of its two narrow ends/);
 });
 
-test('bleibt die Dusche auch im zweiten Versuch falsch, sieht der Kunde das Bild trotzdem, mit Vermerk', async () => {
+test('eine falsche Dusche kostet keinen zweiten Versuch, der Kunde sieht das Bild, NLD liest den Hinweis', async () => {
+  // Diego, 26.09. (Entscheidung A): in zwei Proben richtete der zweite Versuch 0 von 6 Duschen, je CHF 0.12 und 35 s.
   const step = () => checkedInv({ shower: 'back' }, { shower: 'back' }, { shower_step: true });
-  const h = harness({ checks: [step, step] });
+  const h = harness({ checks: [step] });
   const res = await h.invoke(payload({ dusche: 'walk-in', badewanne: 'keine' }));
   assert.equal(res.statusCode, 200);
-  assert.equal(h.counts().generation, 2);
+  assert.equal(h.counts().generation, 1);
   assert.match(JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails').body),
-    /Mangel im gezeigten Bild \(2\. Versuch\) – 1\. Versuch: the shower floor is raised.* \| 2\. Versuch: the shower floor is raised/);
+    /Fensterprüfung.*ok, Hinweis: the shower floor is raised/);
 });
 
-test('zeigt der zweite Versuch einen groben Fehler, gilt wieder das erste Bild, das nur an der Dusche irrte', async () => {
+test('zeigt der zweite Versuch einen groben Fehler, gilt wieder das erste Bild, das nur den Vordergrund verlor', async () => {
   const first = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAADElEQVQImWP4z8AAAAMBAQCc479ZAAAAAElFTkSuQmCC';
-  const h = harness({
-    generations: [() => generated(first), () => generated()],
-    checks: [() => checkedInv({ shower: 'back' }, { shower: 'back' }, { point_drain: true }), () => checked(true)],
-  });
-  const res = await h.invoke(payload({ dusche: 'walk-in', badewanne: 'keine' }));
+  const doorGone = () => checkedInv({}, {}, { foreground_object_before: true, foreground_object_after: false });
+  const h = harness({ generations: [() => generated(first), () => generated()], checks: [doorGone, () => checked(true)] });
+  const res = await h.invoke();
   assert.equal(res.statusCode, 200);
   assert.equal(res.body.image.data, first);
   assert.match(JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails').body),
-    /Mangel im gezeigten Bild \(1\. Versuch\) – 1\. Versuch: the shower has a point drain.* \| 2\. Versuch: an opening was added or lost/);
+    /Mangel im gezeigten Bild \(1\. Versuch\) – 1\. Versuch: what stands in the foreground.* \| 2\. Versuch: an opening was added or lost/);
   // Scheitert der zweite Versuch ganz, ebenso.
-  const failed = harness({
-    generations: [() => generated(first), () => response({ error: 'boom' }, 500)],
-    checks: [() => checkedInv({ shower: 'back' }, { shower: 'back' }, { shower_step: true })],
-  });
-  const failedRes = await failed.invoke(payload({ dusche: 'walk-in', badewanne: 'keine' }));
+  const failed = harness({ generations: [() => generated(first), () => response({ error: 'boom' }, 500)], checks: [doorGone] });
+  const failedRes = await failed.invoke();
   assert.equal(failedRes.statusCode, 200);
   assert.equal(failedRes.body.image.data, first);
   assert.match(JSON.stringify(failed.calls.find((call) => call.url === 'https://api.resend.com/emails').body),
-    /Mangel im gezeigten Bild \(1\. Versuch\) – 1\. Versuch: the shower floor is raised.* \| 2\. Versuch: Bilddienst: HTTP 500/);
+    /Mangel im gezeigten Bild \(1\. Versuch\) – 1\. Versuch: what stands in the foreground.* \| 2\. Versuch: Bilddienst: HTTP 500/);
 });
 
 test('Armaturen: Atelier zeigt die Form von Treemme Aurelia in der gewaehlten Oberflaeche', async () => {

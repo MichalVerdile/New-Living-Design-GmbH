@@ -25,12 +25,11 @@
  *      Grobe Fehler (mehr Fenster als angegeben, Oeffnung dazu oder weg, andere Decke,
  *      WC oder Waschtisch an anderer Wand oder Stelle, Dusche oder Wanne nicht wie
  *      bestellt, Bidet noch da): zweiter Versuch, wenn die Zeit reicht; ein grob falsches
- *      Bild sieht der Kunde nie, NLD bekommt es mit dem Lead. Dusche falsch (Stufe, Rinne,
- *      Armaturen) oder der Vordergrund weg: ebenfalls ein zweiter Versuch, danach wird das
- *      Bild trotzdem gezeigt, mit Vermerk. Feineres (Muretto, Nische) und was von der Wahl
- *      des Kunden abweicht (Wannenart, Kopfbrause, Zahl und Art der Becken, Spiegel) steht
- *      nur als Hinweis in der Lead-Mail. Ist die Pruefung nicht erreichbar, geht das Bild
- *      mit Vermerk hinaus.
+ *      Bild sieht der Kunde nie, NLD bekommt es mit dem Lead. Der Vordergrund weg: ebenfalls
+ *      ein zweiter Versuch, danach wird das Bild trotzdem gezeigt, mit Vermerk. Die Dusche
+ *      falsch (Stufe, Rinne, Armaturen), Feineres (Muretto, Nische) und was von der Wahl des
+ *      Kunden abweicht (Wannenart, Kopfbrause, Zahl und Art der Becken, Spiegel) steht nur als
+ *      Hinweis in der Lead-Mail. Ist die Pruefung nicht erreichbar, geht das Bild mit Vermerk hinaus.
  *   5. Lead-Mail an NLD (Resend mit Anhaengen; bei eindeutigem Fehler Formspree ohne
  *      Bilder). Ohne bestaetigte Annahme kein Erfolg; unklare Zustellung wird nicht
  *      blind wiederholt.
@@ -263,8 +262,8 @@ interface CheckFlags {
   // Im Log fehlte am 20.09. (Colore, 502), welche Antwort "Nische dazu" ausgeloest hatte.
   wallAnswers: Record<string, boolean>;
 }
-// correctable: nur die Dusche (Stufe, Rinne, Armaturen) oder der Vordergrund ist falsch. Das loest den zweiten
-// Versuch aus; bleibt der Fehler, wird das Bild trotzdem gezeigt (siehe handleRender).
+// correctable: nur der Vordergrund ist falsch. Das loest den zweiten Versuch aus; bleibt der Fehler, wird das
+// Bild trotzdem gezeigt (siehe handleRender).
 type CheckResult = { status: 'approved'; note?: string; hints?: string[] } | { status: 'rejected'; reason: string; flags: CheckFlags; correctable?: boolean; hints?: string[] } | { status: 'unavailable'; detail: string } | { status: 'disabled' };
 
 /** Each factory owns its best-effort counters. Tests inject HTTP, clock and IDs. */
@@ -713,7 +712,7 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   const secondPassMs = Math.round(firstPassMs * 1.15) + DELIVERY_RESERVE_MS;
   const secondCheckReserveMs = Math.round((firstPassMs - firstGenerationMs) * 1.15) + DELIVERY_RESERVE_MS;
   if (check.status === 'rejected' && ctx.budget.remaining() >= secondPassMs) {
-    // Ein grob falsches Bild wird nie zur Reserve. Eines, das nur an der Dusche irrt, schon:
+    // Ein grob falsches Bild wird nie zur Reserve. Eines, das nur den Vordergrund verlor, schon:
     // misslingt der zweite Versuch oder zeigt er einen groben Fehler, gilt wieder das erste.
     const first = { gen, check };
     // Der ganze Prompt geht nochmals mit; dazu nur der Grund, nicht eine zweite Liste aller Regeln.
@@ -736,7 +735,7 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
       checkAttempt = 1;
     }
   } else if (check.status === 'rejected') tries.push('kein 2. Versuch (zu wenig Zeit)');
-  // Nur Dusche oder Vordergrund sind falsch: nach dem zweiten Versuch wird das Bild trotzdem
+  // Nur der Vordergrund ist falsch: nach dem zweiten Versuch wird das Bild trotzdem
   // gezeigt, mit dem Grund in der Lead-Mail, damit der Kunde nicht ohne Bild dasteht.
   if (check.status === 'rejected' && check.correctable) {
     checkNote = `Mangel im gezeigten Bild (${checkAttempt}. Versuch) – ${tries.join(' | ')}`;
@@ -1586,16 +1585,17 @@ async function checkOpenings(
     wanted.bathtubType === 'einbau' && parsed.bathtub_after === 'freestanding' && 'the bathtub stands free, but a built-in bathtub was chosen',
     !wanted.shower && parsed.overhead_shower_after === true && 'there is an overhead shower, but no shower was chosen',
   ].filter((hint): hint is string => !!hint);
-  // Das richtet ein zweiter Versuch, alles in einem Satz (Diego, 25.09.): die Dusche bodeneben, alle Armaturen
-  // an der Stirnwand und die Rinne an ihrem Fuss; der Vordergrund bleibt, die Tuer eingeschlossen. Welche Wand
-  // die Stirnwand ist, sagt die Vorpruefung im Foto; ohne sie gehoert die Rinne an den Fuss der Armaturenwand.
+  // Die Dusche bodeneben, alle Armaturen an der Stirnwand und die Rinne an ihrem Fuss. Welche Wand die Stirnwand
+  // ist, sagt die Vorpruefung im Foto; ohne sie gehoert die Rinne an den Fuss der Armaturenwand. Seit dem 26.09.
+  // nur ein Hinweis (Diego, Entscheidung A): der zweite Versuch hatte 0 von 6 Duschen gerichtet und kostet je
+  // rund CHF 0.12 und 35 s.
   const drainWall: Wall | undefined = parsed.drain_wall;
   const fittingsWall: Wall | undefined = parsed.fittings_wall;
   const seen = (wall?: Wall): wall is Wall => !!wall && wall !== 'none';
   const endWall = wanted.showerWall;
   if (wanted.shower) console.info('[badplaner] Dusche:', `Rinne ${drainWall ?? '-'}, Armaturen ${fittingsWall ?? '-'}, Stirnwand laut Foto ${endWall ?? '-'}, Stufe ${parsed.shower_step ?? '-'}`);
   const drainTarget = endWall ?? (seen(fittingsWall) ? fittingsWall : undefined);
-  const faults = [
+  hints.push(...[
     wanted.shower && parsed.shower_step === true && 'the shower floor is raised above the bathroom floor; it must be flush with the floor, with no step, kerb or tray edge',
     wanted.shower && parsed.point_drain && 'the shower has a point drain; it needs a linear channel drain at the foot of the wall with the fittings',
     wanted.shower && parsed.shower_fittings_split === true && 'the shower fittings are spread over two walls; they all belong together on one wall',
@@ -1603,10 +1603,11 @@ async function checkOpenings(
       && `the shower fittings are on the ${fittingsWall} wall; they belong on the ${endWall} wall, the short end of the shower`,
     wanted.shower && drainTarget && seen(drainWall) && drainWall !== drainTarget
       && `the channel drain lies at the foot of the ${drainWall} wall; it belongs at the foot of the ${drainTarget} wall, directly below the fittings`,
-    parsed.foreground_object_before && !parsed.foreground_object_after
-      && 'what stands in the foreground at the edge of image 1 (an open door leaf, a door frame or the edge of a wall) is gone; it must stay at its place and size, exactly as in image 1',
-  ].filter((fault): fault is string => !!fault);
-  if (faults.length) return { status: 'rejected', reason: faults.join('; and '), flags, correctable: true, hints };
+  ].filter((hint): hint is string => !!hint));
+  // Der Vordergrund bleibt, die Tuer eingeschlossen: das richtet ein zweiter Versuch (Diego, 25.09.).
+  if (parsed.foreground_object_before && !parsed.foreground_object_after) {
+    return { status: 'rejected', reason: 'what stands in the foreground at the edge of image 1 (an open door leaf, a door frame or the edge of a wall) is gone; it must stay at its place and size, exactly as in image 1', flags, correctable: true, hints };
+  }
   // Ein anderer Bildausschnitt wird ebenso nur vermerkt.
   return flags.view_changed ? { status: 'approved', note: parsed.reason.slice(0, 200), hints } : { status: 'approved', hints };
 }
