@@ -452,19 +452,19 @@ test('eine unbrauchbare Antwort der Pruefung gilt als nicht verfuegbar, nicht al
   }
 });
 
-test('das Ideenbild entsteht mit gemini-3.1-flash-image in 2K', async () => {
-  // Seit dem 27.09. Flash statt Pro (Diego): im Pruefstand P1 bis P9 ebenso treu, schneller, seltener verworfen und
-  // oefter mit den Armaturen an der Stirnwand.
+test('das Ideenbild entsteht mit dem genauesten Modell, nicht dem billigsten', async () => {
+  // Qualitaet vor Ersparnis: das Bild ist das Produkt. 2K kostet bei diesem Modell gleich viel wie 1K. Flash war vom
+  // 27.09. an kurz der Standard; in der Probe auf der Vorschau fand Diego es schlechter (1 von 5 Bildern zeigbar).
   const h = harness();
   await h.invoke();
   const gen = h.calls.find((call) => call.body?.generationConfig?.responseModalities);
-  assert.match(gen.url, /models\/gemini-3\.1-flash-image:generateContent/);
+  assert.match(gen.url, /models\/gemini-3-pro-image:generateContent/);
   assert.equal(gen.body.generationConfig.imageConfig.imageSize, '2K');
 
   // Umschaltbar ohne Codeaenderung, falls ein neueres Modell kommt.
-  const other = harness({ env: { BADPLANER_MODEL: 'gemini-3-pro-image' } });
+  const other = harness({ env: { BADPLANER_MODEL: 'gemini-3.1-flash-image' } });
   await other.invoke();
-  assert.match(other.calls.find((call) => call.body?.generationConfig?.responseModalities).url, /gemini-3-pro-image/);
+  assert.match(other.calls.find((call) => call.body?.generationConfig?.responseModalities).url, /gemini-3\.1-flash-image/);
 });
 
 test('ein 2K-Ideenbild passt durch alle Groessengrenzen', async () => {
@@ -1676,7 +1676,7 @@ test('die Pruefung jedes Bildes denkt wenig, die Vorpruefung mehr, das Bildmodel
   const gemini = h.calls.filter((call) => call.url.includes('generativelanguage.googleapis.com'));
   const image = gemini.find((call) => call.body.generationConfig.responseModalities);
   assert.equal(image.body.generationConfig.thinkingConfig, undefined);
-  assert.match(image.url, /gemini-3\.1-flash-image:/);
+  assert.match(image.url, /gemini-3-pro-image:/);
   const checks = gemini.filter((call) => call !== image);
   assert.equal(checks.length, 2);
   assert.deepEqual(checks.map((call) => call.body.generationConfig.thinkingConfig), [{ thinkingLevel: 'high' }, { thinkingLevel: 'low' }]);
@@ -1873,7 +1873,7 @@ test('eine Stufe in der Dusche kostet einen zweiten Durchgang; bleibt sie, sieht
   assert.equal(res.statusCode, 200);
   assert.equal(h.counts().generation, 2);
   assert.match(JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails').body),
-    /Fensterprüfung.*Bild 2 nicht gezeigt \(Hinweise: the shower floor is raised.*\), Bild 1 ok, Hinweis: the shower floor is raised/);
+    /Fensterprüfung.*Bild 2 nicht gezeigt \(Hinweise: the shower floor is raised.*\), Bild 1 mit schwerem Hinweis, Hinweis: the shower floor is raised/);
   // Ohne Stufe im zweiten Durchgang: dieses Bild.
   const second = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAADElEQVQImWP4z8AAAAMBAQCc479ZAAAAAElFTkSuQmCC';
   const fixed = harness({ generations: [() => generated(), () => generated(second)], checks: [step, () => checkedInv({ shower: 'back' }, { shower: 'back' })] });
@@ -2364,7 +2364,7 @@ test('Produktdurchgang: faellt das neue Bild durch, hat es einen schweren Hinwei
   const fixed = await run({ checks: [mirror, mirror, () => checked()], product: undefined, extra: { generations: [() => generated(first), () => generated(first), () => generated(edited)] } });
   assert.equal(fixed.res.body.image.data, edited);
   assert.equal(fixed.h.counts().generation, 3);
-  assert.match(fixed.mail, /Bild 2 nicht gezeigt \(Hinweise: the mirror above the washbasin is still the old one of the photo\), Bild 1 ok, Produktdurchgang ok</);
+  assert.match(fixed.mail, /Bild 2 nicht gezeigt \(Hinweise: the mirror above the washbasin is still the old one of the photo\), Bild 1 mit schwerem Hinweis, Produktdurchgang ok</);
   // Der Bilddienst liefert nicht: das erste, ohne weiteres Bild in der Mail.
   const down = await run({ checks: [() => checked()], product: () => response({ error: 'boom' }, 500) });
   assert.equal(down.res.body.image.data, first);

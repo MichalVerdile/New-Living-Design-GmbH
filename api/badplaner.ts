@@ -59,7 +59,7 @@
  *   BADPLANER_DAILY_CAP  Maximale Anfragen mit Ideenbild pro Tag insgesamt (Default 60); jede erzeugt so viele Bilder,
  *                        wie BADPLANER_CANDIDATES sagt, mit zweitem Durchgang doppelt so viele, dazu eines im
  *                        Produktdurchgang
- *   BADPLANER_MODEL      Gemini-Bildmodell (Default gemini-3.1-flash-image)
+ *   BADPLANER_MODEL      Gemini-Bildmodell (Default gemini-3-pro-image)
  *   BADPLANER_CHECK_MODEL Gemini-Textmodell fuer die Pruefung der Ideenbilder (Default
  *                        gemini-3.6-flash); leer lassen = Pruefungen bewusst deaktiviert, auch die Vorpruefung
  *   BADPLANER_PHOTO_CHECK_MODEL Gemini-Textmodell nur fuer die Vorpruefung des Fotos (Default
@@ -956,8 +956,12 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
     } else productNote = 'kein Produktdurchgang (zu wenig Zeit)';
     console.info('[badplaner]', productNote);
   }
-  if (check.status === 'approved' && (others.length || chosen.check.status !== 'approved')) {
-    checkNote = [...others, `Bild ${chosen.number} ${chosen.check.status === 'unavailable' ? `ungeprüft (${chosen.check.detail})` : 'ok'}`].join(', ');
+  // Carla, 27.09.: ein gewaehltes Bild mit schwerem Hinweis hiess in der Mail "ok", obwohl der Hinweis dahinter seinen
+  // Fehler nannte (P2, P5: Armaturen an der Rueckwand).
+  const chosenLabel = chosen.check.status === 'unavailable' ? `ungeprüft (${chosen.check.detail})`
+    : chosen.check.status === 'approved' && chosen.check.serious?.length ? 'mit schwerem Hinweis' : 'ok';
+  if (check.status === 'approved' && (others.length || chosenLabel !== 'ok')) {
+    checkNote = [...others, `Bild ${chosen.number} ${chosenLabel}`].join(', ');
   }
   if (check.status === 'approved' && productNote) checkNote = `${checkNote}, ${productNote}`;
   if (check.status === 'approved' && check.note) {
@@ -1597,11 +1601,11 @@ async function loadSwatch(image: string, src: string, ctx: RequestContext): Prom
 type GenResult = { ok: true; mime: string; data: string } | { ok: false; error: string; detail: string };
 
 async function generateImage(prompt: string, photo: Photo, references: (Photo | null)[], ctx: RequestContext, aspectRatio = '', reserveMs = CHECK_TIMEOUT_MS + DELIVERY_RESERVE_MS): Promise<GenResult> {
-  // Das Ideenbild ist das Produkt: es soll das Bad des Kunden zeigen, nicht irgendein schoenes Bad. Seit dem 27.09.
-  // gemini-3.1-flash-image statt gemini-3-pro-image (Diego): im Pruefstand P1 bis P9 ebenso treu, ein Viertel schneller,
-  // halb so oft verworfen und in P2 und P5 mit den Armaturen an der Stirnwand in 5 von 12 statt 0 von 9 Laeufen. 2K wie
-  // bisher: bei Flash etwas teurer als 1K, zusammen noch billiger als Pro. Pro bleibt ueber BADPLANER_MODEL waehlbar.
-  const model = env.BADPLANER_MODEL || 'gemini-3.1-flash-image';
+  // Das Ideenbild ist das Produkt: es soll das Bad des Kunden zeigen, nicht irgendein schoenes Bad. Darum das genaueste
+  // Modell; 2K kostet bei ihm gleich viel wie 1K. Flash (b3dc622) lag im Pruefstand vorne, nach dem Urteil der Pruefung;
+  // in der Probe auf der Vorschau vom 27.09. fand Diego mit Flash 1 von 5 Bildern zeigbar und die Armaturen in 0 von 3
+  // richtig (mit Pro, 8118807, 2 von 3). Darum wieder Pro; Flash bleibt ueber BADPLANER_MODEL waehlbar.
+  const model = env.BADPLANER_MODEL || 'gemini-3-pro-image';
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
   // Ohne Nummer vor jedem Bild, wie auf der Website (27.09.): mit ihr (b32f7a2) brauchten in der fuenften Probe 7 von 8
   // Bildern einen zweiten Versuch, vorher 3 von 8. Ob sie die Ursache war, ist offen; belegt war ihr Nutzen nie.
