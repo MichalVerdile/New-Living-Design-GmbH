@@ -1750,6 +1750,8 @@ test('Dusche: Rinne und Armaturen an der Stirnwand im Prompt, falsch gezeichnet 
   for (const [flags, reason] of [
     [{ shower_fittings_walls: ['back', 'left'] }, /the shower fittings are spread over two walls/],
     [{ shower_step: true }, /the shower floor is raised above the bathroom floor/],
+    // Problem 1 der siebten Probe (P5): die Dusche um 90 Grad gedreht, die Armaturen an der Stirnwand.
+    [{ shower_turned: true }, /the new shower is turned by 90 degrees against the old bathtub or shower of image 1/],
   ]) {
     const wrong = () => checkedInv({ shower: 'back' }, { shower: 'back' }, flags);
     const w = harness({ checks: [wrong, wrong] });
@@ -2492,7 +2494,10 @@ test('Vorpruefung: die Laengsseite der Wanne haelt die Stirnwand, die Dusche lie
     return h.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
   };
   // Laengsseite rechts: die Rueckwand ist die Stirnwand.
-  assert.match(await promptFor({ shower_end_wall: 'back', shower_long_wall: 'right' }), /The short end wall of the shower is the back wall seen from the camera: .*lies along its foot; its long side runs along the right wall, which carries no fitting, only tiles\./);
+  const deep = await promptFor({ shower_end_wall: 'back', shower_long_wall: 'right' });
+  assert.match(deep, /The short end wall of the shower is the back wall seen from the camera: .*lies along its foot; its long side runs along the right wall, which carries no fitting, only tiles\./);
+  // Problem 1 der siebten Probe (P5): laengs steht auch das Glas laengs.
+  assert.match(deep, /its glass panel stands along its open long side, parallel to the right wall, and never runs across the room parallel to the back wall\./);
   // Ohne Laengsseite wie bisher: die Wand der Wanne ist nie ihre Stirnwand.
   assert.doesNotMatch(await promptFor({ shower_end_wall: 'back' }), /The short end wall/);
   // Nennt die Vorpruefung beide gleich, gilt keine Stirnwand.
@@ -2593,7 +2598,7 @@ test('Problem 1 der siebten Probe: die Armaturen an der Stirnwand, die Vorpruefu
   assert.match(promptOf(h), /The short end wall of the shower is the left wall seen from the camera: the mixer, the overhead shower and the hand shower sit on it, seen from the side and foreshortened, with the overhead shower sticking out from it towards the right, and the channel drain lies along its foot; its long side runs along the back wall, which carries no fitting, only tiles\./);
   // Was Vorpruefung und Pruefung sahen, steht in der Mail (die Logs von Vercel sind fuer uns nicht lesbar).
   assert.match(mailOf(h), /Vorprüfung<\/td><td[^>]*>WC rechts, Waschtisch rechts, Wanne hinten; Wanne\/Dusche quer, Längsseite hinten, Stirnwand links; Decke flach</);
-  assert.match(mailOf(h), /Dusche im Bild<\/td><td[^>]*>Armaturen: links; Rinne: links; Boden: Platten; Stufe: nein</);
+  assert.match(mailOf(h), /Dusche im Bild<\/td><td[^>]*>Armaturen: links; Rinne: links; Boden: Platten; Stufe: nein; gedreht: –</);
   // Die Vorpruefung denkt mehr nach als die Pruefung jedes Bildes.
   const levels = h.calls.filter((call) => call.url.includes('generativelanguage') && !call.body.generationConfig.responseModalities)
     .map((call) => call.body.generationConfig.thinkingConfig?.thinkingLevel);
