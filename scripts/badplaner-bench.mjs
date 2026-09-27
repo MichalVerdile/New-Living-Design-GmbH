@@ -7,7 +7,8 @@
  *     [--env BADPLANER_MODEL=...] [--list-models] [--dry]
  *
  * faelle.json: [{ "name": "P1", "photo": "fotos/P1.jpg", "paket": "atelier", "fields": { "dusche": "walk-in", ... } }]
- * Die Pfade gelten relativ zur Datei. Fotos und Ergebnisse gehoeren nie ins Repository: sie zeigen echte Baeder.
+ * Die Proben P1 bis P10 der siebten Probe stehen in scripts/badplaner-bench-faelle.json; die Fotos dazu legt man als
+ * fotos/P1.jpg usw. neben eine Kopie dieser Datei, ausserhalb des Repositorys. Die Pfade gelten relativ zur Datei. Fotos und Ergebnisse gehoeren nie ins Repository: sie zeigen echte Baeder.
  * Die Muster der Platten kommen aus public/badplaner/swatches, wie nach dem Merge von der Website.
  */
 import { spawnSync } from 'node:child_process';
