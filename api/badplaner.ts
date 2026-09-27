@@ -512,8 +512,8 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
     : bathtub.id === 'freistehend'
       ? `; beside the freestanding bathtub a floor-standing bath mixer of the same series and finish: ${isAtelier
         // P7 vom 26.09.: mit "flat paddle lever" und "faceted spout" kam die Standarmatur von Up+ (Stifthebel, Rundrohr).
-        ? 'a slim round column on a round floor base at one end of the tub, with on its top a flat rectangular paddle lever lying level (not a thin pin), below it a spout of flat square section that runs straight out level and then curves down over the rim (not a round tube), below the spout a round knurled diverter knob sticking out sideways, and beside the column a slim stick hand shower standing upright in a holder fixed to the column just below the spout, its top rising above the column and its hose looping down to the floor base'
-        : 'a slim column rising from the floor at one end of the tub, with a spout that bends over the rim and a hand shower in a holder on the column'}, and no fitting on the walls around the bathtub`
+        ? 'a slim round column on a round floor base at one end of the tub, with on its top a flat rectangular paddle lever lying level (not a thin pin), below it a flat spout, wider than it is thick, that runs straight out level and then curves down over the rim (not a round tube), below the spout a smooth round diverter knob sticking out sideways, and beside the column a slim stick hand shower standing upright in a holder fixed to the column just below the spout, its top rising above the column and its hose looping down to the floor base'
+        : 'a slim column rising from the floor at one end of the tub, with a spout that bends over the rim and a hand shower in a holder on the column'}, and no fitting on the walls around the bathtub${noShower ? '' : ', apart from the shower fittings inside the shower area'}`
       : `; at the bathtub, on the wall at its tap end, a bath mixer of the same series and finish${isAtelier
         ? ': a long flat horizontal wall plate in the same finish just above the rim, carrying from left to right the hand shower outlet with a slim stick hand shower in its holder and a hose, a short cylindrical handle with a flat paddle lever hanging down, a faceted spout that bends down over the rim and a second handle with a paddle lever'
         : ranSeries
@@ -527,24 +527,34 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   const tapPrompt = !noShower ? taps.prompt + bathFiller
     : bathFiller ? `${basinTaps}${bathFiller}; no overhead shower, no shower rail and no shower mixer anywhere`
     : `${basinTaps}; no shower mixer, bath filler or shower controls`;
-  // Der Produktdurchgang (weiter unten) zeichnet nur die Produkte neu, jedes mit seinem Bild und seinem Satz; Bild 1 ist
-  // dort das gepruefte Ideenbild. Ein Produkt ohne Bild bleibt, wie der erste Durchgang es gezeichnet hat.
-  const showerTaps = taps.prompt.match(/; in a shower ([^;]*)/)?.[1];
-  const products = ([
-    [wcImage, (n: number) => `Image ${n}, the toilet: it becomes exactly the toilet bowl of image ${n}, with ${wcShape}, wall-hung and rimless, in ${sanitary.prompt}, with seat and lid in the same ${sanitary.prompt}, not wood.`],
-    [cistern === 'unterputz' ? FLUSH_PLATE_PHOTO : null, (n: number) => `Image ${n}, the flush plate of the toilet: it becomes exactly the OLI Blink plate of image ${n}, in ${finish.prompt}: a flat rectangular plate, wider than high, with two identical small round knobs of the same size side by side and a plus sign under the left one and a minus sign under the right one; never one big and one small button, never a ring around a button and never rectangular buttons.`],
-    [moduleImage, (n: number) => `Image ${n}, the sanitary module behind the toilet: it becomes exactly the OLI QR module of image ${n}: a glass and steel panel about 50 cm wide, 115 cm high and 11 cm deep that stands on the floor about 11 cm in front of the wall, with its brushed steel side edge clearly visible, an opaque white glass front in two parts and a small oval push button in the glass near its top; the toilet hangs on it; no flush plate, never tiled, boxed in or sunk into the wall.`],
-    [tapsImage, (n: number) => `Image ${n}, the tap at each washbasin: it becomes exactly the fitting of image ${n}: ${basinTaps}.`],
-    [showerTaps ? showerImage : null, (n: number) => `Image ${n}, the shower fittings: they become exactly the fittings of image ${n}, in ${finish.prompt}: ${showerTaps}. They all sit together on the wall where image 1 has the hand shower; any other shower control on another wall is removed, and that wall is tiled like the rest.`],
-    [bathImage, (n: number) => `Image ${n}, the bath mixer: it becomes exactly the fitting of image ${n}, in ${finish.prompt}: ${bathFiller.replace(/^; /, '')}.`],
-    [mirrorImage, (n: number) => `Image ${n}, the mirror above the washbasin: it becomes exactly the mirror of image ${n}: ${mirror.prompt}; nothing of the old mirror, its frame or a lamp stays, and there is no lamp or light bar above it.`],
-  ] as [Photo | null, (n: number) => string][]).filter((item): item is [Photo, (n: number) => string] => !!item[0]);
-  const productReferences = products.map(([image]) => image);
-  const productPrompt = buildProductPrompt(room, products.map(([, text], index) => text(index + 2)));
 
   // Die Stirnwand der Dusche liest die Vorpruefung am schmalen Ende von Wanne oder Dusche im Foto.
   const showerWall = photoCheck.status === 'ok' && shower && shower.id !== 'keine' ? photoCheck.showerWall : undefined;
   const showerLongWall = showerWall && photoCheck.status === 'ok' ? photoCheck.showerLongWall : undefined;
+  // Der Produktdurchgang (weiter unten) zeichnet nur die Produkte neu, jedes mit seinem Bild und seinem Satz; Bild 1 ist
+  // dort das gepruefte Ideenbild. Ein Produkt ohne Bild bleibt, wie der erste Durchgang es gezeichnet hat. Saetze, die im
+  // ersten Durchgang auf andere Produkte verweisen ("of the same series"), fallen hier weg (Gegenpruefung vom 27.09.).
+  const showerTaps = taps.prompt.match(/; in a shower ([^;]*)/)?.[1];
+  const products = ([
+    [wcImage, (n: number) => `Image ${n}, the toilet: it becomes exactly the toilet of image ${n}, with ${wcShape}, wall-hung and rimless, in ${sanitary.prompt}, with seat and lid in the same ${sanitary.prompt}, not wood${isAtelier ? '' : `; image ${n} shows the bowl without its seat, which is thin and flat`}.`],
+    [cistern === 'unterputz' ? FLUSH_PLATE_PHOTO : null, (n: number) => `Image ${n}, the flush plate of the toilet: it becomes exactly the OLI Blink plate of image ${n}, in ${finish.prompt}: ${BLINK_PLATE}.`],
+    [moduleImage, (n: number) => `Image ${n}, the sanitary module behind the toilet: it becomes exactly the OLI QR module of image ${n}: ${QR_MODULE.replace('that wall', 'the wall').replace('in front of it', 'in front of the wall')}; no flush plate. Where image 1 shows it flatter, sunk in or boxed in, it stands out to this depth, and the toilet hangs on its front.`],
+    [tapsImage, (n: number) => `Image ${n}, the tap at each washbasin: it becomes exactly the fitting of image ${n}: ${basinTaps.replace(/, all fittings for the requested fixtures from the same series and in the same [^,;]+ finish$/, '')}.`],
+    // Die Wand des Duschsets sagt die Vorpruefung, wie im ersten Durchgang; sonst die Wand der Handbrause im Bild. P2 der
+    // sechsten Probe: Armaturen an zwei Waenden. Die Wannenarmatur hat ihre eigene Handbrause und bleibt.
+    [showerTaps ? showerImage : null, (n: number) => `Image ${n}, the shower fittings: they become exactly the fittings of image ${n}, in ${finish.prompt}: ${showerTaps}. They all sit together on ${showerWall
+      ? `the ${showerWall} wall seen from the camera, the short end wall of the shower${shower?.id === 'walk-in' ? ', at whose foot the channel drain lies' : ''}`
+      : 'the wall where image 1 has the hand shower'}; any other shower mixer, plate or hand shower inside the shower area is removed, and the wall surface simply continues over its place.${bathFiller ? ' The bath mixer at the bathtub is separate and stays.' : ''}`],
+    [bathImage, (n: number) => `Image ${n}, the bath mixer: it becomes exactly the fitting of image ${n}, in ${finish.prompt}: ${bathFiller.replace(/^; /, '').replace(' of the same series and finish', '')}.`],
+    [mirrorImage, (n: number) => `Image ${n}, the mirror above the washbasin: it becomes exactly the mirror of image ${n}: a ${mirror.prompt}; nothing of the old mirror, its frame or a lamp stays, and there is no lamp or light bar above it.`],
+  ] as [Photo | null, (n: number) => string][]).filter((item): item is [Photo, (n: number) => string] => !!item[0]);
+  const productReferences = products.map(([image]) => image);
+  // Farbige Keramik (siebte Probe): die Produktbilder sind weiss, und Becken und Duschwanne haben kein eigenes Bild.
+  const ceramics = [basinType && basinType.id !== 'integriert' && 'washbasin bowl', shower?.id === 'duschwanne' && 'shower tray'].filter(Boolean);
+  const colourLine = sanitary.id !== 'weiss' && ceramics.length
+    ? `The ${ceramics.join(' and the ')} ${ceramics.length > 1 ? 'keep their' : 'keeps its'} shape and place and ${ceramics.length > 1 ? 'take' : 'takes'} the same ${sanitary.prompt} as the toilet; the product photos are white, only their shapes count.`
+    : '';
+  const productPrompt = buildProductPrompt(room, products.map(([, text], index) => text(index + 2)), colourLine);
 
   // Prompt (englisch; Vorlage aus dem Test, mit eingesetzten Wahlwerten)
   const prompt = buildPrompt({
@@ -1313,7 +1323,7 @@ function tapDescription(
   // am 26.09. drei Hebel und den Anschluss dazu, Katalog S. 16), Kopfbrause IT RTBR 376 CC (500 x 200).
   if (pkg === 'atelier') {
     return {
-      prompt: `concealed built-in (Unterputz) Treemme Aurelia wall fittings in ${finish.prompt}: at each washbasin exactly two separate small round wall rosettes (about 7.5 cm) side by side above the basin, no wall plate and nothing between them: from the left one a long slim spout, a flat bar with flat sides and never a round tube, runs about 20 cm out from the wall and bends gently down at its end, and the right one carries the only lever: a short cylinder with a flat paddle lever hanging down; in a shower in one row at the same height: the hose outlet in one small round wall piece that also holds a slim stick hand shower upright on its hose, and beside it exactly two small round wall rosettes of the same size, the mixer and the diverter, each a short cylinder with the same flat lever and never one large plate with both, and above them on the same wall, just below the ceiling, a thin flat rectangular overhead shower plate (about 50 × 20 cm) that sticks straight out from the wall, fixed to it by its short end, with its nozzles facing down`,
+      prompt: `concealed built-in (Unterputz) Treemme Aurelia wall fittings in ${finish.prompt}: at each washbasin exactly two separate small round wall rosettes (about 7.5 cm) side by side above the basin, no wall plate and nothing between them: from the left one a long slim spout, a flat bar with flat sides and never a round tube, runs about 20 cm out from the wall and bends gently down at its end, and the right one carries the only lever: a short cylinder with a flat paddle lever hanging down (not a thin pin); in a shower in one row at the same height: the hose outlet in one small round wall piece that also holds a slim stick hand shower upright on its hose, and beside it exactly two small round wall rosettes of the same size, the mixer and the diverter, each a short cylinder with the same flat paddle lever hanging down (not a thin pin) and never one large plate with both, and above them on the same wall, just below the ceiling, a thin flat rectangular overhead shower plate (about 50 × 20 cm) that sticks straight out from the wall, fixed to it by its short end, with its nozzles facing down`,
       label: `${finish.label}, ${seriesText}`,
     };
   }
@@ -1452,14 +1462,14 @@ function buildPrompt(v: {
   // Die Wahl des Kunden entscheidet (Diego, 26.09.): Aufputz heisst Modul. Bis dahin galt das Foto ("nur eine Platte,
   // dann kein Modul"); das Modell las die Bedingung falsch und stellte in P3 trotzdem ein Modul.
   const toilet = v.cistern === 'aufputz'
-    ? `the old surface-mounted cistern with its casing, or the old flush plate, is removed completely; behind the toilet, in front of the wall or low wall it hangs on, stands the sanitary module of image ${v.moduleImageNumber}: a factory-made glass and steel panel about 50 cm wide, 115 cm high and 11 cm deep, from the floor up, standing about 11 cm out from the wall with its steel side edge clearly visible, never sunk into it, with an opaque white glass front in two parts, a narrow brushed steel edge and a clearly visible small oval push button in the glass front near its top, no flush plate, not tiled or boxed in; the toilet is ${seat}, and hangs on the module at exactly the old toilet position; the wall behind stays where it is`
+    ? `the old surface-mounted cistern with its casing, or the old flush plate, is removed completely; behind the toilet, in front of the wall or low wall it hangs on, stands the sanitary module of image ${v.moduleImageNumber}: ${QR_MODULE}; no flush plate, never sunk into the wall, not tiled or boxed in; the toilet is ${seat}, and hangs on the module at exactly the old toilet position; the wall behind stays where it is`
     // Diegos Befund vom 17.09.: das WC haengt an einem Muretto, das den Spuelkasten traegt;
     // das Modell hatte es eingeebnet. Am 19.09. baute es umgekehrt eines vor eine flache Wand.
-    : `the cistern stays hidden in the wall where it is, and no sanitary module is added. A toilet on a flat full-height wall stays on that flat wall, which is only newly tiled. A toilet that hangs on a low wall or boxed pre-wall in image 1 stays on its front, and that low wall stays with the same place, length, height and depth, only newly tiled; the toilet is not pushed back to the wall behind. The toilet is ${seat}, at its existing position, and its old flush plate is replaced, at the same place on the wall, by a new flat rectangular flush plate in ${v.plateFinish} with two identical small round knobs of the same size side by side and a plus and a minus sign under them, never one big and one small button and never rectangular buttons`;
+    : `the cistern stays hidden in the wall where it is, and no sanitary module is added. A toilet on a flat full-height wall stays on that flat wall, which is only newly tiled. A toilet that hangs on a low wall or boxed pre-wall in image 1 stays on its front, and that low wall stays with the same place, length, height and depth, only newly tiled; the toilet is not pushed back to the wall behind. The toilet is ${seat}, at its existing position, and its old flush plate is replaced, at the same place on the wall, by a new ${BLINK_PLATE.replace('a flat rectangular plate', `flat rectangular flush plate in ${v.plateFinish}`)}`;
   // Die gewaehlte Sanitaerkeramik gilt fuer WC und Waschbecken. Ohne das hier
   // blieb das Becken weiss, waehrend das WC farbig war: zwei Farben in einem Bad.
   const basinColour = v.basinIsCeramic ? `, the basin in the same ${v.sanitaryPrompt} as the toilet` : '';
-  const vanity = `if a washbasin is visible in image 1, ${v.basinPrompt} at its existing place on a wall-hung vanity: front and body in ${v.basePrompt}${colourOf(v.baseImageNumber)}, countertop in ${v.topPrompt}${colourOf(v.topImageNumber)}${v.basinTypePrompt ? `, ${v.basinTypePrompt}` : ''}${basinColour}, with ${v.mirrorPrompt}${asIn(v.mirrorImageNumber ?? 0)} above it, which replaces the old mirror or mirror cabinet and its lamp completely: nothing of their shape, frame or light is kept, and no lamp or light bar above the mirror; the countertop is its own material, not cut from the wall or floor tiles`;
+  const vanity = `if a washbasin is visible in image 1, ${v.basinPrompt} at its existing place on a wall-hung vanity: front and body in ${v.basePrompt}${colourOf(v.baseImageNumber)}, countertop in ${v.topPrompt}${colourOf(v.topImageNumber)}${v.basinTypePrompt ? `, ${v.basinTypePrompt}` : ''}${basinColour}, and above the vanity a ${v.mirrorPrompt}${asIn(v.mirrorImageNumber ?? 0)}; this mirror replaces the old mirror or mirror cabinet and its lamp completely: nothing of their shape, frame or light is kept, and no lamp or light bar above the mirror; the countertop is its own material, not cut from the wall or floor tiles`;
 
   return [
     // Am 19.09. zeichnete das Modell aus Diegos engem Bad ein Ausstellungsbad: darum steht zuerst, was das
@@ -1480,17 +1490,26 @@ function buildPrompt(v: {
   ].filter(Boolean).join('\n');
 }
 
+// Die Platte OLI Blink und das Modul OLI QR, wie in ihren Bildern, fuer beide Durchgaenge. Gegenpruefung vom 27.09.:
+// "nie ein grosser und ein kleiner Knopf" beschrieb gerade die Platte von Geberit aus Diegos Ausschnitt; "panel" las das
+// Modell als duenne Scheibe (P3 der sechsten Probe: 2 cm), und der Knopf des OLI QR ist eine liegende Pille mit + und -.
+const BLINK_PLATE = 'a flat rectangular plate, wider than high, with two equal round solid metal knobs about 3 cm across that stand slightly out of it side by side at mid-height, the gap between them a little wider than one knob, a small plus just below the left one and a small minus just below the right one, and nothing else on the plate';
+const QR_MODULE = 'a factory-made box about 50 cm wide, 115 cm high and 11 cm deep, standing on the floor with its back against that wall, so that its opaque white glass front in two parts stands 11 cm in front of it and its brushed steel side, 11 cm wide, is clearly visible; near the top of the upper glass a small horizontal pill-shaped steel push button with a plus and a minus';
+
 /**
  * Der Auftrag des Produktdurchgangs (Diego, 27.09.): Bild 1 ist das gepruefte Ideenbild, dahinter je ein Produktbild mit
  * seinem Satz. Kurz, denn Raum, Platten und Positionen hat der erste Durchgang schon; hier zaehlen nur die Produkte.
  */
-function buildProductPrompt(room: 'badezimmer' | 'gaeste-wc', items: string[]): string {
+function buildProductPrompt(room: 'badezimmer' | 'gaeste-wc', items: string[], colour = ''): string {
   const roomName = room === 'gaeste-wc' ? 'guest WC' : 'bathroom';
+  // Gegenpruefung vom 27.09.: "bleibt, wo es ist" hiess auch "das alte bleibt" (Spiegel P7, WC P3) und liess das Modul
+  // so flach wie im ersten Bild. Jetzt ersetzt jedes Produkt, was an seinem Platz steht, in Form, Tiefe und Hoehe seines Bildes.
   return [
-    `PRODUCT EDIT of image 1, not a new picture. Image 1 is a finished photo of a renovated ${roomName}. The result is image 1 again, with the same camera, crop, aspect ratio and edges, the same walls, tiles and joints, floor, ceiling, windows, doors, glass, furniture, light and shadows. Only the products listed below are redrawn, each one exactly like the product in its image: the same shape, the same proportions and the same number and kind of parts, but in the colour and finish named here, not in those of its image. Each product stays where it is in image 1, on the same wall and at the same height; nothing is moved or added, and where image 1 does not show one of these products, that place stays as it is. Images 2 to ${items.length + 1} each show one product on a plain background, never a room or a layout.`,
+    `PRODUCT EDIT of image 1, not a new picture. Image 1 is a finished photo of a renovated ${roomName}. The result is image 1 again, with the same camera, crop, aspect ratio and edges, the same walls, tiles and joints, floor, ceiling, windows, doors, glass, furniture, light and shadows. Only the products listed below are redrawn, each one exactly like the product in its image: the same shape and the same number and kind of parts, but in the colour and finish named here, not in those of its image. Each product keeps its wall and its place along that wall in image 1 and replaces whatever stands there, also an old or wrong model; its shape, parts, size, depth and height are those of its image and of its text, even where image 1 shows them differently. A product that image 1 does not show at all is not added. Images 2 to ${items.length + 1} show only products: take nothing from their background, no wall, tile or floor.`,
     ...items,
+    colour,
     'Everything else stays exactly as it is in image 1. Photorealistic, no people, no text.',
-  ].join('\n');
+  ].filter(Boolean).join('\n');
 }
 
 /** Der Grundriss aus der Vorpruefung, als Satz fuer das Bildmodell: was wo steht, von der Kamera aus. */
