@@ -185,7 +185,7 @@ test('Aufputz and Unterputz produce explicit, exclusive toilet branches', async 
       assert.doesNotMatch(prompt, /shelf on top/);
       assert.match(prompt, /A toilet on a flat full-height wall stays on that flat wall, which is only newly tiled/);
       // Unterputz: die neue Platte OLI Blink in der Oberflaeche der Armaturen (Diego, 26.09.).
-      assert.match(prompt, /its old flush plate is replaced, at the same place on the wall, by a new flat rectangular flush plate in polished chrome with two separate round push buttons side by side/);
+      assert.match(prompt, /its old flush plate is replaced, at the same place on the wall, by a new flat rectangular flush plate in polished chrome with two small separate round push buttons side by side/);
       assert.match(JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails').body), /Betätigungsplatte.{0,80}OLI Blink/);
     }
   }
@@ -836,7 +836,7 @@ test('Unterputz carries no module image and forbids a module in front of the wal
   assert.equal(generation.body.contents[0].parts.filter((part) => part.inlineData).length, 4);
   const prompt = generation.body.contents[0].parts[0].text;
   assert.doesNotMatch(prompt, /product photo of the sanitary module|product photo of the new flush plate/);
-  assert.match(prompt, /its old flush plate is replaced, at the same place on the wall, by a new flat rectangular flush plate in polished chrome with two separate round push buttons side by side, never rectangular buttons/);
+  assert.match(prompt, /its old flush plate is replaced, at the same place on the wall, by a new flat rectangular flush plate in polished chrome with two small separate round push buttons side by side, never rectangular buttons/);
   assert.match(prompt, /no sanitary module is added/);
 });
 
@@ -1717,7 +1717,7 @@ test('Dusche: die Stirnwand sagt die Vorpruefung im Foto, der Prompt nennt sie',
   const question = ok.calls.find((call) => /shower_end_wall/.test(call.body?.contents?.[0]?.parts?.[0]?.text || '')).body.contents[0].parts[0].text;
   assert.match(question, /set shower_end_wall to the wall, seen from the camera, at one of its two narrow ends/);
   assert.match(question, /the wall along one of its long sides is never a narrow end, even when the taps are on it, so a bathtub along the back wall has its narrow ends at the left and the right/);
-  assert.match(question, /if both narrow ends are walls, take the one nearer to the existing taps/);
+  assert.match(question, /if both narrow ends are walls, take the one nearer to the existing taps or shower fittings; a narrow end that touches no wall does not count;/);
   // Zeigt das Foto keine Wanne, nur die alte Duschwanne: kein Satz zur Wanne, die zur Dusche wird.
   const shower = harness({ photoChecks: [() => photoChecked(true, JSON.stringify({ is_bathroom: true, reason: 'bathroom', walls: inv({ shower: 'back' }), order: ['washbasin', 'shower', 'toilet'], nearest: 'toilet', shower_end_wall: 'back' }))],
     checks: [() => checkedInv({ shower: 'back' }, { shower: 'back' })] });
@@ -1755,7 +1755,7 @@ test('Armaturen: Atelier zeigt die Form von Treemme Aurelia in der gewaehlten Ob
   const prompt = h.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
   assert.match(prompt, /Treemme Aurelia wall fittings in brushed brass/);
   // Die Platte OLI Blink in der Oberflaeche der Armaturen, nicht immer verchromt (Diego, 26.09.).
-  assert.match(prompt, /by a new flat rectangular flush plate in brushed brass with two separate round push buttons/);
+  assert.match(prompt, /by a new flat rectangular flush plate in brushed brass with two small separate round push buttons/);
   // Artikel vom 25.09.: Waschtisch RWIT 2CC5 (zwei Rosetten statt Platte), Dusche RWIT 2CD9 mit Kopfbrause IT RTBR 376.
   // Nebeneinander, nicht uebereinander (Rendering von Treemme, Diego 26.09.).
   assert.match(prompt, /at each washbasin exactly two separate small round wall rosettes .*side by side above the basin, no wall plate and nothing between them: from the left one .*spout with flat facets .*the right one carries the only lever: .*flat paddle lever hanging down/);
@@ -1978,8 +1978,10 @@ test('der neue Spiegel geht als Bild mit, der alte wird ausdruecklich entfernt',
     // Der Spiegel mit LED-Licht hat keine Tueren: der Satz zum Bild nennt keine (Gegenpruefung vom 26.09.).
     assert.doesNotMatch(prompt, /copy its shape, its doors/, spiegel);
     assert.match(prompt, new RegExp(`as in image ${number} above it, which replaces the old mirror`), spiegel);
-    // P7 und P8 vom 26.09.: der alte Spiegelschrank mit der Lampe darueber blieb. Der neue hat keine Lampe darueber.
-    assert.match(prompt, /nothing of their shape, frame or light is kept, and no lamp or light bar above it;/, spiegel);
+    // P7 und P8 vom 26.09.: der alte Spiegelschrank mit der Lampe darueber blieb. Der neue hat keine Lampe darueber,
+    // und der alte steht mit seiner Lampe auch in der Liste dessen, was weg muss.
+    assert.match(prompt, /nothing of their shape, frame or light is kept, and no lamp or light bar above the mirror;/, spiegel);
+    assert.match(prompt, /REMOVE: .*; the old mirror or mirror cabinet with its lamp;/, spiegel);
     assert.ok(parts.filter((part) => part.inlineData)[number - 1].inlineData.data.startsWith('/9j/'), spiegel);
   }
 });
