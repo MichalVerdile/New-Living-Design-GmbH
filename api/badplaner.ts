@@ -21,10 +21,11 @@
  *   2. Grenzen: 5 Ideenbilder pro Geraet (Cookie) und 10 pro IP und Tag, Tagesdeckel.
  *   3. Gleichzeitig: Muster laden (Platte, Boden, Akzent, Waschtisch) und das Foto
  *      pruefen (ein Bad? was steht wo?). Kein Bad: kein Bild, Lead mit Foto an NLD.
- *   4. Prompt bauen, Ideenbild bei Gemini erzeugen, dann pruefen lassen (checkOpenings).
+ *   4. Prompt bauen, zwei Ideenbilder gleichzeitig bei Gemini erzeugen und pruefen lassen (checkOpenings);
+ *      gezeigt wird das bessere: ohne groben Fehler, mit den wenigsten Hinweisen.
  *      Grobe Fehler (mehr Fenster als angegeben, Oeffnung dazu oder weg, andere Decke,
  *      WC oder Waschtisch an anderer Wand oder Stelle, Dusche oder Wanne nicht wie
- *      bestellt, Bidet noch da): zweiter Versuch, wenn die Zeit reicht; ein grob falsches
+ *      bestellt, Bidet noch da) in beiden: zweiter Durchgang, wenn die Zeit reicht; ein grob falsches
  *      Bild sieht der Kunde nie, NLD bekommt es mit dem Lead. Der Vordergrund weg (Tuer),
  *      die Dusche falsch (Stufe, Rinne, Armaturen), Feineres (Muretto, Nische) und was von der Wahl des
  *      Kunden abweicht (Wannenart, Kopfbrause, Zahl und Art der Becken, Spiegel) steht nur als
@@ -52,6 +53,7 @@
  *   BADPLANER_MODEL      Gemini-Bildmodell (Default gemini-3-pro-image)
  *   BADPLANER_CHECK_MODEL Gemini-Textmodell fuer Foto- und Bildpruefung (Default
  *                        gemini-3.6-flash); leer lassen = Pruefung bewusst deaktiviert
+ *   BADPLANER_CANDIDATES Ideenbilder pro Durchgang, 1 bis 4 (Default 2)
  *
  * Fotos und Ideenbilder werden NICHT gespeichert (kein Blob, kein KV): sie gehen
  * nur an Google zur Bilderzeugung und per E-Mail an uns und an den Kunden. Es gibt
@@ -707,10 +709,6 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
     };
   };
 
-  const passStarted = dependencies.clock.now();
-  let gen = await generateImage(prompt, photo, references, ctx, photoRatio);
-  if (gen.ok === false) return res.status(502).json(await leadWithoutImage(`Bilddienst: ${gen.detail}`));
-  const firstGenerationMs = dependencies.clock.now() - passStarted;
   let checkNote = 'ok';
   const wantedFixtures = { room, shower: shower ? shower.id !== 'keine' : false, showerType: shower?.id, bathtub: bathtub ? bathtub.id !== 'keine' : false, cistern, windows, showerWall,
     bathtubType: bathtub?.id, basin: basin.id, basinType: basinType?.id, mirror: mirror.id };
@@ -726,14 +724,49 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
     }
     return result;
   };
-  let check = await checkWithUnavailableRetry(gen);
+  // Diego, 27.09.: "concentriamoci sul risultato, i costi non sono un problema". Pro Durchgang entstehen zwei Bilder
+  // gleichzeitig, gezeigt wird das bessere: ohne groben Fehler vor ungeprueft vor verworfen, dann das mit den wenigsten
+  // Hinweisen. Die Wartezeit bleibt etwa die eines Bildes; in der fuenften Probe brauchten 7 von 8 Bildern einen
+  // zweiten Durchgang von rund 35 s, und zweimal kam gar kein Bild.
+  // ponytail: zwei Bilder pro Durchgang; BADPLANER_CANDIDATES erlaubt 1 bis 4, wenn das Rate-Limit von Gemini mitmacht.
+  const candidates = Math.min(4, Math.max(1, Math.trunc(Number(env.BADPLANER_CANDIDATES)) || 2));
+  const score = (result: CheckResult) => result.status === 'rejected' ? 1000 : result.status === 'unavailable' ? 100
+    : result.status === 'approved' ? 2 * (result.hints?.length ?? 0) + (result.note ? 1 : 0) : 0;
+  type Attempt = { number: number; gen: { mime: string; data: string }; check: CheckResult };
+  const passStarted = dependencies.clock.now();
+  let firstGenerationMs = 0;
+  const pass = async (passPrompt: string, firstNumber: number, reserveMs?: number) => {
+    const results = await Promise.all(Array.from({ length: candidates }, async (_, index): Promise<Attempt | { number: number; detail: string }> => {
+      const generated = await generateImage(passPrompt, photo, references, ctx, photoRatio, reserveMs);
+      if (firstNumber === 1) firstGenerationMs = Math.max(firstGenerationMs, dependencies.clock.now() - passStarted);
+      if (generated.ok === false) return { number: firstNumber + index, detail: generated.detail };
+      return { number: firstNumber + index, gen: generated, check: await checkWithUnavailableRetry(generated) };
+    }));
+    const attempts = results.filter((result): result is Attempt => 'check' in result);
+    const failures = results.flatMap((result) => ('detail' in result ? [`${result.number}. Versuch: Bilddienst: ${result.detail}`] : []));
+    return { attempts, failures };
+  };
+  const best = (attempts: Attempt[]) => attempts.reduce((chosen, attempt) => (score(attempt.check) < score(chosen.check) ? attempt : chosen));
   // Diego, 25.09.: die Mail nannte nur den Grund des letzten Versuchs, ob es einen zweiten gab, war nicht
   // zu sehen. Jetzt steht jeder abgelehnte Versuch mit seinem Grund in der Mail, oder warum keiner mehr lief.
   const tries: string[] = [];
-  if (check.status === 'rejected') {
-    logRejectedCheck(check, 1);
-    tries.push(`1. Versuch: ${check.reason}`);
+  const discarded: string[] = [];
+  const note = (attempts: Attempt[], failures: string[]) => {
+    for (const attempt of attempts) {
+      if (attempt.check.status !== 'rejected') continue;
+      logRejectedCheck(attempt.check, attempt.number);
+      tries.push(`${attempt.number}. Versuch: ${attempt.check.reason}`);
+      discarded.push(`${attempt.number}. Versuch verworfen (${attempt.check.reason})`);
+    }
+    tries.push(...failures);
+    discarded.push(...failures);
+  };
+  const first = await pass(prompt, 1);
+  if (!first.attempts.length) {
+    return res.status(502).json(await leadWithoutImage(`Bilddienst: ${first.failures.map((failure) => failure.replace(/^\d+\. Versuch: Bilddienst: /, '')).join(' | ')}`));
   }
+  note(first.attempts, first.failures);
+  let chosen = best(first.attempts);
   // Ein zweiter Durchgang dauert ungefähr so lange wie der erste. Die alte Schranke
   // rechnete mit den Höchstwerten (95 s) und liess den zweiten Versuch nie zu; mit
   // 110 s Budget lief er nur nach einem schnellen ersten Durchgang. Mit 220 s passt er
@@ -744,20 +777,20 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   const firstPassMs = dependencies.clock.now() - passStarted;
   const secondPassMs = Math.round(firstPassMs * 1.15) + DELIVERY_RESERVE_MS;
   const secondCheckReserveMs = Math.round((firstPassMs - firstGenerationMs) * 1.15) + DELIVERY_RESERVE_MS;
-  if (check.status === 'rejected' && ctx.budget.remaining() >= secondPassMs) {
-    const firstReason = check.reason;
-    // Der ganze Prompt geht nochmals mit; dazu nur der Grund, nicht eine zweite Liste aller Regeln.
-    const retryPrompt = `${prompt}\nA previous attempt failed the check because ${firstReason}. Start again from image 1 and correct exactly that; everything above still applies.`;
-    const second = await generateImage(retryPrompt, photo, references, ctx, photoRatio, secondCheckReserveMs);
-    if (second.ok === false) return res.status(502).json(await leadWithoutImage(`1. Versuch verworfen (${firstReason}), 2. Versuch: ${second.detail}`, gen));
-    check = await checkWithUnavailableRetry(second);
-    gen = second;
-    if (check.status === 'rejected') {
-      logRejectedCheck(check, 2);
-      tries.push(`2. Versuch: ${check.reason}`);
-    }
-    if (check.status === 'approved') checkNote = `1. Versuch verworfen (${firstReason}), 2. Versuch ok`;
-  } else if (check.status === 'rejected') tries.push('kein 2. Versuch (zu wenig Zeit)');
+  if (chosen.check.status === 'rejected' && ctx.budget.remaining() >= secondPassMs) {
+    // Der ganze Prompt geht nochmals mit; dazu nur die Gruende, nicht eine zweite Liste aller Regeln.
+    const reasons = [...new Set(first.attempts.map((attempt) => (attempt.check as { reason: string }).reason))];
+    const retryPrompt = `${prompt}\nA previous attempt failed the check because ${reasons.join('; another one because ')}. Start again from image 1 and correct exactly that; everything above still applies.`;
+    const second = await pass(retryPrompt, candidates + 1, secondCheckReserveMs);
+    if (!second.attempts.length) return res.status(502).json(await leadWithoutImage([...discarded, ...second.failures].join(', ').replace(/Versuch: Bilddienst: /g, 'Versuch: '), chosen.gen));
+    note(second.attempts, second.failures);
+    chosen = best(second.attempts);
+  } else if (chosen.check.status === 'rejected') tries.push('kein 2. Versuch (zu wenig Zeit)');
+  const gen = chosen.gen;
+  const check = chosen.check;
+  if (check.status === 'approved' && discarded.length) {
+    checkNote = `${discarded.join(', ')}, ${chosen.number}. Versuch ok`;
+  }
   if (check.status === 'rejected') {
     const rejectedNote = `abgelehnt – ${tries.join(' | ')}`;
     const leadDelivery = await sendLeadMail({

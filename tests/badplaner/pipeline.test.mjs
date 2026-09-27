@@ -102,7 +102,9 @@ function harness(settings = {}) {
     }
     throw new Error(`Unexpected mock URL: ${url}`);
   };
-  const handler = createHandler({ fetch, clock, sleep: async (milliseconds) => { clock.advance(milliseconds); }, env: { GEMINI_API_KEY: 'fake-not-a-key', RESEND_API_KEY: 'fake-not-a-key', ...settings.env }, newId: () => `bp-fixture-${++ids}` });
+  // Die meisten Tests pruefen einen Kandidaten pro Durchgang, damit ihre Folge von Bildern und Pruefungen lesbar bleibt;
+  // die Auswahl aus zwei Bildern (Standard seit dem 27.09.) hat eigene Tests.
+  const handler = createHandler({ fetch, clock, sleep: async (milliseconds) => { clock.advance(milliseconds); }, env: { GEMINI_API_KEY: 'fake-not-a-key', RESEND_API_KEY: 'fake-not-a-key', BADPLANER_CANDIDATES: '1', ...settings.env }, newId: () => `bp-fixture-${++ids}` });
   async function invoke(body = payload(), request = {}) {
     const res = { headers: {}, statusCode: 200, body: null,
       setHeader(name, value) { this.headers[name] = value; },
@@ -1092,6 +1094,65 @@ test('ein Ausfall des Bilddienstes wird gemeldet, der Lead aber nicht weggeworfe
     assert.match(leadMail.body.subject, /kein Ideenbild erzeugt/);
     assert.deepEqual(leadMail.body.attachments.map(({ filename }) => filename), ['foto.png']);
   }
+});
+
+test('zwei Bilder gleichzeitig: gezeigt wird das bessere, nicht das erste', async () => {
+  // Diego, 27.09.: "concentriamoci sul risultato, i costi non sono un problema". In der fuenften Probe brauchten
+  // 7 von 8 Bildern einen zweiten Durchgang von rund 35 s, zweimal kam gar kein Bild.
+  const other = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAADElEQVQImWP4z8AAAAMBAQCc479ZAAAAAElFTkSuQmCC';
+  const two = { BADPLANER_CANDIDATES: '2' };
+  const pair = [() => generated(PNG), () => generated(other)];
+  // Die Pruefung antwortet je nach Bild, nicht nach der Reihenfolge der Aufrufe.
+  const byImage = (answers) => (init) => answers[JSON.parse(init.body).contents[0].parts.filter((part) => part.inlineData)[1].inlineData.data]();
+  const mailOf = (h) => JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails').body);
+  // Ohne Einstellung laufen zwei Bilder.
+  const plain = harness({ env: { BADPLANER_CANDIDATES: undefined } });
+  assert.equal((await plain.invoke()).statusCode, 200);
+  assert.equal(plain.counts().generation, 2);
+  // Beide ohne groben Fehler: das mit weniger Hinweisen.
+  const hinted = byImage({ [PNG]: () => checkedInv({}, {}, { foreground_object_before: true, foreground_object_after: false }), [other]: () => checked() });
+  const h = harness({ env: two, generations: pair, checks: [hinted, hinted] });
+  const res = await h.invoke();
+  assert.equal(res.statusCode, 200);
+  assert.equal(h.counts().generation, 2);
+  assert.equal(res.body.image.data, other);
+  assert.doesNotMatch(mailOf(h), /Hinweis/);
+  // Eines mit grobem Fehler: das andere, ohne zweiten Durchgang.
+  const opening = byImage({ [PNG]: () => checked(true), [other]: () => checked() });
+  const one = harness({ env: two, generations: pair, checks: [opening, opening] });
+  const oneRes = await one.invoke();
+  assert.equal(oneRes.statusCode, 200);
+  assert.equal(one.counts().generation, 2);
+  assert.equal(oneRes.body.image.data, other);
+  assert.match(mailOf(one), /1\. Versuch verworfen \(an opening was added or lost.*\), 2\. Versuch ok/);
+  // Beide mit grobem Fehler: ein zweiter Durchgang mit beiden Gruenden, wieder mit zwei Bildern.
+  const round1 = byImage({ [PNG]: () => checked(true), [other]: () => checkedInv({}, {}, { windows_before: 0, windows_after: 1 }) });
+  const round2 = byImage({ [PNG]: () => checked(), [other]: () => checked(true) });
+  const again = harness({ env: two, generations: [...pair, ...pair], checks: [round1, round1, round2, round2] });
+  const againRes = await again.invoke(payload({ windows: '0' }));
+  assert.equal(againRes.statusCode, 200);
+  assert.equal(again.counts().generation, 4);
+  assert.equal(againRes.body.image.data, PNG);
+  const retryPrompt = again.calls.filter((call) => call.body?.generationConfig?.responseModalities)[2].body.contents[0].parts[0].text;
+  assert.match(retryPrompt, /A previous attempt failed the check because an opening was added or lost.*; another one because a window was added/);
+  assert.match(mailOf(again), /1\. Versuch verworfen \(an opening.*\), 2\. Versuch verworfen \(a window was added.*\), 4\. Versuch verworfen \(an opening.*\), 3\. Versuch ok/);
+  // Alle vier mit grobem Fehler: kein Bild, alle Gruende in der Mail.
+  const all = harness({ env: two, generations: [...pair, ...pair], checks: Array.from({ length: 4 }, () => () => checked(true)) });
+  const allRes = await all.invoke();
+  assert.equal(allRes.body.code, 'RENDER_REJECTED');
+  assert.equal(all.counts().generation, 4);
+  assert.match(mailOf(all), /abgelehnt – 1\. Versuch: an opening.* \| 2\. Versuch: an opening.* \| 3\. Versuch: an opening.* \| 4\. Versuch: an opening/);
+  // Liefert der Bilddienst eines nicht, zaehlt das andere.
+  const broken = harness({ env: two, generations: [() => response({ error: 'boom' }, 500), () => generated(other)], checks: [() => checked()] });
+  const brokenRes = await broken.invoke();
+  assert.equal(brokenRes.statusCode, 200);
+  assert.equal(brokenRes.body.image.data, other);
+  assert.match(mailOf(broken), /1\. Versuch: Bilddienst: HTTP 500, 2\. Versuch ok/);
+  // Liefert er keines, bleibt der Lead ohne Bild.
+  const down = harness({ env: two, generations: [() => response({ error: 'boom' }, 500), () => response({ error: 'boom' }, 500)] });
+  const downRes = await down.invoke();
+  assert.equal(downRes.body.code, 'RENDER_FAILED');
+  assert.match(mailOf(down), /Bilddienst: HTTP 500 \| HTTP 500/);
 });
 
 test('auch ein gescheiterter zweiter Versuch behaelt den Lead und das verworfene Bild', async () => {
