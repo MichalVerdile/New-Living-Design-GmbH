@@ -1119,7 +1119,9 @@ test('zwei Bilder gleichzeitig: gezeigt wird das bessere, nicht das erste', asyn
   assert.equal(res.statusCode, 200);
   assert.equal(h.counts().generation, 2);
   assert.equal(res.body.image.data, other);
-  assert.doesNotMatch(mailOf(h), /Hinweis/);
+  // Das andere Bild steht mit seinem Hinweis in der Mail, das gezeigte ohne.
+  assert.match(mailOf(h), /1\. Versuch nicht gezeigt \(Hinweise: the door leaf, door frame or wall edge in the foreground of image 1 is gone\), 2\. Versuch ok/);
+  assert.doesNotMatch(mailOf(h), /, Hinweis:/);
   // Eines mit grobem Fehler: das andere, ohne zweiten Durchgang.
   const opening = byImage({ [PNG]: () => checked(true), [other]: () => checked() });
   const one = harness({ env: two, generations: pair, checks: [opening, opening] });
@@ -1158,6 +1160,67 @@ test('zwei Bilder gleichzeitig: gezeigt wird das bessere, nicht das erste', asyn
   assert.match(mailOf(down), /Bilddienst: HTTP 500 \| HTTP 500/);
 });
 
+test('zwei Bilder: geprueft vor ungeprueft vor verworfen, im zweiten Durchgang das bessere, ohne Pruefung nur eines', async () => {
+  // Gegenpruefung vom 27.09.: diese Faelle liess die Testreihe durch, auch wenn die Auswahl falsch war.
+  const other = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAADElEQVQImWP4z8AAAAMBAQCc479ZAAAAAElFTkSuQmCC';
+  const two = { BADPLANER_CANDIDATES: '2' };
+  const pair = [() => generated(PNG), () => generated(other)];
+  const byImage = (answers) => (init) => answers[JSON.parse(init.body).contents[0].parts.filter((part) => part.inlineData)[1].inlineData.data]();
+  const mailOf = (h) => JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails').body);
+  const busy = () => response({ error: 'busy' }, 503);
+  // Ungeprueft gegen geprueft mit einem Hinweis: das gepruefte (ohne Hinweis waere es sofort gezeigt worden).
+  const door = () => checkedInv({}, {}, { foreground_object_before: true, foreground_object_after: false });
+  const unchecked = harness({ env: two, generations: pair, checks: [byImage({ [PNG]: busy, [other]: door }), byImage({ [PNG]: busy, [other]: door }), busy] });
+  const uncheckedRes = await unchecked.invoke();
+  assert.equal(uncheckedRes.body.image.data, other);
+  assert.match(mailOf(unchecked), /1\. Versuch nicht gezeigt \(ungeprüft\), 2\. Versuch ok, Hinweis: the door leaf/);
+  // Ungeprueft gegen verworfen: das ungepruefte, und die Mail sagt, welches gezeigt wird.
+  const risky = harness({ env: two, generations: pair, checks: [byImage({ [PNG]: () => checked(true), [other]: busy }), byImage({ [PNG]: () => checked(true), [other]: busy }), busy] });
+  const riskyRes = await risky.invoke();
+  assert.equal(riskyRes.statusCode, 200);
+  assert.equal(riskyRes.body.image.data, other);
+  assert.match(mailOf(risky), /nicht möglich \(HTTP 503\) \| 2\. Versuch gezeigt \| 1\. Versuch: an opening was added or lost/);
+  // Ein anderer Bildausschnitt zaehlt wie ein halber Hinweis: das Bild ohne Vermerk.
+  const turned = harness({ env: two, generations: pair, checks: [byImage({ [PNG]: () => checkedInv({}, {}, { view_changed: true, reason: 'camera turned' }), [other]: () => checked() }),
+    byImage({ [PNG]: () => checkedInv({}, {}, { view_changed: true, reason: 'camera turned' }), [other]: () => checked() })] });
+  assert.equal((await turned.invoke()).body.image.data, other);
+  // Im zweiten Durchgang das bessere, nicht das erste.
+  const round2 = byImage({ [PNG]: () => checked(true), [other]: () => checked() });
+  const later = harness({ env: two, generations: [...pair, ...pair], checks: [() => checked(true), () => checked(true), round2, round2] });
+  const laterRes = await later.invoke();
+  assert.equal(laterRes.statusCode, 200);
+  assert.equal(laterRes.body.image.data, other);
+  assert.match(mailOf(later), /1\. Versuch verworfen .*, 2\. Versuch verworfen .*, 3\. Versuch verworfen .*, 4\. Versuch ok/);
+  // Ist die Pruefung ausgeschaltet, gibt es nichts zu waehlen: ein Bild.
+  const off = harness({ env: { ...two, BADPLANER_CHECK_MODEL: '' } });
+  assert.equal((await off.invoke()).statusCode, 200);
+  assert.equal(off.counts().generation, 1);
+});
+
+test('zwei Bilder: ist eines ohne Fehler und ohne Hinweis fertig, wartet der Kunde nicht auf das andere', async () => {
+  // Gegenpruefung vom 27.09.: sonst wartete er auf das langsamere Bild, bis zu dessen Zeitgrenze.
+  let release = () => {};
+  // Spaetestens nach 50 ms kommt es trotzdem, damit ein Rueckfall als Fehler endet, nicht als haengender Test.
+  const slow = () => new Promise((resolve) => { release = () => resolve(generated()); setTimeout(release, 50); });
+  const other = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAADElEQVQImWP4z8AAAAMBAQCc479ZAAAAAElFTkSuQmCC';
+  // Das langsame Bild kommt erst, wenn die Lead-Mail schon unterwegs ist.
+  const h = harness({ env: { BADPLANER_CANDIDATES: '2' }, generations: [slow, () => generated(other)], checks: [() => checked(), () => checked()],
+    mails: [() => { release(); return response({ id: 'mail-1' }); }] });
+  const res = await h.invoke();
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.body.image.data, other);
+  assert.doesNotMatch(JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails').body), /1\. Versuch/);
+});
+
+test('fehlt im Ideenbild der Waschtisch, ist das ein grober Fehler wie beim WC', async () => {
+  // Gegenpruefung vom 27.09.: ohne diese Regel waehlte die Auswahl aus zwei Bildern eines ohne Waschtisch.
+  const h = harness({ checks: [() => checkedInv({}, { washbasin: 'none' }), () => checked()] });
+  assert.equal((await h.invoke()).statusCode, 200);
+  assert.equal(h.counts().generation, 2);
+  assert.match(h.calls.filter((call) => call.body?.generationConfig?.responseModalities)[1].body.contents[0].parts[0].text,
+    /A previous attempt failed the check because the washbasin is missing/);
+});
+
 test('laesst sich der zweite Versuch nicht pruefen, sieht der Kunde ihn, mit dem ersten Grund in der Mail', async () => {
   // Gegenpruefung vom 27.09.: dieser Weg hatte nach f3c724f keinen Test mehr.
   const second = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAADElEQVQImWP4z8AAAAMBAQCc479ZAAAAAElFTkSuQmCC';
@@ -1166,7 +1229,7 @@ test('laesst sich der zweite Versuch nicht pruefen, sieht der Kunde ihn, mit dem
   const res = await h.invoke();
   assert.equal(res.statusCode, 200);
   assert.equal(res.body.image.data, second);
-  assert.match(JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails').body), /nicht möglich \(HTTP 503\) \| 1\. Versuch: an opening was added or lost/);
+  assert.match(JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails').body), /nicht möglich \(HTTP 503\) \| 2\. Versuch gezeigt \| 1\. Versuch: an opening was added or lost/);
 });
 
 test('Wanne wird Dusche: die Dusche an der Stirnwand der Wanne ist richtig, an einer anderen Wand nicht', async () => {

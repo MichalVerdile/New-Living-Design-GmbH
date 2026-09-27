@@ -49,7 +49,8 @@
  *   BADPLANER_FROM       Absender fuer Lead- und Kundenmail (Default
  *                        "Badplaner <badplaner@newlivingdesign.ch>",
  *                        Domain muss bei Resend verifiziert sein)
- *   BADPLANER_DAILY_CAP  Maximale Ideenbilder pro Tag insgesamt (Default 60)
+ *   BADPLANER_DAILY_CAP  Maximale Anfragen mit Ideenbild pro Tag insgesamt (Default 60); jede erzeugt so viele Bilder,
+ *                        wie BADPLANER_CANDIDATES sagt, mit zweitem Durchgang doppelt so viele
  *   BADPLANER_MODEL      Gemini-Bildmodell (Default gemini-3-pro-image)
  *   BADPLANER_CHECK_MODEL Gemini-Textmodell fuer Foto- und Bildpruefung (Default
  *                        gemini-3.6-flash); leer lassen = Pruefung bewusst deaktiviert
@@ -729,21 +730,31 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   // Hinweisen. Die Wartezeit bleibt etwa die eines Bildes; in der fuenften Probe brauchten 7 von 8 Bildern einen
   // zweiten Durchgang von rund 35 s, und zweimal kam gar kein Bild.
   // ponytail: zwei Bilder pro Durchgang; BADPLANER_CANDIDATES erlaubt 1 bis 4, wenn das Rate-Limit von Gemini mitmacht.
-  const candidates = Math.min(4, Math.max(1, Math.trunc(Number(env.BADPLANER_CANDIDATES)) || 2));
+  // Ohne Pruefung gibt es nichts zu waehlen: dann ein Bild.
+  const candidates = checkModel() ? Math.min(4, Math.max(1, Math.trunc(Number(env.BADPLANER_CANDIDATES)) || 2)) : 1;
   const score = (result: CheckResult) => result.status === 'rejected' ? 1000 : result.status === 'unavailable' ? 100
     : result.status === 'approved' ? 2 * (result.hints?.length ?? 0) + (result.note ? 1 : 0) : 0;
   type Attempt = { number: number; gen: { mime: string; data: string }; check: CheckResult };
   const passStarted = dependencies.clock.now();
   let firstGenerationMs = 0;
   const pass = async (passPrompt: string, firstNumber: number, reserveMs?: number) => {
-    const results = await Promise.all(Array.from({ length: candidates }, async (_, index): Promise<Attempt | { number: number; detail: string }> => {
+    const results: (Attempt | { number: number; detail: string })[] = [];
+    // Ein Bild ohne groben Fehler und ohne Hinweis wird gleich gezeigt, ohne auf das andere zu warten (Gegenpruefung
+    // vom 27.09.: sonst wartete der Kunde auf das langsamere Bild, bis zu dessen Zeitgrenze von 65 s).
+    let perfect = () => {};
+    const early = new Promise<void>((resolve) => { perfect = resolve; });
+    const runs = Array.from({ length: candidates }, async (_, index) => {
       const generated = await generateImage(passPrompt, photo, references, ctx, photoRatio, reserveMs);
       if (firstNumber === 1) firstGenerationMs = Math.max(firstGenerationMs, dependencies.clock.now() - passStarted);
-      if (generated.ok === false) return { number: firstNumber + index, detail: generated.detail };
-      return { number: firstNumber + index, gen: generated, check: await checkWithUnavailableRetry(generated) };
-    }));
-    const attempts = results.filter((result): result is Attempt => 'check' in result);
-    const failures = results.flatMap((result) => ('detail' in result ? [`${result.number}. Versuch: Bilddienst: ${result.detail}`] : []));
+      const result: Attempt | { number: number; detail: string } = generated.ok === false ? { number: firstNumber + index, detail: generated.detail }
+        : { number: firstNumber + index, gen: generated, check: await checkWithUnavailableRetry(generated) };
+      results.push(result);
+      if ('check' in result && score(result.check) === 0) perfect();
+    });
+    await Promise.race([Promise.all(runs), early]);
+    const done = [...results].sort((a, b) => a.number - b.number);
+    const attempts = done.filter((result): result is Attempt => 'check' in result);
+    const failures = done.flatMap((result) => ('detail' in result ? [`${result.number}. Versuch: Bilddienst: ${result.detail}`] : []));
     return { attempts, failures };
   };
   const best = (attempts: Attempt[]) => attempts.reduce((chosen, attempt) => (score(attempt.check) < score(chosen.check) ? attempt : chosen));
@@ -767,6 +778,7 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   }
   note(first.attempts, first.failures);
   let chosen = best(first.attempts);
+  let secondAttempts: Attempt[] = [];
   // Ein zweiter Durchgang dauert ungefähr so lange wie der erste. Die alte Schranke
   // rechnete mit den Höchstwerten (95 s) und liess den zweiten Versuch nie zu; mit
   // 110 s Budget lief er nur nach einem schnellen ersten Durchgang. Mit 220 s passt er
@@ -784,13 +796,19 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
     const second = await pass(retryPrompt, candidates + 1, secondCheckReserveMs);
     if (!second.attempts.length) return res.status(502).json(await leadWithoutImage([...discarded, ...second.failures].join(', ').replace(/Versuch: Bilddienst: /g, 'Versuch: '), chosen.gen));
     note(second.attempts, second.failures);
+    secondAttempts = second.attempts;
     chosen = best(second.attempts);
-  } else if (chosen.check.status === 'rejected') tries.push('kein 2. Versuch (zu wenig Zeit)');
+  } else if (chosen.check.status === 'rejected') tries.push(`kein ${candidates + 1}. Versuch (zu wenig Zeit)`);
   const gen = chosen.gen;
   const check = chosen.check;
-  if (check.status === 'approved' && discarded.length) {
-    checkNote = `${discarded.join(', ')}, ${chosen.number}. Versuch ok`;
-  }
+  // Auch die Bilder, die geprueft, aber nicht gezeigt wurden, stehen in der Mail, mit ihren Hinweisen: so sehen wir, wie
+  // oft welcher Hinweis vorkommt (Diego, 25.09., Punkt c), und welches Bild der Kunde bekam.
+  const notShown = [...first.attempts, ...secondAttempts].filter((attempt) => attempt !== chosen && attempt.check.status !== 'rejected')
+    .map((attempt) => `${attempt.number}. Versuch nicht gezeigt${attempt.check.status === 'unavailable' ? ' (ungeprüft)'
+      : attempt.check.status === 'approved' && attempt.check.hints?.length ? ` (Hinweise: ${attempt.check.hints.join('; ')})` : ''}`);
+  const byNumber = (a: string, b: string) => parseInt(a, 10) - parseInt(b, 10);
+  const others = [...discarded, ...notShown].sort(byNumber);
+  if (check.status === 'approved' && others.length) checkNote = `${others.join(', ')}, ${chosen.number}. Versuch ok`;
   if (check.status === 'rejected') {
     const rejectedNote = `abgelehnt – ${tries.join(' | ')}`;
     const leadDelivery = await sendLeadMail({
@@ -832,7 +850,9 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
     checkNote = checkNote + ', Hinweis: ' + hint;
     console.info('[badplaner]', hint);
   }
-  if (check.status === 'unavailable') checkNote = [`nicht möglich (${check.detail})`, ...tries].join(' | ');
+  if (check.status === 'unavailable') {
+    checkNote = [`nicht möglich (${check.detail})`, ...(others.length ? [`${chosen.number}. Versuch gezeigt`] : []), ...[...tries.filter((entry) => !entry.startsWith('kein ')), ...notShown].sort(byNumber)].join(' | ');
+  }
   if (check.status === 'disabled') checkNote = 'deaktiviert';
   console.log('[badplaner] Fensterprüfung:', checkNote);
 
@@ -1799,6 +1819,8 @@ function compareInventory(
   if (wanted.bathtub && after.bathtub === 'none') return 'the requested bathtub is missing';
   if (!wanted.bathtub && after.bathtub !== 'none') return `there is a bathtub on the ${after.bathtub} wall although none was ordered`;
   if (before.toilet !== 'none' && after.toilet === 'none') return 'the toilet is missing';
+  // Gegenpruefung vom 27.09.: ohne diese Regel waehlte die Auswahl aus zwei Bildern eines, in dem der Waschtisch fehlte.
+  if (before.washbasin !== 'none' && after.washbasin === 'none') return 'the washbasin is missing';
   if (before.toilet !== 'none' && after.toilet !== before.toilet) {
     return `the toilet moved from the ${before.toilet} wall to the ${after.toilet} wall`;
   }
