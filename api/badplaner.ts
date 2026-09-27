@@ -531,22 +531,27 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   // Die Stirnwand der Dusche liest die Vorpruefung am schmalen Ende von Wanne oder Dusche im Foto.
   const showerWall = photoCheck.status === 'ok' && shower && shower.id !== 'keine' ? photoCheck.showerWall : undefined;
   const showerLongWall = showerWall && photoCheck.status === 'ok' ? photoCheck.showerLongWall : undefined;
+  const photoWalls = photoCheck.status === 'ok' ? photoCheck.layout?.walls : undefined;
   // Der Produktdurchgang (weiter unten) zeichnet nur die Produkte neu, jedes mit seinem Bild und seinem Satz; Bild 1 ist
   // dort das gepruefte Ideenbild. Ein Produkt ohne Bild bleibt, wie der erste Durchgang es gezeichnet hat. Saetze, die im
   // ersten Durchgang auf andere Produkte verweisen ("of the same series"), fallen hier weg (Gegenpruefung vom 27.09.).
   const showerTaps = taps.prompt.match(/; in a shower ([^;]*)/)?.[1];
+  // Zeigt das Foto laut Vorpruefung kein WC oder keinen Waschtisch, nennt sie auch der Produktdurchgang nicht: die Pruefung
+  // verwirft nur, was fehlt oder wandert, nicht, was dazukommt (Gegenpruefung des Codes vom 27.09.).
+  const noToilet = photoWalls?.toilet === 'none';
+  const noBasin = photoWalls?.washbasin === 'none';
   const products = ([
-    [wcImage, (n: number) => `Image ${n}, the toilet: it becomes exactly the toilet of image ${n}, with ${wcShape}, wall-hung and rimless, in ${sanitary.prompt}, with seat and lid in the same ${sanitary.prompt}, not wood${isAtelier ? '' : `; image ${n} shows the bowl without its seat, which is thin and flat`}.`],
-    [cistern === 'unterputz' ? FLUSH_PLATE_PHOTO : null, (n: number) => `Image ${n}, the flush plate of the toilet: it becomes exactly the OLI Blink plate of image ${n}, in ${finish.prompt}: ${BLINK_PLATE}.`],
-    [moduleImage, (n: number) => `Image ${n}, the sanitary module behind the toilet: it becomes exactly the OLI QR module of image ${n}: ${QR_MODULE.replace('that wall', 'the wall').replace('in front of it', 'in front of the wall')}; no flush plate. Where image 1 shows it flatter, sunk in or boxed in, it stands out to this depth, and the toilet hangs on its front.`],
-    [tapsImage, (n: number) => `Image ${n}, the tap at each washbasin: it becomes exactly the fitting of image ${n}: ${basinTaps.replace(/, all fittings for the requested fixtures from the same series and in the same [^,;]+ finish$/, '')}.`],
+    [noToilet ? null : wcImage, (n: number) => `Image ${n}, the toilet: it becomes exactly the toilet of image ${n}, with ${wcShape}, wall-hung and rimless, in ${sanitary.prompt}, with seat and lid in the same ${sanitary.prompt}, not wood${isAtelier ? '' : `; image ${n} shows the bowl without its seat, which is thin and flat`}.`],
+    [!noToilet && cistern === 'unterputz' ? FLUSH_PLATE_PHOTO : null, (n: number) => `Image ${n}, the flush plate of the toilet: it becomes exactly the OLI Blink plate of image ${n}, in ${finish.prompt}: ${BLINK_PLATE}.`],
+    [noToilet ? null : moduleImage, (n: number) => `Image ${n}, the sanitary module behind the toilet: it becomes exactly the OLI QR module of image ${n}: ${QR_MODULE.replace('that wall', 'the wall').replace('in front of it', 'in front of the wall')}; no flush plate. Where image 1 shows it flatter, sunk in or boxed in, it stands out to this depth, and the toilet hangs on its front.`],
+    [noBasin ? null : tapsImage, (n: number) => `Image ${n}, the tap at each washbasin: it becomes exactly the fitting of image ${n}: ${basinTaps.replace(/, all fittings for the requested fixtures from the same series and in the same [^,;]+ finish$/, '')}.`],
     // Die Wand des Duschsets sagt die Vorpruefung, wie im ersten Durchgang; sonst die Wand der Handbrause im Bild. P2 der
     // sechsten Probe: Armaturen an zwei Waenden. Die Wannenarmatur hat ihre eigene Handbrause und bleibt.
     [showerTaps ? showerImage : null, (n: number) => `Image ${n}, the shower fittings: they become exactly the fittings of image ${n}, in ${finish.prompt}: ${showerTaps}. They all sit together on ${showerWall
       ? `the ${showerWall} wall seen from the camera, the short end wall of the shower${shower?.id === 'walk-in' ? ', at whose foot the channel drain lies' : ''}`
       : 'the wall where image 1 has the hand shower'}; any other shower mixer, plate or hand shower inside the shower area is removed, and the wall surface simply continues over its place.${bathFiller ? ' The bath mixer at the bathtub is separate and stays.' : ''}`],
     [bathImage, (n: number) => `Image ${n}, the bath mixer: it becomes exactly the fitting of image ${n}, in ${finish.prompt}: ${bathFiller.replace(/^; /, '').replace(' of the same series and finish', '')}.`],
-    [mirrorImage, (n: number) => `Image ${n}, the mirror above the washbasin: it becomes exactly the mirror of image ${n}: a ${mirror.prompt}; nothing of the old mirror, its frame or a lamp stays, and there is no lamp or light bar above it.`],
+    [noBasin ? null : mirrorImage, (n: number) => `Image ${n}, the mirror above the washbasin: it becomes exactly the mirror of image ${n}: a ${mirror.prompt}; nothing of the old mirror, its frame or a lamp stays, and there is no lamp or light bar above it.`],
   ] as [Photo | null, (n: number) => string][]).filter((item): item is [Photo, (n: number) => string] => !!item[0]);
   const productReferences = products.map(([image]) => image);
   // Farbige Keramik (siebte Probe): die Produktbilder sind weiss, und Becken und Duschwanne haben kein eigenes Bild.
@@ -699,7 +704,6 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   }
   // Jonathan am 25.09.: Gaeste-WC gewaehlt, im Foto aber ein Bad mit Wanne oder Dusche. Das Modell behielt
   // sie oder raeumte sie weg, und die Pruefung verwarf alle vier Bilder. Das sagt der Badplaner jetzt vorher.
-  const photoWalls = photoCheck.status === 'ok' ? photoCheck.layout?.walls : undefined;
   const bath = photoWalls ? [photoWalls.bathtub !== 'none' && 'eine Badewanne', photoWalls.shower !== 'none' && 'eine Dusche'].filter(Boolean).join(' und ') : '';
   if (isGuestWc && bath) {
     console.warn('[badplaner] Gaeste-WC gewaehlt, Foto zeigt', bath);
@@ -770,7 +774,7 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   };
 
   let checkNote = 'ok';
-  const wantedFixtures = { room, shower: shower ? shower.id !== 'keine' : false, showerType: shower?.id, bathtub: bathtub ? bathtub.id !== 'keine' : false, cistern, windows, showerWall,
+  const wantedFixtures = { room, shower: shower ? shower.id !== 'keine' : false, showerType: shower?.id, bathtub: bathtub ? bathtub.id !== 'keine' : false, cistern, windows, showerWall, showerLongWall,
     bathtubType: bathtub?.id, basin: basin.id, basinType: basinType?.id, mirror: mirror.id };
   const checkWithUnavailableRetry = async (image: { mime: string; data: string }): Promise<CheckResult> => {
     let result = await checkOpenings(photo, image, wantedFixtures, ctx);
@@ -863,7 +867,9 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
     }
     note(second.attempts, second.failures);
     secondAttempts = second.attempts;
-    chosen = best([...first.attempts, ...second.attempts]);
+    // Nach groben Fehlern zaehlt der zweite Durchgang (bei lauter verworfenen Bildern bekommt NLD das neueste); nach einem
+    // schweren Hinweis das beste aller Bilder (Gegenpruefung des Codes vom 27.09.).
+    chosen = chosen.check.status === 'rejected' ? best(second.attempts) : best([...first.attempts, ...second.attempts]);
   } else if (chosen.check.status === 'rejected') tries.push('kein zweiter Durchgang (zu wenig Zeit)');
   let gen: { mime: string; data: string } = chosen.gen;
   let check: CheckResult = chosen.check;
@@ -935,7 +941,9 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
     } else productNote = 'kein Produktdurchgang (zu wenig Zeit)';
     console.info('[badplaner]', productNote);
   }
-  if (check.status === 'approved' && others.length) checkNote = `${others.join(', ')}, Bild ${chosen.number} ${chosen.check.status === 'approved' ? 'ok' : 'ungeprüft'}`;
+  if (check.status === 'approved' && (others.length || chosen.check.status !== 'approved')) {
+    checkNote = [...others, `Bild ${chosen.number} ${chosen.check.status === 'unavailable' ? `ungeprüft (${chosen.check.detail})` : 'ok'}`].join(', ');
+  }
   if (check.status === 'approved' && productNote) checkNote = `${checkNote}, ${productNote}`;
   if (check.status === 'approved' && check.note) {
     checkNote = checkNote + ', Bildausschnitt verändert: ' + check.note;
@@ -1671,7 +1679,7 @@ async function askCheckModel(model: string, question: string, images: Photo[], t
 async function checkOpenings(
   photo: Photo,
   gen: { mime: string; data: string },
-  wanted: { room: 'badezimmer' | 'gaeste-wc'; shower: boolean; bathtub: boolean; cistern: 'aufputz' | 'unterputz'; windows: string; showerWall?: EndWall; showerType?: string;
+  wanted: { room: 'badezimmer' | 'gaeste-wc'; shower: boolean; bathtub: boolean; cistern: 'aufputz' | 'unterputz'; windows: string; showerWall?: EndWall; showerLongWall?: EndWall; showerType?: string;
     bathtubType?: string; basin?: string; basinType?: string; mirror?: string },
   ctx: RequestContext,
   timeoutMs = CHECK_TIMEOUT_MS,
@@ -1907,7 +1915,9 @@ async function checkPhoto(photo: Photo, room: 'badezimmer' | 'gaeste-wc', ctx: R
   // bei einer Eckwanne (P2, P5 der sechsten Probe: Armaturen auf der falschen Seite) vermutlich die richtige Stirnwand
   // verloren. Ohne Antwort gilt wie bisher die Wand, an der die Wanne steht.
   const longWall: EndWall | undefined = ['left', 'right', 'back'].includes(parsed.shower_long_wall) ? parsed.shower_long_wall : undefined;
-  const showerWall = endWall && endWall !== (longWall ?? walls?.bathtub) ? endWall : undefined;
+  // Nennt sie Stirnwand und Laengsseite links und rechts, zwei parallele Waende, gilt keine von beiden (Gegenpruefung vom 27.09.).
+  const parallel = !!longWall && longWall !== 'back' && endWall !== 'back';
+  const showerWall = endWall && endWall !== (longWall ?? walls?.bathtub) && !parallel ? endWall : undefined;
   return { status: 'ok', layout: walls && seen && near ? { walls, order: seen, nearest: near } : undefined, ceiling, showerWall, showerLongWall: showerWall && longWall !== showerWall ? longWall : undefined };
 }
 
@@ -1950,7 +1960,7 @@ function compareDepth(
 function compareInventory(
   before: Inventory,
   after: Inventory,
-  wanted: { room: 'badezimmer' | 'gaeste-wc'; shower: boolean; bathtub: boolean; cistern: 'aufputz' | 'unterputz'; showerWall?: EndWall },
+  wanted: { room: 'badezimmer' | 'gaeste-wc'; shower: boolean; bathtub: boolean; cistern: 'aufputz' | 'unterputz'; showerWall?: EndWall; showerLongWall?: EndWall },
 ): string | null {
   // Kein Paket enthaelt ein Bidet. Steht es noch da, hat das Modell nicht umgebaut.
   if (after.bidet !== 'none') return `the bidet is still there, on the ${after.bidet} wall`;
@@ -1969,9 +1979,10 @@ function compareInventory(
   }
   // Wanne wird Dusche: die Dusche gehoert an die Wand, an der die Wanne stand. Die Wand am schmalen Ende der Wanne
   // (Vorpruefung) gilt auch: dort sitzen die Armaturen, und das Pruefmodell nennt oft sie (P5 vom 26.09.). Sonst trieb
-  // der zweite Versuch die Dusche wieder an die Laengswand, gedreht (Gegenpruefung vom 27.09.).
+  // der zweite Versuch die Dusche wieder an die Laengswand, gedreht (Gegenpruefung vom 27.09.). Die Wand der Laengsseite
+  // (Vorpruefung) gilt ebenso: eine Wanne mit dem Kopfende hinten steht auch an ihr (P2 und P5 der sechsten Probe).
   if (wanted.shower && before.shower === 'none' && before.bathtub !== 'none'
-    && after.shower !== 'none' && after.shower !== before.bathtub && after.shower !== wanted.showerWall) {
+    && after.shower !== 'none' && after.shower !== before.bathtub && after.shower !== wanted.showerWall && after.shower !== wanted.showerLongWall) {
     return `the new shower stands on the ${after.shower} wall, the bathtub it replaces stood on the ${before.bathtub} wall`;
   }
   return null;

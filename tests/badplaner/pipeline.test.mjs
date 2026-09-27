@@ -1037,7 +1037,8 @@ test('oversize JSON is rejected before provider calls', async () => {
 });
 
 test('second rejected result is never returned, while the lead and original photo are preserved', async () => {
-  const h = harness({ checks: [() => checked(true), () => checked(true)] });
+  const second = 'iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAIAAAB7QOjdAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAD0lEQVQImWM4ISd3Qk4OAAh3Agn/2+PxAAAAAElFTkSuQmCC';
+  const h = harness({ generations: [() => generated(), () => generated(second)], checks: [() => checked(true), () => checked(true)] });
   const res = await h.invoke();
   assert.equal(res.body.code, 'RENDER_REJECTED'); assert.equal(res.statusCode, 502);
   assert.equal(res.body.image, undefined); assert.deepEqual(h.counts(), { generation: 2, checks: 2, mail: 1 });
@@ -1045,8 +1046,9 @@ test('second rejected result is never returned, while the lead and original phot
   assert.match(JSON.stringify(leadMail.body), /Ideenbild.*abgelehnt \(Prüfung\), nicht angezeigt/);
   assert.match(JSON.stringify(leadMail.body), /Muster/);
   assert.deepEqual(leadMail.body.attachments.map(({ filename }) => filename), ['foto.png', 'verworfen.jpg']);
-  // Der zweite, ebenfalls verworfene Versuch ist der, den wir zu sehen bekommen.
-  assert.ok(leadMail.body.attachments[1].content.length > 0);
+  // Der zweite, ebenfalls verworfene Versuch ist der, den wir zu sehen bekommen (Gegenpruefung des Codes vom 27.09.:
+  // mit der Auswahl aus allen Bildern war es das erste, und der Test merkte es nicht, weil beide gleich waren).
+  assert.equal(leadMail.body.attachments[1].content, second);
   // Diego, 25.09.: beide Gruende stehen in der Mail, nicht nur der letzte.
   assert.match(JSON.stringify(leadMail.body), /abgelehnt – Bild 1: an opening was added or lost.* \| Bild 2: an opening was added or lost/);
 });
@@ -2502,4 +2504,61 @@ test('die Pruefung fragt, ob das WC noch das alte ist; das ist ein schwerer Hinw
   assert.match(h.calls.filter((call) => call.body?.generationConfig?.responseModalities)[1].body.contents[0].parts[0].text,
     /A previous attempt was wrong because the toilet is still the old one of the photo\. Start again from image 1/);
   assert.match(JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails').body), /Hinweis: the toilet is still the old one of the photo/);
+});
+
+test('Gegenpruefung des Codes vom 27.09.: Produktdurchgang mit zwei Bildern, ohne WC oder Waschtisch im Foto, ungeprueftes Bild davor', async () => {
+  const other = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAADElEQVQImWP4z8AAAAMBAQCc479ZAAAAAElFTkSuQmCC';
+  const edited = 'iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAIAAAB7QOjdAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAD0lEQVQImWM4ISd3Qk4OAAh3Agn/2+PxAAAAAElFTkSuQmCC';
+  const on = { BADPLANER_PRODUCT_PASS: undefined };
+  const mailOf = (h) => JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails').body);
+  const generations = (h) => h.calls.filter((call) => call.body?.generationConfig?.responseModalities);
+  // Wie auf der Seite: zwei Bilder, dann der Produktdurchgang auf dem besseren.
+  const byImage = (answers) => (init) => answers[JSON.parse(init.body).contents[0].parts.filter((part) => part.inlineData)[1].inlineData.data]();
+  const door = () => checkedInv({}, {}, { foreground_object_before: true, foreground_object_after: false });
+  const answers = byImage({ [PNG]: door, [other]: () => checked(), [edited]: () => checked() });
+  const two = harness({ env: { ...on, BADPLANER_CANDIDATES: undefined }, generations: [() => generated(PNG), () => generated(other), () => generated(edited)], checks: [answers, answers, answers] });
+  const twoRes = await two.invoke();
+  assert.equal(twoRes.statusCode, 200);
+  assert.equal(generations(two).length, 3);
+  assert.equal(generations(two)[2].body.contents[0].parts.find((part) => part.inlineData).inlineData.data, other);
+  assert.equal(twoRes.body.image.data, edited);
+  assert.match(mailOf(two), /Bild 1 nicht gezeigt \(Hinweise: the door leaf.*\), Bild 2 ok, Produktdurchgang ok</);
+  // Zeigt das Foto kein WC, nennt der Produktdurchgang weder WC noch Platte; ohne Waschtisch weder Armatur noch Spiegel.
+  const layout = (walls) => () => photoChecked(true, JSON.stringify({ is_bathroom: true, reason: 'bathroom', walls: inv(walls), order: ['washbasin'], nearest: 'washbasin' }));
+  const noToilet = harness({ env: on, photoChecks: [layout({ toilet: 'none' })] });
+  assert.equal((await noToilet.invoke()).statusCode, 200);
+  const noToiletPrompt = generations(noToilet)[1].body.contents[0].parts[0].text;
+  assert.doesNotMatch(noToiletPrompt, /the toilet:|flush plate/);
+  assert.match(noToiletPrompt, /\nImage 2, the tap at each washbasin: .*\nImage 3, the mirror above the washbasin:/);
+  const noBasin = harness({ env: on, photoChecks: [layout({ washbasin: 'none' })] });
+  assert.equal((await noBasin.invoke()).statusCode, 200);
+  const noBasinPrompt = generations(noBasin)[1].body.contents[0].parts[0].text;
+  assert.doesNotMatch(noBasinPrompt, /tap at each washbasin|mirror above the washbasin/);
+  assert.match(noBasinPrompt, /\nImage 2, the toilet: .*\nImage 3, the flush plate of the toilet:/);
+  // Liess sich das Bild davor nicht pruefen, sagt es die Mail, auch wenn der Produktdurchgang die Pruefung bestand.
+  const busy = () => response({ error: 'busy' }, 503);
+  const unchecked = harness({ env: on, generations: [() => generated(PNG), () => generated(edited)], checks: [busy, busy, () => checked()] });
+  const uncheckedRes = await unchecked.invoke();
+  assert.equal(uncheckedRes.body.image.data, edited);
+  assert.match(mailOf(unchecked), /Fensterprüfung.{0,80}>Bild 1 ungeprüft \(HTTP 503\), Produktdurchgang ok</);
+});
+
+test('Gegenpruefung des Codes vom 27.09.: Stirnwand und Laengsseite in Vorpruefung und Pruefung', async () => {
+  const photo = (extra) => () => photoChecked(true, JSON.stringify({ is_bathroom: true, reason: 'bathroom', walls: inv({ bathtub: 'back' }), order: ['toilet', 'bathtub', 'washbasin'], nearest: 'washbasin', ...extra }));
+  const body = payload({ dusche: 'walk-in', badewanne: 'keine' });
+  // Links und rechts zugleich gibt es bei einer Wanne nicht: keine Stirnwand im Prompt.
+  const parallel = harness({ photoChecks: [photo({ shower_end_wall: 'left', shower_long_wall: 'right' })], checks: [() => checkedInv({ bathtub: 'back' }, { shower: 'back' })] });
+  assert.equal((await parallel.invoke(body)).statusCode, 200);
+  assert.doesNotMatch(parallel.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text, /The short end wall/);
+  // Wanne mit dem Kopfende hinten und der Laengsseite rechts: die Dusche an der rechten Wand ist richtig (P2 und P5).
+  const corner = photo({ shower_end_wall: 'back', shower_long_wall: 'right' });
+  const right = harness({ photoChecks: [corner], checks: [() => checkedInv({ bathtub: 'back' }, { shower: 'right' })] });
+  assert.equal((await right.invoke(body)).statusCode, 200);
+  assert.equal(right.counts().generation, 1);
+  // An der linken Wand bleibt es ein grober Fehler.
+  const left = harness({ photoChecks: [corner], checks: [() => checkedInv({ bathtub: 'back' }, { shower: 'left' }), () => checkedInv({ bathtub: 'back' }, { shower: 'back' })] });
+  assert.equal((await left.invoke(body)).statusCode, 200);
+  assert.equal(left.counts().generation, 2);
+  assert.match(left.calls.filter((call) => call.body?.generationConfig?.responseModalities)[1].body.contents[0].parts[0].text,
+    /failed the check because the new shower stands on the left wall, the bathtub it replaces stood on the back wall/);
 });
