@@ -238,6 +238,9 @@ test('shower prompt tiles the full tray or sloped-floor perimeter to the ceiling
   const bathPrompt = bath.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
   assert.match(bathPrompt, /every wall surface in the bathtub wet area is also tiled all the way up to the ceiling/);
   assert.doesNotMatch(bathPrompt, /inside the shower, every wall surface/);
+  const guest = harness();
+  assert.equal((await guest.invoke(payload({ raum: 'gaeste-wc', dusche: '', badewanne: '', waschtisch: 'einzel', wall: 'halbhoch' }))).statusCode, 200);
+  assert.doesNotMatch(guest.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text, /inside the shower, every wall surface|bathtub wet area/);
 });
 
 test('ein Foto ohne Bad wird gar nicht erst gerendert', async () => {
@@ -1155,6 +1158,32 @@ test('zwei Bilder gleichzeitig: gezeigt wird das bessere, nicht das erste', asyn
   assert.match(mailOf(down), /Bilddienst: HTTP 500 \| HTTP 500/);
 });
 
+test('laesst sich der zweite Versuch nicht pruefen, sieht der Kunde ihn, mit dem ersten Grund in der Mail', async () => {
+  // Gegenpruefung vom 27.09.: dieser Weg hatte nach f3c724f keinen Test mehr.
+  const second = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAADElEQVQImWP4z8AAAAMBAQCc479ZAAAAAElFTkSuQmCC';
+  const busy = () => response({ error: 'busy' }, 503);
+  const h = harness({ generations: [() => generated(), () => generated(second)], checks: [() => checked(true), busy, busy] });
+  const res = await h.invoke();
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.body.image.data, second);
+  assert.match(JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails').body), /nicht möglich \(HTTP 503\) \| 1\. Versuch: an opening was added or lost/);
+});
+
+test('Wanne wird Dusche: die Dusche an der Stirnwand der Wanne ist richtig, an einer anderen Wand nicht', async () => {
+  // P5 vom 26.09.: "the new shower stands on the left wall, the bathtub it replaces stood on the back wall". Sitzen die
+  // Armaturen richtig an der Stirnwand, nennt das Pruefmodell oft diese Wand; der zweite Versuch drehte die Dusche dann wieder.
+  const photo = () => photoChecked(true, JSON.stringify({ is_bathroom: true, reason: 'bathroom', walls: inv({ bathtub: 'back' }), order: ['toilet', 'bathtub', 'washbasin'], nearest: 'washbasin', shower_end_wall: 'left' }));
+  const body = payload({ dusche: 'walk-in', badewanne: 'keine' });
+  const end = harness({ photoChecks: [photo], checks: [() => checkedInv({ bathtub: 'back' }, { shower: 'left' })] });
+  assert.equal((await end.invoke(body)).statusCode, 200);
+  assert.equal(end.counts().generation, 1);
+  const moved = harness({ photoChecks: [photo], checks: [() => checkedInv({ bathtub: 'back' }, { shower: 'right' }), () => checkedInv({ bathtub: 'back' }, { shower: 'back' })] });
+  assert.equal((await moved.invoke(body)).statusCode, 200);
+  assert.equal(moved.counts().generation, 2);
+  assert.match(moved.calls.filter((call) => call.body?.generationConfig?.responseModalities)[1].body.contents[0].parts[0].text,
+    /failed the check because the new shower stands on the right wall, the bathtub it replaces stood on the back wall/);
+});
+
 test('auch ein gescheiterter zweiter Versuch behaelt den Lead und das verworfene Bild', async () => {
   const h = harness({ generateDelays: [35000, 0], checkDelays: [4000], checks: [() => checked(true)],
     generations: [() => generated(), () => response({ error: 'boom' }, 500)] });
@@ -1725,6 +1754,8 @@ test('Dusche: die Stirnwand sagt die Vorpruefung im Foto, der Prompt nennt sie',
   const showerPrompt = shower.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
   assert.match(showerPrompt, /An old shower tray, its kerb or platform is removed down to the floor\./);
   assert.doesNotMatch(showerPrompt, /A bathtub that becomes a shower/);
+  // Die Regel gilt nur fuer die Wanne: die Stirnwand einer Dusche im Foto bleibt.
+  assert.match(showerPrompt, /The short end wall of the shower is the back wall/);
 });
 
 test('eine falsche Dusche kostet keinen zweiten Versuch, der Kunde sieht das Bild, NLD liest den Hinweis', async () => {
@@ -2027,8 +2058,9 @@ test('Bodenplatte und Akzent gehen als eigene Muster mit, mit ihrer Bildnummer i
 test('der Prompt bleibt kurz, und jede genannte Bildnummer hat ihr Bild', async () => {
   // Bis zum 23.09. waren es fuer diese Auswahl rund 2200 Woerter mit rund 80 Verboten. Fenster,
   // Decke und Dusche stehen seit dem 25.09. wieder im geprueften Wortlaut vom 19./20.09. (rund
-  // 1540 Woerter). Die schwerste Auswahl: Atelier mit Akzent, Walk-in, Aufputz, einem Fenster
-  // und dem Grundriss aus der Vorpruefung.
+  // 1540 Woerter). Die schwerste Auswahl ohne Wanne: Atelier mit Akzent, Walk-in, Aufputz, einem Fenster und dem
+  // Grundriss aus der Vorpruefung. Mit Dusche und Wanne sind es mehr (Gegenpruefung vom 27.09.: Atelier mit Einbauwanne
+  // rund 2210 Woerter, alles zusammen mit Dachschraege und drei Fenstern rund 2450).
   const image = () => new Response(Buffer.from(PNG, 'base64'), { status: 200, headers: { 'content-type': 'image/png' } });
   const atelier = optionsForPackage('atelier');
   const tile = atelier.tiles[0];

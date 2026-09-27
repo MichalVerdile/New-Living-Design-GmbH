@@ -488,7 +488,7 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   const mirrorImage = mirror.id === 'spiegelschrank' ? MIRROR_CABINET_PHOTO : mirror.id === 'spiegel' ? LED_MIRROR_PHOTO : null;
 
   // Bilder an Gemini, in dieser Reihenfolge: 1 Foto, dann Platte, Bodenplatte, Akzent,
-  // Waschtischplatte, Unterbau (dieselbe Datei nur einmal), Spiegel, Modul, WC, Platte, Waschtisch, Dusche, Wannenarmatur. Die Nummern stehen so im Prompt.
+  // Waschtischplatte, Unterbau (dieselbe Datei nur einmal), Spiegel, Modul, WC, Waschtisch, Dusche, Wannenarmatur. Die Nummern stehen so im Prompt.
   const references = [swatch, floorSwatch, accentSwatch, topSwatch, baseSwatch === topSwatch ? null : baseSwatch, mirrorImage, moduleImage, wcImage, tapsImage, showerImage, bathImage];
   const imageNumber = (image: Photo | null) => (image ? 2 + references.filter(Boolean).indexOf(image) : 0);
 
@@ -1744,6 +1744,9 @@ async function checkPhoto(photo: Photo, room: 'badezimmer' | 'gaeste-wc', ctx: R
   // Dusche kam um 90 Grad gedreht. Die Wand, an der die Wanne der Laenge nach steht, ist nie ihr schmales Ende: nennt die
   // Vorpruefung beide gleich, gilt keine Stirnwand, und die Dusche folgt nur der Richtung der Wanne.
   const endWall: EndWall | undefined = ['left', 'right', 'back'].includes(parsed.shower_end_wall) ? parsed.shower_end_wall : undefined;
+  // ponytail: die Vorpruefung nennt die Wand, an der die Wanne steht, nicht ausdruecklich ihre Laengsseite. Steht eine
+  // Wanne mit dem Kopfende an der Rueckwand (Halbinsel, Ecke), geht so auch eine richtige Stirnwand verloren; dann gilt nur
+  // die Richtung der Wanne. Abhilfe waere eine eigene Frage nach der Wand der Laengsseite.
   const showerWall = endWall && endWall !== walls?.bathtub ? endWall : undefined;
   return { status: 'ok', layout: walls && seen && near ? { walls, order: seen, nearest: near } : undefined, ceiling, showerWall };
 }
@@ -1787,7 +1790,7 @@ function compareDepth(
 function compareInventory(
   before: Inventory,
   after: Inventory,
-  wanted: { room: 'badezimmer' | 'gaeste-wc'; shower: boolean; bathtub: boolean; cistern: 'aufputz' | 'unterputz' },
+  wanted: { room: 'badezimmer' | 'gaeste-wc'; shower: boolean; bathtub: boolean; cistern: 'aufputz' | 'unterputz'; showerWall?: EndWall },
 ): string | null {
   // Kein Paket enthaelt ein Bidet. Steht es noch da, hat das Modell nicht umgebaut.
   if (after.bidet !== 'none') return `the bidet is still there, on the ${after.bidet} wall`;
@@ -1802,9 +1805,11 @@ function compareInventory(
   if (before.washbasin !== 'none' && after.washbasin !== 'none' && after.washbasin !== before.washbasin) {
     return `the washbasin moved from the ${before.washbasin} wall to the ${after.washbasin} wall`;
   }
-  // Wanne wird Dusche: die Dusche gehoert an die Wand, an der die Wanne stand.
+  // Wanne wird Dusche: die Dusche gehoert an die Wand, an der die Wanne stand. Die Wand am schmalen Ende der Wanne
+  // (Vorpruefung) gilt auch: dort sitzen die Armaturen, und das Pruefmodell nennt oft sie (P5 vom 26.09.). Sonst trieb
+  // der zweite Versuch die Dusche wieder an die Laengswand, gedreht (Gegenpruefung vom 27.09.).
   if (wanted.shower && before.shower === 'none' && before.bathtub !== 'none'
-    && after.shower !== 'none' && after.shower !== before.bathtub) {
+    && after.shower !== 'none' && after.shower !== before.bathtub && after.shower !== wanted.showerWall) {
     return `the new shower stands on the ${after.shower} wall, the bathtub it replaces stood on the ${before.bathtub} wall`;
   }
   return null;
