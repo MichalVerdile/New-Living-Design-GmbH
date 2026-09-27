@@ -699,9 +699,10 @@ test('ein erhaltenes Muretto ist kein Fehler', async () => {
 test('ein neues Muretto, eine Ablage oder eine Nische steht als Hinweis in der Lead-Mail', async () => {
   // Diegos Test vom 19.09.: flache, raumhoch geplattete Wand, Spuelplatte buendig, im
   // Ideenbild ein halbhohes Muretto mit Ablage hinter Waschtisch, WC und Dusche.
-  for (const flags of [
-    { new_wall_element: true },
-    { toilet_on_low_wall_before: false, toilet_on_low_wall_after: true },
+  // Je Antwort ein eigener Satz (P4 der sechsten Probe: der Hinweis stand in der Mail, im Bild war nichts).
+  for (const [flags, hint] of [
+    [{ new_wall_element: true }, /Hinweis: a low wall, ledge, shelf or niche that is not in the photo was added/],
+    [{ toilet_on_low_wall_before: false, toilet_on_low_wall_after: true }, /Hinweis: the toilet now stands against a low wall or boxed pre-wall that is not in the photo/],
   ]) {
     const added = () => checkedInv({ toilet: 'right' }, { toilet: 'right' }, flags);
     const h = harness({ checks: [added] });
@@ -709,7 +710,7 @@ test('ein neues Muretto, eine Ablage oder eine Nische steht als Hinweis in der L
     assert.equal(res.statusCode, 200);
     assert.equal(h.counts().generation, 1);
     const leadMail = h.calls.find((call) => call.url === 'https://api.resend.com/emails');
-    assert.match(JSON.stringify(leadMail.body), /Hinweis: a low wall, ledge, shelf or niche that is not in the photo was added/);
+    assert.match(JSON.stringify(leadMail.body), hint);
   }
   const prompt = harness();
   await prompt.invoke();

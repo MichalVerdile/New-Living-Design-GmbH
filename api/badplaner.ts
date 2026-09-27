@@ -1768,9 +1768,11 @@ async function checkOpenings(
   const hints = [
     compareDepth(after, nearestBefore, nearestAfter),
     parsed.toilet_on_low_wall_before && !parsed.toilet_on_low_wall_after && 'the low wall the toilet stood against is gone',
-    // Beim Aufputz-Spuelkasten zaehlt das Glasmodul nicht: die Pruefung liest es manchmal als Vorwand.
-    (parsed.new_wall_element || (wanted.cistern === 'unterputz' && !parsed.toilet_on_low_wall_before && parsed.toilet_on_low_wall_after))
-      && 'a low wall, ledge, shelf or niche that is not in the photo was added',
+    parsed.new_wall_element && 'a low wall, ledge, shelf or niche that is not in the photo was added',
+    // Beim Aufputz-Spuelkasten zaehlt das Glasmodul nicht: die Pruefung liest es manchmal als Vorwand. Ein eigener Satz, weil
+    // in P4 der sechsten Probe "Muretto dazu" in der Mail stand und im Bild nichts war: so sehen wir, welche Antwort irrte.
+    !parsed.new_wall_element && wanted.cistern === 'unterputz' && !parsed.toilet_on_low_wall_before && parsed.toilet_on_low_wall_after
+      && 'the toilet now stands against a low wall or boxed pre-wall that is not in the photo',
     parsed.wall_element_lost && 'a recess, alcove, niche or step of the wall that is in the photo was filled in or straightened',
     parsed.window_much_bigger && 'the window takes up much more of the result than of the photo',
     // Die Wahl des Kunden (Punkt c): ein unlesbarer Wert zaehlt nicht, die Pruefung bleibt trotzdem gueltig.
