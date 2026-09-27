@@ -6,6 +6,13 @@
  *   GEMINI_API_KEY=... node scripts/badplaner-bench.mjs <faelle.json> <ausgabe> [--runs 3] [--only P1,P5] [--parallel 3]
  *     [--env BADPLANER_MODEL=...] [--list-models] [--dry]
  *
+ * In der Claude-Umgebung Badplaner-Test ohne GEMINI_API_KEY: dort setzt der Proxy (HTTPS_PROXY) den Schluessel selbst ein,
+ * der Pruefstand schickt dann kein x-goog-api-key mit. fetch geht in Node 22 nur mit NODE_USE_ENV_PROXY=1 ueber den
+ * Proxy (ab Node 22.21):
+ *
+ *   NODE_USE_ENV_PROXY=1 node scripts/badplaner-bench.mjs --list-models
+ *   NODE_USE_ENV_PROXY=1 node scripts/badplaner-bench.mjs <faelle.json> <ausgabe> [--runs 3] [--only P1,P5] [--parallel 3]
+ *
  * faelle.json: [{ "name": "P1", "photo": "fotos/P1.jpg", "paket": "atelier", "fields": { "dusche": "walk-in", ... } }]
  * Die Proben P1 bis P10 der siebten Probe stehen in scripts/badplaner-bench-faelle.json; die Fotos dazu legt man als
  * fotos/P1.jpg usw. neben eine Kopie dieser Datei, ausserhalb des Repositorys. Die Pfade gelten relativ zur Datei. Fotos und Ergebnisse gehoeren nie ins Repository: sie zeigen echte Baeder.
@@ -27,7 +34,17 @@ const flag = (name, fallback) => {
 // --dry: ohne Gemini, mit einem festen Bild und einer leeren Pruefung; nur um den Pruefstand selbst zu pruefen.
 const dry = args.includes('--dry');
 const key = dry ? 'dry' : process.env.GEMINI_API_KEY;
-if (!key) throw new Error('GEMINI_API_KEY fehlt: in den Umgebungsvariablen der Arbeitsumgebung setzen, nie im Code.');
+// Ohne Schluessel: Proxy-Modus, der Proxy der Claude-Umgebung setzt ihn bei Google selbst ein.
+const proxy = !key && Boolean(process.env.HTTPS_PROXY || process.env.https_proxy);
+if (!key && !proxy) throw new Error('GEMINI_API_KEY fehlt und kein Proxy (HTTPS_PROXY), der ihn einsetzt: den Schluessel in den Umgebungsvariablen der Arbeitsumgebung setzen, nie im Code.');
+if (proxy && process.env.NODE_USE_ENV_PROXY !== '1') throw new Error('Proxy-Modus ohne GEMINI_API_KEY: mit NODE_USE_ENV_PROXY=1 starten (ab Node 22.21), sonst geht fetch am Proxy vorbei. NODE_USE_ENV_PROXY=1 node scripts/badplaner-bench.mjs ...');
+/** Kopfzeilen an Google: den Wert des Handlers ersetzen durch den gesetzten Schluessel, im Proxy-Modus durch keinen (auch keinen Platzhalter). */
+const googleHeaders = (headers) => {
+  const result = new Headers(headers);
+  result.delete('x-goog-api-key');
+  if (key) result.set('x-goog-api-key', key);
+  return result;
+};
 const DRY_PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAIAAAB7QOjdAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAD0lEQVQImWM4ISd3Qk4OAAh3Agn/2+PxAAAAAElFTkSuQmCC';
 const dryFetch = async (url, init) => {
   const request = JSON.parse(init.body);
@@ -36,8 +53,9 @@ const dryFetch = async (url, init) => {
 };
 
 if (args.includes('--list-models')) {
-  const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200', { headers: { 'x-goog-api-key': key } });
+  const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200', { headers: googleHeaders() });
   const json = await r.json();
+  if (!r.ok) throw new Error(`Modellliste: HTTP ${r.status} ${json.error?.message ?? ''}`);
   for (const model of json.models ?? []) console.log(model.name.replace('models/', ''), '|', (model.supportedGenerationMethods ?? []).join(','));
   process.exit(0);
 }
@@ -98,7 +116,7 @@ async function runOnce(testCase, run, dir) {
       const parts = request.contents?.[0]?.parts ?? [];
       const prompt = parts.find((part) => part.text)?.text ?? '';
       const started = Date.now();
-      const response = dry ? await dryFetch(url, init) : await globalThis.fetch(url, { ...init, headers: { ...init.headers, 'x-goog-api-key': key } });
+      const response = dry ? await dryFetch(url, init) : await globalThis.fetch(url, { ...init, headers: googleHeaders(init.headers) });
       const text = await response.text();
       const ms = Date.now() - started;
       if (request.generationConfig?.responseModalities) {
@@ -137,7 +155,8 @@ async function runOnce(testCase, run, dir) {
     }
     return new Response('not in bench', { status: 404 });
   };
-  const handler = createHandler({ fetch, env: { GEMINI_API_KEY: key, RESEND_API_KEY: 'bench', VERCEL_ENV: 'preview', ...extraEnv } });
+  // Der Handler verlangt einen Schluessel (leer = 503); im Proxy-Modus nur ein Platzhalter, googleHeaders nimmt ihn vor Google heraus.
+  const handler = createHandler({ fetch, env: { GEMINI_API_KEY: key || 'proxy', RESEND_API_KEY: 'bench', VERCEL_ENV: 'preview', ...extraEnv } });
   const res = { headers: {}, statusCode: 200, body: null, setHeader(name, value) { this.headers[name] = value; },
     status(code) { this.statusCode = code; return this; }, json(value) { this.body = value; return this; } };
   const started = Date.now();
