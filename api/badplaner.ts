@@ -25,9 +25,8 @@
  *      Grobe Fehler (mehr Fenster als angegeben, Oeffnung dazu oder weg, andere Decke,
  *      WC oder Waschtisch an anderer Wand oder Stelle, Dusche oder Wanne nicht wie
  *      bestellt, Bidet noch da): zweiter Versuch, wenn die Zeit reicht; ein grob falsches
- *      Bild sieht der Kunde nie, NLD bekommt es mit dem Lead. Der Vordergrund weg: ebenfalls
- *      ein zweiter Versuch, danach wird das Bild trotzdem gezeigt, mit Vermerk. Die Dusche
- *      falsch (Stufe, Rinne, Armaturen), Feineres (Muretto, Nische) und was von der Wahl des
+ *      Bild sieht der Kunde nie, NLD bekommt es mit dem Lead. Der Vordergrund weg (Tuer),
+ *      die Dusche falsch (Stufe, Rinne, Armaturen), Feineres (Muretto, Nische) und was von der Wahl des
  *      Kunden abweicht (Wannenart, Kopfbrause, Zahl und Art der Becken, Spiegel) steht nur als
  *      Hinweis in der Lead-Mail. Ist die Pruefung nicht erreichbar, geht das Bild mit Vermerk hinaus.
  *   5. Lead-Mail an NLD (Resend mit Anhaengen; bei eindeutigem Fehler Formspree ohne
@@ -265,9 +264,7 @@ interface CheckFlags {
   // Im Log fehlte am 20.09. (Colore, 502), welche Antwort "Nische dazu" ausgeloest hatte.
   wallAnswers: Record<string, boolean>;
 }
-// correctable: nur der Vordergrund ist falsch. Das loest den zweiten Versuch aus; bleibt der Fehler, wird das
-// Bild trotzdem gezeigt (siehe handleRender).
-type CheckResult = { status: 'approved'; note?: string; hints?: string[] } | { status: 'rejected'; reason: string; flags: CheckFlags; correctable?: boolean; note?: string; hints?: string[] } | { status: 'unavailable'; detail: string } | { status: 'disabled' };
+type CheckResult = { status: 'approved'; note?: string; hints?: string[] } | { status: 'rejected'; reason: string; flags: CheckFlags } | { status: 'unavailable'; detail: string } | { status: 'disabled' };
 
 /** Each factory owns its best-effort counters. Tests inject HTTP, clock and IDs. */
 export function createHandler(overrides: Partial<BadplanerDependencies> = {}) {
@@ -726,12 +723,11 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
     return result;
   };
   let check = await checkWithUnavailableRetry(gen);
-  let checkAttempt = 1;
   // Diego, 25.09.: die Mail nannte nur den Grund des letzten Versuchs, ob es einen zweiten gab, war nicht
   // zu sehen. Jetzt steht jeder abgelehnte Versuch mit seinem Grund in der Mail, oder warum keiner mehr lief.
   const tries: string[] = [];
   if (check.status === 'rejected') {
-    logRejectedCheck(check, checkAttempt);
+    logRejectedCheck(check, 1);
     tries.push(`1. Versuch: ${check.reason}`);
   }
   // Ein zweiter Durchgang dauert ungefähr so lange wie der erste. Die alte Schranke
@@ -745,37 +741,19 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   const secondPassMs = Math.round(firstPassMs * 1.15) + DELIVERY_RESERVE_MS;
   const secondCheckReserveMs = Math.round((firstPassMs - firstGenerationMs) * 1.15) + DELIVERY_RESERVE_MS;
   if (check.status === 'rejected' && ctx.budget.remaining() >= secondPassMs) {
-    // Ein grob falsches Bild wird nie zur Reserve. Eines, das nur den Vordergrund verlor, schon:
-    // misslingt der zweite Versuch oder zeigt er einen groben Fehler, gilt wieder das erste.
-    const first = { gen, check };
+    const firstReason = check.reason;
     // Der ganze Prompt geht nochmals mit; dazu nur der Grund, nicht eine zweite Liste aller Regeln.
-    const retryPrompt = `${prompt}\nA previous attempt failed the check because ${check.reason}. Start again from image 1 and correct exactly that; everything above still applies.`;
+    const retryPrompt = `${prompt}\nA previous attempt failed the check because ${firstReason}. Start again from image 1 and correct exactly that; everything above still applies.`;
     const second = await generateImage(retryPrompt, photo, references, ctx, photoRatio, secondCheckReserveMs);
-    if (second.ok === false && !first.check.correctable) return res.status(502).json(await leadWithoutImage(`1. Versuch verworfen (${first.check.reason}), 2. Versuch: ${second.detail}`, gen));
-    if (second.ok) {
-      check = await checkWithUnavailableRetry(second);
-      gen = second;
-      checkAttempt = 2;
-      if (check.status === 'rejected') {
-        logRejectedCheck(check, checkAttempt);
-        tries.push(`2. Versuch: ${check.reason}`);
-      }
-      if (check.status === 'approved') checkNote = `1. Versuch verworfen (${first.check.reason}), 2. Versuch ok`;
-    } else tries.push(`2. Versuch: Bilddienst: ${second.detail}`);
-    // Laesst sich das zweite Bild nicht pruefen, gilt ebenfalls das erste: es hat alle groben Pruefungen bestanden.
-    if (first.check.correctable && check.status === 'unavailable') tries.push(`2. Versuch: Prüfung nicht möglich (${check.detail})`);
-    if (first.check.correctable && (second.ok === false || check.status === 'unavailable' || (check.status === 'rejected' && !check.correctable))) {
-      gen = first.gen;
-      check = first.check;
-      checkAttempt = 1;
+    if (second.ok === false) return res.status(502).json(await leadWithoutImage(`1. Versuch verworfen (${firstReason}), 2. Versuch: ${second.detail}`, gen));
+    check = await checkWithUnavailableRetry(second);
+    gen = second;
+    if (check.status === 'rejected') {
+      logRejectedCheck(check, 2);
+      tries.push(`2. Versuch: ${check.reason}`);
     }
+    if (check.status === 'approved') checkNote = `1. Versuch verworfen (${firstReason}), 2. Versuch ok`;
   } else if (check.status === 'rejected') tries.push('kein 2. Versuch (zu wenig Zeit)');
-  // Nur der Vordergrund ist falsch: nach dem zweiten Versuch wird das Bild trotzdem
-  // gezeigt, mit dem Grund in der Lead-Mail, damit der Kunde nicht ohne Bild dasteht.
-  if (check.status === 'rejected' && check.correctable) {
-    checkNote = `Mangel im gezeigten Bild (${checkAttempt}. Versuch) – ${tries.join(' | ')}`;
-    check = { status: 'approved', note: check.note, hints: check.hints };
-  }
   if (check.status === 'rejected') {
     const rejectedNote = `abgelehnt – ${tries.join(' | ')}`;
     const leadDelivery = await sendLeadMail({
@@ -1672,10 +1650,9 @@ async function checkOpenings(
     // Kein Hinweis mehr, an welcher Wand Rinne und Armaturen stehen: in P9 vom 26.09. waren beide falsch, Rinne und
     // Armaturen standen richtig (Diego). Die Waende stehen nur noch im Log.
   ].filter((hint): hint is string => !!hint));
-  // Der Vordergrund bleibt, die Tuer eingeschlossen: das richtet ein zweiter Versuch (Diego, 25.09.).
-  if (parsed.foreground_object_before && !parsed.foreground_object_after) {
-    return { status: 'rejected', reason: 'what stands in the foreground at the edge of image 1 (an open door leaf, a door frame or the edge of a wall) is gone; it must stay at its place and size, exactly as in image 1', flags, correctable: true, note: flags.view_changed ? parsed.reason.slice(0, 200) : undefined, hints };
-  }
+  // Diego, 27.09.: eine Tuer oder Mauerkante vorne, die fehlt, ist kein Grund fuer einen zweiten Versuch, nur ein Hinweis.
+  // In der fuenften Probe loeste sie drei von sieben zweiten Versuchen aus (je rund 35 s).
+  if (parsed.foreground_object_before && !parsed.foreground_object_after) hints.push('the door leaf, door frame or wall edge in the foreground of image 1 is gone');
   // Ein anderer Bildausschnitt wird ebenso nur vermerkt.
   return flags.view_changed ? { status: 'approved', note: parsed.reason.slice(0, 200), hints } : { status: 'approved', hints };
 }

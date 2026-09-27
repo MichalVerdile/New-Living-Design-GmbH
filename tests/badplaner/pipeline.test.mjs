@@ -560,25 +560,18 @@ test('der zweite Versuch bekommt die ganze Liste noch einmal mit', async () => {
   assert.match(retryPrompt, /Whatever is built in the immediate foreground at the edge of image 1/);
 });
 
-test('eine verschwundene Tuer im Vordergrund loest den zweiten Versuch aus', async () => {
+test('eine verschwundene Tuer im Vordergrund ist nur ein Hinweis, kein zweiter Versuch', async () => {
   // Probe vom 17.09.: im Foto steht links vorne der offene Tuerfluegel und nimmt ein
   // Viertel des Bildes ein. Im Ideenbild ist er weg, das Modell hat die Kamera gedreht.
-  // Bis zum 25.09. nur ein Hinweis; dann fehlte die Tuer in P2, P4 und P5, und Diego will das Foto mit der Tuer.
-  const turned = () => checkedInv({}, {}, { foreground_object_before: true, foreground_object_after: false });
+  // Diego, 27.09.: die Tuer ist kein Grund fuer einen zweiten Versuch (fuenfte Probe: drei von sieben zweiten Versuchen).
+  const turned = () => checkedInv({}, {}, { foreground_object_before: true, foreground_object_after: false, view_changed: true, reason: 'camera turned to the right' });
   const h = harness({ checks: [turned] });
   const res = await h.invoke();
   assert.equal(res.statusCode, 200);
-  assert.equal(h.counts().generation, 2);
-  assert.match(h.calls.filter((call) => call.body?.generationConfig?.responseModalities)[1].body.contents[0].parts[0].text,
-    /failed the check because what stands in the foreground at the edge of image 1 \(an open door leaf, a door frame or the edge of a wall\) is gone/);
-  // Bleibt sie auch im zweiten Versuch weg, kommt das Bild trotzdem, mit Vermerk.
-  // Hat sich dabei auch der Bildausschnitt verschoben, steht das ebenfalls in der Mail (Pruefung vom 26.09.).
-  const turnedView = () => checkedInv({}, {}, { foreground_object_before: true, foreground_object_after: false, view_changed: true, reason: 'camera turned to the right' });
-  const twice = harness({ checks: [turned, turnedView] });
-  assert.equal((await twice.invoke()).statusCode, 200);
-  const twiceMail = JSON.stringify(twice.calls.find((call) => call.url === 'https://api.resend.com/emails').body);
-  assert.match(twiceMail, /Mangel im gezeigten Bild \(2\. Versuch\) – 1\. Versuch: what stands in the foreground.* \| 2\. Versuch: what stands in the foreground/);
-  assert.match(twiceMail, /Bildausschnitt verändert: camera turned to the right/);
+  assert.equal(h.counts().generation, 1);
+  const mail = JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails').body);
+  assert.match(mail, /Fensterprüfung.{0,80}ok, Bildausschnitt verändert: camera turned to the right, Hinweis: the door leaf, door frame or wall edge in the foreground of image 1 is gone/);
+  assert.doesNotMatch(mail, /Mangel im gezeigten Bild/);
 });
 
 test('die Wahl des Kunden wird abgelesen, ein Unterschied steht nur als Hinweis in der Mail', async () => {
@@ -1652,32 +1645,6 @@ test('eine falsche Dusche kostet keinen zweiten Versuch, der Kunde sieht das Bil
   assert.equal(h.counts().generation, 1);
   assert.match(JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails').body),
     /Fensterprüfung.*ok, Hinweis: the shower floor is raised/);
-});
-
-test('zeigt der zweite Versuch einen groben Fehler, gilt wieder das erste Bild, das nur den Vordergrund verlor', async () => {
-  const first = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAADElEQVQImWP4z8AAAAMBAQCc479ZAAAAAElFTkSuQmCC';
-  const doorGone = () => checkedInv({}, {}, { foreground_object_before: true, foreground_object_after: false });
-  const h = harness({ generations: [() => generated(first), () => generated()], checks: [doorGone, () => checked(true)] });
-  const res = await h.invoke();
-  assert.equal(res.statusCode, 200);
-  assert.equal(res.body.image.data, first);
-  assert.match(JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails').body),
-    /Mangel im gezeigten Bild \(1\. Versuch\) – 1\. Versuch: what stands in the foreground.* \| 2\. Versuch: an opening was added or lost/);
-  // Scheitert der zweite Versuch ganz, ebenso.
-  const failed = harness({ generations: [() => generated(first), () => response({ error: 'boom' }, 500)], checks: [doorGone] });
-  const failedRes = await failed.invoke();
-  assert.equal(failedRes.statusCode, 200);
-  assert.equal(failedRes.body.image.data, first);
-  assert.match(JSON.stringify(failed.calls.find((call) => call.url === 'https://api.resend.com/emails').body),
-    /Mangel im gezeigten Bild \(1\. Versuch\) – 1\. Versuch: what stands in the foreground.* \| 2\. Versuch: Bilddienst: HTTP 500/);
-  // Laesst sich das zweite Bild nicht pruefen, ebenso: das erste hat alle groben Pruefungen bestanden (Pruefung vom 26.09.).
-  const busy = () => response({ error: 'busy' }, 503);
-  const unchecked = harness({ generations: [() => generated(first), () => generated()], checks: [doorGone, busy, busy, busy, busy] });
-  const uncheckedRes = await unchecked.invoke();
-  assert.equal(uncheckedRes.statusCode, 200);
-  assert.equal(uncheckedRes.body.image.data, first);
-  assert.match(JSON.stringify(unchecked.calls.find((call) => call.url === 'https://api.resend.com/emails').body),
-    /Mangel im gezeigten Bild \(1\. Versuch\) – 1\. Versuch: what stands in the foreground.* \| 2\. Versuch: Prüfung nicht möglich/);
 });
 
 test('Armaturen: Atelier zeigt die Form von Treemme Aurelia in der gewaehlten Oberflaeche', async () => {
