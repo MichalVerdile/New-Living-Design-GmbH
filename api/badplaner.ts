@@ -24,12 +24,18 @@
  *   4. Prompt bauen, zwei Ideenbilder gleichzeitig bei Gemini erzeugen und pruefen lassen (checkOpenings);
  *      gezeigt wird das bessere: ohne groben Fehler, mit den wenigsten Hinweisen.
  *      Grobe Fehler (mehr Fenster als angegeben, Oeffnung dazu oder weg, andere Decke,
- *      WC oder Waschtisch an anderer Wand oder Stelle, Dusche oder Wanne nicht wie
+ *      WC oder Waschtisch an anderer Wand oder Stelle oder weg, Dusche oder Wanne nicht wie
  *      bestellt, Bidet noch da) in beiden: zweiter Durchgang, wenn die Zeit reicht; ein grob falsches
- *      Bild sieht der Kunde nie, NLD bekommt es mit dem Lead. Der Vordergrund weg (Tuer),
- *      die Dusche falsch (Stufe, Rinne, Armaturen), Feineres (Muretto, Nische) und was von der Wahl des
- *      Kunden abweicht (Wannenart, Kopfbrause, Zahl und Art der Becken, Spiegel) steht nur als
- *      Hinweis in der Lead-Mail. Ist die Pruefung nicht erreichbar, geht das Bild mit Vermerk hinaus.
+ *      Bild sieht der Kunde nie, NLD bekommt es mit dem Lead. Schwere Hinweise, die der Kunde sofort
+ *      sieht (alter Spiegel, altes WC, Wannenart, Kopfbrause ohne Dusche, Stufe oder falscher Boden in
+ *      der Dusche, Armaturen auf zwei Waenden), loesen ebenfalls einen zweiten Durchgang aus; gezeigt wird
+ *      dann das beste aller Bilder. Leichte Hinweise (Tuer vorne weg, Punktablauf, Muretto, Nische, Zahl
+ *      und Art der Becken, Spiegelart) stehen nur in der Lead-Mail. Ist die Pruefung nicht erreichbar,
+ *      geht das Bild mit Vermerk hinaus.
+ *   4b. Produktdurchgang: das gewaehlte Bild geht mit den Produktbildern (WC, Platte oder Modul,
+ *      Armaturen, Dusche, Wanne, Spiegel) nochmals an Gemini, das nur die Produkte neu zeichnet. Besteht
+ *      das neue Bild die Pruefung ohne mehr schwere Hinweise, sieht es der Kunde, sonst das erste; NLD
+ *      bekommt beide.
  *   5. Lead-Mail an NLD (Resend mit Anhaengen; bei eindeutigem Fehler Formspree ohne
  *      Bilder). Ohne bestaetigte Annahme kein Erfolg; unklare Zustellung wird nicht
  *      blind wiederholt.
@@ -50,11 +56,13 @@
  *                        "Badplaner <badplaner@newlivingdesign.ch>",
  *                        Domain muss bei Resend verifiziert sein)
  *   BADPLANER_DAILY_CAP  Maximale Anfragen mit Ideenbild pro Tag insgesamt (Default 60); jede erzeugt so viele Bilder,
- *                        wie BADPLANER_CANDIDATES sagt, mit zweitem Durchgang doppelt so viele
+ *                        wie BADPLANER_CANDIDATES sagt, mit zweitem Durchgang doppelt so viele, dazu eines im
+ *                        Produktdurchgang
  *   BADPLANER_MODEL      Gemini-Bildmodell (Default gemini-3-pro-image)
  *   BADPLANER_CHECK_MODEL Gemini-Textmodell fuer Foto- und Bildpruefung (Default
  *                        gemini-3.6-flash); leer lassen = Pruefung bewusst deaktiviert
  *   BADPLANER_CANDIDATES Ideenbilder pro Durchgang, 1 bis 4 (Default 2)
+ *   BADPLANER_PRODUCT_PASS 0 = ohne Produktdurchgang (Default: mit, ein Bild mehr pro Anfrage)
  *
  * Fotos und Ideenbilder werden NICHT gespeichert (kein Blob, kein KV): sie gehen
  * nur an Google zur Bilderzeugung und per E-Mail an uns und an den Kunden. Es gibt
@@ -68,7 +76,7 @@ import { Budget, TimeoutError, type Clock } from '../server/badplaner/budget.js'
 import { normalizeSelection, ValidationError } from '../server/badplaner/validation.js';
 import { normalizeBase64, validateImageBytes, MAX_PHOTO_BASE64, MAX_PLAN_BASE64 } from '../src/pages/badplaner/imageValidation.js';
 import { SANITARY_MODULE_PHOTO } from '../server/badplaner/sanitaermodul.js';
-import { WC_PHOTO } from '../server/badplaner/wc.js';
+import { CIELO_WC_PHOTO, FLUSH_PLATE_PHOTO, WC_PHOTO } from '../server/badplaner/wc.js';
 import { LED_MIRROR_PHOTO, MIRROR_CABINET_PHOTO } from '../server/badplaner/spiegel.js';
 import { AURELIA_BASIN_PHOTO, AURELIA_BATH_FLOOR_PHOTO, AURELIA_BATH_WALL_PHOTO, AURELIA_SHOWER_PHOTO } from '../server/badplaner/aurelia.js';
 import { UP_AUFPUTZ_BATH_PHOTO, UP_AUFPUTZ_SHOWER_PHOTO, UP_BASIN_PHOTO, UP_BATH_PHOTO, UP_SHOWER_PHOTO } from '../server/badplaner/up.js';
@@ -267,7 +275,7 @@ interface CheckFlags {
   // Im Log fehlte am 20.09. (Colore, 502), welche Antwort "Nische dazu" ausgeloest hatte.
   wallAnswers: Record<string, boolean>;
 }
-type CheckResult = { status: 'approved'; note?: string; hints?: string[] } | { status: 'rejected'; reason: string; flags: CheckFlags } | { status: 'unavailable'; detail: string } | { status: 'disabled' };
+type CheckResult = { status: 'approved'; note?: string; hints?: string[]; serious?: string[] } | { status: 'rejected'; reason: string; flags: CheckFlags } | { status: 'unavailable'; detail: string } | { status: 'disabled' };
 
 /** Each factory owns its best-effort counters. Tests inject HTTP, clock and IDs. */
 export function createHandler(overrides: Partial<BadplanerDependencies> = {}) {
@@ -459,10 +467,12 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   // Vorwand. Das Bild liegt im Code, darum kann es weder fehlen noch Zeit kosten.
   const moduleImage = cistern === 'aufputz' ? SANITARY_MODULE_PHOTO : null;
   // Das neue WC als Bild (Diego, 26.09.): mit Worten allein blieb in P4 und P8 ein WC wie das alte. In der fuenften
-  // Probe war es 7 von 8 Mal das neue. Die Platte OLI Blink geht seit dem 27.09. nur als Text mit: ihr Bild ergab in
-  // P2, P4, P7 und P8 trotzdem eine Platte wie von Geberit, und die Platte mit zwei runden Knoepfen stand im Verdacht,
-  // den Waschtisch in P7 auf eine Platte zu setzen.
-  const wcImage = WC_PHOTO;
+  // Probe war es 7 von 8 Mal das neue. Das Atelier hat die Keramik von Cielo, das WC Mare (Diego, 27.09.). Die Platte
+  // OLI Blink geht im ersten Durchgang nur als Text mit: ihr Bild ergab in P2, P4, P7 und P8 trotzdem eine Platte wie
+  // von Geberit, und die Platte mit zwei runden Knoepfen stand im Verdacht, den Waschtisch in P7 auf eine Platte zu
+  // setzen. Ihr Bild kommt im Produktdurchgang.
+  const wcImage = isAtelier ? CIELO_WC_PHOTO : WC_PHOTO;
+  const wcShape = isAtelier ? 'its smooth body that narrows towards its rounded underside, with a thin flat seat and lid' : 'its flat, squared back, rounded only at the front';
   // Die Armaturen als Produktfoto, weil die Worte allein nur allgemeine Armaturen ergaben (Aurelia am 20.09.,
   // Up+ in P3 und P4 vom 25.09.). Nur Armaturen, kein Raum. Ohne Dusche nur die Waschtischarmatur, im Bild wie
   // im Text: mit dem Duschset zeichnete das Modell am 25.09. (Jonathan, Atelier ohne Dusche) ueber der
@@ -517,9 +527,24 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   const tapPrompt = !noShower ? taps.prompt + bathFiller
     : bathFiller ? `${basinTaps}${bathFiller}; no overhead shower, no shower rail and no shower mixer anywhere`
     : `${basinTaps}; no shower mixer, bath filler or shower controls`;
+  // Der Produktdurchgang (weiter unten) zeichnet nur die Produkte neu, jedes mit seinem Bild und seinem Satz; Bild 1 ist
+  // dort das gepruefte Ideenbild. Ein Produkt ohne Bild bleibt, wie der erste Durchgang es gezeichnet hat.
+  const showerTaps = taps.prompt.match(/; in a shower ([^;]*)/)?.[1];
+  const products = ([
+    [wcImage, (n: number) => `Image ${n}, the toilet: it becomes exactly the toilet bowl of image ${n}, with ${wcShape}, wall-hung and rimless, in ${sanitary.prompt}, with seat and lid in the same ${sanitary.prompt}, not wood.`],
+    [cistern === 'unterputz' ? FLUSH_PLATE_PHOTO : null, (n: number) => `Image ${n}, the flush plate of the toilet: it becomes exactly the OLI Blink plate of image ${n}, in ${finish.prompt}: a flat rectangular plate, wider than high, with two identical small round knobs of the same size side by side and a plus sign under the left one and a minus sign under the right one; never one big and one small button, never a ring around a button and never rectangular buttons.`],
+    [moduleImage, (n: number) => `Image ${n}, the sanitary module behind the toilet: it becomes exactly the OLI QR module of image ${n}: a glass and steel panel about 50 cm wide, 115 cm high and 11 cm deep that stands on the floor about 11 cm in front of the wall, with its brushed steel side edge clearly visible, an opaque white glass front in two parts and a small oval push button in the glass near its top; the toilet hangs on it; no flush plate, never tiled, boxed in or sunk into the wall.`],
+    [tapsImage, (n: number) => `Image ${n}, the tap at each washbasin: it becomes exactly the fitting of image ${n}: ${basinTaps}.`],
+    [showerTaps ? showerImage : null, (n: number) => `Image ${n}, the shower fittings: they become exactly the fittings of image ${n}, in ${finish.prompt}: ${showerTaps}. They all sit together on the wall where image 1 has the hand shower; any other shower control on another wall is removed, and that wall is tiled like the rest.`],
+    [bathImage, (n: number) => `Image ${n}, the bath mixer: it becomes exactly the fitting of image ${n}, in ${finish.prompt}: ${bathFiller.replace(/^; /, '')}.`],
+    [mirrorImage, (n: number) => `Image ${n}, the mirror above the washbasin: it becomes exactly the mirror of image ${n}: ${mirror.prompt}; nothing of the old mirror, its frame or a lamp stays, and there is no lamp or light bar above it.`],
+  ] as [Photo | null, (n: number) => string][]).filter((item): item is [Photo, (n: number) => string] => !!item[0]);
+  const productReferences = products.map(([image]) => image);
+  const productPrompt = buildProductPrompt(room, products.map(([, text], index) => text(index + 2)));
 
   // Die Stirnwand der Dusche liest die Vorpruefung am schmalen Ende von Wanne oder Dusche im Foto.
   const showerWall = photoCheck.status === 'ok' && shower && shower.id !== 'keine' ? photoCheck.showerWall : undefined;
+  const showerLongWall = showerWall && photoCheck.status === 'ok' ? photoCheck.showerLongWall : undefined;
 
   // Prompt (englisch; Vorlage aus dem Test, mit eingesetzten Wahlwerten)
   const prompt = buildPrompt({
@@ -559,6 +584,7 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
     baseImageNumber: imageNumber(baseSwatch),
     moduleImageNumber: imageNumber(moduleImage),
     wcImageNumber: imageNumber(wcImage),
+    wcShape,
     plateFinish: finish.prompt,
     tapsImageNumber: imageNumber(tapsImage),
     showerImageNumber: imageNumber(showerImage),
@@ -569,6 +595,7 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
     layout: photoCheck.status === 'ok' ? photoCheck.layout : undefined,
     ceiling: photoCheck.status === 'ok' ? photoCheck.ceiling : undefined,
     showerWall,
+    showerLongWall,
   });
 
   // Auswahl in Klartext: dieselben Zeilen für Lead- und Kundenmail. Sie
@@ -680,6 +707,28 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
       error: `Auf Ihrem Foto sehen wir ${bath}. Das Gäste-WC planen wir ohne Dusche und Badewanne. Bitte wählen Sie in Schritt 1 «Badezimmer» und laden Sie das Foto danach nochmals hoch.`,
     });
   }
+  // Diego, 27.09.: Badewanne und Dusche zusammen nur, wenn das Foto schon beide zeigt. Sonst muesste das Modell eine
+  // davon dazuerfinden, und wohin, weiss niemand. Wie beim Gaeste-WC sagt es der Badplaner vor dem Bild.
+  const wantsBathAndShower = !!shower && shower.id !== 'keine' && !!bathtub && bathtub.id !== 'keine';
+  if (wantsBathAndShower && photoWalls && (photoWalls.bathtub === 'none' || photoWalls.shower === 'none')) {
+    const seen = bath ? `nur ${bath}` : 'weder eine Badewanne noch eine Dusche';
+    console.warn('[badplaner] Badewanne und Dusche gewaehlt, Foto zeigt', seen);
+    const bothDelivery = await sendLeadMail({
+      subject: preview
+        ? `Badplaner-Fehler ohne Kontakt – ${pkg.name} – Wanne und Dusche, Foto zeigt nicht beide`
+        : `Badplaner-Lead: ${name} - ${pkg.name} - Wanne und Dusche, Foto zeigt nicht beide`,
+      replyTo: email || undefined,
+      intro: `Badewanne und Dusche gewählt, auf dem Foto ist aber ${seen} zu sehen. Es wurde kein Ideenbild erzeugt; der Besucher wurde gebeten, nur eines von beiden zu wählen. Foto und Auswahl liegen bei.`,
+      details: leadDetails(`nicht nötig: Badewanne und Dusche gewählt, Foto zeigt ${seen}`, 'nicht erzeugt: Badewanne und Dusche gewählt, Foto zeigt nicht beide'),
+      attachments: [{ filename: photoName, content: photo.data }],
+    }, ctx);
+    delivered = true;
+    return res.status(422).json({
+      ok: false, code: 'BATH_AND_SHOWER_NOT_IN_PHOTO',
+      delivery: { lead: bothDelivery.status, leadProvider: bothDelivery.provider, leadAttachments: bothDelivery.attachments },
+      error: `Auf Ihrem Foto sehen wir ${seen}. Badewanne und Dusche zusammen planen wir nur, wenn auf dem Foto beide schon zu sehen sind. Bitte wählen Sie in Schritt 2 unter «Dusche / Badewanne» nur die Dusche oder nur die Badewanne und erstellen Sie das Ideenbild danach nochmals.`,
+    });
+  }
 
   console.info('[badplaner] Seitenverhältnis', photoRatio || 'automatisch');
   // Wenn der Bilddienst nichts liefert, war der Kunde trotzdem da: Name, Telefon
@@ -732,8 +781,9 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   // ponytail: zwei Bilder pro Durchgang; BADPLANER_CANDIDATES erlaubt 1 bis 4, wenn das Rate-Limit von Gemini mitmacht.
   // Ohne Pruefung gibt es nichts zu waehlen: dann ein Bild.
   const candidates = checkModel() ? Math.min(4, Math.max(1, Math.trunc(Number(env.BADPLANER_CANDIDATES)) || 2)) : 1;
+  // Ein schwerer Hinweis wiegt viel, ein leichter wenig, ein anderer Bildausschnitt am wenigsten.
   const score = (result: CheckResult) => result.status === 'rejected' ? 1000 : result.status === 'unavailable' ? 100
-    : result.status === 'approved' ? 2 * (result.hints?.length ?? 0) + (result.note ? 1 : 0) : 0;
+    : result.status === 'approved' ? 10 * (result.serious?.length ?? 0) + 2 * (result.hints?.length ?? 0) + (result.note ? 1 : 0) : 0;
   type Attempt = { number: number; gen: { mime: string; data: string }; check: CheckResult };
   const passStarted = dependencies.clock.now();
   let firstGenerationMs = 0;
@@ -754,7 +804,7 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
     await Promise.race([Promise.all(runs), early]);
     const done = [...results].sort((a, b) => a.number - b.number);
     const attempts = done.filter((result): result is Attempt => 'check' in result);
-    const failures = done.flatMap((result) => ('detail' in result ? [`${result.number}. Versuch: Bilddienst: ${result.detail}`] : []));
+    const failures = done.flatMap((result) => ('detail' in result ? [`Bild ${result.number}: Bilddienst: ${result.detail}`] : []));
     return { attempts, failures };
   };
   const best = (attempts: Attempt[]) => attempts.reduce((chosen, attempt) => (score(attempt.check) < score(chosen.check) ? attempt : chosen));
@@ -766,15 +816,15 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
     for (const attempt of attempts) {
       if (attempt.check.status !== 'rejected') continue;
       logRejectedCheck(attempt.check, attempt.number);
-      tries.push(`${attempt.number}. Versuch: ${attempt.check.reason}`);
-      discarded.push(`${attempt.number}. Versuch verworfen (${attempt.check.reason})`);
+      tries.push(`Bild ${attempt.number}: ${attempt.check.reason}`);
+      discarded.push(`Bild ${attempt.number} verworfen (${attempt.check.reason})`);
     }
     tries.push(...failures);
     discarded.push(...failures);
   };
   const first = await pass(prompt, 1);
   if (!first.attempts.length) {
-    return res.status(502).json(await leadWithoutImage(`Bilddienst: ${first.failures.map((failure) => failure.replace(/^\d+\. Versuch: Bilddienst: /, '')).join(' | ')}`));
+    return res.status(502).json(await leadWithoutImage(`Bilddienst: ${first.failures.map((failure) => failure.replace(/^Bild \d+: Bilddienst: /, '')).join(' | ')}`));
   }
   note(first.attempts, first.failures);
   let chosen = best(first.attempts);
@@ -789,26 +839,31 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   const firstPassMs = dependencies.clock.now() - passStarted;
   const secondPassMs = Math.round(firstPassMs * 1.15) + DELIVERY_RESERVE_MS;
   const secondCheckReserveMs = Math.round((firstPassMs - firstGenerationMs) * 1.15) + DELIVERY_RESERVE_MS;
-  if (chosen.check.status === 'rejected' && ctx.budget.remaining() >= secondPassMs) {
+  // Ein zweiter Durchgang, wenn alle Bilder einen groben Fehler haben oder das beste einen schweren Hinweis (Diego, 27.09.).
+  // Gezeigt wird danach das beste aller Bilder: ein schwerer Hinweis allein laesst niemanden ohne Bild.
+  const seriousFaults = chosen.check.status === 'approved' ? chosen.check.serious ?? [] : [];
+  if ((chosen.check.status === 'rejected' || seriousFaults.length) && ctx.budget.remaining() >= secondPassMs) {
     // Der ganze Prompt geht nochmals mit; dazu nur die Gruende, nicht eine zweite Liste aller Regeln.
-    const reasons = [...new Set(first.attempts.map((attempt) => (attempt.check as { reason: string }).reason))];
-    const retryPrompt = `${prompt}\nA previous attempt failed the check because ${reasons.join('; another one because ')}. Start again from image 1 and correct exactly that; everything above still applies.`;
+    const retryPrompt = chosen.check.status === 'rejected'
+      ? `${prompt}\nA previous attempt failed the check because ${[...new Set(first.attempts.map((attempt) => (attempt.check as { reason: string }).reason))].join('; another one because ')}. Start again from image 1 and correct exactly that; everything above still applies.`
+      : `${prompt}\nA previous attempt was wrong because ${seriousFaults.join('; and because ')}. Start again from image 1 and correct exactly that; everything above still applies.`;
     const second = await pass(retryPrompt, candidates + 1, secondCheckReserveMs);
-    if (!second.attempts.length) return res.status(502).json(await leadWithoutImage([...discarded, ...second.failures].join(', ').replace(/Versuch: Bilddienst: /g, 'Versuch: '), chosen.gen));
+    if (!second.attempts.length && chosen.check.status === 'rejected') {
+      return res.status(502).json(await leadWithoutImage([...discarded, ...second.failures].join(', ').replace(/(Bild \d+): Bilddienst: /g, '$1: '), chosen.gen));
+    }
     note(second.attempts, second.failures);
     secondAttempts = second.attempts;
-    chosen = best(second.attempts);
-  } else if (chosen.check.status === 'rejected') tries.push(`kein ${candidates + 1}. Versuch (zu wenig Zeit)`);
-  const gen = chosen.gen;
-  const check = chosen.check;
+    chosen = best([...first.attempts, ...second.attempts]);
+  } else if (chosen.check.status === 'rejected') tries.push('kein zweiter Durchgang (zu wenig Zeit)');
+  let gen: { mime: string; data: string } = chosen.gen;
+  let check: CheckResult = chosen.check;
   // Auch die Bilder, die geprueft, aber nicht gezeigt wurden, stehen in der Mail, mit ihren Hinweisen: so sehen wir, wie
   // oft welcher Hinweis vorkommt (Diego, 25.09., Punkt c), und welches Bild der Kunde bekam.
   const notShown = [...first.attempts, ...secondAttempts].filter((attempt) => attempt !== chosen && attempt.check.status !== 'rejected')
-    .map((attempt) => `${attempt.number}. Versuch nicht gezeigt${attempt.check.status === 'unavailable' ? ' (ungeprüft)'
+    .map((attempt) => `Bild ${attempt.number} nicht gezeigt${attempt.check.status === 'unavailable' ? ' (ungeprüft)'
       : attempt.check.status === 'approved' && attempt.check.hints?.length ? ` (Hinweise: ${attempt.check.hints.join('; ')})` : ''}`);
-  const byNumber = (a: string, b: string) => parseInt(a, 10) - parseInt(b, 10);
+  const byNumber = (a: string, b: string) => parseInt(a.replace(/^Bild /, ''), 10) - parseInt(b.replace(/^Bild /, ''), 10);
   const others = [...discarded, ...notShown].sort(byNumber);
-  if (check.status === 'approved' && others.length) checkNote = `${others.join(', ')}, ${chosen.number}. Versuch ok`;
   if (check.status === 'rejected') {
     const rejectedNote = `abgelehnt – ${tries.join(' | ')}`;
     const leadDelivery = await sendLeadMail({
@@ -841,6 +896,37 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
         : 'Ihr Ideenbild hat unsere Qualitätsprüfung nicht bestanden und wird deshalb nicht angezeigt. Ihre Angaben und Ihr Foto sind bei uns. Wir melden uns persönlich bei Ihnen.',
     });
   }
+  // Produktdurchgang (Diego, 27.09.: "sistemare una volta per sempre, anche con immagini, il costo non conta"): das
+  // gepruefte Bild bleibt, und ein zweiter, kurzer Auftrag ersetzt nur die Produkte nach ihren Vorlagen. Im ersten
+  // Durchgang, mit Raum, Platten und allen Produkten zugleich, blieben sie in sechs Proben oft falsch: die Platte wie von
+  // Geberit, die Duscharmaturen, der alte Spiegel, Aurelia wie Up+. Auch dieses Bild vergleicht die Pruefung mit dem Foto;
+  // faellt es durch oder hat es einen schweren Hinweis mehr, bleibt das erste. BADPLANER_PRODUCT_PASS=0 schaltet ihn ab.
+  let productNote = '';
+  let productOther: { name: string; image: { mime: string; data: string } } | undefined;
+  if (env.BADPLANER_PRODUCT_PASS !== '0' && productReferences.length) {
+    if (ctx.budget.remaining() >= Math.round(firstPassMs * 1.15) + DELIVERY_RESERVE_MS) {
+      const edited = await generateImage(productPrompt, gen, productReferences, ctx, photoRatio, secondCheckReserveMs);
+      if (edited.ok === false) productNote = `Produktdurchgang: Bilddienst: ${edited.detail}`;
+      else {
+        const editedCheck = await checkWithUnavailableRetry(edited);
+        const seriousBefore = check.status === 'approved' ? check.serious?.length ?? 0 : Number.POSITIVE_INFINITY;
+        if (editedCheck.status === 'disabled' || (editedCheck.status === 'approved' && (editedCheck.serious?.length ?? 0) <= seriousBefore)) {
+          productOther = { name: 'vor-produktdurchgang', image: gen };
+          gen = edited;
+          check = editedCheck;
+          productNote = 'Produktdurchgang ok';
+        } else {
+          productOther = { name: 'produktdurchgang-nicht-gezeigt', image: edited };
+          productNote = editedCheck.status === 'rejected' ? `Produktdurchgang verworfen (${editedCheck.reason})`
+            : editedCheck.status === 'unavailable' ? `Produktdurchgang ungeprüft (${editedCheck.detail}), nicht gezeigt`
+              : `Produktdurchgang nicht gezeigt (${(editedCheck.status === 'approved' ? editedCheck.serious ?? [] : []).join('; ')})`;
+        }
+      }
+    } else productNote = 'kein Produktdurchgang (zu wenig Zeit)';
+    console.info('[badplaner]', productNote);
+  }
+  if (check.status === 'approved' && others.length) checkNote = `${others.join(', ')}, Bild ${chosen.number} ${chosen.check.status === 'approved' ? 'ok' : 'ungeprüft'}`;
+  if (check.status === 'approved' && productNote) checkNote = `${checkNote}, ${productNote}`;
   if (check.status === 'approved' && check.note) {
     checkNote = checkNote + ', Bildausschnitt verändert: ' + check.note;
     console.info('[badplaner] Bildausschnitt verändert, Ideenbild trotzdem geliefert:', check.note);
@@ -851,13 +937,15 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
     console.info('[badplaner]', hint);
   }
   if (check.status === 'unavailable') {
-    checkNote = [`nicht möglich (${check.detail})`, ...(others.length ? [`${chosen.number}. Versuch gezeigt`] : []), ...[...tries.filter((entry) => !entry.startsWith('kein ')), ...notShown].sort(byNumber)].join(' | ');
+    checkNote = [`nicht möglich (${check.detail})`, ...(others.length ? [`Bild ${chosen.number} gezeigt`] : []), ...[...tries.filter((entry) => !entry.startsWith('kein ')), ...notShown].sort(byNumber), ...(productNote ? [productNote] : [])].join(' | ');
   }
-  if (check.status === 'disabled') checkNote = 'deaktiviert';
+  if (check.status === 'disabled') checkNote = ['deaktiviert', productNote].filter(Boolean).join(', ');
   console.log('[badplaner] Fensterprüfung:', checkNote);
 
   // Lead-Mail an NLD (Resend mit Anhängen, sonst Formspree ohne Bilder)
   const imageName = gen.mime === 'image/png' ? 'ideenbild.png' : 'ideenbild.jpg';
+  // Das zweite Bild des Produktdurchgangs geht mit, gezeigt oder nicht: so sieht NLD, was er geaendert hat.
+  const baseAttachment = productOther ? [{ filename: `${productOther.name}.${productOther.image.mime === 'image/png' ? 'png' : 'jpg'}`, content: productOther.image.data }] : [];
   const details = leadDetails(checkNote);
   if (preview) {
     // Foto und Bild gehen jetzt an NLD: nur hier liegt das Foto, die Anfrage bringt
@@ -870,6 +958,7 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
       attachments: [
         { filename: photoName, content: photo.data },
         { filename: imageName, content: gen.data },
+        ...baseAttachment,
       ],
     }, ctx);
     if (draftDelivery.status !== 'accepted') console.error('[badplaner] Entwurf-Mail nicht bestaetigt', draftDelivery.status);
@@ -889,6 +978,7 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
     attachments: [
       { filename: photoName, content: photo.data },
       { filename: imageName, content: gen.data },
+      ...baseAttachment,
     ],
   }, ctx);
   if (leadDelivery.status !== 'accepted') return res.status(502).json({
@@ -1223,7 +1313,7 @@ function tapDescription(
   // am 26.09. drei Hebel und den Anschluss dazu, Katalog S. 16), Kopfbrause IT RTBR 376 CC (500 x 200).
   if (pkg === 'atelier') {
     return {
-      prompt: `concealed built-in (Unterputz) Treemme Aurelia wall fittings in ${finish.prompt}: at each washbasin exactly two separate small round wall rosettes (about 7.5 cm) side by side above the basin, no wall plate and nothing between them: from the left one a long slim spout with flat facets runs about 20 cm out from the wall and bends gently down at its end, and the right one carries the only lever: a short cylinder with a flat paddle lever hanging down; in a shower in one row at the same height: the hose outlet in one small round wall piece that also holds a slim stick hand shower upright on its hose, and beside it exactly two small round wall rosettes, each a short cylinder with the same flat lever, and above them on the same wall, just below the ceiling, a thin flat rectangular overhead shower plate (about 50 × 20 cm) that sticks straight out from the wall, fixed to it by its short end, with its nozzles facing down`,
+      prompt: `concealed built-in (Unterputz) Treemme Aurelia wall fittings in ${finish.prompt}: at each washbasin exactly two separate small round wall rosettes (about 7.5 cm) side by side above the basin, no wall plate and nothing between them: from the left one a long slim spout, a flat bar with flat sides and never a round tube, runs about 20 cm out from the wall and bends gently down at its end, and the right one carries the only lever: a short cylinder with a flat paddle lever hanging down; in a shower in one row at the same height: the hose outlet in one small round wall piece that also holds a slim stick hand shower upright on its hose, and beside it exactly two small round wall rosettes of the same size, the mixer and the diverter, each a short cylinder with the same flat lever and never one large plate with both, and above them on the same wall, just below the ceiling, a thin flat rectangular overhead shower plate (about 50 × 20 cm) that sticks straight out from the wall, fixed to it by its short end, with its nozzles facing down`,
       label: `${finish.label}, ${seriesText}`,
     };
   }
@@ -1285,6 +1375,7 @@ function buildPrompt(v: {
   baseImageNumber: number;
   moduleImageNumber: number;
   wcImageNumber?: number;
+  wcShape?: string;
   plateFinish?: string;
   tapsImageNumber?: number;
   showerImageNumber?: number;
@@ -1295,6 +1386,7 @@ function buildPrompt(v: {
   layout?: Layout;
   ceiling?: Ceiling;
   showerWall?: EndWall;
+  showerLongWall?: EndWall;
   tileIsMosaicSample?: boolean;
   floorIsMosaicSample?: boolean;
 }): string {
@@ -1356,14 +1448,14 @@ function buildPrompt(v: {
         v.wantsBathtub ? `a ${v.bathtubPrompt}` : 'no bathtub and no bath filler', // die Wannen nennen ihren Platz selbst
       ].join('; ');
   // Ein Holzsitz auf weisser Keramik war einer der Befunde vom 16.09.
-  const seat = `${v.wcImageNumber ? `the new toilet of image ${v.wcImageNumber} with its flat, squared back, rounded only at the front, never shaped like the old one, ` : ''}wall-hung and rimless in ${v.sanitaryPrompt}, with seat and lid in the same ${v.sanitaryPrompt}, not wood`;
+  const seat = `${v.wcImageNumber ? `the new toilet of image ${v.wcImageNumber} with ${v.wcShape}, never shaped like the old one, ` : ''}wall-hung and rimless in ${v.sanitaryPrompt}, with seat and lid in the same ${v.sanitaryPrompt}, not wood`;
   // Die Wahl des Kunden entscheidet (Diego, 26.09.): Aufputz heisst Modul. Bis dahin galt das Foto ("nur eine Platte,
   // dann kein Modul"); das Modell las die Bedingung falsch und stellte in P3 trotzdem ein Modul.
   const toilet = v.cistern === 'aufputz'
-    ? `the old surface-mounted cistern with its casing, or the old flush plate, is removed completely; behind the toilet, in front of the wall or low wall it hangs on, stands the sanitary module of image ${v.moduleImageNumber}: a factory-made glass and steel panel about 50 cm wide, 115 cm high and 11 cm deep, from the floor up, never sunk into the wall, with a white glass front in two parts, a narrow brushed steel edge and a small oval push button in the glass front near its top, no flush plate, not tiled or boxed in; the toilet is ${seat}, and hangs on the module at exactly the old toilet position; the wall behind stays where it is`
+    ? `the old surface-mounted cistern with its casing, or the old flush plate, is removed completely; behind the toilet, in front of the wall or low wall it hangs on, stands the sanitary module of image ${v.moduleImageNumber}: a factory-made glass and steel panel about 50 cm wide, 115 cm high and 11 cm deep, from the floor up, standing about 11 cm out from the wall with its steel side edge clearly visible, never sunk into it, with an opaque white glass front in two parts, a narrow brushed steel edge and a clearly visible small oval push button in the glass front near its top, no flush plate, not tiled or boxed in; the toilet is ${seat}, and hangs on the module at exactly the old toilet position; the wall behind stays where it is`
     // Diegos Befund vom 17.09.: das WC haengt an einem Muretto, das den Spuelkasten traegt;
     // das Modell hatte es eingeebnet. Am 19.09. baute es umgekehrt eines vor eine flache Wand.
-    : `the cistern stays hidden in the wall where it is, and no sanitary module is added. A toilet on a flat full-height wall stays on that flat wall, which is only newly tiled. A toilet that hangs on a low wall or boxed pre-wall in image 1 stays on its front, and that low wall stays with the same place, length, height and depth, only newly tiled; the toilet is not pushed back to the wall behind. The toilet is ${seat}, at its existing position, and its old flush plate is replaced, at the same place on the wall, by a new flat rectangular flush plate in ${v.plateFinish} with two small separate round push buttons side by side, never rectangular buttons`;
+    : `the cistern stays hidden in the wall where it is, and no sanitary module is added. A toilet on a flat full-height wall stays on that flat wall, which is only newly tiled. A toilet that hangs on a low wall or boxed pre-wall in image 1 stays on its front, and that low wall stays with the same place, length, height and depth, only newly tiled; the toilet is not pushed back to the wall behind. The toilet is ${seat}, at its existing position, and its old flush plate is replaced, at the same place on the wall, by a new flat rectangular flush plate in ${v.plateFinish} with two identical small round knobs of the same size side by side and a plus and a minus sign under them, never one big and one small button and never rectangular buttons`;
   // Die gewaehlte Sanitaerkeramik gilt fuer WC und Waschbecken. Ohne das hier
   // blieb das Becken weiss, waehrend das WC farbig war: zwei Farben in einem Bad.
   const basinColour = v.basinIsCeramic ? `, the basin in the same ${v.sanitaryPrompt} as the toilet` : '';
@@ -1377,7 +1469,7 @@ function buildPrompt(v: {
     `PHOTO EDITING TASK, not a design task. Image 1 is a photograph of the customer's existing ${roomName}. The result is that same photograph after the renovation: the same picture from the same spot, with the same lens, the same crop and the same edges, in which only the surfaces and products named under CHANGE have been replaced, each one in its own place. Someone who knows this ${roomName} must recognise it at first glance. Do not design a new ${roomName} and do not show a showroom.${references}`,
     v.layout ? layoutPrompt(v.layout) : '',
     `This is an edit of image 1, not a new picture. Keep image 1 and change only what the CHANGE list names. Everything else stays exactly as it is: the camera position, angle, lens and framing, the same crop and the same aspect ratio, the walls and where they stand, with every niche, ledge, projection and step they have in image 1 and no others, the ceiling and the room height, the room proportions, every window, roof window and door at its exact size and position, and a radiator only where image 1 has one. ${ceilingRule} Never zoom out, never widen the view, never show floor, wall or ceiling beyond the edges of image 1, never create extra floor area. Whatever is built in the immediate foreground at the edge of image 1 belongs to the picture and stays: an open door leaf, a door frame, the edge of a wall. It keeps its place and takes up the same part of the picture as before, and is never removed to show more of the room. A loose piece of furniture at the edge is removed like all loose furniture: the floor and the walls behind it continue, and the camera stays exactly where it is. Every window keeps the same share of the picture it has in image 1; do not move closer to it and do not make it larger. ${windowRule}${glassRule}`,
-    `KEEP THE POSITIONS. A half-height wall, a low built wall or a boxed pre-wall that a fixture stands against is part of the room, not furniture: it keeps its place, its length, its height and its depth, and the fixture stays mounted on it. Every fixture keeps the wall or low wall it stands against in image 1 and its place along it, measured against the corners, the door and the window next to it. The toilet keeps its wall and its place because its drain cannot be moved${v.ceiling === 'sloped' ? ': under the sloping ceiling it stays under that sloping ceiling and is never moved to a straight or rear wall to gain headroom' : ''}. The washbasin keeps its wall and its place. ${v.layout?.walls.bathtub === 'none' ? 'An old shower tray, its kerb or platform is removed down to the floor.' : "A bathtub that becomes a shower uses only the bathtub's own footprint, on the same wall and in the same direction as the bathtub; the bathtub and any raised base under it are removed down to the floor. So is an old shower tray, its kerb or platform."}${v.showerWall ? ` The short end wall of the shower is the ${v.showerWall} wall seen from the camera: the mixer, the overhead shower and the hand shower sit on it${v.trayShower ? '' : ', and the channel drain lies along its foot'}.` : ''} NO NEW WALLS: never add a wall, a partition, a half-height wall, a boxed pre-wall, a ledge, a shelf or a niche that image 1 does not show, not behind the toilet, not behind the washbasin and not in the shower. Where image 1 shows one flat wall, the result shows that same flat wall with new tiles: it never steps forward and never gets a flat top at mid-height. NOTHING IS FILLED IN EITHER: every recess, alcove, niche, wall offset, corner step and wall projection that image 1 shows stays exactly where it is, with the same width, depth and height, above all in the shower area. A shower or bathtub that stands in a recess or alcove stays inside it, and the new tiles follow the wall into the recess and around its corners. Never fill a recess, never close an alcove, never tile a niche over flush and never straighten a stepped wall into one flat wall. Only surfaces, sanitary fixtures, taps, furniture and lights change.`,
+    `KEEP THE POSITIONS. A half-height wall, a low built wall or a boxed pre-wall that a fixture stands against is part of the room, not furniture: it keeps its place, its length, its height and its depth, and the fixture stays mounted on it. Every fixture keeps the wall or low wall it stands against in image 1 and its place along it, measured against the corners, the door and the window next to it. The toilet keeps its wall and its place because its drain cannot be moved${v.ceiling === 'sloped' ? ': under the sloping ceiling it stays under that sloping ceiling and is never moved to a straight or rear wall to gain headroom' : ''}. The washbasin keeps its wall and its place. ${v.layout?.walls.bathtub === 'none' ? 'An old shower tray, its kerb or platform is removed down to the floor.' : "A bathtub that becomes a shower uses only the bathtub's own footprint, on the same wall and in the same direction as the bathtub; the bathtub and any raised base under it are removed down to the floor. So is an old shower tray, its kerb or platform."}${v.showerWall ? ` The short end wall of the shower is the ${v.showerWall} wall seen from the camera: the mixer, the overhead shower and the hand shower sit on it${v.trayShower ? '' : ', and the channel drain lies along its foot'}${v.showerLongWall ? `; its long side runs along the ${v.showerLongWall} wall` : ''}.` : ''} NO NEW WALLS: never add a wall, a partition, a half-height wall, a boxed pre-wall, a ledge, a shelf or a niche that image 1 does not show, not behind the toilet, not behind the washbasin and not in the shower. Where image 1 shows one flat wall, the result shows that same flat wall with new tiles: it never steps forward and never gets a flat top at mid-height. NOTHING IS FILLED IN EITHER: every recess, alcove, niche, wall offset, corner step and wall projection that image 1 shows stays exactly where it is, with the same width, depth and height, above all in the shower area. A shower or bathtub that stands in a recess or alcove stays inside it, and the new tiles follow the wall into the recess and around its corners. Never fill a recess, never close an alcove, never tile a niche over flush and never straighten a stepped wall into one flat wall. Only surfaces, sanitary fixtures, taps, furniture and lights change.`,
     `CHANGE this, and only this, in this ${roomName} (style "${v.packageName}"):${look} ${surfaces}; ${fixtures}; if a toilet is visible in image 1, ${toilet}; ${vanity}; ${v.tapPrompt}.${accent}`,
     // P7 vom 26.09.: der alte Spiegel blieb, darum steht er auch hier.
     `REMOVE: the bidet, if image 1 has one: its place is finished like the rest of the room, with nothing standing there;${v.mirrorImageNumber ? ' the old mirror or mirror cabinet with its lamp;' : ''} the old shower curtain and its rail; the old shower fittings and their slide rail; towels, bottles, rugs and loose furniture, also a cabinet or shelf cut off at the edge of the picture. The vanity unit is not loose furniture and stays, even when cut off at the edge of the picture.${v.wantsShower ? ' All shower fittings sit together on one wall inside the shower area, never next to the toilet or the washbasin.' : ''}`,
@@ -1386,6 +1478,19 @@ function buildPrompt(v: {
     // P1 vom 26.09.: ein Heizkoerper, den das Foto nicht hat.
     `BEFORE YOU DRAW, compare with image 1: the same viewpoint and framing, the same walls and ceiling, ${v.windows === '0' ? 'no window at all' : 'the same windows'}, the same door and, at the edge of the picture, the same door leaf or frame in the foreground if image 1 has one, every fixture where image 1 has it, every recess, alcove and step of the walls that image 1 has, and no low wall, ledge, shelf, niche or radiator that image 1 does not have. A small, tight room stays small and tight: never show more of the room than image 1 shows.`,
   ].filter(Boolean).join('\n');
+}
+
+/**
+ * Der Auftrag des Produktdurchgangs (Diego, 27.09.): Bild 1 ist das gepruefte Ideenbild, dahinter je ein Produktbild mit
+ * seinem Satz. Kurz, denn Raum, Platten und Positionen hat der erste Durchgang schon; hier zaehlen nur die Produkte.
+ */
+function buildProductPrompt(room: 'badezimmer' | 'gaeste-wc', items: string[]): string {
+  const roomName = room === 'gaeste-wc' ? 'guest WC' : 'bathroom';
+  return [
+    `PRODUCT EDIT of image 1, not a new picture. Image 1 is a finished photo of a renovated ${roomName}. The result is image 1 again, with the same camera, crop, aspect ratio and edges, the same walls, tiles and joints, floor, ceiling, windows, doors, glass, furniture, light and shadows. Only the products listed below are redrawn, each one exactly like the product in its image: the same shape, the same proportions and the same number and kind of parts, but in the colour and finish named here, not in those of its image. Each product stays where it is in image 1, on the same wall and at the same height; nothing is moved or added, and where image 1 does not show one of these products, that place stays as it is. Images 2 to ${items.length + 1} each show one product on a plain background, never a room or a layout.`,
+    ...items,
+    'Everything else stays exactly as it is in image 1. Photorealistic, no people, no text.',
+  ].join('\n');
 }
 
 /** Der Grundriss aus der Vorpruefung, als Satz fuer das Bildmodell: was wo steht, von der Kamera aus. */
@@ -1596,6 +1701,7 @@ async function checkOpenings(
     'set basin_on_top_after true if the washbasin is a separate bowl standing on the countertop, false if it is set into the countertop or moulded into it; ' +
     'set mirror_after to what hangs above the washbasin: "cabinet" for a mirror cabinet with mirror doors, "mirror" for a flat mirror without a cabinet, "none" when there is none or you cannot see it; ' +
     'set mirror_kept true if that mirror or mirror cabinet is still the one of image 1, with the same shape, frame and lamp; ' +
+    'set toilet_kept true if the toilet of image 2 is still the old toilet of image 1, with the same shape, not a new model; ' +
     'set bathtub_after to "freestanding" if the bathtub stands free on the floor with its own finished shell all round, "built_in" if it is built in against the walls with a tiled or panelled front, "none" when there is no bathtub; ' +
     'set overhead_shower_after true if there is an overhead or rain shower head anywhere; a hand shower on a hose does not count. ' +
     'Answer with JSON only, no markdown and exactly these keys: ' +
@@ -1606,7 +1712,7 @@ async function checkOpenings(
     '"toilet_on_low_wall_before":false,"toilet_on_low_wall_after":false,"new_wall_element":false,"wall_element_lost":false,' +
     '"foreground_object_before":false,"foreground_object_after":false,"window_much_bigger":false,"point_drain":false,"shower_fittings_split":false,"drain_wall":"none","fittings_wall":"none",' +
     '"shower_step":false,"shower_floor_after":"none","windows_before":0,"windows_after":0,"ceiling_changed":false,' +
-    '"washbasins_after":0,"basin_on_top_after":false,"mirror_after":"none","mirror_kept":false,"bathtub_after":"none","overhead_shower_after":false,' +
+    '"washbasins_after":0,"basin_on_top_after":false,"mirror_after":"none","mirror_kept":false,"toilet_kept":false,"bathtub_after":"none","overhead_shower_after":false,' +
     '"extra_openings":false,"view_changed":false,"reason":"short English note, max 25 words"}';
   const reply = await askCheckModel(model, question, [photo, gen], timeoutMs, ctx);
   if ('detail' in reply) {
@@ -1618,7 +1724,7 @@ async function checkOpenings(
     'toilet_on_low_wall_before', 'toilet_on_low_wall_after', 'new_wall_element', 'wall_element_lost', 'foreground_object_before', 'foreground_object_after',
     'window_much_bigger', 'point_drain', 'shower_fittings_split', 'drain_wall', 'fittings_wall',
     'shower_step', 'shower_floor_after', 'windows_before', 'windows_after', 'ceiling_changed', 'extra_openings', 'view_changed', 'reason',
-    'washbasins_after', 'basin_on_top_after', 'mirror_after', 'mirror_kept', 'bathtub_after', 'overhead_shower_after'];
+    'washbasins_after', 'basin_on_top_after', 'mirror_after', 'mirror_kept', 'toilet_kept', 'bathtub_after', 'overhead_shower_after'];
   // Die spaeter dazugekommenen Antworten sind freiwillig; fehlt eine, wird sie nicht geprueft.
   const optionalFlag = (key: string) => parsed?.[key] === undefined || typeof parsed[key] === 'boolean';
   const optionalWall = (key: string) => parsed?.[key] === undefined || WALLS.includes(parsed[key]);
@@ -1677,7 +1783,13 @@ async function checkOpenings(
         : 'the washbasin is set into the countertop, but a bowl standing on it was chosen'),
     wanted.mirror === 'spiegelschrank' && parsed.mirror_after === 'mirror' && 'a flat mirror hangs above the washbasin, but a mirror cabinet was chosen',
     wanted.mirror === 'spiegel' && parsed.mirror_after === 'cabinet' && 'a mirror cabinet hangs above the washbasin, but a flat mirror was chosen',
+  ].filter((hint): hint is string => !!hint);
+  // Schwere Hinweise (Diego, 27.09.): sie sieht der Kunde sofort. Hat das beste Bild einen davon, laufen zwei Bilder mehr,
+  // und gezeigt wird das beste aller Bilder; ohne Bild bleibt deshalb niemand. In der sechsten Probe P1 (Walk-in erhoeht),
+  // P7 (alter Spiegel), in der fuenften P3 (altes WC).
+  const serious = [
     parsed.mirror_kept === true && 'the mirror above the washbasin is still the old one of the photo',
+    parsed.toilet_kept === true && 'the toilet is still the old one of the photo',
     wanted.bathtubType === 'freistehend' && parsed.bathtub_after === 'built_in' && 'the bathtub is built in, but a freestanding bathtub was chosen',
     wanted.bathtubType === 'einbau' && parsed.bathtub_after === 'freestanding' && 'the bathtub stands free, but a built-in bathtub was chosen',
     !wanted.shower && parsed.overhead_shower_after === true && 'there is an overhead shower, but no shower was chosen',
@@ -1695,13 +1807,17 @@ async function checkOpenings(
   // Ein unbekannter Wert zaehlt nicht, wie bei der Wahl des Kunden; ein Objekt warf sonst im Log nach dem bezahlten Bild.
   const showerFloor = ['tray', 'tiles', 'none'].includes(parsed.shower_floor_after) ? parsed.shower_floor_after as string : undefined;
   if (wanted.shower) console.info('[badplaner] Dusche:', `${tray ? 'Duschwanne' : 'Walk-in'}, Boden ${showerFloor ?? '-'}, Rinne ${drainWall ?? '-'}, Armaturen ${fittingsWall ?? '-'}, Stirnwand laut Foto ${endWall ?? '-'}, Stufe ${parsed.shower_step ?? '-'}`);
-  hints.push(...[
+  serious.push(...[
     wanted.shower && parsed.shower_step === true && `the shower floor is raised above the bathroom floor; ${tray ? 'the shower tray must lie level with the floor tiles, with no step or kerb' : 'it must be flush with the floor, with no step, kerb or tray edge'}`,
     walkIn && showerFloor === 'tray' && 'the shower has a shower tray, but a walk-in shower with the floor tiles continuing into it was chosen',
     tray && showerFloor === 'tiles' && 'the shower floor is tiled, but a shower with a shower tray was chosen',
     tray && seen(drainWall) && 'the shower has a channel drain; the shower tray needs its own small round drain',
-    walkIn && parsed.point_drain && 'the shower has a point drain; it needs a linear channel drain at the foot of the wall with the fittings',
+    // P2 der sechsten Probe (Ausschnitt von Diego): zwei Rosetten und die Handbrause an einer Wand, an der anderen eine
+    // runde Platte mit zwei Griffen.
     wanted.shower && parsed.shower_fittings_split === true && 'the shower fittings are spread over two walls; they all belong together on one wall',
+  ].filter((hint): hint is string => !!hint));
+  hints.push(...[
+    walkIn && parsed.point_drain && 'the shower has a point drain; it needs a linear channel drain at the foot of the wall with the fittings',
     // Kein Hinweis mehr, an welcher Wand Rinne und Armaturen stehen: in P9 vom 26.09. waren beide falsch, Rinne und
     // Armaturen standen richtig (Diego). Die Waende stehen nur noch im Log.
   ].filter((hint): hint is string => !!hint));
@@ -1709,7 +1825,8 @@ async function checkOpenings(
   // In der fuenften Probe loeste sie drei von sieben zweiten Versuchen aus (je rund 35 s).
   if (parsed.foreground_object_before && !parsed.foreground_object_after) hints.push('the door leaf, door frame or wall edge in the foreground of image 1 is gone');
   // Ein anderer Bildausschnitt wird ebenso nur vermerkt.
-  return flags.view_changed ? { status: 'approved', note: parsed.reason.slice(0, 200), hints } : { status: 'approved', hints };
+  const all = [...serious, ...hints];
+  return flags.view_changed ? { status: 'approved', note: parsed.reason.slice(0, 200), hints: all, serious } : { status: 'approved', hints: all, serious };
 }
 
 /**
@@ -1726,7 +1843,7 @@ interface Layout { walls: Inventory; order: Fixture[]; nearest: Fixture | 'none'
 type Ceiling = 'flat' | 'sloped';
 /** Die Wand am schmalen Ende von Wanne oder Dusche im Foto: dort sitzen die Duscharmaturen und die Rinne. */
 type EndWall = 'left' | 'right' | 'back';
-type PhotoCheck = { status: 'ok'; layout?: Layout; ceiling?: Ceiling; showerWall?: EndWall } | { status: 'wrong_room'; reason: string } | { status: 'unavailable' };
+type PhotoCheck = { status: 'ok'; layout?: Layout; ceiling?: Ceiling; showerWall?: EndWall; showerLongWall?: EndWall } | { status: 'wrong_room'; reason: string } | { status: 'unavailable' };
 
 async function checkPhoto(photo: Photo, room: 'badezimmer' | 'gaeste-wc', ctx: RequestContext): Promise<PhotoCheck> {
   const model = checkModel();
@@ -1743,8 +1860,9 @@ async function checkPhoto(photo: Photo, room: 'badezimmer' | 'gaeste-wc', ctx: R
     // P1 und P3 vom 25.09.: Rinne an der Rueckwand, Armaturen an der Seitenwand. Das schmale Ende einer Wanne erkennt
     // das Modell im Foto sicherer als im Ergebnis, wo die neue Dusche in der Tiefe verkuerzt ist.
     'If the photo shows a bathtub or a shower, set shower_end_wall to the wall, seen from the camera, at one of its two narrow ends (a bathtub or shower tray is long and narrow: its narrow ends are its short sides; the wall along one of its long sides is never a narrow end, even when the taps are on it, so a bathtub along the back wall has its narrow ends at the left and the right): "left", "right" or "back"; if both narrow ends are walls, take the one nearer to the existing taps or shower fittings; a narrow end that touches no wall does not count; "none" when there is no bathtub or shower or you cannot tell. ' +
+    'Set shower_long_wall to the wall, seen from the camera, that one of its long sides runs along: "left", "right" or "back", or "none" when no long side touches a wall or you cannot tell. ' +
     'Answer with JSON only, no markdown and exactly these keys: {"is_bathroom":true,"reason":"short English reason, max 25 words",' +
-    '"walls":{"toilet":"left","washbasin":"left","shower":"none","bathtub":"none","bidet":"none"},"order":["washbasin","toilet"],"nearest":"toilet","ceiling":"flat","shower_end_wall":"none"}';
+    '"walls":{"toilet":"left","washbasin":"left","shower":"none","bathtub":"none","bidet":"none"},"order":["washbasin","toilet"],"nearest":"toilet","ceiling":"flat","shower_end_wall":"none","shower_long_wall":"none"}';
   const reply = await askCheckModel(model, question, [photo], PHOTO_CHECK_TIMEOUT_MS, ctx);
   if ('detail' in reply) {
     console.error('[badplaner] Fotopruefung nicht moeglich', reply.detail);
@@ -1753,7 +1871,7 @@ async function checkPhoto(photo: Photo, room: 'badezimmer' | 'gaeste-wc', ctx: R
   const parsed = reply.answer;
   if (!parsed || Array.isArray(parsed) || typeof parsed.is_bathroom !== 'boolean' || typeof parsed.reason !== 'string'
     || !parsed.reason.trim() || parsed.reason.length > 200
-    || Object.keys(parsed).some((key) => !['is_bathroom', 'reason', 'walls', 'order', 'nearest', 'ceiling', 'shower_end_wall'].includes(key))) return { status: 'unavailable' };
+    || Object.keys(parsed).some((key) => !['is_bathroom', 'reason', 'walls', 'order', 'nearest', 'ceiling', 'shower_end_wall', 'shower_long_wall'].includes(key))) return { status: 'unavailable' };
   if (!parsed.is_bathroom) return { status: 'wrong_room', reason: parsed.reason.slice(0, 200) };
   // Der Grundriss ist eine Zugabe: fehlt er oder ist er unlesbar, wird ohne ihn gerendert.
   const walls = inventory(parsed.walls);
@@ -1764,11 +1882,12 @@ async function checkPhoto(photo: Photo, room: 'badezimmer' | 'gaeste-wc', ctx: R
   // Dusche kam um 90 Grad gedreht. Die Wand, an der die Wanne der Laenge nach steht, ist nie ihr schmales Ende: nennt die
   // Vorpruefung beide gleich, gilt keine Stirnwand, und die Dusche folgt nur der Richtung der Wanne.
   const endWall: EndWall | undefined = ['left', 'right', 'back'].includes(parsed.shower_end_wall) ? parsed.shower_end_wall : undefined;
-  // ponytail: die Vorpruefung nennt die Wand, an der die Wanne steht, nicht ausdruecklich ihre Laengsseite. Steht eine
-  // Wanne mit dem Kopfende an der Rueckwand (Halbinsel, Ecke), geht so auch eine richtige Stirnwand verloren; dann gilt nur
-  // die Richtung der Wanne. Abhilfe waere eine eigene Frage nach der Wand der Laengsseite.
-  const showerWall = endWall && endWall !== walls?.bathtub ? endWall : undefined;
-  return { status: 'ok', layout: walls && seen && near ? { walls, order: seen, nearest: near } : undefined, ceiling, showerWall };
+  // Seit dem 27.09. fragt die Vorpruefung auch nach der Wand der Laengsseite: mit der Wand, an der die Wanne steht, ging
+  // bei einer Eckwanne (P2, P5 der sechsten Probe: Armaturen auf der falschen Seite) vermutlich die richtige Stirnwand
+  // verloren. Ohne Antwort gilt wie bisher die Wand, an der die Wanne steht.
+  const longWall: EndWall | undefined = ['left', 'right', 'back'].includes(parsed.shower_long_wall) ? parsed.shower_long_wall : undefined;
+  const showerWall = endWall && endWall !== (longWall ?? walls?.bathtub) ? endWall : undefined;
+  return { status: 'ok', layout: walls && seen && near ? { walls, order: seen, nearest: near } : undefined, ceiling, showerWall, showerLongWall: showerWall && longWall !== showerWall ? longWall : undefined };
 }
 
 /**
