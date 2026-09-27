@@ -1214,10 +1214,8 @@ test('current large catalog originals below 5 MiB retain their visual reference'
   const images = generation.body.contents[0].parts.filter((part) => part.inlineData);
   assert.equal(images.length, 6 + new Set([options.tops[0].image, options.bases[0].image]).size); // dazu WC und Platte
   assert.equal(Buffer.from(images[1].inlineData.data, 'base64').length, bytes.length);
-  // Vor jedem Bild steht seine Nummer, wie im Prompt (Diego, 26.09.: jedes Bild einzeln).
-  assert.deepEqual(generation.body.contents[0].parts.slice(1).filter((part) => part.text).map((part) => part.text),
-    images.map((_, index) => `Image ${index + 1}:`));
-  assert.ok(generation.body.contents[0].parts.slice(1).every((part, index) => (index % 2 === 0) === !!part.text));
+  // Zuerst der Prompt, dann nur die Bilder, ohne Nummer davor (27.09., wie auf der Website und in der vierten Probe).
+  assert.deepEqual(generation.body.contents[0].parts.map((part) => !!part.text), [true, ...images.map(() => false)]);
   const leadMail = h.calls.find((call) => call.url === 'https://api.resend.com/emails');
   assert.match(JSON.stringify(leadMail.body), /Muster/);
   assert.match(JSON.stringify(leadMail.body), /geladen/);

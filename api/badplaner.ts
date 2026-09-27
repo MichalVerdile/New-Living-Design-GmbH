@@ -1391,10 +1391,10 @@ async function generateImage(prompt: string, photo: Photo, references: (Photo | 
   // 2K kostet bei diesem Modell gleich viel wie 1K, also 2K.
   const model = env.BADPLANER_MODEL || 'gemini-3-pro-image';
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
-  // Vor jedem Bild seine Nummer (Diego, 26.09.: jedes Bild einzeln): bei 9 bis 11 Bildern muss das Modell sonst zaehlen,
-  // welches "Image 8" ist. Dieselbe Reihenfolge wie imageNumber(), leere Stellen fallen weg.
-  const images = [photo, ...references].filter((image): image is Photo => !!image);
-  const parts: any[] = [{ text: prompt }, ...images.flatMap((image, index) => [{ text: `Image ${index + 1}:` }, { inlineData: { mimeType: image.mime, data: image.data } }])];
+  // Ohne Nummer vor jedem Bild, wie auf der Website (27.09.): mit ihr (b32f7a2) brauchten in der fuenften Probe 7 von 8
+  // Bildern einen zweiten Versuch, vorher 3 von 8. Ob sie die Ursache war, ist offen; belegt war ihr Nutzen nie.
+  const parts: any[] = [{ text: prompt }, { inlineData: { mimeType: photo.mime, data: photo.data } }];
+  for (const image of references) if (image) parts.push({ inlineData: { mimeType: image.mime, data: image.data } });
 
   try {
     const r = await request(ctx, url, {
