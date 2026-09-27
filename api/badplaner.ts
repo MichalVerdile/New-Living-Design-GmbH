@@ -65,7 +65,7 @@ import { Budget, TimeoutError, type Clock } from '../server/badplaner/budget.js'
 import { normalizeSelection, ValidationError } from '../server/badplaner/validation.js';
 import { normalizeBase64, validateImageBytes, MAX_PHOTO_BASE64, MAX_PLAN_BASE64 } from '../src/pages/badplaner/imageValidation.js';
 import { SANITARY_MODULE_PHOTO } from '../server/badplaner/sanitaermodul.js';
-import { FLUSH_PLATE_PHOTO, WC_PHOTO } from '../server/badplaner/wc.js';
+import { WC_PHOTO } from '../server/badplaner/wc.js';
 import { LED_MIRROR_PHOTO, MIRROR_CABINET_PHOTO } from '../server/badplaner/spiegel.js';
 import { AURELIA_BASIN_PHOTO, AURELIA_BATH_FLOOR_PHOTO, AURELIA_BATH_WALL_PHOTO, AURELIA_SHOWER_PHOTO } from '../server/badplaner/aurelia.js';
 import { UP_AUFPUTZ_BATH_PHOTO, UP_AUFPUTZ_SHOWER_PHOTO, UP_BASIN_PHOTO, UP_BATH_PHOTO, UP_SHOWER_PHOTO } from '../server/badplaner/up.js';
@@ -455,10 +455,11 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   // Beschreiben allein genügt dem Modell nicht, es baut sonst eine verkleidete
   // Vorwand. Das Bild liegt im Code, darum kann es weder fehlen noch Zeit kosten.
   const moduleImage = cistern === 'aufputz' ? SANITARY_MODULE_PHOTO : null;
-  // Das neue WC und bei Unterputz die neue Platte als Bild (Diego, 26.09.): mit Worten allein blieb in P4 und P8 ein
-  // WC wie das alte, in P4 samt der alten Platte.
+  // Das neue WC als Bild (Diego, 26.09.): mit Worten allein blieb in P4 und P8 ein WC wie das alte. In der fuenften
+  // Probe war es 7 von 8 Mal das neue. Die Platte OLI Blink geht seit dem 27.09. nur als Text mit: ihr Bild ergab in
+  // P2, P4, P7 und P8 trotzdem eine Platte wie von Geberit, und die Platte mit zwei runden Knoepfen stand im Verdacht,
+  // den Waschtisch in P7 auf eine Platte zu setzen.
   const wcImage = WC_PHOTO;
-  const plateImage = cistern === 'unterputz' ? FLUSH_PLATE_PHOTO : null;
   // Die Armaturen als Produktfoto, weil die Worte allein nur allgemeine Armaturen ergaben (Aurelia am 20.09.,
   // Up+ in P3 und P4 vom 25.09.). Nur Armaturen, kein Raum. Ohne Dusche nur die Waschtischarmatur, im Bild wie
   // im Text: mit dem Duschset zeichnete das Modell am 25.09. (Jonathan, Atelier ohne Dusche) ueber der
@@ -467,6 +468,10 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   // Ran (Colore): Renderings von Diego, 26.09.; in T7 und T8 vom 25.09. kam ohne Bild der Mischer aus dem Foto.
   const ranSeries = tapSeriesOption?.id === 'treemme-ran';
   const noShower = !shower || shower.id === 'keine';
+  // Der Satz zum Dusch- und Wannenbereich nur, wo es sie gibt (Gegenpruefung vom 26.09.: P4 und P7 bekamen ihn ohne Dusche).
+  let wallPrompt = wall.prompt;
+  if (noShower) wallPrompt = wallPrompt.replace(/; inside the shower[^;]*/, '');
+  if (!bathtub || bathtub.id === 'keine') wallPrompt = wallPrompt.replace(/; every wall surface in the bathtub wet area[^;]*/, '');
   // Waschtisch und Dusche je als eigenes Bild (Diego, 26.09.): im gemeinsamen Bild folgte das Modell in P2, P5 und P9 dem
   // Waschtisch, nicht der Dusche, und in P1 setzte es die Hebel der Dusche an den Waschtisch.
   const tapsImage = isAtelier ? AURELIA_BASIN_PHOTO : ranSeries ? RAN_BASIN_PHOTO : upSeries ? UP_BASIN_PHOTO : null;
@@ -482,7 +487,7 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
 
   // Bilder an Gemini, in dieser Reihenfolge: 1 Foto, dann Platte, Bodenplatte, Akzent,
   // Waschtischplatte, Unterbau (dieselbe Datei nur einmal), Spiegel, Modul, WC, Platte, Waschtisch, Dusche, Wannenarmatur. Die Nummern stehen so im Prompt.
-  const references = [swatch, floorSwatch, accentSwatch, topSwatch, baseSwatch === topSwatch ? null : baseSwatch, mirrorImage, moduleImage, wcImage, plateImage, tapsImage, showerImage, bathImage];
+  const references = [swatch, floorSwatch, accentSwatch, topSwatch, baseSwatch === topSwatch ? null : baseSwatch, mirrorImage, moduleImage, wcImage, tapsImage, showerImage, bathImage];
   const imageNumber = (image: Photo | null) => (image ? 2 + references.filter(Boolean).indexOf(image) : 0);
 
   // Armaturen: Essenza Aufputz verchromt, Colore in der gewählten Serie und Oberfläche,
@@ -524,7 +529,7 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
     floorPrompt: floorTile ? floorTile.prompt : undefined,
     accentPlacementPrompt: accent ? placement?.prompt : undefined,
     accentPrompt: accent ? accent.prompt : undefined,
-    wallPrompt: wall.prompt,
+    wallPrompt,
     // Stirnwand hinten laut Foto (P2 und P5 vom 25.09.): der Satz zur breiten Dusche verlangte die Rinne dann quer zur
     // Rueckwand, die Stirnwand an ihrem Fuss. Er faellt dort weg; links, rechts und ohne Stirnwand passt er und bleibt.
     showerPrompt: showerWall === 'back' ? shower?.prompt.replace(/When the shower is wider than it is deep[^;]*; never/, 'Never') : shower?.prompt,
@@ -551,7 +556,6 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
     baseImageNumber: imageNumber(baseSwatch),
     moduleImageNumber: imageNumber(moduleImage),
     wcImageNumber: imageNumber(wcImage),
-    plateImageNumber: imageNumber(plateImage),
     plateFinish: finish.prompt,
     tapsImageNumber: imageNumber(tapsImage),
     showerImageNumber: imageNumber(showerImage),
@@ -612,7 +616,7 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
       + (floorTile ? `, Boden ${floorSwatch ? 'geladen' : 'nicht geladen'}` : '')
       + (accent ? `, Akzent ${accentSwatch ? 'geladen' : 'nicht geladen'}` : '')],
     ...(cistern === 'aufputz' ? [['Sanitärmodul', 'OLI QR INOX Sospeso, Vorlagebild mitgeschickt'] as [string, string]]
-      : [['Betätigungsplatte', `OLI Blink, ${finish.label}, Vorlagebild mitgeschickt`] as [string, string]]),
+      : [['Betätigungsplatte', `OLI Blink, ${finish.label}`] as [string, string]]),
     ['Foto', photoOrigin(body.fotoInfo, photoSent)],
     ['Fensterprüfung', checkStatus],
     ...(imageStatus ? [['Ideenbild', imageStatus] as [string, string]] : []),
@@ -1228,7 +1232,6 @@ function buildPrompt(v: {
   baseImageNumber: number;
   moduleImageNumber: number;
   wcImageNumber?: number;
-  plateImageNumber?: number;
   plateFinish?: string;
   tapsImageNumber?: number;
   showerImageNumber?: number;
@@ -1259,7 +1262,6 @@ function buildPrompt(v: {
   }
   sample(v.moduleImageNumber, 'a product photo of the sanitary module');
   sample(v.wcImageNumber, 'a product photo of the new toilet bowl: copy its shape, not its colour');
-  sample(v.plateImageNumber, 'a product photo of the new flush plate on a plain background: copy its shape, not its finish; its finish is the one named under CHANGE');
   sample(v.tapsImageNumber, 'a product photo of the washbasin tap: copy its shape, not its finish');
   sample(v.showerImageNumber, 'a product photo of the shower fittings: copy their shapes, not their finish');
   // Die Aurelia-Wannenplatte hat den Auslauf in der Mitte und zwei Hebel, wie der falsche Waschtisch in P1 vom 26.09.
@@ -1301,18 +1303,18 @@ function buildPrompt(v: {
         v.wantsBathtub ? `a ${v.bathtubPrompt}` : 'no bathtub and no bath filler', // die Wannen nennen ihren Platz selbst
       ].join('; ');
   // Ein Holzsitz auf weisser Keramik war einer der Befunde vom 16.09.
-  const seat = `${v.wcImageNumber ? `the new toilet of image ${v.wcImageNumber}, never shaped like the old one, ` : ''}wall-hung and rimless in ${v.sanitaryPrompt}, with seat and lid in the same ${v.sanitaryPrompt}, not wood`;
+  const seat = `${v.wcImageNumber ? `the new toilet of image ${v.wcImageNumber} with its flat, squared back, rounded only at the front, never shaped like the old one, ` : ''}wall-hung and rimless in ${v.sanitaryPrompt}, with seat and lid in the same ${v.sanitaryPrompt}, not wood`;
   // Die Wahl des Kunden entscheidet (Diego, 26.09.): Aufputz heisst Modul. Bis dahin galt das Foto ("nur eine Platte,
   // dann kein Modul"); das Modell las die Bedingung falsch und stellte in P3 trotzdem ein Modul.
   const toilet = v.cistern === 'aufputz'
-    ? `the old surface-mounted cistern with its casing, or the old flush plate, is removed completely; behind the toilet, flat against the wall or low wall it hangs on, stands the sanitary module of image ${v.moduleImageNumber}: a factory-made glass and steel panel about 50 cm wide, 115 cm high and 11 cm deep, from the floor up, with a white glass front in two parts, a narrow brushed steel edge and a small oval push button in the glass front near its top, not tiled or boxed in; the toilet is ${seat}, and hangs on the module at exactly the old toilet position; the wall behind stays where it is`
+    ? `the old surface-mounted cistern with its casing, or the old flush plate, is removed completely; behind the toilet, in front of the wall or low wall it hangs on, stands the sanitary module of image ${v.moduleImageNumber}: a factory-made glass and steel panel about 50 cm wide, 115 cm high and 11 cm deep, from the floor up, never sunk into the wall, with a white glass front in two parts, a narrow brushed steel edge and a small oval push button in the glass front near its top, no flush plate, not tiled or boxed in; the toilet is ${seat}, and hangs on the module at exactly the old toilet position; the wall behind stays where it is`
     // Diegos Befund vom 17.09.: das WC haengt an einem Muretto, das den Spuelkasten traegt;
     // das Modell hatte es eingeebnet. Am 19.09. baute es umgekehrt eines vor eine flache Wand.
-    : `the cistern stays hidden in the wall where it is, and no sanitary module is added. A toilet on a flat full-height wall stays on that flat wall, which is only newly tiled. A toilet that hangs on a low wall or boxed pre-wall in image 1 stays on its front, and that low wall stays with the same place, length, height and depth, only newly tiled; the toilet is not pushed back to the wall behind. The toilet is ${seat}, at its existing position${v.plateImageNumber ? `, and its old flush plate is replaced, at the same place on the wall, by the new flush plate of image ${v.plateImageNumber} in ${v.plateFinish}` : ''}`;
+    : `the cistern stays hidden in the wall where it is, and no sanitary module is added. A toilet on a flat full-height wall stays on that flat wall, which is only newly tiled. A toilet that hangs on a low wall or boxed pre-wall in image 1 stays on its front, and that low wall stays with the same place, length, height and depth, only newly tiled; the toilet is not pushed back to the wall behind. The toilet is ${seat}, at its existing position, and its old flush plate is replaced, at the same place on the wall, by a new flat rectangular flush plate in ${v.plateFinish} with two separate round push buttons side by side, never rectangular buttons`;
   // Die gewaehlte Sanitaerkeramik gilt fuer WC und Waschbecken. Ohne das hier
   // blieb das Becken weiss, waehrend das WC farbig war: zwei Farben in einem Bad.
   const basinColour = v.basinIsCeramic ? `, the basin in the same ${v.sanitaryPrompt} as the toilet` : '';
-  const vanity = `if a washbasin is visible in image 1, ${v.basinPrompt} at its existing place on a wall-hung vanity: front and body in ${v.basePrompt}${colourOf(v.baseImageNumber)}, countertop in ${v.topPrompt}${colourOf(v.topImageNumber)}${v.basinTypePrompt ? `, ${v.basinTypePrompt}` : ''}${basinColour}, with ${v.mirrorPrompt}${asIn(v.mirrorImageNumber ?? 0)} above it, which replaces the old mirror or mirror cabinet and its lamp completely: nothing of their shape, frame or light is kept; the countertop is its own material, not cut from the wall or floor tiles`;
+  const vanity = `if a washbasin is visible in image 1, ${v.basinPrompt} at its existing place on a wall-hung vanity: front and body in ${v.basePrompt}${colourOf(v.baseImageNumber)}, countertop in ${v.topPrompt}${colourOf(v.topImageNumber)}${v.basinTypePrompt ? `, ${v.basinTypePrompt}` : ''}${basinColour}, with ${v.mirrorPrompt}${asIn(v.mirrorImageNumber ?? 0)} above it, which replaces the old mirror or mirror cabinet and its lamp completely: nothing of their shape, frame or light is kept, and no lamp or light bar above it; the countertop is its own material, not cut from the wall or floor tiles`;
 
   return [
     // Am 19.09. zeichnete das Modell aus Diegos engem Bad ein Ausstellungsbad: darum steht zuerst, was das
@@ -1322,10 +1324,10 @@ function buildPrompt(v: {
     `PHOTO EDITING TASK, not a design task. Image 1 is a photograph of the customer's existing ${roomName}. The result is that same photograph after the renovation: the same picture from the same spot, with the same lens, the same crop and the same edges, in which only the surfaces and products named under CHANGE have been replaced, each one in its own place. Someone who knows this ${roomName} must recognise it at first glance. Do not design a new ${roomName} and do not show a showroom.${references}`,
     v.layout ? layoutPrompt(v.layout) : '',
     `This is an edit of image 1, not a new picture. Keep image 1 and change only what the CHANGE list names. Everything else stays exactly as it is: the camera position, angle, lens and framing, the same crop and the same aspect ratio, the walls and where they stand, with every niche, ledge, projection and step they have in image 1 and no others, the ceiling and the room height, the room proportions, every window, roof window and door at its exact size and position, and a radiator only where image 1 has one. ${ceilingRule} Never zoom out, never widen the view, never show floor, wall or ceiling beyond the edges of image 1, never create extra floor area. Whatever is built in the immediate foreground at the edge of image 1 belongs to the picture and stays: an open door leaf, a door frame, the edge of a wall. It keeps its place and takes up the same part of the picture as before, and is never removed to show more of the room. A loose piece of furniture at the edge is removed like all loose furniture: the floor and the walls behind it continue, and the camera stays exactly where it is. Every window keeps the same share of the picture it has in image 1; do not move closer to it and do not make it larger. ${windowRule}${glassRule}`,
-    `KEEP THE POSITIONS. A half-height wall, a low built wall or a boxed pre-wall that a fixture stands against is part of the room, not furniture: it keeps its place, its length, its height and its depth, and the fixture stays mounted on it. Every fixture keeps the wall or low wall it stands against in image 1 and its place along it, measured against the corners, the door and the window next to it. The toilet keeps its wall and its place because its drain cannot be moved${v.ceiling === 'sloped' ? ': under the sloping ceiling it stays under that sloping ceiling and is never moved to a straight or rear wall to gain headroom' : ''}. The washbasin keeps its wall and its place. A bathtub that becomes a shower uses only the bathtub's own footprint, on the same wall; the bathtub and any raised base under it are removed down to the floor. So is an old shower tray, its kerb or platform.${v.showerWall ? ` The short end wall of the shower is the ${v.showerWall} wall seen from the camera: the mixer, the overhead shower and the hand shower sit on it${v.trayShower ? '' : ', and the channel drain lies along its foot'}.` : ''} NO NEW WALLS: never add a wall, a partition, a half-height wall, a boxed pre-wall, a ledge, a shelf or a niche that image 1 does not show, not behind the toilet, not behind the washbasin and not in the shower. Where image 1 shows one flat wall, the result shows that same flat wall with new tiles: it never steps forward and never gets a flat top at mid-height. NOTHING IS FILLED IN EITHER: every recess, alcove, niche, wall offset, corner step and wall projection that image 1 shows stays exactly where it is, with the same width, depth and height, above all in the shower area. A shower or bathtub that stands in a recess or alcove stays inside it, and the new tiles follow the wall into the recess and around its corners. Never fill a recess, never close an alcove, never tile a niche over flush and never straighten a stepped wall into one flat wall. Only surfaces, sanitary fixtures, taps, furniture and lights change.`,
+    `KEEP THE POSITIONS. A half-height wall, a low built wall or a boxed pre-wall that a fixture stands against is part of the room, not furniture: it keeps its place, its length, its height and its depth, and the fixture stays mounted on it. Every fixture keeps the wall or low wall it stands against in image 1 and its place along it, measured against the corners, the door and the window next to it. The toilet keeps its wall and its place because its drain cannot be moved${v.ceiling === 'sloped' ? ': under the sloping ceiling it stays under that sloping ceiling and is never moved to a straight or rear wall to gain headroom' : ''}. The washbasin keeps its wall and its place. ${v.layout?.walls.bathtub === 'none' ? 'An old shower tray, its kerb or platform is removed down to the floor.' : "A bathtub that becomes a shower uses only the bathtub's own footprint, on the same wall and in the same direction as the bathtub; the bathtub and any raised base under it are removed down to the floor. So is an old shower tray, its kerb or platform."}${v.showerWall ? ` The short end wall of the shower is the ${v.showerWall} wall seen from the camera: the mixer, the overhead shower and the hand shower sit on it${v.trayShower ? '' : ', and the channel drain lies along its foot'}.` : ''} NO NEW WALLS: never add a wall, a partition, a half-height wall, a boxed pre-wall, a ledge, a shelf or a niche that image 1 does not show, not behind the toilet, not behind the washbasin and not in the shower. Where image 1 shows one flat wall, the result shows that same flat wall with new tiles: it never steps forward and never gets a flat top at mid-height. NOTHING IS FILLED IN EITHER: every recess, alcove, niche, wall offset, corner step and wall projection that image 1 shows stays exactly where it is, with the same width, depth and height, above all in the shower area. A shower or bathtub that stands in a recess or alcove stays inside it, and the new tiles follow the wall into the recess and around its corners. Never fill a recess, never close an alcove, never tile a niche over flush and never straighten a stepped wall into one flat wall. Only surfaces, sanitary fixtures, taps, furniture and lights change.`,
     `CHANGE this, and only this, in this ${roomName} (style "${v.packageName}"):${look} ${surfaces}; ${fixtures}; if a toilet is visible in image 1, ${toilet}; ${vanity}; ${v.tapPrompt}.${accent}`,
     // P7 vom 26.09.: der alte Spiegel blieb, darum steht er auch hier.
-    `REMOVE: the bidet, if image 1 has one: its place is finished like the rest of the room, with nothing standing there;${v.mirrorImageNumber ? ' the old mirror or mirror cabinet and its lamp;' : ''} the old shower curtain and its rail; towels, bottles, rugs and loose furniture, also a cabinet or shelf cut off at the edge of the picture. The vanity unit is not loose furniture and stays.${v.wantsShower ? ' All shower fittings sit together on one wall inside the shower area, never next to the toilet or the washbasin.' : ''}`,
+    `REMOVE: the bidet, if image 1 has one: its place is finished like the rest of the room, with nothing standing there; the old shower curtain and its rail; the old shower fittings and their slide rail; towels, bottles, rugs and loose furniture, also a cabinet or shelf cut off at the edge of the picture. The vanity unit is not loose furniture and stays, even when cut off at the edge of the picture.${v.wantsShower ? ' All shower fittings sit together on one wall inside the shower area, never next to the toilet or the washbasin.' : ''}`,
     // Tageslicht in einem Raum ohne Fenster verlangt nach einem Fenster (P4 und P5 vom 25.09.).
     `Photorealistic, ${v.windows === '0' ? 'bright, even light' : 'natural daylight'}, no people, no text.`,
     // P1 vom 26.09.: ein Heizkoerper, den das Foto nicht hat.
@@ -1528,7 +1530,7 @@ async function checkOpenings(
     'Set shower_fittings_split true only if its fittings (mixer, overhead shower arm, hand shower holder) are mounted on two or more different walls rather than all on one wall; false when there is no such shower or you cannot see it. ' +
     'Then say whether something large stands in the immediate foreground of image 1 at the edge of the picture, cut off by the border — an open door leaf, a door frame or the near edge of a wall; loose furniture does not count, it is meant to be removed — taking up roughly a fifth of the picture or more; and whether that same object is still visible at the edge of image 2 at any size, even as a narrow strip (foreground_object_after is false only when it is gone completely). ' +
     'Set window_much_bigger true only if a window that is visible in both images takes up a clearly larger part of image 2 than of image 1, about half again as large or more. ' +
-    'Set extra_openings true only if image 2 has a window, roof window, door or outside opening that image 1 does not have, or lost one that image 1 has. ' +
+    'Set extra_openings true only if image 2 has a window, roof window, door or outside opening that image 1 does not have, or lost one that image 1 has; a window that now stands on a different wall than in image 1 counts as lost and added. ' +
     // P4 und P5 vom 25.09.: bei "keine Fenster" kam einmal ein Dachfenster, einmal ein Fenster links dazu,
     // und extra_openings blieb false. Gezaehlt wird zuverlaessiger als verglichen.
     'Count the windows in each image, roof windows and skylights included; a glass shower panel, a glass door, a mirror or a picture is not a window. Set windows_before and windows_after to those two numbers. ' +
@@ -1687,7 +1689,7 @@ async function checkPhoto(photo: Photo, room: 'badezimmer' | 'gaeste-wc', ctx: R
     'Set ceiling to "flat" when the visible ceiling is flat and horizontal, "sloped" when it slopes (an attic or roof slope), or "unknown" when no ceiling is visible. ' +
     // P1 und P3 vom 25.09.: Rinne an der Rueckwand, Armaturen an der Seitenwand. Das schmale Ende einer Wanne erkennt
     // das Modell im Foto sicherer als im Ergebnis, wo die neue Dusche in der Tiefe verkuerzt ist.
-    'If the photo shows a bathtub or a shower, set shower_end_wall to the wall, seen from the camera, at one of its two narrow ends (a bathtub or shower tray is long and narrow: its narrow ends are its short sides): "left", "right" or "back"; if both narrow ends are walls, take the one with the existing taps or shower fittings; "none" when there is no bathtub or shower or you cannot tell. ' +
+    'If the photo shows a bathtub or a shower, set shower_end_wall to the wall, seen from the camera, at one of its two narrow ends (a bathtub or shower tray is long and narrow: its narrow ends are its short sides; the wall along one of its long sides is never a narrow end, even when the taps are on it, so a bathtub along the back wall has its narrow ends at the left and the right): "left", "right" or "back"; if both narrow ends are walls, take the one nearer to the existing taps or shower fittings; "none" when there is no bathtub or shower or you cannot tell. ' +
     'Answer with JSON only, no markdown and exactly these keys: {"is_bathroom":true,"reason":"short English reason, max 25 words",' +
     '"walls":{"toilet":"left","washbasin":"left","shower":"none","bathtub":"none","bidet":"none"},"order":["washbasin","toilet"],"nearest":"toilet","ceiling":"flat","shower_end_wall":"none"}';
   const reply = await askCheckModel(model, question, [photo], PHOTO_CHECK_TIMEOUT_MS, ctx);
@@ -1705,7 +1707,11 @@ async function checkPhoto(photo: Photo, room: 'badezimmer' | 'gaeste-wc', ctx: R
   const seen = order(parsed.order);
   const near = nearest(parsed.nearest);
   const ceiling: Ceiling | undefined = parsed.ceiling === 'flat' || parsed.ceiling === 'sloped' ? parsed.ceiling : undefined;
-  const showerWall: EndWall | undefined = ['left', 'right', 'back'].includes(parsed.shower_end_wall) ? parsed.shower_end_wall : undefined;
+  // P1, P5 und P8 vom 26.09.: die alte Wanne stand der Rueckwand entlang, mit ihren Armaturen an dieser Wand, und die neue
+  // Dusche kam um 90 Grad gedreht. Die Wand, an der die Wanne der Laenge nach steht, ist nie ihr schmales Ende: nennt die
+  // Vorpruefung beide gleich, gilt keine Stirnwand, und die Dusche folgt nur der Richtung der Wanne.
+  const endWall: EndWall | undefined = ['left', 'right', 'back'].includes(parsed.shower_end_wall) ? parsed.shower_end_wall : undefined;
+  const showerWall = endWall && endWall !== walls?.bathtub ? endWall : undefined;
   return { status: 'ok', layout: walls && seen && near ? { walls, order: seen, nearest: near } : undefined, ceiling, showerWall };
 }
 
