@@ -452,19 +452,19 @@ test('eine unbrauchbare Antwort der Pruefung gilt als nicht verfuegbar, nicht al
   }
 });
 
-test('das Ideenbild entsteht mit dem genauesten Modell, nicht dem billigsten', async () => {
-  // Qualitaet vor Ersparnis: das Bild ist das Produkt. 2K kostet bei diesem
-  // Modell gleich viel wie 1K.
+test('das Ideenbild entsteht mit gemini-3.1-flash-image in 2K', async () => {
+  // Seit dem 27.09. Flash statt Pro (Diego): im Pruefstand P1 bis P9 ebenso treu, schneller, seltener verworfen und
+  // oefter mit den Armaturen an der Stirnwand.
   const h = harness();
   await h.invoke();
   const gen = h.calls.find((call) => call.body?.generationConfig?.responseModalities);
-  assert.match(gen.url, /models\/gemini-3-pro-image:generateContent/);
+  assert.match(gen.url, /models\/gemini-3\.1-flash-image:generateContent/);
   assert.equal(gen.body.generationConfig.imageConfig.imageSize, '2K');
 
   // Umschaltbar ohne Codeaenderung, falls ein neueres Modell kommt.
-  const other = harness({ env: { BADPLANER_MODEL: 'gemini-3.1-flash-image' } });
+  const other = harness({ env: { BADPLANER_MODEL: 'gemini-3-pro-image' } });
   await other.invoke();
-  assert.match(other.calls.find((call) => call.body?.generationConfig?.responseModalities).url, /gemini-3\.1-flash-image/);
+  assert.match(other.calls.find((call) => call.body?.generationConfig?.responseModalities).url, /gemini-3-pro-image/);
 });
 
 test('ein 2K-Ideenbild passt durch alle Groessengrenzen', async () => {
@@ -1253,7 +1253,7 @@ test('laesst sich der zweite Versuch nicht pruefen, sieht der Kunde ihn, mit dem
 test('Wanne wird Dusche: die Dusche an der Stirnwand der Wanne ist richtig, an einer anderen Wand nicht', async () => {
   // P5 vom 26.09.: "the new shower stands on the left wall, the bathtub it replaces stood on the back wall". Sitzen die
   // Armaturen richtig an der Stirnwand, nennt das Pruefmodell oft diese Wand; der zweite Versuch drehte die Dusche dann wieder.
-  const photo = () => photoChecked(true, JSON.stringify({ is_bathroom: true, reason: 'bathroom', walls: inv({ bathtub: 'back' }), order: ['toilet', 'bathtub', 'washbasin'], nearest: 'washbasin', shower_end_wall: 'left' }));
+  const photo = () => photoChecked(true, JSON.stringify({ is_bathroom: true, reason: 'bathroom', walls: inv({ bathtub: 'back' }), order: ['toilet', 'bathtub', 'washbasin'], nearest: 'washbasin', shower_back: 'along', shower_left: true }));
   const body = payload({ dusche: 'walk-in', badewanne: 'keine' });
   const end = harness({ photoChecks: [photo], checks: [() => checkedInv({ bathtub: 'back' }, { shower: 'left' })] });
   assert.equal((await end.invoke(body)).statusCode, 200);
@@ -1676,23 +1676,25 @@ test('die Pruefung jedes Bildes denkt wenig, die Vorpruefung mehr, das Bildmodel
   const gemini = h.calls.filter((call) => call.url.includes('generativelanguage.googleapis.com'));
   const image = gemini.find((call) => call.body.generationConfig.responseModalities);
   assert.equal(image.body.generationConfig.thinkingConfig, undefined);
-  assert.match(image.url, /gemini-3-pro-image:/);
+  assert.match(image.url, /gemini-3\.1-flash-image:/);
   const checks = gemini.filter((call) => call !== image);
   assert.equal(checks.length, 2);
   assert.deepEqual(checks.map((call) => call.body.generationConfig.thinkingConfig), [{ thinkingLevel: 'high' }, { thinkingLevel: 'low' }]);
+  // Problem 1 der siebten Probe: die Vorpruefung mit dem grossen Modell, jedes Bild weiter mit dem Pruefmodell.
+  assert.deepEqual(checks.map((call) => call.url.match(/models\/([^:]+):/)[1]), ['gemini-3.1-pro-preview', 'gemini-3.6-flash']);
   // Ein aelteres Pruefmodell kennt thinkingLevel nicht und bekommt es nicht.
   const old = harness({ env: { BADPLANER_CHECK_MODEL: 'gemini-2.5-flash' } }); await old.invoke();
   for (const call of old.calls.filter((c) => c.url.includes('gemini-2.5-flash'))) assert.equal(call.body.generationConfig.thinkingConfig, undefined);
 });
 
-test('eine langsame Fotopruefung haelt das Bild hoechstens 25 s auf', async () => {
+test('eine langsame Fotopruefung haelt das Bild hoechstens 40 s auf', async () => {
   const withLayout = () => photoChecked(true, JSON.stringify({ is_bathroom: true, reason: 'bathroom', walls: inv(), order: ['washbasin', 'toilet'], nearest: 'toilet' }));
-  const slow = harness({ photoCheckDelays: [26000], photoChecks: [withLayout] }); const res = await slow.invoke();
+  const slow = harness({ photoCheckDelays: [41000], photoChecks: [withLayout] }); const res = await slow.invoke();
   assert.equal(res.statusCode, 200);
   assert.equal(slow.counts().generation, 1);
   const prompt = slow.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
   assert.doesNotMatch(prompt, /WHAT IMAGE 1 SHOWS/);
-  const inTime = harness({ photoCheckDelays: [24000], photoChecks: [withLayout] });
+  const inTime = harness({ photoCheckDelays: [39000], photoChecks: [withLayout] });
   await inTime.invoke();
   assert.match(inTime.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text, /WHAT IMAGE 1 SHOWS/);
 });
@@ -1810,15 +1812,15 @@ test('Dusche: Rinne und Armaturen an der Stirnwand im Prompt, falsch gezeichnet 
 test('Dusche: die Stirnwand sagt die Vorpruefung im Foto, der Prompt nennt sie', async () => {
   // P2 und P5 vom 25.09.: Rinne und Armaturen richtig an der kurzen Rueckwand, trotzdem "long side" und ein zweiter
   // Versuch, weil die Pruefung die Dusche im Ergebnis fuer breiter als tief hielt. P1 und P3: Rinne hinten, Armaturen links.
-  const photo = (end) => () => photoChecked(true, JSON.stringify({ is_bathroom: true, reason: 'bathroom', walls: inv({ bathtub: 'left' }), order: ['bathtub', 'washbasin', 'toilet'], nearest: 'toilet', shower_end_wall: end }));
+  const photo = (extra) => () => photoChecked(true, JSON.stringify({ is_bathroom: true, reason: 'bathroom', walls: inv({ bathtub: 'left' }), order: ['bathtub', 'washbasin', 'toilet'], nearest: 'toilet', ...extra }));
   const result = (drain, fittings) => () => checkedInv({ bathtub: 'left' }, { shower: 'left' }, { drain_wall: drain, shower_fittings_walls: [fittings] });
   // Die Rinne gehoert seit dem 26.09. nur zum Walk-in; die Duschwanne bekommt den Satz ohne Rinne.
   const body = payload({ dusche: 'walk-in', badewanne: 'keine' });
-  const trayWall = harness({ photoChecks: [photo('back')], checks: [result('back', 'back')] });
+  const trayWall = harness({ photoChecks: [photo({ shower_back: 'end' })], checks: [result('back', 'back')] });
   await trayWall.invoke(payload({ dusche: 'duschwanne', badewanne: 'keine' }));
   assert.match(trayWall.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text,
     /The short end wall of the shower is the back wall seen from the camera: the mixer, the overhead shower and the hand shower sit on it, facing the camera; the side walls of the shower carry no fitting, only tiles\. /);
-  const ok = harness({ photoChecks: [photo('back')], checks: [result('back', 'back')] });
+  const ok = harness({ photoChecks: [photo({ shower_back: 'end' })], checks: [result('back', 'back')] });
   assert.equal((await ok.invoke(body)).statusCode, 200);
   assert.equal(ok.counts().generation, 1);
   const okPrompt = ok.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
@@ -1827,9 +1829,9 @@ test('Dusche: die Stirnwand sagt die Vorpruefung im Foto, der Prompt nennt sie',
   assert.doesNotMatch(okPrompt, /wider than it is deep|perpendicular to the back wall/);
   // Gegenpruefung vom 27.09.: "slopes towards it" war der einzige Satz mit einem Hoehenunterschied (P1: Walk-in erhoeht).
   assert.match(okPrompt, /and the shower floor, level with the bathroom floor at its edge, falls only very slightly towards it\. Never a central point drain, never a round or square grate/);
-  // Die Wanne steht der linken Wand entlang; nennt die Vorpruefung dieselbe Wand als schmales Ende, gilt keine Stirnwand
-  // (P1, P5 und P8 vom 26.09.: die Dusche kam um 90 Grad gedreht). Die Dusche folgt dann der Richtung der Wanne.
-  const wrong = harness({ photoChecks: [photo('left')], checks: [result('back', 'back')] });
+  // Beruehrt die Wanne die linke Wand, aber die Rueckwand nicht, hat kein Ende eine Wand: keine Stirnwand. Die Dusche folgt
+  // dann der Richtung der Wanne.
+  const wrong = harness({ photoChecks: [photo({ shower_left: true })], checks: [result('back', 'back')] });
   assert.equal((await wrong.invoke(body)).statusCode, 200);
   assert.equal(wrong.counts().generation, 1);
   const wrongPrompt = wrong.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
@@ -1839,20 +1841,19 @@ test('Dusche: die Stirnwand sagt die Vorpruefung im Foto, der Prompt nennt sie',
   // Rinne und Armaturen an einer anderen Wand als der Stirnwand: kein Hinweis mehr (P9 vom 26.09., beide falsch).
   assert.doesNotMatch(JSON.stringify(wrong.calls.find((call) => call.url === 'https://api.resend.com/emails').body), /Hinweis/);
   // Ohne Wanne oder Dusche im Foto (oder ein unbekanntes Wort) nennt der Prompt keine Wand.
-  const none = harness({ photoChecks: [photo('diagonal')], checks: [result('back', 'back')] });
+  const none = harness({ photoChecks: [photo({ shower_back: 'diagonal' })], checks: [result('back', 'back')] });
   await none.invoke(body);
   const nonePrompt = none.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
   assert.doesNotMatch(nonePrompt, /short end wall of the shower is the/);
   assert.match(nonePrompt, /When the shower is wider than it is deep, this drain runs through the full depth/);
   assert.equal(none.counts().generation, 1);
   // Die Vorpruefung fragt danach.
-  const question = ok.calls.find((call) => /shower_end_wall/.test(call.body?.contents?.[0]?.parts?.[0]?.text || '')).body.contents[0].parts[0].text;
-  // Siebte Probe: zuerst die Lage der Wanne, dann ihre Waende.
-  assert.match(question, /Set shower_orientation to "across" when its long sides run from left to right across the picture, so that it lies along the back wall, or to "deep" when its long sides run from the back towards the camera, so that it lies along the left or the right wall/);
-  assert.match(question, /Set shower_end_wall to the wall at one of its two narrow ends: "left" or "right" when it lies across, "back" when it lies deep; the wall along one of its long sides is never a narrow end, even when the taps are on it/);
-  assert.match(question, /if both narrow ends are walls, take the one nearer to the existing taps or shower fittings; a narrow end that touches no wall does not count;/);
+  const question = ok.calls.find((call) => /shower_back/.test(call.body?.contents?.[0]?.parts?.[0]?.text || '')).body.contents[0].parts[0].text;
+  // Problem 1 der siebten Probe (Diego, 27.09.): welche Waende die Wanne beruehrt, statt quer oder laengs.
+  assert.match(question, /set shower_left true if it touches the left wall and shower_right true if it touches the right wall; /);
+  assert.match(question, /set shower_back to "along" if one of its long sides stands against the back wall over its whole length, "end" if it touches the back wall only with one of its narrow ends, "none" if it does not touch the back wall\./);
   // Zeigt das Foto keine Wanne, nur die alte Duschwanne: kein Satz zur Wanne, die zur Dusche wird.
-  const shower = harness({ photoChecks: [() => photoChecked(true, JSON.stringify({ is_bathroom: true, reason: 'bathroom', walls: inv({ shower: 'back' }), order: ['washbasin', 'shower', 'toilet'], nearest: 'toilet', shower_end_wall: 'back' }))],
+  const shower = harness({ photoChecks: [() => photoChecked(true, JSON.stringify({ is_bathroom: true, reason: 'bathroom', walls: inv({ shower: 'back' }), order: ['washbasin', 'shower', 'toilet'], nearest: 'toilet', shower_back: 'end' }))],
     checks: [() => checkedInv({ shower: 'back' }, { shower: 'back' })] });
   await shower.invoke(body);
   const showerPrompt = shower.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
@@ -2424,7 +2425,7 @@ test('Produktdurchgang: Aufputz mit dem Modul statt der Platte, Atelier mit dem 
   // Ohne Stirnwand aus der Vorpruefung: die Wand der Handbrause im Bild.
   assert.match(productCall(shower).body.contents[0].parts[0].text, /Image 5, the shower fittings: they become exactly the fittings of image 5, in polished chrome: in one row at the same height: the hose outlet .*never one large plate with both.*\. They all sit together on the wall where image 1 has the hand shower; any other shower mixer, plate or hand shower inside the shower area is removed, and the wall surface simply continues over its place\.\n/);
   // Mit Stirnwand: dieselbe Wand wie im ersten Durchgang, beim Walk-in mit der Rinne an ihrem Fuss.
-  const end = () => photoChecked(true, JSON.stringify({ is_bathroom: true, reason: 'bathroom', walls: inv({ bathtub: 'back' }), order: ['toilet', 'bathtub', 'washbasin'], nearest: 'washbasin', shower_end_wall: 'left', shower_long_wall: 'back' }));
+  const end = () => photoChecked(true, JSON.stringify({ is_bathroom: true, reason: 'bathroom', walls: inv({ bathtub: 'back' }), order: ['toilet', 'bathtub', 'washbasin'], nearest: 'washbasin', shower_back: 'along', shower_left: true }));
   const known = harness({ env: on, photoChecks: [end], checks: [() => checkedInv({ bathtub: 'back' }, { shower: 'left' }), () => checkedInv({ bathtub: 'back' }, { shower: 'left' })] });
   assert.equal((await known.invoke(payload({ paket: 'atelier', look: tile.look, format: tile.format, platte: tile.id, kombination: 'einheitlich',
     unterbau: atelier.bases[0].id, top: atelier.tops[0].id, becken: atelier.basinTypes[0].id, finish: atelier.finishes[0].id, keramik: atelier.sanitary[0].id,
@@ -2482,27 +2483,42 @@ test('Badewanne und Dusche zusammen nur, wenn das Foto schon beide zeigt', async
   assert.equal((await unread.invoke(both)).statusCode, 200);
 });
 
-test('Vorpruefung: die Laengsseite der Wanne haelt die Stirnwand, die Dusche liegt in ihrer Richtung', async () => {
-  // P2 und P5 der sechsten Probe: Armaturen auf der falschen Seite. Steht die Wanne mit dem Kopfende an der Rueckwand, ging
-  // die richtige Stirnwand verloren, weil die Vorpruefung auch die Wand der Wanne "back" nannte.
-  const photo = (extra) => () => photoChecked(true, JSON.stringify({ is_bathroom: true, reason: 'bathroom', walls: inv({ bathtub: 'back' }), order: ['toilet', 'bathtub', 'washbasin'], nearest: 'washbasin', ...extra }));
-  const promptFor = async (extra) => {
-    const h = harness({ photoChecks: [photo(extra)], checks: [() => checkedInv({ bathtub: 'back' }, { shower: 'back' })] });
+test('Vorpruefung: die beruehrten Waende sagen die Enden der Wanne, die Armaturen kommen zum Waschtisch, sonst zum WC', async () => {
+  // P2 und P5 der siebten Probe: die quere Wanne, von Wand zu Wand an der Rueckwand, las die Vorpruefung als laengs an der
+  // linken Wand. Jetzt sagt sie nur, welche Waende die Wanne beruehrt; Enden und Laengsseite rechnet der Code (Diego, 27.09.).
+  const photo = (extra, walls = {}) => () => photoChecked(true, JSON.stringify({ is_bathroom: true, reason: 'bathroom', walls: inv({ bathtub: 'back', ...walls }), order: ['toilet', 'bathtub', 'washbasin'], nearest: 'washbasin', ...extra }));
+  const run = async (extra, walls) => {
+    const h = harness({ photoChecks: [photo(extra, walls)], checks: [() => checkedInv({ bathtub: 'back' }, { shower: 'back' })] });
     assert.equal((await h.invoke(payload({ dusche: 'walk-in', badewanne: 'keine' }))).statusCode, 200);
-    return h.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
+    return h;
   };
-  // Laengsseite rechts: die Rueckwand ist die Stirnwand.
-  assert.match(await promptFor({ shower_end_wall: 'back', shower_long_wall: 'right' }), /The short end wall of the shower is the back wall seen from the camera: .*lies along its foot; its long side runs along the right wall, which carries no fitting, only tiles\./);
-  // Ohne Laengsseite wie bisher: die Wand der Wanne ist nie ihre Stirnwand.
-  assert.doesNotMatch(await promptFor({ shower_end_wall: 'back' }), /The short end wall/);
-  // Nennt die Vorpruefung beide gleich, gilt keine Stirnwand.
-  assert.doesNotMatch(await promptFor({ shower_end_wall: 'left', shower_long_wall: 'left' }), /The short end wall/);
+  const promptOf = (h) => h.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
+  // Mit einem Ende an der Rueckwand, der rechten Wand entlang: die Rueckwand ist die Stirnwand.
+  assert.match(promptOf(await run({ shower_back: 'end', shower_right: true })), /The short end wall of the shower is the back wall seen from the camera: .*lies along its foot; its long side runs along the right wall, which carries no fitting, only tiles\./);
+  // Der Rueckwand entlang, von Wand zu Wand (P2): die Armaturen an das Ende zum Waschtisch, dort kommt das Wasser an.
+  const wide = { shower_back: 'along', shower_left: true, shower_right: true };
+  const p2 = await run(wide, { washbasin: 'right', toilet: 'right' });
+  assert.match(promptOf(p2), /The short end wall of the shower is the right wall seen from the camera\. Seen from the door, the mixer, the overhead shower and the hand shower are on this right wall, next to the washbasin cabinet, seen from the side and foreshortened, with the overhead shower sticking out from it towards the left, and the channel drain lies along its foot\. The back wall of the shower stays empty: only tiles, no mixer, no hand shower and no shower head\./);
+  assert.match(JSON.stringify(p2.calls.find((call) => call.url === 'https://api.resend.com/emails').body), /Wanne\/Dusche berührt links, rechts, hinten der Länge nach; Längsseite hinten, Stirnwand rechts \(zum Waschtisch\)/);
+  // Steht der Waschtisch an keiner Seitenwand, zaehlt seine Seite in der Reihe von links nach rechts; ohne ihn die des WCs.
+  assert.match(promptOf(await run(wide, { washbasin: 'front' })), /The short end wall of the shower is the right wall/);
+  assert.match(promptOf(await run(wide, { washbasin: 'none', toilet: 'left' })), /The short end wall of the shower is the left wall/);
+  // Nie an ein offenes Ende: beruehrt die Wanne nur die linke Wand, bleibt es links, auch mit dem Waschtisch rechts.
+  assert.match(promptOf(await run({ shower_back: 'along', shower_left: true }, { washbasin: 'right' })), /The short end wall of the shower is the left wall/);
+  // Kein Ende an einer Wand: keine Stirnwand.
+  assert.doesNotMatch(promptOf(await run({ shower_back: 'along' })), /The short end wall/);
+  // Liest sie die quere Wanne trotzdem als laengs (P2), gilt der Waschtisch gleich neben einem Ende: seine Wand ist die Stirnwand.
+  const misread = { shower_back: 'end', shower_left: true, basin_beside_end: true };
+  assert.match(promptOf(await run(misread, { washbasin: 'right', toilet: 'right' })), /The short end wall of the shower is the right wall seen from the camera\. .*The back wall of the shower stays empty/);
+  // Nicht, wenn seine Wand die Laengsseite ist: dann steht er vor dem offenen Ende, und die Rueckwand bleibt.
+  assert.match(promptOf(await run(misread, { washbasin: 'left' })), /The short end wall of the shower is the back wall/);
   // Die Frage selbst.
   const h = harness();
   await h.invoke();
   const question = h.calls.find((call) => call.url.includes('generativelanguage') && call.body.contents[0].parts.filter((part) => part.inlineData).length === 1).body.contents[0].parts[0].text;
-  assert.match(question, /Set shower_long_wall to the wall, seen from the camera, that one of its long sides stands against: "back", "left" or "right", or "none" when no long side touches a wall or you cannot tell\./);
-  assert.match(question, /"shower_orientation":"none","shower_long_wall":"none","shower_end_wall":"none"\}$/);
+  assert.match(question, /If the photo shows a bathtub, or a shower when there is no bathtub, say which walls it touches, seen from the camera: /);
+  assert.match(question, /Then set basin_beside_end true if the washbasin or its cabinet stands right beside one of the two narrow ends of that bathtub or shower, almost touching it/);
+  assert.match(question, /"shower_left":false,"shower_right":false,"shower_back":"none","basin_beside_end":false\}$/);
 });
 
 test('die Pruefung fragt, ob das WC noch das alte ist; das ist ein schwerer Hinweis', async () => {
@@ -2560,12 +2576,12 @@ test('Gegenpruefung des Codes vom 27.09.: Produktdurchgang mit zwei Bildern, ohn
 test('Gegenpruefung des Codes vom 27.09.: Stirnwand und Laengsseite in Vorpruefung und Pruefung', async () => {
   const photo = (extra) => () => photoChecked(true, JSON.stringify({ is_bathroom: true, reason: 'bathroom', walls: inv({ bathtub: 'back' }), order: ['toilet', 'bathtub', 'washbasin'], nearest: 'washbasin', ...extra }));
   const body = payload({ dusche: 'walk-in', badewanne: 'keine' });
-  // Links und rechts zugleich gibt es bei einer Wanne nicht: keine Stirnwand im Prompt.
-  const parallel = harness({ photoChecks: [photo({ shower_end_wall: 'left', shower_long_wall: 'right' })], checks: [() => checkedInv({ bathtub: 'back' }, { shower: 'back' })] });
+  // Beruehrt die Wanne die Rueckwand nicht, hat kein Ende eine Wand: keine Stirnwand im Prompt.
+  const parallel = harness({ photoChecks: [photo({ shower_left: true, shower_right: true })], checks: [() => checkedInv({ bathtub: 'back' }, { shower: 'back' })] });
   assert.equal((await parallel.invoke(body)).statusCode, 200);
   assert.doesNotMatch(parallel.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text, /The short end wall/);
   // Wanne mit dem Kopfende hinten und der Laengsseite rechts: die Dusche an der rechten Wand ist richtig (P2 und P5).
-  const corner = photo({ shower_end_wall: 'back', shower_long_wall: 'right' });
+  const corner = photo({ shower_back: 'end', shower_right: true });
   const right = harness({ photoChecks: [corner], checks: [() => checkedInv({ bathtub: 'back' }, { shower: 'right' })] });
   assert.equal((await right.invoke(body)).statusCode, 200);
   assert.equal(right.counts().generation, 1);
@@ -2581,7 +2597,7 @@ test('Problem 1 der siebten Probe: die Armaturen an der Stirnwand, die Vorpruefu
   // P1 und P5 der siebten Probe: alle Armaturen an der Laengswand; P8: zwei Saetze an zwei Waenden. Sechste Probe: P2, P5.
   const photo = (extra) => () => photoChecked(true, JSON.stringify({ is_bathroom: true, reason: 'bathroom', walls: inv({ toilet: 'right', washbasin: 'right', bathtub: 'back' }),
     order: ['bathtub', 'washbasin', 'toilet'], nearest: 'toilet', ceiling: 'flat', ...extra }));
-  const across = { shower_orientation: 'across', shower_long_wall: 'back', shower_end_wall: 'left' };
+  const across = { shower_back: 'along', shower_left: true };
   const body = payload({ dusche: 'walk-in', badewanne: 'keine' });
   const promptOf = (h) => h.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
   const mailOf = (h) => JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails').body);
@@ -2590,9 +2606,9 @@ test('Problem 1 der siebten Probe: die Armaturen an der Stirnwand, die Vorpruefu
   const h = harness({ photoChecks: [photo(across)], checks: [right] });
   assert.equal((await h.invoke(body)).statusCode, 200);
   assert.equal(h.counts().generation, 1);
-  assert.match(promptOf(h), /The short end wall of the shower is the left wall seen from the camera: the mixer, the overhead shower and the hand shower sit on it, seen from the side and foreshortened, with the overhead shower sticking out from it towards the right, and the channel drain lies along its foot; its long side runs along the back wall, which carries no fitting, only tiles\./);
+  assert.match(promptOf(h), /The short end wall of the shower is the left wall seen from the camera\. Seen from the door, the mixer, the overhead shower and the hand shower are on this left wall, seen from the side and foreshortened, with the overhead shower sticking out from it towards the right, and the channel drain lies along its foot\. The back wall of the shower stays empty: only tiles, no mixer, no hand shower and no shower head\./);
   // Was Vorpruefung und Pruefung sahen, steht in der Mail (die Logs von Vercel sind fuer uns nicht lesbar).
-  assert.match(mailOf(h), /Vorprüfung<\/td><td[^>]*>WC rechts, Waschtisch rechts, Wanne hinten; Wanne\/Dusche quer, Längsseite hinten, Stirnwand links; Decke flach</);
+  assert.match(mailOf(h), /Vorprüfung<\/td><td[^>]*>WC rechts, Waschtisch rechts, Wanne hinten; Wanne\/Dusche berührt links, hinten der Länge nach; Längsseite hinten, Stirnwand links; Decke flach</);
   assert.match(mailOf(h), /Dusche im Bild<\/td><td[^>]*>Armaturen: links; Rinne: links; Boden: Platten; Stufe: nein</);
   // Die Vorpruefung denkt mehr nach als die Pruefung jedes Bildes.
   const levels = h.calls.filter((call) => call.url.includes('generativelanguage') && !call.body.generationConfig.responseModalities)
@@ -2604,8 +2620,8 @@ test('Problem 1 der siebten Probe: die Armaturen an der Stirnwand, die Vorpruefu
   assert.equal((await wrong.invoke(body)).statusCode, 200);
   assert.equal(wrong.counts().generation, 2);
   assert.match(wrong.calls.filter((call) => call.body?.generationConfig?.responseModalities)[1].body.contents[0].parts[0].text,
-    /A previous attempt was wrong because the shower fittings are on the back wall; they all belong on the short end wall of the shower, the left wall\. Start again from image 1/);
-  assert.match(mailOf(wrong), /Bild 1 nicht gezeigt \(Hinweise: the shower fittings are on the back wall; they all belong on the short end wall of the shower, the left wall\), Bild 2 ok/);
+    /A previous attempt was wrong because the shower fittings are on the back wall; seen from the door they all belong on the left wall at the short end of the shower, seen from the side, and the back wall stays empty\. Start again from image 1/);
+  assert.match(mailOf(wrong), /Bild 1 nicht gezeigt \(Hinweise: the shower fittings are on the back wall; seen from the door they all belong on the left wall at the short end of the shower, seen from the side, and the back wall stays empty\), Bild 2 ok/);
   // Zwei Saetze an zwei Waenden (P8): ebenso.
   const split = () => checkedInv({ bathtub: 'back' }, { shower: 'back' }, { shower_fittings_walls: ['back', 'left'] });
   const twice = harness({ photoChecks: [photo(across)], checks: [split, right] });
@@ -2616,16 +2632,16 @@ test('Problem 1 der siebten Probe: die Armaturen an der Stirnwand, die Vorpruefu
   const unknown = harness({ checks: [back] });
   assert.equal((await unknown.invoke(body)).statusCode, 200);
   assert.equal(unknown.counts().generation, 1);
-  // Passt die Stirnwand nicht zur Lage der Wanne, gilt sie nicht, und die Mail sagt es.
-  for (const extra of [{ ...across, shower_end_wall: 'back' }, { shower_orientation: 'deep', shower_long_wall: 'left', shower_end_wall: 'right' }, { shower_orientation: 'across', shower_long_wall: 'left', shower_end_wall: 'right' }]) {
+  // Hat kein Ende der Wanne eine Wand, gibt es keine Stirnwand, und die Mail sagt es.
+  for (const extra of [{ shower_back: 'along' }, { shower_left: true }, { shower_back: 'none', shower_right: true }]) {
     const odd = harness({ photoChecks: [photo(extra)], checks: [right] });
     assert.equal((await odd.invoke(body)).statusCode, 200);
     assert.doesNotMatch(promptOf(odd), /The short end wall/, JSON.stringify(extra));
-    assert.match(mailOf(odd), /\(passt nicht, nicht verwendet\)/, JSON.stringify(extra));
+    assert.match(mailOf(odd), /Stirnwand –; Decke flach</, JSON.stringify(extra));
   }
   // Laengs an der linken Wand, Ende hinten: die Armaturen an der Rueckwand, von vorne gesehen.
-  const deep = harness({ photoChecks: [photo({ shower_orientation: 'deep', shower_long_wall: 'left', shower_end_wall: 'back' })], checks: [right] });
+  const deep = harness({ photoChecks: [photo({ shower_back: 'end', shower_left: true })], checks: [right] });
   assert.equal((await deep.invoke(body)).statusCode, 200);
   assert.match(promptOf(deep), /The short end wall of the shower is the back wall seen from the camera: the mixer, the overhead shower and the hand shower sit on it, facing the camera, and the channel drain lies along its foot; its long side runs along the left wall, which carries no fitting, only tiles\./);
-  assert.match(mailOf(deep), /Wanne\/Dusche längs, Längsseite links, Stirnwand hinten;/);
+  assert.match(mailOf(deep), /Wanne\/Dusche berührt links, hinten mit einem Ende; Längsseite links, Stirnwand hinten;/);
 });

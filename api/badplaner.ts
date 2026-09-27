@@ -59,9 +59,11 @@
  *   BADPLANER_DAILY_CAP  Maximale Anfragen mit Ideenbild pro Tag insgesamt (Default 60); jede erzeugt so viele Bilder,
  *                        wie BADPLANER_CANDIDATES sagt, mit zweitem Durchgang doppelt so viele, dazu eines im
  *                        Produktdurchgang
- *   BADPLANER_MODEL      Gemini-Bildmodell (Default gemini-3-pro-image)
- *   BADPLANER_CHECK_MODEL Gemini-Textmodell fuer Foto- und Bildpruefung (Default
- *                        gemini-3.6-flash); leer lassen = Pruefung bewusst deaktiviert
+ *   BADPLANER_MODEL      Gemini-Bildmodell (Default gemini-3.1-flash-image)
+ *   BADPLANER_CHECK_MODEL Gemini-Textmodell fuer die Pruefung der Ideenbilder (Default
+ *                        gemini-3.6-flash); leer lassen = Pruefungen bewusst deaktiviert, auch die Vorpruefung
+ *   BADPLANER_PHOTO_CHECK_MODEL Gemini-Textmodell nur fuer die Vorpruefung des Fotos (Default
+ *                        gemini-3.1-pro-preview)
  *   BADPLANER_CANDIDATES Ideenbilder pro Durchgang, 1 bis 4 (Default 2)
  *   BADPLANER_PRODUCT_PASS 0 = ohne Produktdurchgang (Default: mit, ein Bild mehr pro Anfrage)
  *
@@ -116,7 +118,9 @@ const CHECK_TIMEOUT_MS = 20000;       // liest ein 2K-Bild
 const QUICK_CHECK_TIMEOUT_MS = 10000; // zweiter Anlauf nach einem Timeout: kurz, nicht nochmals 20 s
 // haelt das Bild auf; laeuft sie ab, wird ohne Grundriss gerendert. Seit dem 27.09. mit mehr Nachdenken (Problem 1 der
 // siebten Probe: an welcher Wand die Armaturen hingehoeren, liest sie aus der Lage der Wanne), darum 25 statt 12 s.
-const PHOTO_CHECK_TIMEOUT_MS = 25000;
+// Seit gemini-3.1-pro-preview (27.09.): P2 14 bis 21 s, P9 17 bis 19 s, P7 3 s oder 26 bis 27 s; mit 25 s lief P7 im Pruefstand
+// dreimal ab. 40 s lassen Luft und reichen im Budget von 220 s noch fuer zwei Durchgaenge.
+const PHOTO_CHECK_TIMEOUT_MS = 40000;
 const CHECK_RETRY_DELAY_MS = 750;
 // Die Pruefmodelle lesen nur ab und fuellen JSON aus. gemini-3.6-flash denkt ab Werk "medium";
 // "low" kennen alle Gemini-3-Modelle (ai.google.dev/gemini-api/docs/generate-content/thinking),
@@ -1448,6 +1452,10 @@ function buildPrompt(v: {
   // vorne. An einer Seitenwand sieht man sie von der Seite; das steht jetzt dabei.
   const endView = v.showerWall === 'back' ? ', facing the camera'
     : v.showerWall ? `, seen from the side and foreshortened, with the overhead shower sticking out from it towards the ${v.showerWall === 'left' ? 'right' : 'left'}` : '';
+  // Problem 1 der siebten Probe (P2, P5): an einer Seitenwand setzten beide Bildmodelle die Armaturen trotzdem an die
+  // Rueckwand. Darum so beschrieben, wie man es von der Tuer aus sieht (Diego, 27.09.), und neben dem Waschtisch, wenn er dort steht.
+  const sideEnd = v.showerWall === 'left' || v.showerWall === 'right';
+  const besideBasin = sideEnd && v.layout?.walls.washbasin === v.showerWall ? ', next to the washbasin cabinet' : '';
   const colourOf = (n: number) => (n ? ` in the colour and finish of image ${n}` : '');
 
   // Fenster und Decke im Wortlaut der Website: mit der kurzen Fassung kam in P4 und P5 vom 25.09.
@@ -1503,7 +1511,7 @@ function buildPrompt(v: {
     `PHOTO EDITING TASK, not a design task. Image 1 is a photograph of the customer's existing ${roomName}. The result is that same photograph after the renovation: the same picture from the same spot, with the same lens, the same crop and the same edges, in which only the surfaces and products named under CHANGE have been replaced, each one in its own place. Someone who knows this ${roomName} must recognise it at first glance. Do not design a new ${roomName} and do not show a showroom.${references}`,
     v.layout ? layoutPrompt(v.layout) : '',
     `This is an edit of image 1, not a new picture. Keep image 1 and change only what the CHANGE list names. Everything else stays exactly as it is: the camera position, angle, lens and framing, the same crop and the same aspect ratio, the walls and where they stand, with every niche, ledge, projection and step they have in image 1 and no others, the ceiling and the room height, the room proportions, every window, roof window and door at its exact size and position, and a radiator only where image 1 has one. ${ceilingRule} Never zoom out, never widen the view, never show floor, wall or ceiling beyond the edges of image 1, never create extra floor area. Whatever is built in the immediate foreground at the edge of image 1 belongs to the picture and stays: an open door leaf, a door frame, the edge of a wall. It keeps its place and takes up the same part of the picture as before, and is never removed to show more of the room. A loose piece of furniture at the edge is removed like all loose furniture: the floor and the walls behind it continue, and the camera stays exactly where it is. Every window keeps the same share of the picture it has in image 1; do not move closer to it and do not make it larger. ${windowRule}${glassRule}`,
-    `KEEP THE POSITIONS. A half-height wall, a low built wall or a boxed pre-wall that a fixture stands against is part of the room, not furniture: it keeps its place, its length, its height and its depth, and the fixture stays mounted on it. Every fixture keeps the wall or low wall it stands against in image 1 and its place along it, measured against the corners, the door and the window next to it. The toilet keeps its wall and its place because its drain cannot be moved${v.ceiling === 'sloped' ? ': under the sloping ceiling it stays under that sloping ceiling and is never moved to a straight or rear wall to gain headroom' : ''}. The washbasin keeps its wall and its place. ${v.layout?.walls.bathtub === 'none' ? 'An old shower tray, its kerb or platform is removed down to the floor.' : "A bathtub that becomes a shower uses only the bathtub's own footprint, on the same wall and in the same direction as the bathtub; the bathtub and any raised base under it are removed down to the floor. So is an old shower tray, its kerb or platform."}${v.showerWall ? ` The short end wall of the shower is the ${v.showerWall} wall seen from the camera: the mixer, the overhead shower and the hand shower sit on it${endView}${v.trayShower ? '' : ', and the channel drain lies along its foot'}; ${v.showerLongWall ? `its long side runs along the ${v.showerLongWall} wall, which carries` : v.showerWall === 'back' ? 'the side walls of the shower carry' : 'the back wall of the shower carries'} no fitting, only tiles.` : ''} NO NEW WALLS: never add a wall, a partition, a half-height wall, a boxed pre-wall, a ledge, a shelf or a niche that image 1 does not show, not behind the toilet, not behind the washbasin and not in the shower. Where image 1 shows one flat wall, the result shows that same flat wall with new tiles: it never steps forward and never gets a flat top at mid-height. NOTHING IS FILLED IN EITHER: every recess, alcove, niche, wall offset, corner step and wall projection that image 1 shows stays exactly where it is, with the same width, depth and height, above all in the shower area. A shower or bathtub that stands in a recess or alcove stays inside it, and the new tiles follow the wall into the recess and around its corners. Never fill a recess, never close an alcove, never tile a niche over flush and never straighten a stepped wall into one flat wall. Only surfaces, sanitary fixtures, taps, furniture and lights change.`,
+    `KEEP THE POSITIONS. A half-height wall, a low built wall or a boxed pre-wall that a fixture stands against is part of the room, not furniture: it keeps its place, its length, its height and its depth, and the fixture stays mounted on it. Every fixture keeps the wall or low wall it stands against in image 1 and its place along it, measured against the corners, the door and the window next to it. The toilet keeps its wall and its place because its drain cannot be moved${v.ceiling === 'sloped' ? ': under the sloping ceiling it stays under that sloping ceiling and is never moved to a straight or rear wall to gain headroom' : ''}. The washbasin keeps its wall and its place. ${v.layout?.walls.bathtub === 'none' ? 'An old shower tray, its kerb or platform is removed down to the floor.' : "A bathtub that becomes a shower uses only the bathtub's own footprint, on the same wall and in the same direction as the bathtub; the bathtub and any raised base under it are removed down to the floor. So is an old shower tray, its kerb or platform."}${v.showerWall && sideEnd ? ` The short end wall of the shower is the ${v.showerWall} wall seen from the camera. Seen from the door, the mixer, the overhead shower and the hand shower are on this ${v.showerWall} wall${besideBasin}${endView}${v.trayShower ? '' : ', and the channel drain lies along its foot'}. The ${v.showerLongWall ?? 'back'} wall of the shower stays empty: only tiles, no mixer, no hand shower and no shower head.` : v.showerWall ? ` The short end wall of the shower is the ${v.showerWall} wall seen from the camera: the mixer, the overhead shower and the hand shower sit on it${endView}${v.trayShower ? '' : ', and the channel drain lies along its foot'}; ${v.showerLongWall ? `its long side runs along the ${v.showerLongWall} wall, which carries` : v.showerWall === 'back' ? 'the side walls of the shower carry' : 'the back wall of the shower carries'} no fitting, only tiles.` : ''} NO NEW WALLS: never add a wall, a partition, a half-height wall, a boxed pre-wall, a ledge, a shelf or a niche that image 1 does not show, not behind the toilet, not behind the washbasin and not in the shower. Where image 1 shows one flat wall, the result shows that same flat wall with new tiles: it never steps forward and never gets a flat top at mid-height. NOTHING IS FILLED IN EITHER: every recess, alcove, niche, wall offset, corner step and wall projection that image 1 shows stays exactly where it is, with the same width, depth and height, above all in the shower area. A shower or bathtub that stands in a recess or alcove stays inside it, and the new tiles follow the wall into the recess and around its corners. Never fill a recess, never close an alcove, never tile a niche over flush and never straighten a stepped wall into one flat wall. Only surfaces, sanitary fixtures, taps, furniture and lights change.`,
     `CHANGE this, and only this, in this ${roomName} (style "${v.packageName}"):${look} ${surfaces}; ${fixtures}; if a toilet is visible in image 1, ${toilet}; ${vanity}; ${v.tapPrompt}.${accent}`,
     // P7 vom 26.09.: der alte Spiegel blieb, darum steht er auch hier.
     `REMOVE: the bidet, if image 1 has one: its place is finished like the rest of the room, with nothing standing there;${v.mirrorImageNumber ? ' the old mirror or mirror cabinet with its lamp;' : ''} the old shower curtain and its rail; the old shower fittings and their slide rail; towels, bottles, rugs and loose furniture, also a cabinet or shelf cut off at the edge of the picture. The vanity unit is not loose furniture and stays, even when cut off at the edge of the picture.${v.wantsShower ? ' All shower fittings sit together on one wall inside the shower area, never next to the toilet or the washbasin.' : ''}`,
@@ -1589,10 +1597,11 @@ async function loadSwatch(image: string, src: string, ctx: RequestContext): Prom
 type GenResult = { ok: true; mime: string; data: string } | { ok: false; error: string; detail: string };
 
 async function generateImage(prompt: string, photo: Photo, references: (Photo | null)[], ctx: RequestContext, aspectRatio = '', reserveMs = CHECK_TIMEOUT_MS + DELIVERY_RESERVE_MS): Promise<GenResult> {
-  // Das Ideenbild ist das Produkt: es soll das Bad des Kunden zeigen, nicht
-  // irgendein schoenes Bad. Darum das genaueste Modell, nicht das billigste.
-  // 2K kostet bei diesem Modell gleich viel wie 1K, also 2K.
-  const model = env.BADPLANER_MODEL || 'gemini-3-pro-image';
+  // Das Ideenbild ist das Produkt: es soll das Bad des Kunden zeigen, nicht irgendein schoenes Bad. Seit dem 27.09.
+  // gemini-3.1-flash-image statt gemini-3-pro-image (Diego): im Pruefstand P1 bis P9 ebenso treu, ein Viertel schneller,
+  // halb so oft verworfen und in P2 und P5 mit den Armaturen an der Stirnwand in 5 von 12 statt 0 von 9 Laeufen. 2K wie
+  // bisher: bei Flash etwas teurer als 1K, zusammen noch billiger als Pro. Pro bleibt ueber BADPLANER_MODEL waehlbar.
+  const model = env.BADPLANER_MODEL || 'gemini-3.1-flash-image';
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
   // Ohne Nummer vor jedem Bild, wie auf der Website (27.09.): mit ihr (b32f7a2) brauchten in der fuenften Probe 7 von 8
   // Bildern einen zweiten Versuch, vorher 3 von 8. Ob sie die Ursache war, ist offen; belegt war ihr Nutzen nie.
@@ -1662,6 +1671,10 @@ const nearest = (value: any): Fixture | 'none' | null =>
 
 /** Pruefmodell fuer Foto und Ideenbild; BADPLANER_CHECK_MODEL leer = Pruefungen bewusst aus. */
 const checkModel = (): string => (env.BADPLANER_CHECK_MODEL ?? 'gemini-3.6-flash').trim();
+// Problem 1 der siebten Probe (27.09.): die quere Wanne in P2 las gemini-3.6-flash in 10 von 10 Laeufen als laengs an der
+// linken Wand, gemini-3.1-pro-preview in 5 von 5 richtig. Nur fuer die Vorpruefung, einmal pro Anfrage; jedes Bild prueft
+// weiter das Pruefmodell. Ohne Pruefmodell ist auch die Vorpruefung aus.
+const photoCheckModel = (): string => (checkModel() ? (env.BADPLANER_PHOTO_CHECK_MODEL ?? 'gemini-3.1-pro-preview').trim() : '');
 
 /**
  * Eine Frage mit Bildern an das Pruefmodell, Antwort als JSON. Liefert die gelesene
@@ -1870,7 +1883,8 @@ async function checkOpenings(
     wanted.shower && fittingsWalls && fittingsWalls.length > 1 && 'the shower fittings are spread over two walls; they all belong together on one wall',
     // P1 und P5 der siebten Probe: alle Armaturen an der Laengswand. Die Stirnwand sagt die Vorpruefung im Foto.
     wanted.shower && endWall && fittingsWalls?.length === 1 && fittingsWalls[0] !== endWall
-      && `the shower fittings are on the ${fittingsWalls[0]} wall; they all belong on the short end wall of the shower, the ${endWall} wall`,
+      && (endWall === 'back' ? `the shower fittings are on the ${fittingsWalls[0]} wall; they all belong on the short end wall of the shower, the ${endWall} wall`
+        : `the shower fittings are on the ${fittingsWalls[0]} wall; seen from the door they all belong on the ${endWall} wall at the short end of the shower, seen from the side, and the ${fittingsWalls[0]} wall stays empty`),
   ].filter((hint): hint is string => !!hint));
   hints.push(...[
     walkIn && parsed.point_drain && 'the shower has a point drain; it needs a linear channel drain at the foot of the wall with the fittings',
@@ -1902,7 +1916,7 @@ type EndWall = 'left' | 'right' | 'back';
 type PhotoCheck = { status: 'ok'; layout?: Layout; ceiling?: Ceiling; showerWall?: EndWall; showerLongWall?: EndWall; summary?: string } | { status: 'wrong_room'; reason: string } | { status: 'unavailable' };
 
 async function checkPhoto(photo: Photo, room: 'badezimmer' | 'gaeste-wc', ctx: RequestContext): Promise<PhotoCheck> {
-  const model = checkModel();
+  const model = photoCheckModel();
   if (!model) return { status: 'unavailable' };
   const question =
     `A customer uploaded this photo as the ${room === 'gaeste-wc' ? 'guest WC' : 'bathroom'} they want renovated. ` +
@@ -1913,16 +1927,18 @@ async function checkPhoto(photo: Photo, room: 'badezimmer' | 'gaeste-wc', ctx: R
     'List the visible fixtures in the order you see them from left to right, each at most once, and name the one closest to the camera, or "none" when you cannot tell. ' +
     // P4 vom 25.09.: aus einer flachen Decke wurde eine Dachschraege. Das Bildmodell bekommt jetzt gesagt, welche Decke es ist.
     'Set ceiling to "flat" when the visible ceiling is flat and horizontal, "sloped" when it slopes (an attic or roof slope), or "unknown" when no ceiling is visible. ' +
-    // P1 und P3 vom 25.09.: Rinne an der Rueckwand, Armaturen an der Seitenwand. Das schmale Ende einer Wanne erkennt
-    // das Modell im Foto sicherer als im Ergebnis, wo die neue Dusche in der Tiefe verkuerzt ist.
-    // Siebte Probe (P1, P5, P8): die Armaturen an der Laengswand oder an zwei Waenden. Zuerst die Lage der Wanne oder Dusche
-    // im Bild, dann ihre Waende: so liest das Modell die Stirnwand sicherer als mit einer einzigen Frage danach.
-    'If the photo shows a bathtub or a shower, picture it from above: a long rectangle with two long sides and two narrow ends. ' +
-    'Set shower_orientation to "across" when its long sides run from left to right across the picture, so that it lies along the back wall, or to "deep" when its long sides run from the back towards the camera, so that it lies along the left or the right wall; "none" when there is no bathtub or shower or you cannot tell. ' +
-    'Set shower_long_wall to the wall, seen from the camera, that one of its long sides stands against: "back", "left" or "right", or "none" when no long side touches a wall or you cannot tell. ' +
-    'Set shower_end_wall to the wall at one of its two narrow ends: "left" or "right" when it lies across, "back" when it lies deep; the wall along one of its long sides is never a narrow end, even when the taps are on it; if both narrow ends are walls, take the one nearer to the existing taps or shower fittings; a narrow end that touches no wall does not count; "none" when there is no bathtub or shower or you cannot tell. ' +
+    // Problem 1 der siebten Probe (Diego, 27.09.): in P2 und P5 las die Vorpruefung die quere Wanne, von Wand zu Wand an der
+    // Rueckwand, in 5 von 5 Laeufen als "laengs an der linken Wand". Statt "quer oder laengs" sagt sie jetzt, welche Waende
+    // die Wanne beruehrt; Laengsseite und Enden rechnet der Code daraus aus.
+    'If the photo shows a bathtub, or a shower when there is no bathtub, say which walls it touches, seen from the camera: ' +
+    'set shower_left true if it touches the left wall and shower_right true if it touches the right wall; ' +
+    'set shower_back to "along" if one of its long sides stands against the back wall over its whole length, "end" if it touches the back wall only with one of its narrow ends, "none" if it does not touch the back wall. ' +
+    'With no bathtub and no shower, or when you cannot tell, set false, false and "none". ' +
+    // Auch so las sie P2 als laengs. Der Waschtisch als Anker (Diego, 27.09.): steht er gleich neben einem schmalen Ende,
+    // ist seine Wand die Stirnwand.
+    'Then set basin_beside_end true if the washbasin or its cabinet stands right beside one of the two narrow ends of that bathtub or shower, almost touching it, and false if it stands along a long side, across the room from it or further away, or when you cannot tell. ' +
     'Answer with JSON only, no markdown and exactly these keys: {"is_bathroom":true,"reason":"short English reason, max 25 words",' +
-    '"walls":{"toilet":"left","washbasin":"left","shower":"none","bathtub":"none","bidet":"none"},"order":["washbasin","toilet"],"nearest":"toilet","ceiling":"flat","shower_orientation":"none","shower_long_wall":"none","shower_end_wall":"none"}';
+    '"walls":{"toilet":"left","washbasin":"left","shower":"none","bathtub":"none","bidet":"none"},"order":["washbasin","toilet"],"nearest":"toilet","ceiling":"flat","shower_left":false,"shower_right":false,"shower_back":"none","basin_beside_end":false}';
   const reply = await askCheckModel(model, question, [photo], PHOTO_CHECK_TIMEOUT_MS, ctx, 'high');
   if ('detail' in reply) {
     console.error('[badplaner] Fotopruefung nicht moeglich', reply.detail);
@@ -1931,39 +1947,48 @@ async function checkPhoto(photo: Photo, room: 'badezimmer' | 'gaeste-wc', ctx: R
   const parsed = reply.answer;
   if (!parsed || Array.isArray(parsed) || typeof parsed.is_bathroom !== 'boolean' || typeof parsed.reason !== 'string'
     || !parsed.reason.trim() || parsed.reason.length > 200
-    || Object.keys(parsed).some((key) => !['is_bathroom', 'reason', 'walls', 'order', 'nearest', 'ceiling', 'shower_orientation', 'shower_end_wall', 'shower_long_wall'].includes(key))) return { status: 'unavailable' };
+    || Object.keys(parsed).some((key) => !['is_bathroom', 'reason', 'walls', 'order', 'nearest', 'ceiling', 'shower_left', 'shower_right', 'shower_back', 'basin_beside_end'].includes(key))) return { status: 'unavailable' };
   if (!parsed.is_bathroom) return { status: 'wrong_room', reason: parsed.reason.slice(0, 200) };
   // Der Grundriss ist eine Zugabe: fehlt er oder ist er unlesbar, wird ohne ihn gerendert.
   const walls = inventory(parsed.walls);
   const seen = order(parsed.order);
   const near = nearest(parsed.nearest);
   const ceiling: Ceiling | undefined = parsed.ceiling === 'flat' || parsed.ceiling === 'sloped' ? parsed.ceiling : undefined;
-  // P1, P5 und P8 vom 26.09.: die alte Wanne stand der Rueckwand entlang, mit ihren Armaturen an dieser Wand, und die neue
-  // Dusche kam um 90 Grad gedreht. Die Wand, an der die Wanne der Laenge nach steht, ist nie ihr schmales Ende: nennt die
-  // Vorpruefung beide gleich, gilt keine Stirnwand, und die Dusche folgt nur der Richtung der Wanne.
-  const endWall: EndWall | undefined = ['left', 'right', 'back'].includes(parsed.shower_end_wall) ? parsed.shower_end_wall : undefined;
-  // Seit dem 27.09. fragt die Vorpruefung auch nach der Wand der Laengsseite: mit der Wand, an der die Wanne steht, ging
-  // bei einer Eckwanne (P2, P5 der sechsten Probe: Armaturen auf der falschen Seite) vermutlich die richtige Stirnwand
-  // verloren. Ohne Antwort gilt wie bisher die Wand, an der die Wanne steht.
-  const longWall: EndWall | undefined = ['left', 'right', 'back'].includes(parsed.shower_long_wall) ? parsed.shower_long_wall : undefined;
-  // Nennt sie Stirnwand und Laengsseite links und rechts, zwei parallele Waende, gilt keine von beiden (Gegenpruefung vom 27.09.).
-  const parallel = !!longWall && longWall !== 'back' && endWall !== 'back';
-  // Quer liegt die Wanne an der Rueckwand, mit den Enden links und rechts; laengs an einer Seitenwand, mit dem Ende hinten.
-  // Passt die Stirnwand nicht zur Lage, gilt keine.
-  const orientation = parsed.shower_orientation === 'across' || parsed.shower_orientation === 'deep' ? parsed.shower_orientation as 'across' | 'deep' : undefined;
-  const fitsOrientation = !orientation || (orientation === 'across' ? endWall !== 'back' && (!longWall || longWall === 'back') : endWall === 'back' && longWall !== 'back');
-  const showerWall = endWall && endWall !== (longWall ?? walls?.bathtub) && !parallel && fitsOrientation ? endWall : undefined;
+  // Aus den beruehrten Waenden: der Rueckwand entlang liegt die Wanne quer, mit den Enden links und rechts, und ein Ende
+  // hat eine Wand nur, wo sie sie beruehrt; mit einem Ende an der Rueckwand liegt sie laengs, das Ende hinten ist ihre
+  // einzige Wand und die Laengsseite die Seitenwand, die sie beruehrt (beide: eine Nische). Sonst gibt es keine Stirnwand.
+  const left = parsed.shower_left === true;
+  const right = parsed.shower_right === true;
+  const back = parsed.shower_back === 'along' || parsed.shower_back === 'end' ? parsed.shower_back as 'along' | 'end' : undefined;
+  const ends: EndWall[] = back === 'along' ? (['left', 'right'] as const).filter((wall) => (wall === 'left' ? left : right)) : back === 'end' ? ['back'] : [];
+  const longWall: EndWall | undefined = back === 'along' ? 'back' : back === 'end' && left !== right ? (left ? 'left' : 'right') : undefined;
+  // Zwei Enden an Waenden: die Armaturen kommen an das Ende zum Waschtisch, dort kommt das Wasser an (Diego, 27.09.), sonst
+  // an das Ende zum WC; nie an ein offenes Ende. Die alten Armaturen zaehlen nicht: bei Wannen sitzen sie oft an der Laengsseite.
+  const toward = (fixture: Fixture): EndWall | undefined => {
+    const wall = walls?.[fixture];
+    if (wall === 'left' || wall === 'right') return wall;
+    if (!wall || wall === 'none') return undefined;
+    const tub = seen?.indexOf(walls?.bathtub !== 'none' ? 'bathtub' : 'shower') ?? -1;
+    const other = seen?.indexOf(fixture) ?? -1;
+    return tub < 0 || other < 0 ? undefined : other < tub ? 'left' : 'right';
+  };
+  // Steht der Waschtisch gleich neben einem schmalen Ende, gilt seine Wand, auch gegen die gelesenen Waende (P2: "laengs
+  // links"); die Laengsseite steht quer dazu. Nicht, wenn seine Wand die Laengsseite ist: dann steht er vor dem offenen Ende.
+  const basinWall = walls?.washbasin;
+  const basin: EndWall | undefined = parsed.basin_beside_end === true && (basinWall === 'left' || basinWall === 'right' || basinWall === 'back') && basinWall !== longWall ? basinWall : undefined;
+  const showerWall = basin ?? (ends.length === 2 ? toward('washbasin') ?? toward('toilet') : ends[0]);
+  const showerLong = basin ? (basin === 'back' ? (left !== right ? (left ? 'left' : 'right') : undefined) : 'back') : longWall;
   // Fuer die Mail an NLD (Problem 1 der siebten Probe): was die Vorpruefung sah und ob ihre Stirnwand gilt. Die Logs von
   // Vercel sind fuer uns nicht lesbar.
   const names: Record<Fixture, string> = { toilet: 'WC', washbasin: 'Waschtisch', shower: 'Dusche', bathtub: 'Wanne', bidet: 'Bidet' };
   const summary = [
     walls ? FIXTURES.filter((fixture) => walls[fixture] !== 'none').map((fixture) => `${names[fixture]} ${wallDe(walls[fixture])}`).join(', ') || 'kein Sanitärobjekt' : 'Grundriss unlesbar',
-    orientation || endWall || longWall
-      ? `Wanne/Dusche ${orientation === 'across' ? 'quer' : orientation === 'deep' ? 'längs' : '–'}, Längsseite ${wallDe(longWall)}, Stirnwand ${wallDe(endWall)}${endWall && !showerWall ? ' (passt nicht, nicht verwendet)' : ''}`
+    back || left || right
+      ? `Wanne/Dusche berührt ${[left && 'links', right && 'rechts', back === 'along' ? 'hinten der Länge nach' : back === 'end' && 'hinten mit einem Ende'].filter(Boolean).join(', ')}; Längsseite ${wallDe(showerLong)}, Stirnwand ${wallDe(showerWall)}${basin ? ' (Waschtisch am Ende)' : ends.length === 2 ? (toward('washbasin') ? ' (zum Waschtisch)' : toward('toilet') ? ' (zum WC)' : '') : ''}`
       : '',
     `Decke ${ceiling === 'flat' ? 'flach' : ceiling === 'sloped' ? 'schräg' : '–'}`,
   ].filter(Boolean).join('; ');
-  return { status: 'ok', layout: walls && seen && near ? { walls, order: seen, nearest: near } : undefined, ceiling, showerWall, showerLongWall: showerWall && longWall !== showerWall ? longWall : undefined, summary };
+  return { status: 'ok', layout: walls && seen && near ? { walls, order: seen, nearest: near } : undefined, ceiling, showerWall, showerLongWall: showerWall ? showerLong : undefined, summary };
 }
 
 /**
