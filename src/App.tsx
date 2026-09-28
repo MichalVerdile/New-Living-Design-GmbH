@@ -6,6 +6,7 @@ import ScrollToTop from './components/scroll-helper/ScrollToTop';
 import Partners from './pages/partners/Partners';
 import CategoryPage from './pages/catalog/CategoryPage';
 import SupplierPage from './pages/catalog/SupplierPage';
+import NotFound from './pages/not-found/NotFound';
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
 import SEOHead from './components/seo/SEOHead';
@@ -55,6 +56,7 @@ function App() {
         <Route path="/datenschutz" element={<DataSecurity />} />
         <Route path="/impressum" element={<Impressum />} />
         <Route path="/agb" element={<AGB />} />
+        <Route path="*" element={<NotFound />} />
       </Routes>
       <Footer />
 
