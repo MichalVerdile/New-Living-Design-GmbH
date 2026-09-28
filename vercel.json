@@ -9,11 +9,12 @@
       "memory": 1024
     }
   },
-  "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
-    }
+  "redirects": [
+    { "source": "/services-1", "destination": "/dienstleistungen", "statusCode": 301 },
+    { "source": "/services-9", "destination": "/dienstleistungen", "statusCode": 301 },
+    { "source": "/unsere-produkte", "destination": "/produkte", "statusCode": 301 },
+    { "source": "/contact-5", "destination": "/kontakt", "statusCode": 301 },
+    { "source": "/%C3%BCber-uns", "destination": "/ueber-uns", "statusCode": 301 }
   ],
   "headers": [
     {

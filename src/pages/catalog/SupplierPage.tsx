@@ -5,6 +5,17 @@ import Gallery from '../../components/suppliers/Gallery';
 import { areaById, areaHref, groupSlug, seriesInArea, supplierByKey, supplierHref, suppliers, type SupplierKey } from '../../data/suppliers';
 import styles from './Catalog.module.css';
 
+/** Titel mit höchstens 65 Zeichen (Google kürzt längere): so viele Fachgebiete wie Platz haben, «Zofingen» wenn es passt. */
+const pageTitle = (name: string, specialties: string[]) => {
+  const parts = specialties.join(', ').split(', ');
+  for (const suffix of [' | New Living Design Zofingen', ' | New Living Design'])
+    for (let i = parts.length; i > 0; i--) {
+      const t = `${name}: ${parts.slice(0, i).join(', ')}${suffix}`;
+      if (t.length <= 65) return t;
+    }
+  return `${name} | New Living Design`;
+};
+
 /** Markenseite: Bereich > Fachgebiet > Marke > Serien mit ihren Bildern. */
 const SupplierPage: React.FC = () => {
   const { area: areaId = '', supplier: key = '' } = useParams();
@@ -21,7 +32,7 @@ const SupplierPage: React.FC = () => {
   return (
     <main id="main-content" className={styles.page}>
       <SEOHead
-        title={`${supplier.name}: ${inArea.specialties.join(', ')} | New Living Design Zofingen`}
+        title={pageTitle(supplier.name, inArea.specialties)}
         description={`${supplier.name} bei New Living Design in Zofingen: ${inArea.specialties.join(', ')}. Auswahl, Beratung und Planung persönlich mit Ihnen.`}
         url={supplierHref(supplier.key, area.id)}
         type="website"

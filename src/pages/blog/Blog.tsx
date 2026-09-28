@@ -43,7 +43,7 @@ const Blog: React.FC = () => {
   return (
     <main id="main-content" className={styles.page}>
       <SEOHead
-        title="Ratgeber zu Badumbau, Materialien & Kosten | NLD"
+        title="Ratgeber zu Badumbau, Materialien & Kosten | New Living Design"
         description="Praxiswissen von New Living Design zu Badumbau, Materialien, Kosten und Planung – verständlich erklärt für Eigentümerinnen und Eigentümer."
         keywords="Badumbau Blog, Badumbau Kosten Aargau, Badezimmer Tipps, Platten Bad, Steuerabzug Badumbau, New Living Design Zofingen"
         url="/blog"

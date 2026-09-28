@@ -6,8 +6,11 @@
  * 3. Schreibt das HTML in dist/<route>/index.html (Home: dist/index.html),
  *    mit den Head-Tags von react-helmet-async (Titel, Meta, Canonical, JSON-LD).
  *
- * Fällt eine Route oder der Server-Build aus, bleibt für sie das normale
- * SPA-HTML aus dist/index.html erhalten: der Build schlägt dadurch nie fehl.
+ * 4. Schreibt dist/404.html (NotFound-Seite): ohne Catch-all-Rewrite liefert Vercel
+ *    sie für unbekannte Adressen mit Status 404.
+ *
+ * Fällt eine Route aus, bekommt sie das normale SPA-HTML (sie bleibt erreichbar),
+ * fällt der Server-Build aus, bleiben alle Seiten SPA: der Build schlägt dadurch nie fehl.
  */
 import { execFileSync } from 'node:child_process'
 import fs from 'node:fs'
@@ -90,7 +93,9 @@ if (!rootPos) {
 
 /* ---------- 2./3. Routen rendern und schreiben ---------- */
 let ok = 0
-for (const route of routes) {
+for (const route of [...routes, '/404']) {
+  const outFile =
+    route === '/' ? templatePath : route === '/404' ? path.join(dist, '404.html') : path.join(dist, route.replace(/^\//, ''), 'index.html')
   try {
     const { html, head } = render(route)
     if (!html || html.length < 500) throw new Error(`leeres Ergebnis (${html ? html.length : 0} Zeichen)`)
@@ -108,13 +113,19 @@ for (const route of routes) {
       page.slice(pos.end)
     if (head) page = page.replace('</head>', `    ${head}\n  </head>`)
 
-    const outFile = route === '/' ? templatePath : path.join(dist, route.replace(/^\//, ''), 'index.html')
+    const title = ((head.match(/<title[^>]*>([^<]*)<\/title>/) || [])[1] || '').replace(/&[#\w]+;/g, '_')
+    if (title.length > 65) console.warn(`[prerender] ${route}: Titel hat ${title.length} Zeichen (max. 65, Google kürzt): ${title}`)
+
     fs.mkdirSync(path.dirname(outFile), { recursive: true })
     fs.writeFileSync(outFile, page)
-    ok++
+    if (route !== '/404') ok++
     console.log(`[prerender] ${route} -> ${path.relative(root, outFile)} (${Math.round(page.length / 1024)} KB)`)
   } catch (err) {
     console.warn(`[prerender] ${route} übersprungen, bleibt SPA:`, err && err.message ? err.message : err)
+    if (route !== '/' && route !== '/404') {
+      fs.mkdirSync(path.dirname(outFile), { recursive: true })
+      fs.writeFileSync(outFile, template)
+    }
   }
 }
 
