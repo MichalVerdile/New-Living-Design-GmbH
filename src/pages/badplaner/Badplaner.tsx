@@ -6,6 +6,7 @@ import { business, bathPackages, individualPackage } from '../../config/business
 import {
   accentsForPlacement,
   badplanerFaq,
+  essenzaTaps,
   optionsForPackage,
   tilesForLook,
   type AccentPlacementId,
@@ -19,14 +20,11 @@ import { resizeImageFile, fileToBase64, readFileNow, type ResizedImage } from '.
 import { MAX_PLAN_BASE64, MAX_SOURCE_IMAGE_BYTES } from './imageValidation';
 
 /*
- * Badplaner: Paket wählen, Ausstattung wählen, Foto machen, Kontakt angeben,
- * Ideenbild erhalten. Die Bilderzeugung und der E-Mail-Versand laufen in
- * api/badplaner.ts. Beim Prerendering (ohne Browser) wird nur der Startzustand
- * gerendert; alles mit Datei, Kamera oder Fenster passiert in Handlern.
- *
- * Schritt 2 zeigt zuerst die wichtigsten Auswahlen. Umfangreiche Materialfamilien
- * und die optionalen Details sind einklappbar; alle Werte bleiben vorbelegt und
- * jede bisherige Option bleibt erreichbar.
+ * Badplaner: Raum und Paket wählen, Ausstattung wählen, Foto machen, Ideenbild
+ * als Vorschau ansehen, dann mit den Kontaktangaben anfragen. Die Bilderzeugung
+ * und der E-Mail-Versand laufen in api/badplaner.ts. Beim Prerendering (ohne
+ * Browser) wird nur der Startzustand gerendert; alles mit Datei, Kamera oder
+ * Fenster passiert in Handlern. Alle Auswahlen sind vorbelegt.
  */
 
 const PAGE_URL = `${business.siteUrl}/badplaner`;
@@ -87,6 +85,8 @@ interface Result {
   leadId: string;
   dataUrl: string;
   mime: string;
+  /** Die Produkte, mit denen das Bild entstand; die Auswahl darueber kann sich danach noch aendern. */
+  originals: { label: string; image: string; name: string }[];
   /** Vorschau: das Bild ist da, die Kontaktangaben noch nicht. Danach fehlt dieses Feld. */
   preview?: { ticket: string; exp: number; auswahl: [string, string][]; paket: unknown; bytes: Blob };
   delivery?: {
@@ -286,6 +286,7 @@ const Badplaner: React.FC = () => {
   const [showFailureConsultation, setShowFailureConsultation] = useState(false);
 
   const [photo, setPhoto] = useState<ResizedImage | null>(null);
+  const [photoSource, setPhotoSource] = useState(''); // kamera, galerie oder datei: steht in der Mail an NLD
   const PHOTO_INPUTS = ['bp-foto-kamera', 'bp-foto-galerie', 'bp-foto-kamera-neu', 'bp-foto-galerie-neu', 'bp-foto-datei'];
   const removePhoto = () => {
     setPhoto(null);
@@ -474,6 +475,7 @@ const Badplaner: React.FC = () => {
     const input = e.target;
     const file = input.files?.[0];
     if (!file) return;
+    setPhotoSource(input.id.replace(/^bp-foto-|-neu$/g, ''));
     await loadPhoto(file); // die Datei zuerst lesen, das Feld erst danach leeren
     input.value = ''; // gleiche Datei darf erneut gewählt werden
   };
@@ -544,6 +546,7 @@ const Badplaner: React.FC = () => {
           windows,
           cistern,
           foto: photo.dataUrl,
+          fotoInfo: { quelle: photoSource, breite: photo.sourceWidth, hoehe: photo.sourceHeight, bytes: photo.sourceBytes },
           consent: contact.consent,
           website: '',
         }),
@@ -556,6 +559,7 @@ const Badplaner: React.FC = () => {
           leadId: json.leadId || '',
           mime,
           dataUrl: `data:${mime};base64,${json.image.data}`,
+          originals,
           preview: { ticket: json.ticket, exp: json.exp, auswahl: json.auswahl || [], paket: json.paket, bytes: new Blob([bytes], { type: mime }) },
         });
         setStatus('idle');
@@ -617,6 +621,7 @@ const Badplaner: React.FC = () => {
           leadId: result.leadId,
           mime: result.mime,
           dataUrl: result.dataUrl,
+          originals: result.originals,
           delivery: {
             lead: 'accepted',
             customer: known.includes(answer.delivery.customer) ? answer.delivery.customer : 'unknown',
@@ -900,6 +905,21 @@ const Badplaner: React.FC = () => {
     if (chosen.mirror) summaryRows.push({ label: 'Spiegel', value: chosen.mirror.label });
   }
 
+  // Die gewaehlten Produkte im Original unter dem Ideenbild: das Bild zeigt die Stimmung,
+  // die genaue Form von Armatur, Becken oder Front zeigt nur das Produktfoto.
+  const original = (label: string, o?: { label: string; supplier: string; image?: string | null }) =>
+    (o?.image ? [{ label, image: o.image, name: o.label.startsWith(o.supplier) ? o.label : `${o.supplier} ${o.label}` }] : []);
+  const originals = chosen
+    ? [
+        ...original(chosen.floor ? 'Wandplatte' : 'Platten', chosen.tile),
+        ...original('Bodenplatte', chosen.floor),
+        ...original('Akzent', sel?.accentMode === 'kombination' ? chosen.accent : undefined),
+        ...original('Unterbau', chosen.base),
+        ...original('Waschtisch\u00adplatte', chosen.top), // weiches Trennzeichen fuer schmale Bildschirme
+        ...(pkg === 'colore' ? [chosen.tapSeries] : isAtelier ? (options?.tapSeriesOptions ?? []).filter((t) => t.id !== 'treemme-aurelia-dusche' || (!!chosen.shower && chosen.shower.id !== 'keine')) : pkg === 'essenza' ? [essenzaTaps] : []).flatMap((t) => original('Armaturen', t)),
+        ...original('Keramik', chosen.sanitary),
+      ]
+    : [];
   const whatsappText = `Guten Tag, ich habe im Badplaner ein Ideenbild erstellt (${packageLabel || 'Badplaner'}${chosen?.tile ? `, Platte ${chosen.tile.label}` : ''}). Können wir das besprechen?`;
   const whatsappUrl = `https://wa.me/${business.whatsapp.e164.replace('+', '')}?text=${encodeURIComponent(whatsappText)}`;
 
@@ -1327,6 +1347,20 @@ const Badplaner: React.FC = () => {
                 <img src={result.dataUrl} alt={`Ideenbild Ihres Bads im Paket ${pkgInfo.name}`} className={styles.resultImage} />
               </div>
               <span className={styles.badge}>{result.preview ? 'Vorschau · Ideenbild, kein Plan' : 'Ideenbild, kein Plan'}</span>
+              {result.originals.length > 0 && (
+                <div className={styles.originals}>
+                  <p>Die gewählten Produkte im Original. Das Ideenbild zeigt die Stimmung; Form und Details der Produkte sehen Sie hier und in unserer Ausstellung.</p>
+                  <ul>
+                    {result.originals.map((o) => (
+                      <li key={`${o.label}-${o.image}`}>
+                        <Swatch image={o.image} label={o.name} />
+                        <strong>{o.label}</strong>
+                        <span>{o.name}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
               {result.preview ? (
                 <form className={styles.extra} onSubmit={submitAnfrage}>
                   <h3>In voller Qualität per E-Mail, dazu eine kostenlose Beratung</h3>
@@ -1516,7 +1550,7 @@ function DateiWaehlen({ id, onChange, disabled, onRetry }: { id: string; onChang
 
 function friendlyHttpError(status: number): string {
   if (status === 413) return 'Das Bild ist zu gross für den Upload. Bitte ein kleineres Foto wählen.';
-  if (status === 429) return 'Tageslimit erreicht (3 Ideenbilder). Rufen Sie uns an oder kommen Sie in die Ausstellung.';
+  if (status === 429) return 'Tageslimit erreicht. Rufen Sie uns an oder kommen Sie in die Ausstellung.';
   if (status === 503) return 'Der Badplaner ist im Moment nicht verfügbar.';
   return 'Das hat nicht geklappt. Bitte in einer Minute noch einmal versuchen.';
 }

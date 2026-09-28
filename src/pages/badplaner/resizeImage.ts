@@ -13,6 +13,10 @@ export interface ResizedImage {
   mime: 'image/jpeg';
   width: number;
   height: number;
+  // Groesse vor dem Verkleinern, fuer die Mail an NLD (Diego, 26.09.: scheitern Fotos aus der Galerie oefter?).
+  sourceWidth: number;
+  sourceHeight: number;
+  sourceBytes: number; // 0, wenn der Browser die Bytes nicht lesen konnte
 }
 
 type Drawable = ImageBitmap | HTMLImageElement;
@@ -219,7 +223,7 @@ export async function resizeImageFile(
     const dataUrl = canvas.toDataURL('image/jpeg', quality);
     if (!dataUrl.startsWith('data:image/jpeg;base64,')) throw new Error('Bild konnte nicht verarbeitet werden.');
     const base64 = normalizeBase64(dataUrl.slice('data:image/jpeg;base64,'.length), maxBase64);
-    return { dataUrl, base64, mime: 'image/jpeg', width, height };
+    return { dataUrl, base64, mime: 'image/jpeg', width, height, sourceWidth: srcW, sourceHeight: srcH, sourceBytes: bytes?.length ?? 0 };
   } finally {
     // Insbesondere bei Canvas-/Grössenfehlern keine ImageBitmap-Ressourcen behalten.
     if (source && 'close' in source) source.close();

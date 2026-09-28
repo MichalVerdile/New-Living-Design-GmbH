@@ -17,12 +17,6 @@
   overflow: hidden;
   padding: 4rem 1rem;
 }
-.heroBackground { position: absolute; inset: 0; z-index: 0; }
-.heroImage { width: 100%; height: 100%; object-fit: cover; display: block; scale: 1.06; }
-.heroOverlay {
-  position: absolute; inset: 0; z-index: 1;
-  background: linear-gradient(135deg, rgb(0 0 0 / 88%) 0%, rgb(15 23 42 / 72%) 40%, rgb(30 41 59 / 74%) 70%, rgb(0 0 0 / 90%) 100%);
-}
 .heroContent {
   position: relative; z-index: 2;
   width: 100%; min-width: 0; max-width: 860px; text-align: center; color: #fff;
@@ -71,8 +65,6 @@
   border-radius: 50px; margin-bottom: 1rem;
 }
 .sectionTitle { font-size: clamp(1.7rem, 4vw, 2.7rem); font-weight: 900; line-height: 1.2; margin: 0; color: inherit; }
-.sectionIntro { max-width: 720px; margin: 1.25rem auto 0; color: #374151; font-size: 1.05rem; line-height: 1.7; }
-.sectionIntroLight { max-width: 720px; margin: 1.25rem auto 0; color: #d1d5db; font-size: 1.05rem; line-height: 1.7; }
 
 /* Schritte (Akkordeon) */
 .steps { display: grid; gap: 1rem; max-width: 900px; margin: 0 auto; }
@@ -121,17 +113,9 @@
 .packageName { font-size: 1.35rem; font-weight: 800; color: #111827; }
 .packagePrice { font-weight: 700; color: #111827; font-variant-numeric: tabular-nums; }
 .packageClaim { color: #4b5563; line-height: 1.45; font-size: .95rem; }
-.packageList { list-style: none; margin: .5rem 0 0; padding: 0; display: grid; gap: .3rem; font-size: .88rem; color: #374151; }
-.packageList li { position: relative; padding-left: 1.1rem; line-height: 1.45; }
-.packageList li::before { content: ''; position: absolute; left: 0; top: .55em; width: 6px; height: 6px; background: #111; border-radius: 50%; }
 
-.packageFacts { list-style: none; margin: .6rem 0 0; padding: 0; display: grid; gap: .25rem; font-size: .84rem; color: #4b5563; }
-.packageFacts li { line-height: 1.4; }
 .packagesFull { display: grid; gap: 1rem; margin-top: 1rem; }
 .packageCustom { padding-top: 1.25rem; }
-.subQuestion { margin-top: 1.75rem; padding-top: 1.25rem; border-top: 1px solid rgba(0,0,0,.12); }
-.subQuestion h3 { margin: 0 0 .35rem; font-size: 1.1rem; font-weight: 800; color: #111827; }
-.subQuestion .hint { margin-top: 0; margin-bottom: .9rem; }
 
 .choiceTitle { margin: 0 0 .75rem; font-size: 1.08rem; color: #111827; }
 .roomChoices { display: grid; gap: .75rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -197,53 +181,6 @@
   text-transform: uppercase; color: #6b7280;
 }
 
-/* Lange Materiallisten: ausgewählte Familie offen, weitere Familien auf Abruf */
-.swatchGroup {
-  margin: 0 0 .65rem; border: 1px solid rgba(0,0,0,.12); border-radius: .9rem;
-  background: rgba(255,255,255,.72); overflow: clip;
-}
-.swatchGroup[open] { border-color: rgba(0,0,0,.22); background: #fff; }
-.swatchGroupSummary {
-  display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: .75rem; align-items: center;
-  min-height: 46px; padding: .65rem .8rem; cursor: pointer; list-style: none; color: #111827;
-}
-.swatchGroupSummary::-webkit-details-marker { display: none; }
-.swatchGroupSummary::after {
-  content: '+'; display: grid; place-items: center; width: 1.6rem; height: 1.6rem;
-  border-radius: 50%; background: #f3f4f6; font-size: 1.15rem; font-weight: 500; line-height: 1;
-}
-.swatchGroup[open] > .swatchGroupSummary::after { content: '−'; }
-.swatchGroupSummary:hover { background: rgba(0,0,0,.035); }
-.swatchGroupSummary:focus-visible { outline: 3px solid #111; outline-offset: -3px; }
-.swatchGroupHeading { min-width: 0; display: flex; flex-wrap: wrap; column-gap: .4rem; align-items: baseline; }
-.swatchGroupTitle { font-size: .92rem; font-weight: 750; }
-.swatchGroupMeta { font-size: .78rem; color: #6b7280; }
-.swatchGroupStatus { max-width: 16rem; font-size: .78rem; color: #4b5563; text-align: right; line-height: 1.3; }
-.swatchGroupBody { padding: .25rem .8rem .85rem; }
-.swatchGroupBody .hint { margin-bottom: 0; }
-
-/* Zweite Ebene: vorbelegte, optionale Feinwahl */
-.detailsDisclosure {
-  margin: .5rem 0 1.5rem; border: 1px solid rgba(0,0,0,.14); border-radius: 1rem;
-  background: #f7f7f7; overflow: clip;
-}
-.detailsDisclosure[open] { background: #fff; }
-.detailsSummary {
-  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 1rem; align-items: center;
-  min-height: 58px; padding: .85rem 1rem; cursor: pointer; list-style: none; color: #111827;
-}
-.detailsSummary::-webkit-details-marker { display: none; }
-.detailsSummary:hover { background: rgba(0,0,0,.035); }
-.detailsSummary:focus-visible { outline: 3px solid #111; outline-offset: -3px; }
-.detailsTitle { display: block; font-size: 1rem; font-weight: 800; }
-.detailsHint { display: block; margin-top: .18rem; font-size: .82rem; font-weight: 500; color: #6b7280; line-height: 1.35; }
-.detailsAction { display: inline-flex; align-items: center; gap: .4rem; font-size: .82rem; font-weight: 750; color: #374151; }
-.detailsAction::before { content: 'Anpassen'; }
-.detailsAction::after { content: '+'; font-size: 1.2rem; font-weight: 500; line-height: 1; }
-.detailsDisclosure[open] > .detailsSummary .detailsAction::before { content: 'Schliessen'; }
-.detailsDisclosure[open] > .detailsSummary .detailsAction::after { content: '−'; }
-.detailsBody { padding: .5rem 1rem 0; border-top: 1px solid rgba(0,0,0,.1); }
-
 /* Untergruppen (Serie, Familie, Lieferant) */
 .subGroup { margin-bottom: 1rem; min-width: 0; }
 .subGroup:last-child { margin-bottom: 0; }
@@ -261,7 +198,8 @@
 .card:hover { border-color: rgba(0,0,0,.4); }
 .cardSelected { border-color: #111; box-shadow: 0 0 0 3px rgba(17,17,17,.12); }
 .card input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
-.cardImg { width: 100%; aspect-ratio: 3 / 2; object-fit: cover; border-radius: .7rem; display: block; background: #e5e7eb; }
+/* height: auto, sonst macht das Attribut height="320" am <img> jede Karte 320 px hoch und aspect-ratio greift nie. */
+.cardImg { width: 100%; height: auto; aspect-ratio: 3 / 2; object-fit: cover; border-radius: .7rem; display: block; background: #e5e7eb; }
 .cardImgDiagram { aspect-ratio: 4 / 3; object-fit: contain; background: #fff; border: 1px solid rgba(0,0,0,.08); }
 .coverFallback { display: grid; place-items: center; font-size: .8rem; font-weight: 700; color: rgba(0,0,0,.55); background: #d1d5db; }
 .cardText { display: block; padding: 0 .35rem .35rem; overflow-wrap: anywhere; }
@@ -269,27 +207,11 @@
 .cardMeta { display: block; margin-top: .25rem; font-size: .84rem; color: #4b5563; line-height: 1.45; }
 .cardNote { display: block; margin-top: .3rem; font-size: .78rem; color: #6b7280; line-height: 1.4; }
 
-/* Checkbox in den Details (Boden anders) */
-.checkbox { display: grid; grid-template-columns: auto 1fr; gap: .6rem; align-items: center; cursor: pointer; font-size: .95rem; font-weight: 600; color: #111827; }
-.checkbox input { width: 18px; height: 18px; }
-
-/* Zusammenfassung vor dem Senden */
-.summaryBox { border: 1px solid rgba(0,0,0,.12); border-radius: 1rem; background: #fafafa; padding: 1rem 1.1rem; margin-bottom: 1.5rem; }
-.summaryBox .blockTitle { margin-bottom: .6rem; }
-.linkButton { margin-top: .75rem; background: none; border: 0; padding: 0; font: inherit; font-size: .88rem; font-weight: 600; color: #111; text-decoration: underline; cursor: pointer; }
-
 @media (max-width: 639px) {
   .roomChoices { grid-template-columns: 1fr; }
   .consultationForm { padding: .9rem; }
   .positionHead { grid-template-columns: auto minmax(0, 1fr) auto; padding: .6rem; }
   .positionBody { padding: .75rem; }
-  .swatchGroupSummary { grid-template-columns: minmax(0, 1fr) auto; gap: .45rem; }
-  .swatchGroupStatus { grid-column: 1; text-align: left; max-width: none; }
-  .swatchGroupSummary::after { grid-column: 2; grid-row: 1 / span 2; }
-  .detailsSummary { padding: .8rem; }
-  .detailsAction::before { content: ''; }
-  .detailsDisclosure[open] > .detailsSummary .detailsAction::before { content: ''; }
-  .detailsBody { padding-inline: .8rem; }
   .swatches .option { grid-template-columns: 1fr; gap: .4rem; padding: .4rem; }
   .swatches .swatchImg, .swatches .swatchFallback { width: 100%; height: 58px; }
   .swatches .optionLabel { font-size: .82rem; }
@@ -346,6 +268,14 @@
   display: inline-block; margin: 1rem 0 0; padding: .35rem .9rem; border-radius: 50px;
   background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.25); font-size: .78rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
 }
+/* Die gewaehlten Produkte im Original, direkt unter dem Ideenbild */
+.originals { margin: 1rem 0 0; }
+.originals p { margin: 0 0 .6rem; font-size: .88rem; color: #d1d5db; line-height: 1.5; }
+.originals ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(6.5rem, 1fr)); gap: .75rem; }
+.originals li { min-width: 0; font-size: .75rem; line-height: 1.3; color: #e5e7eb; overflow-wrap: anywhere; }
+.originals li > :first-child { margin-bottom: .35rem; }
+.originals strong { display: block; font-weight: 700; }
+.originals li span { display: block; color: #9ca3af; }
 .compare { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; margin-top: 1.25rem; }
 .compare figure { margin: 0; }
 .compare img { width: 100%; aspect-ratio: 4 / 5; object-fit: cover; border-radius: .9rem; display: block; background: #222; }
@@ -354,8 +284,6 @@
 .summary li { display: grid; grid-template-columns: 1fr; gap: .1rem; }
 @media (min-width: 480px) { .summary li { grid-template-columns: 9rem 1fr; gap: .5rem; } }
 .summary li span:first-child { color: #9ca3af; }
-.summaryLight { color: #374151; font-size: .92rem; margin-top: 0; }
-.summaryLight li span:first-child { color: #6b7280; }
 .resultActions { display: flex; gap: .75rem; flex-wrap: wrap; margin-top: 1.5rem; }
 .resultNote { margin: 1.25rem 0 0; font-size: .88rem; color: #9ca3af; line-height: 1.55; }
 .resultNote button { background: none; border: 0; color: #fff; text-decoration: underline; cursor: pointer; font: inherit; padding: 0; }
@@ -371,14 +299,6 @@
 .extra .field input[type="file"] { padding: .6rem; }
 .extra .error { color: #fecaca; }
 .extra .success { color: #d1fae5; }
-
-/* Beispiele */
-.examples { display: grid; gap: 2rem; max-width: 900px; margin: 0 auto; }
-.example { margin: 0; }
-.examplePair { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
-.examplePair img { width: 100%; aspect-ratio: 4 / 5; object-fit: cover; border-radius: 1rem; display: block; background: #ddd; }
-.exampleTag { display: block; margin-top: .4rem; font-size: .85rem; font-weight: 600; color: #374151; text-align: center; }
-.example figcaption { margin-top: .75rem; text-align: center; color: #4b5563; font-size: .92rem; }
 
 /* So funktioniert's */
 .how { list-style: none; margin: 0; padding: 0; display: grid; gap: 1rem; }
@@ -435,9 +355,9 @@
   .stepBody { padding: 0 .45rem 1rem; }
   .choiceTitle { font-size: .95rem; overflow-wrap: anywhere; }
 
-  .roomChoice, .consultationForm, .positionBody, .summaryBox { padding: .65rem; }
+  .roomChoice, .consultationForm, .positionBody { padding: .65rem; }
   .roomChoice strong, .packageName { font-size: 1rem; overflow-wrap: anywhere; }
-  .roomChoice span, .packageClaim, .packageFacts { overflow-wrap: anywhere; }
+  .roomChoice span, .packageClaim { overflow-wrap: anywhere; }
   .package { padding: .9rem .55rem .9rem 2.15rem; }
   .package::before { left: .65rem; top: 1rem; width: 16px; height: 16px; }
   .packageBadge { position: static; align-self: start; padding-inline: .55rem; overflow-wrap: anywhere; }
