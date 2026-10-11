@@ -287,6 +287,11 @@ const wallDe = (wall?: string) => ({ left: 'links', right: 'rechts', back: 'hint
 interface Inventory { toilet: Wall; washbasin: Wall; shower: Wall; bathtub: Wall; bidet: Wall }
 const FIXTURES = ['toilet', 'washbasin', 'shower', 'bathtub', 'bidet'] as const;
 type Fixture = typeof FIXTURES[number];
+// Ein Fenster, wie es die Pruefung nennt: Wand, Drittel des Bildes, in dem seine Mitte liegt, und Form.
+const WINDOW_WALLS = ['left', 'right', 'back', 'front', 'ceiling'] as const;
+const WINDOW_PLACES = ['left', 'middle', 'right'] as const;
+const WINDOW_SHAPES = ['wide', 'square', 'tall'] as const;
+interface WindowSeen { wall: typeof WINDOW_WALLS[number]; place: typeof WINDOW_PLACES[number]; shape: typeof WINDOW_SHAPES[number] }
 
 interface CheckFlags {
   extra_openings: boolean;
@@ -965,7 +970,10 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   const reviewHead = 'Persönliche Prüfung (Versuch): Der Kunde hat das Ideenbild weder gesehen noch per Mail erhalten.';
   // Auftrag fuer ein Bild, das Diego nach eigener Pruefung und Anruf von Hand senden darf; `file` ist der einzige Anhang dafuer.
   const reviewTask = (file: string) => 'Diego prüft das Bild selbst, ohne zweiten Prüfer: Foto und Bild in voller Auflösung im '
-    + 'Anhang, Lead-ID, Foto und Auswahl abgleichen; Fenster, Raumform, alle Armaturen, Glas und Produkte prüfen. Ist das Bild '
+    + 'Anhang, Lead-ID, Foto und Auswahl abgleichen; Fenster, Raumform, alle Armaturen, Glas und Produkte prüfen. '
+    // Carla, nach der Essenza-Probe: die Pruefung der Fenster ersetzt den Blick nicht.
+    + 'Fenster immer selbst mit dem Kundenfoto vergleichen: Anzahl, Wand, Position, Form. Keine Abweichung gemeldet ersetzt die '
+    + 'Sichtprüfung nicht; nicht lesbar gilt nicht als bestanden. Ist das Bild '
     + `klar richtig: zuerst den Kunden anrufen, dann nur ${file} per E-Mail senden, keinen anderen Anhang. Ist es falsch oder `
     + 'zweifelhaft, oder zeigt es eine Duschsäule statt des gewählten Up+: nicht senden, den Kunden anrufen und es erklären.';
   const reviewAnswer = (delivery: MailResult) => delivery.status === 'accepted'
@@ -988,8 +996,10 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
     const fittingsOnly = review && held && check.status === 'approved' && !!check.serious?.length
       && check.serious.every((hint) => hint.startsWith('the shower fittings are'));
     const ext = image.mime === 'image/png' ? 'png' : 'jpg';
+    // Zurueckgehalten, weil die Pruefung nicht moeglich war, nicht wegen eines schweren Hinweises.
+    const reasonHeld = check.status === 'unavailable' ? 'Prüfung nicht möglich' : 'schwerer Hinweis';
     const outcome = fittingsOnly ? 'Ideenbild zurückgehalten (Armaturen, möglicher Fehlalarm)'
-      : held ? 'Ideenbild zurückgehalten (schwerer Hinweis)' : 'Ideenbild abgelehnt';
+      : held ? `Ideenbild zurückgehalten (${reasonHeld})` : 'Ideenbild abgelehnt';
     const leadDelivery = await sendLeadMail({
       subject: preview
         ? `Badplaner-Fehler ohne Kontakt – ${isGuestWc ? 'Gäste-WC' : pkg.name} – ${outcome}`
@@ -998,13 +1008,13 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
       withoutAttachments: reviewWithoutImages,
       intro: fittingsOnly ? `${reviewHead} Die automatische Prüfung hat das Bild nur wegen der Armaturen zurückgehalten (siehe `
         + `Fensterprüfung), möglicherweise ein Fehlalarm. ${reviewTask(`ideenbild.${ext}`)}`
-        : review ? `${reviewHead} Die automatische Prüfung hat das Bild ${held ? 'zurückgehalten (schwerer Hinweis, siehe Fensterprüfung)'
+        : review ? `${reviewHead} Die automatische Prüfung hat das Bild ${held ? `zurückgehalten (${reasonHeld}, siehe Fensterprüfung)`
         : 'verworfen (siehe Fensterprüfung)'}: nicht senden, den Kunden anrufen und es erklären.` : held
-        ? `${preview ? 'Anonymer Badplaner-Versuch ohne Kontaktdaten. ' : ''}Das Ideenbild hat einen schweren Hinweis der Prüfung (siehe Fensterprüfung) und wurde ${preview ? 'nicht angezeigt; ohne Kontaktdaten können wir es nicht nachschicken' : 'dem Kunden weder angezeigt noch geschickt'}. Originalfoto, Auswahl und Bild liegen bei.`
+        ? `${preview ? 'Anonymer Badplaner-Versuch ohne Kontaktdaten. ' : ''}${check.status === 'unavailable' ? 'Das Ideenbild konnte nicht geprüft werden' : 'Das Ideenbild hat einen schweren Hinweis der Prüfung'} (siehe Fensterprüfung) und wurde ${preview ? 'nicht angezeigt; ohne Kontaktdaten können wir es nicht nachschicken' : 'dem Kunden weder angezeigt noch geschickt'}. Originalfoto, Auswahl und Bild liegen bei.`
         : preview
           ? 'Anonymer Badplaner-Versuch ohne Kontaktdaten. Das Ideenbild wurde von der Qualitätsprüfung abgelehnt und nicht angezeigt. Originalfoto, Auswahl und verworfenes Bild liegen bei.'
           : 'Das Ideenbild wurde von der Qualitätsprüfung abgelehnt und dem Kunden nicht angezeigt. Originalfoto, Auswahl und verworfenes Bild liegen bei.',
-      details: leadDetails(note, held ? 'zurückgehalten (schwerer Hinweis), nicht angezeigt'
+      details: leadDetails(note, held ? `zurückgehalten (${reasonHeld}), nicht angezeigt`
         : preview ? RENDER_FAILURE_LABELS.RENDER_REJECTED : 'abgelehnt (Prüfung), nicht angezeigt'),
       // Das Bild geht mit: ohne es können wir nicht beurteilen, ob die
       // Prüfung recht hatte oder ein brauchbares Bild unnötig zurückblieb.
@@ -1080,7 +1090,7 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
     console.info('[badplaner]', hint);
   }
   if (check.status === 'unavailable') {
-    checkNote = [`nicht möglich (${check.detail})`, ...(others.length ? [`Bild ${chosen.number} gezeigt`] : []), ...[...tries.filter((entry) => !entry.startsWith('kein ')), ...notShown].sort(byNumber), ...(productNote ? [productNote] : [])].join(' | ');
+    checkNote = [`nicht möglich (${check.detail})`, ...(others.length ? [`Bild ${chosen.number} gewählt`] : []), ...[...tries.filter((entry) => !entry.startsWith('kein ')), ...notShown].sort(byNumber), ...(productNote ? [productNote] : [])].join(' | ');
   }
   if (check.status === 'disabled') checkNote = ['deaktiviert', productNote].filter(Boolean).join(', ');
   if (check.status === 'approved' && check.shower) showerSeen = check.shower;
@@ -1093,8 +1103,13 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   const details = leadDetails(checkNote, review ? 'nicht angezeigt, persönliche Prüfung' : undefined);
   // Carla und Diego, 04.10.: in P2 und P5 ging ein Bild mit schwerem Hinweis an den Kunden, weil alle Durchgaenge einen
   // hatten ("Dusche im Bild" mit den Armaturen hinten, die Vorpruefung mit der Stirnwand rechts: dieser Widerspruch ist
-  // einer der schweren Hinweise). Es zaehlt die Pruefung des Bildes nach dem Produktdurchgang. Ein ungeprueftes Bild geht
-  // wie bisher mit Vermerk hinaus.
+  // einer der schweren Hinweise). Es zaehlt die Pruefung des Bildes nach dem Produktdurchgang. Ein ungeprueftes Bild bleibt
+  // seit der Essenza-Probe ebenfalls zurueck: ohne Pruefung ist die Lage der Fenster nicht bestaetigt (Carla: nicht lesbar
+  // gilt nicht als bestanden). Ohne zusaetzlichen Durchgang; ist die Pruefung abgeschaltet (BADPLANER_CHECK_MODEL leer), nicht.
+  if (check.status === 'unavailable') {
+    console.warn('[badplaner] Ideenbild zurückgehalten, Prüfung nicht möglich:', check.detail);
+    return await withhold(checkNote, gen, true, baseAttachment);
+  }
   if (check.status === 'approved' && check.serious?.length) {
     console.warn('[badplaner] Ideenbild zurückgehalten, schwerer Hinweis:', check.serious.join('; '));
     return await withhold(checkNote, gen, true, baseAttachment);
@@ -1624,7 +1639,8 @@ function buildPrompt(v: {
         : 'The number of windows, roof windows and doors must be identical to image 1: never add an opening that is not visible in image 1; walls that are solid in image 1 stay solid.';
   // Diegos Foto vom 19.09.: rechts steht die alte Duschkabine mit satiniertem Glas. In drei von
   // vier Versuchen zeichnete das Modell dort ein Fenster in die rechte Wand.
-  const glassRule = ' The glass of an old shower enclosure, a shower door or any frosted or misted pane in image 1 is not a window: behind it stands a solid wall of the room, and the result shows tiled wall there, never a window, a sill or outside light.';
+  // Essenza-Probe: "any frosted pane" passte auch auf ein Badfenster mit satiniertem Glas. Die Regel gilt nur fuer Duschglas.
+  const glassRule = ' The glass of an old shower enclosure or shower door in image 1, also when it is frosted or misted, is not a window: behind it stands a solid wall of the room, and the result shows tiled wall there, never a window, a sill or outside light.';
   // Die Decke sagt die Vorpruefung; "also a sloping one" allein hat in P4 eine Dachschraege gebracht.
   const ceilingRule = v.ceiling === 'flat'
     ? 'The ceiling is flat and horizontal exactly as in image 1: no slope, no attic, no beams and no roof window.'
@@ -1667,7 +1683,7 @@ function buildPrompt(v: {
     `PHOTO EDITING TASK, not a design task. Image 1 is a photograph of the customer's existing ${roomName}. The result is that same photograph after the renovation: the same picture from the same spot, with the same lens, the same crop and the same edges, in which only the surfaces and products named under CHANGE have been replaced, each one in its own place. Someone who knows this ${roomName} must recognise it at first glance. Do not design a new ${roomName} and do not show a showroom.${references}`,
     v.layout ? layoutPrompt(v.layout) : '',
     `This is an edit of image 1, not a new picture. Keep image 1 and change only what the CHANGE list names. Everything else stays exactly as it is: the camera position, angle, lens and framing, the same crop and the same aspect ratio, the walls and where they stand, with every niche, ledge, projection and step they have in image 1 and no others, the ceiling and the room height, the room proportions, every window, roof window and door at its exact size and position, and a radiator only where image 1 has one. ${ceilingRule} Never zoom out, never widen the view, never show floor, wall or ceiling beyond the edges of image 1, never create extra floor area. Whatever is built in the immediate foreground at the edge of image 1 belongs to the picture and stays: an open door leaf, a door frame, the edge of a wall. It keeps its place and takes up the same part of the picture as before, and is never removed to show more of the room. A loose piece of furniture at the edge is removed like all loose furniture: the floor and the walls behind it continue, and the camera stays exactly where it is. Every window keeps the same share of the picture it has in image 1; do not move closer to it and do not make it larger. ${windowRule}${glassRule}`,
-    `KEEP THE POSITIONS. A half-height wall, a low built wall or a boxed pre-wall that a fixture stands against is part of the room, not furniture: it keeps its place, its length, its height and its depth, and the fixture stays mounted on it. Every fixture keeps the wall or low wall it stands against in image 1 and its place along it, measured against the corners, the door and the window next to it. The toilet keeps its wall and its place because its drain cannot be moved${v.ceiling === 'sloped' ? ': under the sloping ceiling it stays under that sloping ceiling and is never moved to a straight or rear wall to gain headroom' : ''}. The washbasin keeps its wall and its place.${rightOrder} ${v.layout?.walls.bathtub === 'none' ? 'An old shower tray, its kerb or platform is removed down to the floor.' : "A bathtub that becomes a shower uses only the bathtub's own footprint, on the same wall and in the same direction as the bathtub; the bathtub and any raised base under it are removed down to the floor. So is an old shower tray, its kerb or platform."}${v.showerWall && sideEnd ? ` The short end wall of the shower is the ${v.showerWall} wall seen from the camera. Seen from the door, the mixer, the overhead shower and the hand shower are on this ${v.showerWall} wall${besideBasin}${endView}${v.trayShower ? '' : ', and the channel drain lies along its foot'}. The ${v.showerLongWall ?? 'back'} wall of the shower stays empty: only tiles, no mixer, no hand shower and no shower head.` : v.showerWall ? ` The short end wall of the shower is the ${v.showerWall} wall seen from the camera: the mixer, the overhead shower and the hand shower sit on it${endView}${v.trayShower ? '' : ', and the channel drain lies along its foot'}; ${v.showerLongWall ? `its long side runs along the ${v.showerLongWall} wall, which carries` : v.showerWall === 'back' ? 'the side walls of the shower carry' : 'the back wall of the shower carries'} no fitting, only tiles.` : ''} NO NEW WALLS: never add a wall, a partition, a half-height wall, a boxed pre-wall, a ledge, a shelf or a niche that image 1 does not show, not behind the toilet, not behind the washbasin and not in the shower. Where image 1 shows one flat wall, the result shows that same flat wall with new tiles: it never steps forward and never gets a flat top at mid-height. NOTHING IS FILLED IN EITHER: every recess, alcove, niche, wall offset, corner step and wall projection that image 1 shows stays exactly where it is, with the same width, depth and height, above all in the shower area. A shower or bathtub that stands in a recess or alcove stays inside it, and the new tiles follow the wall into the recess and around its corners. Never fill a recess, never close an alcove, never tile a niche over flush and never straighten a stepped wall into one flat wall. Only surfaces, sanitary fixtures, taps, furniture and lights change.`,
+    `KEEP THE POSITIONS. A half-height wall, a low built wall or a boxed pre-wall that a fixture stands against is part of the room, not furniture: it keeps its place, its length, its height and its depth, and the fixture stays mounted on it. Every fixture keeps the wall or low wall it stands against in image 1 and its place along it, measured against the corners, the door and the window next to it. The toilet keeps its wall and its place because its drain cannot be moved${v.ceiling === 'sloped' ? ': under the sloping ceiling it stays under that sloping ceiling and is never moved to a straight or rear wall to gain headroom' : ''}. The washbasin keeps its wall and its place.${rightOrder} ${v.layout?.walls.bathtub === 'none' ? 'An old shower tray, its kerb or platform is removed down to the floor.' : "A bathtub that becomes a shower uses only the bathtub's own footprint, on the same wall and in the same direction as the bathtub; the bathtub and any raised base under it are removed down to the floor. So is an old shower tray, its kerb or platform."}${v.wantsShower && v.windows !== '0' && v.layout?.walls.bathtub !== 'none' ? ' A window above the bathtub stays at the same place and size above the new shower; the tiles stop at its frame.' : ''}${v.showerWall && sideEnd ? ` The short end wall of the shower is the ${v.showerWall} wall seen from the camera. Seen from the door, the mixer, the overhead shower and the hand shower are on this ${v.showerWall} wall${besideBasin}${endView}${v.trayShower ? '' : ', and the channel drain lies along its foot'}. The ${v.showerLongWall ?? 'back'} wall of the shower stays empty: only tiles${v.windows !== '0' ? ' and, where image 1 has one there, its window' : ''}, no mixer, no hand shower and no shower head.` : v.showerWall ? ` The short end wall of the shower is the ${v.showerWall} wall seen from the camera: the mixer, the overhead shower and the hand shower sit on it${endView}${v.trayShower ? '' : ', and the channel drain lies along its foot'}; ${v.showerLongWall ? `its long side runs along the ${v.showerLongWall} wall, which carries` : v.showerWall === 'back' ? 'the side walls of the shower carry' : 'the back wall of the shower carries'} no fitting, only tiles.` : ''} NO NEW WALLS: never add a wall, a partition, a half-height wall, a boxed pre-wall, a ledge, a shelf or a niche that image 1 does not show, not behind the toilet, not behind the washbasin and not in the shower. Where image 1 shows one flat wall, the result shows that same flat wall with new tiles: it never steps forward and never gets a flat top at mid-height. NOTHING IS FILLED IN EITHER: every recess, alcove, niche, wall offset, corner step and wall projection that image 1 shows stays exactly where it is, with the same width, depth and height, above all in the shower area. A shower or bathtub that stands in a recess or alcove stays inside it, and the new tiles follow the wall into the recess and around its corners. Never fill a recess, never close an alcove, never tile a niche over flush and never straighten a stepped wall into one flat wall. Only surfaces, sanitary fixtures, taps, furniture and lights change.`,
     `CHANGE this, and only this, in this ${roomName} (style "${v.packageName}"):${look} ${surfaces}; ${fixtures}; if a toilet is visible in image 1, ${toilet}; ${vanity}; ${v.tapPrompt}.${colours}${accent}`,
     // P7 vom 26.09.: der alte Spiegel blieb, darum steht er auch hier.
     `REMOVE: the bidet, if image 1 has one: its place is finished like the rest of the room, with nothing standing there;${v.mirrorImageNumber ? ' the old mirror or mirror cabinet with its lamp;' : ''} the old shower curtain and its rail; the old shower fittings and their slide rail; towels, bottles, rugs and loose furniture, also a cabinet or shelf cut off at the edge of the picture. The vanity unit is not loose furniture and stays, even when cut off at the edge of the picture.${v.wantsShower ? ' All shower fittings sit together on one wall inside the shower area, never next to the toilet or the washbasin.' : ''}`,
@@ -1824,6 +1840,10 @@ const order = (value: any): Fixture[] | null => {
 };
 const nearest = (value: any): Fixture | 'none' | null =>
   value === 'none' || FIXTURES.includes(value) ? value : null;
+const windowList = (value: any): WindowSeen[] | null =>
+  Array.isArray(value) && value.length <= 8 && value.every((item) => item && typeof item === 'object' && !Array.isArray(item)
+    && Object.keys(item).length === 3 && WINDOW_WALLS.includes(item.wall) && WINDOW_PLACES.includes(item.place) && WINDOW_SHAPES.includes(item.shape))
+    ? value as WindowSeen[] : null;
 
 /** Pruefmodell fuer Foto und Ideenbild; BADPLANER_CHECK_MODEL leer = Pruefungen bewusst aus. */
 const checkModel = (): string => (env.BADPLANER_CHECK_MODEL ?? 'gemini-3.6-flash').trim();
@@ -1912,6 +1932,12 @@ async function checkOpenings(
     // P4 und P5 vom 25.09.: bei "keine Fenster" kam einmal ein Dachfenster, einmal ein Fenster links dazu,
     // und extra_openings blieb false. Gezaehlt wird zuverlaessiger als verglichen.
     'Count the windows in each image, roof windows and skylights included; a glass shower panel, a glass door, a mirror or a picture is not a window. Set windows_before and windows_after to those two numbers. ' +
+    // Essenza-Probe von Diego (Vorschau e3e5d51): das breite Fenster hinten ueber der Wanne stand im Bild schmal an der
+    // linken Wand; die Zahl blieb 1, extra_openings false. Die Pruefung nennt jetzt jedes Fenster, der Code vergleicht.
+    'Then list the same windows: window_list_before for image 1 and window_list_after for image 2, each window once as an object with exactly the keys "wall", "place" and "shape". ' +
+    'wall is the wall it is set in, seen from the camera: "left", "right", "back", "front", or "ceiling" for a roof window or skylight; ' +
+    'place is the third of the picture in which the middle of the window lies: "left", "middle" or "right"; ' +
+    'shape is "wide" when the window is clearly wider than tall, "tall" when it is clearly taller than wide, otherwise "square". A window seen only in a mirror is not listed. ' +
     'Set ceiling_changed true if the ceiling of image 2 has another shape than the ceiling of image 1: a slope, an attic, beams or a roof window that image 1 does not have, or a slope of image 1 that is gone. ' +
     // Diego, 04.10.: fehlt nur die Tuer und sind Kamera und Waende gleich, kostet das Bild nichts (sonst ein Vermerk und ein Punkt).
     'Set view_changed true if camera position, angle, lens or framing changed, or if image 2 shows floor, wall or ceiling area that lies outside image 1. A door leaf or door frame of image 1 that is missing or smaller in image 2 does not count, nor does the floor or wall it covered in image 1: if that is the only difference and the camera, the walls and the edges of the picture are the same, view_changed stays false. ' +
@@ -1932,7 +1958,7 @@ async function checkOpenings(
     '"nearest_before":"toilet","nearest_after":"toilet",' +
     '"toilet_on_low_wall_before":false,"toilet_on_low_wall_after":false,"new_wall_element":false,"wall_element_lost":false,' +
     '"foreground_object_before":false,"foreground_object_after":false,"window_much_bigger":false,"point_drain":false,"drain_wall":"none","shower_fittings_walls":[],' +
-    '"shower_step":false,"shower_floor_after":"none","windows_before":0,"windows_after":0,"ceiling_changed":false,' +
+    '"shower_step":false,"shower_floor_after":"none","windows_before":0,"windows_after":0,"window_list_before":[],"window_list_after":[],"ceiling_changed":false,' +
     '"washbasins_after":0,"basin_on_top_after":false,"mirror_after":"none","mirror_kept":false,"toilet_kept":false,"bathtub_after":"none","overhead_shower_after":false,' +
     '"extra_openings":false,"view_changed":false,"reason":"short English note, max 25 words"}';
   const reply = await askCheckModel(model, question, [photo, gen], timeoutMs, ctx);
@@ -1944,12 +1970,11 @@ async function checkOpenings(
   const keys = ['before', 'after', 'order_before', 'order_after', 'nearest_before', 'nearest_after',
     'toilet_on_low_wall_before', 'toilet_on_low_wall_after', 'new_wall_element', 'wall_element_lost', 'foreground_object_before', 'foreground_object_after',
     'window_much_bigger', 'point_drain', 'drain_wall', 'shower_fittings_walls',
-    'shower_step', 'shower_floor_after', 'windows_before', 'windows_after', 'ceiling_changed', 'extra_openings', 'view_changed', 'reason',
+    'shower_step', 'shower_floor_after', 'windows_before', 'windows_after', 'window_list_before', 'window_list_after', 'ceiling_changed', 'extra_openings', 'view_changed', 'reason',
     'washbasins_after', 'basin_on_top_after', 'mirror_after', 'mirror_kept', 'toilet_kept', 'bathtub_after', 'overhead_shower_after'];
   // Die spaeter dazugekommenen Antworten sind freiwillig; fehlt eine, wird sie nicht geprueft.
   const optionalFlag = (key: string) => parsed?.[key] === undefined || typeof parsed[key] === 'boolean';
   const optionalWall = (key: string) => parsed?.[key] === undefined || WALLS.includes(parsed[key]);
-  const optionalCount = (key: string) => parsed?.[key] === undefined || (Number.isInteger(parsed[key]) && parsed[key] >= 0 && parsed[key] <= 20);
   const optionalWalls = (key: string) => parsed?.[key] === undefined || (Array.isArray(parsed[key]) && parsed[key].length <= 4
     && new Set(parsed[key]).size === parsed[key].length && parsed[key].every((wall: unknown) => WALLS.includes(wall as Wall) && wall !== 'none'));
   const before = inventory(parsed?.before);
@@ -1964,7 +1989,7 @@ async function checkOpenings(
     || typeof parsed.foreground_object_before !== 'boolean' || typeof parsed.foreground_object_after !== 'boolean'
     || typeof parsed.window_much_bigger !== 'boolean'
     || !optionalWall('drain_wall') || !optionalWalls('shower_fittings_walls')
-    || !optionalFlag('shower_step') || !optionalFlag('ceiling_changed') || !optionalCount('windows_before') || !optionalCount('windows_after')
+    || !optionalFlag('shower_step') || !optionalFlag('ceiling_changed')
     || typeof parsed.extra_openings !== 'boolean' || typeof parsed.view_changed !== 'boolean'
     || typeof parsed.reason !== 'string' || !parsed.reason.trim() || parsed.reason.length > 200
     || Object.keys(parsed).some((key) => !keys.includes(key))) return { status: 'unavailable', detail: 'Antwort unlesbar' };
@@ -1975,22 +2000,36 @@ async function checkOpenings(
   // oder weniger, eine andere Decke, ein Sanitaerstueck an einer anderen Wand oder an
   // einem anderen Platz in der Reihe, Dusche oder Wanne nicht wie bestellt, das Bidet noch da.
   if (flags.extra_openings) return { status: 'rejected', reason: `an opening was added or lost (${parsed.reason.slice(0, 120)})`, flags };
+  // Die Fenster nennt die Pruefung zweimal, als Zahl und als Liste (Essenza-Probe: Zahl gleich, extra_openings false, das
+  // Fenster trotzdem an einer anderen Wand). Fehlt eine Angabe, ist sie unlesbar oder passen Zahl und Liste nicht zusammen,
+  // ist die Lage nicht bestaetigt: ein schwerer Hinweis, das Bild bleibt zurueck, auch im Produktdurchgang. Nie macht das die
+  // ganze Antwort unlesbar: der Rest der Pruefung bleibt verwertbar, auch fuer den zweiten Durchgang.
+  const windowCount = (value: unknown) => (Number.isInteger(value) && (value as number) >= 0 && (value as number) <= 20 ? value as number : undefined);
+  const photoWindows = windowCount(parsed.windows_before);
+  const resultWindows = windowCount(parsed.windows_after);
+  const windowsBefore = windowList(parsed.window_list_before);
+  const windowsAfter = windowList(parsed.window_list_after);
+  const windowsUnconfirmed = photoWindows === undefined || resultWindows === undefined || !windowsBefore || !windowsAfter
+    || windowsBefore.length !== photoWindows || windowsAfter.length !== resultWindows;
   // Erlaubt ist die groessere Zahl: die des Kunden ("3" heisst drei oder mehr) oder die im Foto gezaehlte.
   // Zaehlt das Pruefmodell einen Spiegel als Fenster, dann in beiden Bildern, und das Bild bleibt.
-  const counts = [/^[0-3]$/.test(wanted.windows) ? Number(wanted.windows) : undefined, parsed.windows_before].filter((n): n is number => typeof n === 'number');
-  // "3 oder mehr" ohne Zahl aus dem Foto: keine Obergrenze.
-  const allowedWindows = wanted.windows === '3' && typeof parsed.windows_before !== 'number' ? undefined : counts.length ? Math.max(...counts) : undefined;
-  if (typeof parsed.windows_after === 'number' && allowedWindows !== undefined && parsed.windows_after > allowedWindows) {
-    return { status: 'rejected', reason: `a window was added: the result shows ${parsed.windows_after} window(s) including roof windows, the photo ${allowedWindows === 0 ? 'none' : allowedWindows}`, flags };
+  const counts = [/^[0-3]$/.test(wanted.windows) ? Number(wanted.windows) : undefined, photoWindows].filter((n): n is number => typeof n === 'number');
+  // "3 oder mehr" ohne Zahl aus dem Foto: keine Obergrenze (die fehlende Zahl haelt das Bild ohnehin zurueck).
+  const allowedWindows = wanted.windows === '3' && photoWindows === undefined ? undefined : counts.length ? Math.max(...counts) : undefined;
+  if (resultWindows !== undefined && allowedWindows !== undefined && resultWindows > allowedWindows) {
+    return { status: 'rejected', reason: `a window was added: the result shows ${resultWindows} window(s) including roof windows, the photo ${allowedWindows === 0 ? 'none' : allowedWindows}`, flags };
   }
   // Diego, 04.10.: die Fenster zuerst. Ein Fenster weniger verwirft das Bild auch dann, wenn extra_openings es nicht sieht.
   // Verlangt ist die kleinere Zahl ("3" heisst mindestens drei): ein Spiegel, den die Pruefung im Foto als Fenster zaehlt,
   // verwirft nichts, und ein Fenster, das sie im Foto nicht sieht, wird nicht verlangt. Ein Fenster an einer anderen Wand
-  // hat dieselbe Zahl: das bleibt bei extra_openings (weg und dazu).
+  // hat dieselbe Zahl: das sieht extra_openings (weg und dazu) oder der Vergleich der Listen gleich danach.
   const requiredWindows = counts.length ? Math.min(...counts) : undefined;
-  if (typeof parsed.windows_after === 'number' && requiredWindows !== undefined && parsed.windows_after < requiredWindows) {
-    return { status: 'rejected', reason: `a window was lost: the result shows ${parsed.windows_after} window(s) including roof windows, the photo ${requiredWindows}`, flags };
+  if (resultWindows !== undefined && requiredWindows !== undefined && resultWindows < requiredWindows) {
+    return { status: 'rejected', reason: `a window was lost: the result shows ${resultWindows} window(s) including roof windows, the photo ${requiredWindows}`, flags };
   }
+  // Jedes Fenster des Ideenbilds braucht sein Gegenstueck im Foto: dieselbe Wand, dieselbe Gegend, dieselbe Form.
+  const windowFault = windowsBefore && windowsAfter ? compareWindows(windowsBefore, windowsAfter) : null;
+  if (windowFault) return { status: 'rejected', reason: windowFault, flags };
   if (parsed.ceiling_changed === true) return { status: 'rejected', reason: 'the ceiling changed its shape: a slope, attic, beams or roof window that the photo does not have, or a slope that is gone', flags };
   const fault = compareInventory(before, after, wanted) || compareOrder(orderBefore, orderAfter);
   if (fault) return { status: 'rejected', reason: fault, flags };
@@ -2021,6 +2060,8 @@ async function checkOpenings(
   // und gewaehlt wird das beste aller Bilder; hat auch das einen, sieht der Kunde keines (04.10.). In der sechsten Probe P1 (Walk-in erhoeht),
   // P7 (alter Spiegel), in der fuenften P3 (altes WC).
   const serious = [
+    // Nicht "the shower fittings are": so wird ein solches Bild nie als Fehlalarm der Armaturen von Hand freigegeben.
+    windowsUnconfirmed && 'the window positions could not be confirmed: the check gave no complete, matching count and list of the windows',
     parsed.mirror_kept === true && 'the mirror above the washbasin is still the old one of the photo',
     parsed.toilet_kept === true && 'the toilet is still the old one of the photo',
     wanted.bathtubType === 'freistehend' && parsed.bathtub_after === 'built_in' && 'the bathtub is built in, but a freestanding bathtub was chosen',
@@ -2226,6 +2267,22 @@ function compareInventory(
     return `the new shower stands on the ${after.shower} wall, the bathtub it replaces stood on the ${before.bathtub} wall`;
   }
   return null;
+}
+
+/**
+ * Jedes Fenster der kuerzeren Liste braucht ein eigenes Gegenstueck in der anderen: an derselben Wand, hoechstens ein Drittel
+ * daneben und nicht von breit zu hoch oder umgekehrt. Ein Fenster mehr oder weniger bleibt der Zahl ueberlassen (ein Spiegel,
+ * den die Pruefung als Fenster zaehlt, ein Fenster, das sie im Foto nicht sieht). Gesucht wird jede Zuordnung, nicht nur die
+ * erste; bei hoechstens 8 Fenstern sind das wenige Versuche.
+ */
+function compareWindows(before: WindowSeen[], after: WindowSeen[]): string | null {
+  const near = (list: readonly string[], a: string, b: string) => Math.abs(list.indexOf(a) - list.indexOf(b)) <= 1;
+  const fits = (a: WindowSeen, b: WindowSeen) => a.wall === b.wall && near(WINDOW_PLACES, a.place, b.place) && near(WINDOW_SHAPES, a.shape, b.shape);
+  const matched = (rest: WindowSeen[], free: WindowSeen[]): boolean => !rest.length
+    || free.some((other, index) => fits(rest[0], other) && matched(rest.slice(1), free.filter((_, i) => i !== index)));
+  if (after.length <= before.length ? matched(after, before) : matched(before, after)) return null;
+  const text = (w: WindowSeen) => `a ${w.shape} window on the ${w.wall === 'ceiling' ? 'ceiling' : `${w.wall} wall`} (${w.place} third)`;
+  return `a window moved or changed: the result has ${after.map(text).join(' and ')}, the photo ${before.map(text).join(' and ')}`;
 }
 
 function logRejectedCheck(check: Extract<CheckResult, { status: 'rejected' }>, attempt: number) {
