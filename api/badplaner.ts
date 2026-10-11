@@ -963,19 +963,25 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   const byNumber = (a: string, b: string) => parseInt(a.replace(/^Bild /, ''), 10) - parseInt(b.replace(/^Bild /, ''), 10);
   const others = [...discarded, ...notShown].sort(byNumber);
   // Versuch "persoenliche Pruefung": NLD bekommt das Bild mit dem Auftrag zu pruefen, der Kunde nur die Bestaetigung,
-  // weder Bild noch Mail (Carla, 05.10.). Diego, 06.10.: er prueft selbst, ohne zweiten Pruefer; eine Duschsaeule statt
-  // des gewaehlten Up+ geht nicht hinaus, ebenso jedes Bild im Zweifel. Verworfene Bilder nie, zurueckgehaltene nur, wenn
-  // allein die Armaturen der Grund sind (siehe withhold).
+  // weder Bild noch Mail (Carla, 05.10.). Diego, 06.10.: er prueft selbst, ohne zweiten Pruefer; eine Duscharmatur, die
+  // nicht der gewaehlten Variante entspricht, geht nicht hinaus, ebenso jedes Bild im Zweifel. Verworfene Bilder nie,
+  // zurueckgehaltene nur, wenn allein die Armaturen der Grund sind (siehe withhold).
   // Carla, 06.10.: angerufen wird vor jedem Versand, auch wenn der kurze Text fuer den Kunden den Anruf nicht nennt.
   const reviewHead = 'Persönliche Prüfung (Versuch): Der Kunde hat das Ideenbild weder gesehen noch per Mail erhalten.';
   // Auftrag fuer ein Bild, das Diego nach eigener Pruefung und Anruf von Hand senden darf; `file` ist der einzige Anhang dafuer.
+  // Diego und Carla, 11.10.: Up+ ist bei Essenza eine Aufputz-Duschsaeule (IT 6B60), bei Colore Unterputz mit drei Rosetten;
+  // "eine Duschsaeule statt des gewaehlten Up+" passte nur auf Colore. Ran und Atelier: nur ihr Referenzfoto, ohne eigene Zeile.
+  const showerVariant = pkg.id === 'essenza'
+    ? 'Up+ Aufputz (Essenza): Säule mit Steigrohr, Aufputz-Mischer unten (waagrechte Stange), runde Kopfbrause am Arm und schlanke Stabhandbrause im Halter am Steigrohr. '
+    : upColore ? 'Up+ Unterputz (Colore): drei runde Rosetten in einer Reihe, Stabhandbrause im Halter und Kopfbrause am Wandarm; keine Duschsäule. ' : '';
   const reviewTask = (file: string) => 'Diego prüft das Bild selbst, ohne zweiten Prüfer: Foto und Bild in voller Auflösung im '
     + 'Anhang, Lead-ID, Foto und Auswahl abgleichen; Fenster, Raumform, alle Armaturen, Glas und Produkte prüfen. '
     // Carla, nach der Essenza-Probe: die Pruefung der Fenster ersetzt den Blick nicht.
     + 'Fenster immer selbst mit dem Kundenfoto vergleichen: Anzahl, Wand, Position, Form. Keine Abweichung gemeldet ersetzt die '
-    + 'Sichtprüfung nicht; nicht lesbar gilt nicht als bestanden. Ist das Bild '
-    + `klar richtig: zuerst den Kunden anrufen, dann nur ${file} per E-Mail senden, keinen anderen Anhang. Ist es falsch oder `
-    + 'zweifelhaft, oder zeigt es eine Duschsäule statt des gewählten Up+: nicht senden, den Kunden anrufen und es erklären.';
+    + 'Sichtprüfung nicht; nicht lesbar gilt nicht als bestanden. '
+    + `Die Duscharmatur mit dem Referenzfoto der gewählten Variante vergleichen; auch die Form von Kopf- und Handbrause prüfen. ${showerVariant}`
+    + `Ist das Bild klar richtig: zuerst den Kunden anrufen, dann nur ${file} per E-Mail senden, keinen anderen Anhang. Ist etwas falsch oder `
+    + 'zweifelhaft, oder entspricht die Duscharmatur nicht der gewählten Variante (Zeile Armatur): nicht senden, den Kunden anrufen und es erklären.';
   const reviewAnswer = (delivery: MailResult) => delivery.status === 'accepted'
     ? res.status(200).json({ ok: true, pruefung: true, leadId, delivery: { lead: delivery.status, leadProvider: delivery.provider, leadAttachments: delivery.attachments } })
     : res.status(502).json({ ok: false, code: 'LEAD_DELIVERY_FAILED', delivery: { lead: delivery.status },

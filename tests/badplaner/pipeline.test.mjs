@@ -2967,13 +2967,17 @@ const reviewPhoto = () => photoChecked(true, JSON.stringify({ is_bathroom: true,
 const reviewCheck = (walls) => () => checkedInv({ bathtub: 'back' }, { shower: 'back' }, { shower_fittings_walls: walls, shower_floor_after: 'tray', shower_step: false });
 const reviewOk = { photoChecks: [reviewPhoto], checks: [reviewCheck(['right'])] };
 // Der ganze Auftrag an Diego in der Mail an NLD (Checkliste von Carla, 06.10.), Wort fuer Wort.
-const reviewChecklist = (file) => 'Diego prüft das Bild selbst, ohne zweiten Prüfer: Foto und Bild in voller Auflösung im Anhang, '
+// Die Zeile der gewaehlten Duscharmatur (Diego und Carla, 11.10.): nur Essenza und Colore mit Up+ haben eine eigene.
+const reviewEssenza = 'Up+ Aufputz (Essenza): Säule mit Steigrohr, Aufputz-Mischer unten (waagrechte Stange), runde Kopfbrause am Arm und schlanke Stabhandbrause im Halter am Steigrohr. ';
+const reviewColoreUp = 'Up+ Unterputz (Colore): drei runde Rosetten in einer Reihe, Stabhandbrause im Halter und Kopfbrause am Wandarm; keine Duschsäule. ';
+const reviewChecklist = (file, variant = reviewEssenza) => 'Diego prüft das Bild selbst, ohne zweiten Prüfer: Foto und Bild in voller Auflösung im Anhang, '
   + 'Lead-ID, Foto und Auswahl abgleichen; Fenster, Raumform, alle Armaturen, Glas und Produkte prüfen. '
   + 'Fenster immer selbst mit dem Kundenfoto vergleichen: Anzahl, Wand, Position, Form. Keine Abweichung gemeldet ersetzt die '
-  + 'Sichtprüfung nicht; nicht lesbar gilt nicht als bestanden. Ist das Bild klar richtig: '
-  + `zuerst den Kunden anrufen, dann nur ${file} per E-Mail senden, keinen anderen Anhang. Ist es falsch oder zweifelhaft, oder `
-  + 'zeigt es eine Duschsäule statt des gewählten Up+: nicht senden, den Kunden anrufen und es erklären.';
-const reviewIntro = (file) => `Persönliche Prüfung (Versuch): Der Kunde hat das Ideenbild weder gesehen noch per Mail erhalten. ${reviewChecklist(file)}`;
+  + 'Sichtprüfung nicht; nicht lesbar gilt nicht als bestanden. '
+  + `Die Duscharmatur mit dem Referenzfoto der gewählten Variante vergleichen; auch die Form von Kopf- und Handbrause prüfen. ${variant}`
+  + `Ist das Bild klar richtig: zuerst den Kunden anrufen, dann nur ${file} per E-Mail senden, keinen anderen Anhang. Ist etwas falsch oder zweifelhaft, oder `
+  + 'entspricht die Duscharmatur nicht der gewählten Variante (Zeile Armatur): nicht senden, den Kunden anrufen und es erklären.';
+const reviewIntro = (file, variant) => `Persönliche Prüfung (Versuch): Der Kunde hat das Ideenbild weder gesehen noch per Mail erhalten. ${reviewChecklist(file, variant)}`;
 
 test('Versuch persoenliche Pruefung: nur auf Vorschau-Deployments; dort zuerst der Kontakt, ohne Modellaufruf', async () => {
   // Ohne Schalter oder in Produktion: die Vorschau wie bisher, und pruefung: true wird vor jedem Aufruf abgelehnt.
@@ -3038,10 +3042,10 @@ test('Versuch persoenliche Pruefung: das Bild geht nur an NLD, ohne Kundenmail u
   assert.match(text, />PLZ \/ Ort<\/td><td[^>]*>4800 Zofingen</);
   assert.match(text, />Newsletter<\/td><td[^>]*>nein</);
   // Diego und Carla, 06.10.: er prueft selbst; ein klar richtiges Bild erst nach dem Anruf senden, sonst nicht senden und
-  // anrufen (falsch, zweifelhaft oder eine Duschsaeule statt des gewaehlten Up+).
+  // anrufen (falsch, zweifelhaft oder, seit dem 11.10., eine Duscharmatur, die nicht der gewaehlten Variante entspricht).
   assert.match(text, /Diego prüft das Bild selbst, ohne zweiten Prüfer/);
   assert.match(text, /Ist das Bild klar richtig: zuerst den Kunden anrufen, dann nur ideenbild\.png per E-Mail senden, keinen anderen Anhang\./);
-  assert.match(text, /falsch oder zweifelhaft, oder zeigt es eine Duschsäule statt des gewählten Up\+: nicht senden, den Kunden anrufen und es erklären/);
+  assert.match(text, /Ist etwas falsch oder zweifelhaft, oder entspricht die Duscharmatur nicht der gewählten Variante \(Zeile Armatur\): nicht senden, den Kunden anrufen und es erklären/);
   assert.equal(lead.text.split('\n')[0], reviewIntro('ideenbild.png'), 'die ganze Checkliste');
 
   // Diego, 06.10.: haelt die Pruefung das Bild nur wegen der Armaturen zurueck (moeglicher Fehlalarm, P2/P5), darf er es nach
@@ -3050,7 +3054,7 @@ test('Versuch persoenliche Pruefung: das Bild geht nur an NLD, ohne Kundenmail u
   const fittings = (extra = {}) => () => checkedInv({ bathtub: 'back' }, { shower: 'back' }, { shower_fittings_walls: ['back'], shower_floor_after: 'tray', shower_step: false, ...extra });
   for (const [settings, subject, file, finding, sendable] of [
     [{ photoChecks: [reviewPhoto], checks: [fittings(), fittings()] }, /– Ideenbild zurückgehalten \(Armaturen, möglicher Fehlalarm\)$/, 'ideenbild.png',
-      /nur wegen der Armaturen zurückgehalten \(siehe Fensterprüfung\), möglicherweise ein Fehlalarm\. Diego prüft das Bild selbst.+zuerst den Kunden anrufen, dann nur ideenbild\.png per E-Mail senden, keinen anderen Anhang.+Duschsäule statt des gewählten Up\+: nicht senden/, true],
+      /nur wegen der Armaturen zurückgehalten \(siehe Fensterprüfung\), möglicherweise ein Fehlalarm\. Diego prüft das Bild selbst.+zuerst den Kunden anrufen, dann nur ideenbild\.png per E-Mail senden, keinen anderen Anhang.+nicht der gewählten Variante \(Zeile Armatur\): nicht senden/, true],
     [{ photoChecks: [reviewPhoto], checks: [fittings({ mirror_kept: true }), fittings({ mirror_kept: true })] }, /– Ideenbild zurückgehalten \(schwerer Hinweis\)$/, 'zurueckgehalten.png',
       /hat das Bild zurückgehalten \(schwerer Hinweis, siehe Fensterprüfung\): nicht senden, den Kunden anrufen und es erklären/, false],
     [{ checks: [() => checked(true), () => checked(true)] }, /– Ideenbild abgelehnt$/, 'verworfen.jpg', /hat das Bild verworfen \(siehe Fensterprüfung\): nicht senden, den Kunden anrufen und es erklären/, false],
@@ -3068,6 +3072,34 @@ test('Versuch persoenliche Pruefung: das Bild geht nur an NLD, ohne Kundenmail u
     assert.match(JSON.stringify(mail), finding);
     if (sendable) assert.ok(mail.text.split('\n')[0].endsWith(`möglicherweise ein Fehlalarm. ${reviewChecklist(file)}`), 'die ganze Checkliste');
     if (!sendable) assert.doesNotMatch(JSON.stringify(mail), /per E-Mail senden|Fehlalarm/, 'gesperrt: kein Auftrag zum Senden');
+  }
+});
+
+test('Versuch persoenliche Pruefung: die Checkliste nennt die Duscharmatur der gewaehlten Variante, Up+ nur, wo es gewaehlt ist', async () => {
+  // Diego und Carla, 11.10.: Up+ ist bei Essenza eine Aufputz-Duschsaeule (IT 6B60), bei Colore Unterputz mit drei Rosetten.
+  // Ran und Atelier vergleichen mit ihrem Referenzfoto, ohne Up+ und ohne die Regel der drei Rosetten.
+  const colore = optionsForPackage('colore');
+  const atelier = optionsForPackage('atelier');
+  const coloreBody = { paket: 'colore', format: colore.formats[0], platte: colore.tiles[0].id, unterbau: colore.bases[0].id, top: colore.tops[0].id,
+    becken: 'aufsatz', finish: colore.finishes[0].id, keramik: colore.sanitary[0].id, wall: colore.walls[0].id, spiegel: colore.mirrors[0].id };
+  const atelierBody = { paket: 'atelier', look: atelier.tiles[0].look, format: atelier.tiles[0].format, platte: atelier.tiles[0].id, kombination: 'einheitlich',
+    unterbau: atelier.bases[0].id, top: atelier.tops[0].id, becken: atelier.basinTypes[0].id, finish: atelier.finishes[0].id,
+    keramik: atelier.sanitary[0].id, wall: atelier.walls[0].id, spiegel: atelier.mirrors[0].id };
+  for (const [label, body, variant, armatur] of [
+    ['Essenza', {}, reviewEssenza, 'Treemme Up\\+, Aufputz, verchromt'],
+    ['Colore mit Up+', { ...coloreBody, armaturenserie: 'treemme-up' }, reviewColoreUp, 'Treemme Up\\+, '],
+    ['Colore mit Ran', { ...coloreBody, armaturenserie: 'treemme-ran' }, '', 'Treemme Ran, '],
+    ['Atelier', atelierBody, '', '[^<]*Treemme Aurelia'],
+  ]) {
+    const h = harness({ env: reviewTrial, ...reviewOk });
+    const res = await h.invoke(payload({ ...body, ...reviewShower, pruefung: true }));
+    assert.equal(res.statusCode, 200, label);
+    const [, lead] = reviewMails(h);
+    const checklist = lead.text.split('\n')[0];
+    assert.equal(checklist, reviewIntro('ideenbild.png', variant), label);
+    // Die Zeile Armatur, auf die die Regel verweist, steht in derselben Mail.
+    assert.match(JSON.stringify(lead), new RegExp(`>Armatur</td><td[^>]*>${armatur}`), label);
+    if (!variant) assert.doesNotMatch(checklist, /Up\+|Rosetten|Säule/, label);
   }
 });
 
