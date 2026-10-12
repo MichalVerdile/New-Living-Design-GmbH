@@ -137,8 +137,10 @@ const DataSecurity: React.FC = () => {
 
           <article id="cookies" className={styles.card}>
             <h3>7. Cookies & Tracking</h3>
-            <p>Wir verwenden Cookies und ähnliche Technologien, um die Website bereitzustellen (notwendig) und, nur mit Ihrer Einwilligung, um die Nutzung
-              zu messen (Statistik) und den Erfolg unserer Werbung zu messen (Marketing). Ohne Einwilligung wird keiner der optionalen Dienste geladen.
+            <p>Wir verwenden Cookies und ähnliche Technologien, um die Website bereitzustellen (notwendig), um die Nutzung zu messen (Statistik) und,
+              nur mit Ihrer Einwilligung, um den Erfolg unserer Werbung zu messen (Marketing). Die Statistik (Google Analytics 4 mit gekürzter IP-Adresse)
+              läuft ab dem ersten Aufruf auf Grundlage unseres berechtigten Interesses nach dem Schweizer Datenschutzgesetz; Sie können sie jederzeit
+              ablehnen, im Cookie-Banner mit «Nur notwendige» oder unten auf dieser Seite (Opt-out). Marketing-Dienste werden ohne Einwilligung nicht geladen.
               Sie können Ihre Wahl jederzeit unten auf dieser Seite ändern.</p>
             <details className={styles.details}>
               <summary>Optionale Dienste</summary>
