@@ -4,8 +4,9 @@ import { BANNER_COOKIE, saveConsent } from '../../utils/tracking';
 import './CookieBanner.css';
 
 const CookieBanner: React.FC = () => {
-    // Statistik und Marketing sind zwei getrennte Entscheidungen. Der dritte
-    // Knopf nimmt nur die Statistik an; die Werbesignale bleiben gesperrt.
+    // Statistik und Marketing sind zwei getrennte Entscheidungen. Statistik
+    // laeuft ab dem ersten Aufruf (Opt-out), "Nur notwendige" schaltet sie ab.
+    // Der dritte Knopf bestaetigt nur die Statistik; die Werbesignale bleiben gesperrt.
     // react-cookie-consent blendet sich nur bei den eigenen zwei Knoepfen aus,
     // darum hier der eigene Sichtbarkeitsschalter.
     const [hidden, setHidden] = useState(false);
@@ -105,7 +106,7 @@ const CookieBanner: React.FC = () => {
             <div className="cookie-banner-content">
                 <div className="cookie-banner-text">
                     <p>
-                        Statistik (Google Analytics) und Marketing (Meta Pixel) nur mit Ihrer Zustimmung, je einzeln.{' '}
+                        Statistik (Google Analytics, IP gekürzt) läuft standardmässig, Marketing (Meta Pixel) nur mit Ihrer Zustimmung. «Nur notwendige» schaltet auch die Statistik ab.{' '}
                         <button type="button" className="cookie-banner-link" onClick={handleStatistikOnly}>
                             Nur Statistik
                         </button>
