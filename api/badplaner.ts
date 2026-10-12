@@ -247,8 +247,9 @@ interface Photo {
  * Bildausschnitt, und genau das lehnt die Prüfung ab. Darum das nächstgelegene
  * unterstützte Verhältnis des Kundenfotos mitschicken.
  */
+// 12.10.: auch 2:3 und 3:2. Das Essenza-Foto (640x960) ist 2:3 und bekam bis dahin 3:4.
 const ASPECT_RATIOS: ReadonlyArray<readonly [string, number]> = [
-  ['9:16', 9 / 16], ['3:4', 3 / 4], ['1:1', 1], ['4:3', 4 / 3], ['16:9', 16 / 9],
+  ['9:16', 9 / 16], ['2:3', 2 / 3], ['3:4', 3 / 4], ['1:1', 1], ['4:3', 4 / 3], ['3:2', 3 / 2], ['16:9', 16 / 9],
 ];
 
 export function nearestAspectRatio(width: number, height: number): string {

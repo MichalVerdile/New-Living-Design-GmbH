@@ -821,6 +821,14 @@ test('the generation request carries the aspect ratio of the customer photo', as
   const gen = h.calls.find((call) => call.url.includes('generativelanguage.googleapis.com') && call.body?.generationConfig?.responseModalities);
   assert.equal(gen.body.generationConfig.imageConfig.imageSize, '2K');
   assert.equal(gen.body.generationConfig.imageConfig.aspectRatio, '1:1');
+  // Essenza-Probe: ein Foto 640x960 ist 2:3 und bekam 3:4. Erster Durchgang und Produktdurchgang verlangen dasselbe Format.
+  const tall = Buffer.from(PNG, 'base64');
+  tall.writeUInt32BE(640, 16);
+  tall.writeUInt32BE(960, 20);
+  const both = harness({ env: { BADPLANER_PRODUCT_PASS: undefined } });
+  await both.invoke(payload({ foto: `data:image/png;base64,${tall.toString('base64')}` }));
+  assert.deepEqual(both.calls.filter((call) => call.body?.generationConfig?.responseModalities).map((call) => call.body.generationConfig.imageConfig),
+    [{ imageSize: '2K', aspectRatio: '2:3' }, { imageSize: '2K', aspectRatio: '2:3' }]);
 });
 
 test('nearestAspectRatio picks a format Gemini supports', () => {
@@ -829,6 +837,9 @@ test('nearestAspectRatio picks a format Gemini supports', () => {
   assert.equal(nearestAspectRatio(1200, 1600), '3:4');
   assert.equal(nearestAspectRatio(1600, 1200), '4:3');
   assert.equal(nearestAspectRatio(1024, 1024), '1:1');
+  assert.equal(nearestAspectRatio(640, 960), '2:3');
+  assert.equal(nearestAspectRatio(960, 640), '3:2');
+  assert.equal(nearestAspectRatio(600, 800), '3:4');
   assert.equal(nearestAspectRatio(0, 800), '');
 });
 
