@@ -1,5 +1,5 @@
 /**
- * Tracking nur mit Einwilligung.
+ * Tracking: Statistik standardmaessig, Marketing nur mit Einwilligung.
  *
  * - Google Analytics 4 (Statistik)  -> Kategorie "analytics"
  * - Meta Pixel (Marketing)          -> Kategorie "marketing"
@@ -7,14 +7,18 @@
  * Die beiden Kategorien sind getrennt. Google Consent Mode v2:
  *   Statistik -> analytics_storage
  *   Marketing -> ad_storage, ad_user_data, ad_personalization
- * Wer nur der Statistik zustimmt, bekommt ausschliesslich die Messung; alle
- * Werbesignale bleiben auf "denied".
  *
- * Kein Script wird geladen, bevor der Besucher im Cookie-Banner oder in den
- * Cookie-Einstellungen zugestimmt hat. Die Einwilligung liegt im Cookie
- * "nldConsent" als JSON {"analytics":bool,"marketing":bool,"ts":ms}.
- * Das Cookie "newLivingDesignCookieConsent" (react-cookie-consent) steuert nur,
- * ob der Banner angezeigt wird.
+ * Statistik (GA4 mit gekuerzter IP) laeuft ab dem ersten Aufruf, solange der
+ * Besucher sie nicht im Banner ("Nur notwendige") oder in den
+ * Cookie-Einstellungen abgelehnt hat (Opt-out, Schweizer DSG). Marketing
+ * (Meta Pixel, Werbesignale) wird erst nach ausdruecklicher Zustimmung geladen.
+ * Grund fuer die Umstellung am 12.10.2026: mit Opt-in zaehlte GA4 ab dem
+ * 21.09. nur noch die Besucher, die den Banner bestaetigten (Woche 05.-11.10.:
+ * 8 Nutzer bei 6 Klicks laut Search Console, drei Tage mit 0 Nutzern).
+ * Die Wahl liegt im Cookie "nldConsent" als JSON
+ * {"analytics":bool,"marketing":bool,"ts":ms}; fehlt es, gilt DEFAULT_CONSENT
+ * (Statistik an, Marketing aus). Das Cookie "newLivingDesignCookieConsent"
+ * (react-cookie-consent) steuert nur, ob der Banner angezeigt wird.
  */
 import { Cookies } from 'react-cookie-consent';
 import { business } from '../config/business.js';
@@ -26,6 +30,8 @@ export interface ConsentState {
 
 export const CONSENT_COOKIE = 'nldConsent';
 export const BANNER_COOKIE = 'newLivingDesignCookieConsent';
+/** Gilt, solange der Besucher im Banner oder in den Einstellungen nichts gewaehlt hat. */
+export const DEFAULT_CONSENT: ConsentState = { analytics: true, marketing: false };
 
 type Fbq = ((...args: unknown[]) => void) & {
   queue: unknown[][];
@@ -111,7 +117,8 @@ function updateGoogleConsent(state: ConsentState): void {
 export function initTrackingFromConsent(): void {
   initConsentMode();
   const state = readConsent();
-  if (state) applyConsent(state);
+  // Ohne gespeicherte Wahl: Statistik an (Opt-out), Marketing aus.
+  applyConsent(state ?? DEFAULT_CONSENT);
 }
 
 /* ---------- Google Analytics 4 ---------- */
@@ -128,29 +135,30 @@ function ensureGtagStub(): void {
 }
 
 /**
- * Consent Mode v2: Standard "denied" beim Laden, "granted" mit der Einwilligung.
- * gtag.js und das config (= page_view mit session_start) kommen erst NACH der
- * Einwilligung. Vorher lief config schon beim Laden: page_view und
- * session_start gingen als anonymer Ping ohne Kennung raus, danach kam nur noch
- * user_engagement, und GA4 fuehrte die Sitzung als "(not set)" / Unassigned
- * statt utm_campaign=badplaner (19.09.2026: 32 Besucher aus Meta laut Vercel
- * Analytics, 0 Sitzungen "badplaner" in GA4). Besucher ohne Einwilligung zaehlt
- * Vercel Web Analytics ohne Cookies; GA4 zeigt anonyme Pings ohnehin nicht an.
+ * Consent Mode v2: Werbesignale "denied" beim Laden; Messung "granted", ausser
+ * der Besucher hat die Statistik frueher abgelehnt (dann "denied"). gtag.js und
+ * das config (= page_view mit session_start) folgen direkt danach in
+ * initTrackingFromConsent, damit Sitzung und Quelle (utm_campaign) in GA4
+ * zusammenbleiben: lief config frueher mit "denied", gingen page_view und
+ * session_start als anonymer Ping raus und GA4 fuehrte die Sitzung als
+ * "(not set)" / Unassigned (19.09.2026). Besucher mit Opt-out zaehlt nur Vercel
+ * Web Analytics ohne Cookies.
  */
 export function initConsentMode(): void {
   if (typeof window === 'undefined' || consentModeReady) return;
   consentModeReady = true;
   ensureGtagStub();
+  const stored = readConsent();
   window.gtag!('consent', 'default', {
     ad_storage: 'denied',
     ad_user_data: 'denied',
     ad_personalization: 'denied',
-    analytics_storage: 'denied',
+    analytics_storage: stored && !stored.analytics ? 'denied' : 'granted',
     wait_for_update: 500,
   });
 }
 
-/** Einmal pro Seitenaufruf, nach der Einwilligung: laedt gtag.js und sendet den page_view mit der aktuellen URL (auf der Landingpage samt UTM). */
+/** Einmal pro Seitenaufruf: laedt gtag.js und sendet den page_view mit der aktuellen URL (auf der Landingpage samt UTM). */
 function loadGtagScript(): void {
   if (gtagScriptLoaded) return;
   gtagScriptLoaded = true;
