@@ -6,8 +6,11 @@
  * (ad_storage, ad_user_data, ad_personalization) und der Meta Pixel haengen
  * am Marketing und bleiben dann gesperrt.
  *
- * Geprueft werden alle Kombinationen: keine Einwilligung, nur Statistik,
- * nur Marketing, beide, und der Widerruf ohne Neuladen der Seite.
+ * Seit 12.10.2026 laeuft die Statistik ohne gespeicherte Wahl (Opt-out),
+ * das Marketing nur mit Einwilligung.
+ *
+ * Geprueft werden alle Kombinationen: keine Wahl, alles abgelehnt, nur
+ * Statistik, nur Marketing, beide, und der Widerruf ohne Neuladen der Seite.
  */
 import assert from 'node:assert/strict';
 import test from 'node:test';
@@ -94,14 +97,36 @@ function pixelBefehle(window) {
   return (window.fbq?.queue || []).map((argumente) => Array.from(argumente));
 }
 
-test('ohne Einwilligung ist alles gesperrt und nichts wird geladen', async () => {
-  const { scripts, window } = await seitenaufruf(null);
+test('ohne gespeicherte Wahl: Statistik laeuft (Opt-out), Marketing bleibt gesperrt', async () => {
+  const { tracking, scripts, window } = await seitenaufruf(null);
 
+  const [standard] = gtagBefehle(window, 'consent');
+  assert.equal(standard[1], 'default');
+  assert.equal(standard[2].analytics_storage, 'granted', 'Messung schon im Standard, damit config nicht als anonymer Ping rausgeht');
+  assert.deepEqual(googleSignale(window), {
+    ad_storage: 'denied',
+    ad_user_data: 'denied',
+    ad_personalization: 'denied',
+    analytics_storage: 'granted',
+  });
+  assert.deepEqual(scripts, [GTAG_SCRIPT], 'gtag.js ja, fbevents.js nein');
+  assert.equal(window[`ga-disable-${GA_ID}`], false);
+  assert.equal(window.fbq, undefined, 'der Meta Pixel braucht eine Einwilligung');
+
+  tracking.trackLead('form', 'badplaner');
+  assert.equal(gtagBefehle(window, 'event').length, 1);
+  assert.equal(window.fbq, undefined);
+});
+
+test('nach "Nur notwendige": beim naechsten Aufruf ist alles gesperrt und nichts wird geladen', async () => {
+  const { scripts, window } = await seitenaufruf({ analytics: false, marketing: false });
+
+  const [standard] = gtagBefehle(window, 'consent');
+  assert.equal(standard[2].analytics_storage, 'denied', 'die fruehere Ablehnung gilt schon im Standard');
   assert.deepEqual(googleSignale(window), DENIED);
-  assert.equal(gtagBefehle(window, 'consent').length, 1, 'nur der Standard "denied", kein update');
   assert.deepEqual(scripts, [], 'weder gtag.js noch fbevents.js');
   assert.equal(window.fbq, undefined);
-  assert.equal(window[`ga-disable-${GA_ID}`], undefined);
+  assert.equal(window[`ga-disable-${GA_ID}`], true);
 });
 
 test('nur Statistik: Messung an, alle Werbesignale bleiben gesperrt', async () => {

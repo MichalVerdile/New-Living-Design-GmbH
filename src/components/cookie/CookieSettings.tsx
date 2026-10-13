@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './CookieSettings.css';
-import { readConsent, saveConsent } from '../../utils/tracking';
+import { DEFAULT_CONSENT, readConsent, saveConsent } from '../../utils/tracking';
 import { business } from '../../config/business';
 
 interface CookieSettingsProps {
@@ -14,10 +14,11 @@ interface CookieSettingsState {
 }
 
 const CookieSettings: React.FC<CookieSettingsProps> = ({ onSettingsChange }) => {
+  // Ohne gespeicherte Wahl gilt DEFAULT_CONSENT: Statistik an (Opt-out), Marketing aus.
   const [settings, setSettings] = useState<CookieSettingsState>({
     necessary: true, // immer aktiv
-    analytics: false,
-    marketing: false
+    analytics: DEFAULT_CONSENT.analytics,
+    marketing: DEFAULT_CONSENT.marketing
   });
 
   const [isLoading, setIsLoading] = useState(false);
