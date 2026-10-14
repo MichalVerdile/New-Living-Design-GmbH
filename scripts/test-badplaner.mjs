@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -11,6 +11,9 @@ try {
   if (compile.status !== 0) process.exitCode = compile.status || 1;
   else {
     writeFileSync(path.join(output, 'package.json'), '{"type":"module"}\n');
+    // Der Testbaum sieht die node_modules des Repos nicht; server/badplaner/doccetta.ts laedt sharp, darum ein Link.
+    mkdirSync(path.join(output, 'node_modules'));
+    symlinkSync(path.join(root, 'node_modules/sharp'), path.join(output, 'node_modules/sharp'), 'dir');
     const directory = path.join(root, 'tests/badplaner');
     const tests = readdirSync(directory).filter((name) => name.endsWith('.test.mjs')).sort().map((name) => path.join(directory, name));
     const result = spawnSync(process.execPath, ['--test', ...tests], {
