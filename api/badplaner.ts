@@ -95,9 +95,8 @@ import { SANITARY_MODULE_PHOTO } from '../server/badplaner/sanitaermodul.js';
 import { CIELO_WC_PHOTO, FLUSH_PLATE_PHOTO, WC_PHOTO } from '../server/badplaner/wc.js';
 import { LED_MIRROR_PHOTO, MIRROR_CABINET_PHOTO } from '../server/badplaner/spiegel.js';
 import { AURELIA_BASIN_PHOTO, AURELIA_BATH_FLOOR_PHOTO, AURELIA_BATH_WALL_PHOTO, AURELIA_SHOWER_PHOTO } from '../server/badplaner/aurelia.js';
-import { TREEMME_RWIT6BD9_DOCCETTA, UP_AUFPUTZ_BATH_PHOTO, UP_AUFPUTZ_SHOWER_PHOTO, UP_BASIN_PHOTO, UP_BATH_PHOTO, UP_SHOWER_PHOTO } from '../server/badplaner/up.js';
+import { UP_AUFPUTZ_BATH_PHOTO, UP_AUFPUTZ_SHOWER_PHOTO, UP_BASIN_PHOTO, UP_BATH_PHOTO, UP_SHOWER_PHOTO } from '../server/badplaner/up.js';
 import { RAN_BASIN_PHOTO, RAN_BATH_PHOTO, RAN_SHOWER_PHOTO } from '../server/badplaner/ran.js';
-import { composeDoccetta, cropForDoccetta, DOCCETTA_PROMPT, HAND_SHOWER_QUESTION, planDoccetta, readHandShower } from '../server/badplaner/doccetta.js';
 
 // Node-Globals ohne @types/node (api/tsconfig.json ist auf Edge ausgelegt)
 declare const process: any;
@@ -413,11 +412,6 @@ function reviewTrialActive(): boolean {
   return env.VITE_BADPLANER_PRUEFUNG === '1' && env.VERCEL_ENV === 'preview';
 }
 
-/** Doccetta locale (server/badplaner/doccetta.ts): aus, bis Diego BADPLANER_DOCCETTA=1 setzt, und nur im Versuch oben. */
-function doccettaActive(): boolean {
-  return env.BADPLANER_DOCCETTA === '1' && reviewTrialActive();
-}
-
 async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestContext) {
   const { room, isGuestWc, cistern, pkg, opts, isAtelier, individuell, tile, floorTile, base, top, basinType,
     tapSeriesOption, finish, sanitary, wall, shower, bathtub, basin, mirror, look, format,
@@ -612,9 +606,6 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
     : !upSeries ? null : pkg.id === 'essenza' ? UP_AUFPUTZ_SHOWER_PHOTO : UP_SHOWER_PHOTO;
   // Die Wannenarmatur als eigenes Bild, fuer Aurelia, Ran und Up+ (Bilder von Diego, 25. und 26.09.).
   const upColore = upSeries && pkg.id === 'colore';
-  // Doccetta locale nur fuer Colore mit Up+ in Chrom und Dusche, im Versuch mit persoenlicher Pruefung: der Lotto T1/T2 hat
-  // nur Chrom CC geprueft, und der Auftrag verlangt verchromt. Essenza erst mit eigener Vorlage.
-  const doccetta = doccettaActive() && review && upColore && showerImage === UP_SHOWER_PHOTO && finish.id === 'treemme-cromo';
   const bathImage = !bathtub || bathtub.id === 'keine' ? null
     : isAtelier ? (bathtub.id === 'freistehend' ? AURELIA_BATH_FLOOR_PHOTO : AURELIA_BATH_WALL_PHOTO)
     : ranSeries ? RAN_BATH_PHOTO : upColore ? UP_BATH_PHOTO : pkg.id === 'essenza' ? UP_AUFPUTZ_BATH_PHOTO : null;
@@ -1087,63 +1078,6 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
     } else productNote = 'kein Produktdurchgang (zu wenig Zeit)';
     console.info('[badplaner]', productNote);
   }
-  // Doccetta locale (Carla und Diego, 14.10.; server/badplaner/doccetta.ts): nur wenn `doccetta` gilt und das gezeigte Bild
-  // die Pruefung ohne schweren Hinweis bestanden hat. Die Rahmen liest eine eigene Frage zu genau diesem Bild, nach dem
-  // Produktdurchgang (der bleibt: er richtet auch WC, Modul, Platte und Spiegel), die Raumpruefung bleibt unveraendert. Fehlt
-  // die Antwort oder ist sie unlesbar oder unsicher, ist die Maske zu nah an Halter, Armaturen, Glas, Spiegel oder Waschtisch
-  // oder zu gross, oder reicht die Zeit nicht: kein Ersatz und kein zweiter Versuch. Das Ideenbild bleibt immer das Bild ohne
-  // Ersatz; ein gelungener Ersatz geht nur als eigener Anhang mit, nicht bestaetigt (ausserhalb der Maske unveraendert belegt
-  // nicht die Form der Handbrause), ein gescheiterter gar nicht. Ein zusaetzlicher 1K-Auftrag, nur wenn alles passt.
-  let doccettaNote = '';
-  let doccettaAttachment: { filename: string; content: string } | undefined;
-  if (doccetta && check.status === 'approved' && !check.serious?.length) {
-    const shown = gen;
-    const bytes = Buffer.from(shown.data, 'base64');
-    // Zeit fuer Rahmenfrage (Frist 20 s), 1K-Auftrag (Frist 65 s), Ausschnitt und Zusammensetzen mit sharp, danach die Mails.
-    // Die 5 s fuer sharp sind eine Reserve, im Container gemessen (beides zusammen unter 1 s bei 2K), keine Frist: die nativen
-    // Schritte laufen ohne Abbruch. Auf Vercel nicht gemessen.
-    const composeMs = 5000;
-    let plan: ReturnType<typeof planDoccetta> = { ok: false, reason: 'zu wenig Zeit' };
-    let source = '';
-    if (ctx.budget.remaining() >= CHECK_TIMEOUT_MS + GEMINI_TIMEOUT_MS + composeMs + DELIVERY_RESERVE_MS) {
-      const model = checkModel();
-      const reply = await askCheckModel(model, HAND_SHOWER_QUESTION, [shown], CHECK_TIMEOUT_MS, ctx);
-      const reading = 'answer' in reply ? readHandShower(reply.answer) : undefined;
-      let size: { width: number; height: number } | undefined;
-      try { size = validateImageBytes(bytes, shown.mime, GENERATED_IMAGE_LIMITS); } catch { size = undefined; }
-      // Herkunft der Koordinaten fuer die Mail: Modell und Hash des Bildes, zu dem sie gehoeren.
-      source = `Quelle ${model}, Bild ${(await sha256Hex(bytes)).slice(0, 12)}${reading?.box ? `, Rahmen ${reading.box.join(',')}` : ''}`;
-      plan = 'detail' in reply ? { ok: false, reason: `Rahmen nicht erhalten: ${reply.detail}` } : !reading ? { ok: false, reason: 'Rahmen unlesbar' }
-        : !size ? { ok: false, reason: 'Bildgroesse unlesbar' } : planDoccetta(reading, size.width, size.height);
-    }
-    let input: { mime: string; data: string } | undefined;
-    if (plan.ok) {
-      try { input = await cropForDoccetta(shown, plan); } catch (error) { plan = { ok: false, reason: `Ausschnitt: ${String(error).slice(0, 80)}` }; }
-    }
-    if (!plan.ok || !input) doccettaNote = `Doccetta übersprungen (${plan.ok ? 'Ausschnitt' : plan.reason}${source ? `; ${source}` : ''})`;
-    else {
-      const edited = await generateImage(DOCCETTA_PROMPT, input, [TREEMME_RWIT6BD9_DOCCETTA], ctx, '3:4', composeMs + DELIVERY_RESERVE_MS, '1K');
-      let composed: Awaited<ReturnType<typeof composeDoccetta>>;
-      try {
-        composed = edited.ok === false ? { ok: false, reason: `Bilddienst: ${edited.detail}` } : await composeDoccetta(shown, edited, plan);
-      } catch (error) {
-        composed = { ok: false, reason: `Zusammensetzen: ${String(error).slice(0, 80)}` };
-      }
-      if (!composed.ok) doccettaNote = `Doccetta-Ersatz verworfen, nicht angehängt (${composed.reason}; ${source})`;
-      else {
-        // Resend nimmt hoechstens 40 MB nach base64. Der Ersatz geht nur mit, wenn Foto, Ideenbild, Bild des Produktdurchgangs
-        // und Ersatz zusammen hoechstens 30 MB base64 haben (Rand fuer Text und MIME); sonst fehlt nur er, die Mail bleibt.
-        const total = photo.data.length + gen.data.length + (productOther?.image.data.length ?? 0) + composed.image.data.length;
-        if (total > 30_000_000) {
-          doccettaNote = `Doccetta-Ersatz nicht angehängt (Anhänge zusammen ${(total / 1e6).toFixed(1)} MB base64, Grenze 30 MB; ${source}; ${composed.note})`;
-        } else {
-          doccettaAttachment = { filename: 'doccetta-nicht-bestaetigt.png', content: composed.image.data };
-          doccettaNote = `Doccetta-Ersatz nur im Anhang doccetta-nicht-bestaetigt.png, nicht bestätigt (${source}; ${composed.note})`;
-        }
-      }
-    }
-    console.info('[badplaner]', doccettaNote);
-  }
   // Carla, 27.09.: ein gewaehltes Bild mit schwerem Hinweis hiess in der Mail "ok", obwohl der Hinweis dahinter seinen
   // Fehler nannte (P2, P5: Armaturen an der Rueckwand). Das Etikett urteilt nur nach der Pruefung des Bildes, das der Kunde
   // bekaeme, also nach dem Produktdurchgang (Revision vom 04.10.): war das Bild davor ungeprueft und besteht der
@@ -1153,7 +1087,6 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
     checkNote = [...others, `Bild ${chosen.number} ${chosenLabel}`].join(', ');
   }
   if (check.status === 'approved' && productNote) checkNote = `${checkNote}, ${productNote}`;
-  if (check.status === 'approved' && doccettaNote) checkNote = `${checkNote}, ${doccettaNote}`;
   if (check.status === 'approved' && check.note) {
     checkNote = checkNote + ', Bildausschnitt verändert: ' + check.note;
     console.info('[badplaner] Bildausschnitt verändert, Ideenbild trotzdem geliefert:', check.note);
@@ -1174,8 +1107,6 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   const imageName = gen.mime === 'image/png' ? 'ideenbild.png' : 'ideenbild.jpg';
   // Das zweite Bild des Produktdurchgangs geht mit, gezeigt oder nicht: so sieht NLD, was er geaendert hat.
   const baseAttachment = productOther ? [{ filename: `${productOther.name}.${productOther.image.mime === 'image/png' ? 'png' : 'jpg'}`, content: productOther.image.data }] : [];
-  // Doccetta locale: der Ersatz nur als eigener Anhang, nicht bestaetigt; das Ideenbild bleibt das Bild ohne Ersatz.
-  if (doccettaAttachment) baseAttachment.push(doccettaAttachment);
   const details = leadDetails(checkNote, review ? 'nicht angezeigt, persönliche Prüfung' : undefined);
   // Carla und Diego, 04.10.: in P2 und P5 ging ein Bild mit schwerem Hinweis an den Kunden, weil alle Durchgaenge einen
   // hatten ("Dusche im Bild" mit den Armaturen hinten, die Vorpruefung mit der Stirnwand rechts: dieser Widerspruch ist
@@ -1844,7 +1775,7 @@ async function loadSwatch(image: string, src: string, ctx: RequestContext): Prom
 
 type GenResult = { ok: true; mime: string; data: string } | { ok: false; error: string; detail: string };
 
-async function generateImage(prompt: string, photo: Photo, references: (Photo | null)[], ctx: RequestContext, aspectRatio = '', reserveMs = CHECK_TIMEOUT_MS + DELIVERY_RESERVE_MS, imageSize = '2K'): Promise<GenResult> {
+async function generateImage(prompt: string, photo: Photo, references: (Photo | null)[], ctx: RequestContext, aspectRatio = '', reserveMs = CHECK_TIMEOUT_MS + DELIVERY_RESERVE_MS): Promise<GenResult> {
   // Das Ideenbild ist das Produkt: es soll das Bad des Kunden zeigen, nicht irgendein schoenes Bad. Darum das genaueste
   // Modell; 2K kostet bei ihm gleich viel wie 1K. Flash (b3dc622) lag im Pruefstand vorne, nach dem Urteil der Pruefung;
   // in der Probe auf der Vorschau vom 27.09. fand Diego mit Flash 1 von 5 Bildern zeigbar und die Armaturen in 0 von 3
@@ -1862,7 +1793,7 @@ async function generateImage(prompt: string, photo: Photo, references: (Photo | 
       headers: { 'x-goog-api-key': env.GEMINI_API_KEY || '', 'content-type': 'application/json' },
       body: JSON.stringify({
         contents: [{ role: 'user', parts }],
-        generationConfig: { responseModalities: ['IMAGE'], imageConfig: aspectRatio ? { imageSize, aspectRatio } : { imageSize } },
+        generationConfig: { responseModalities: ['IMAGE'], imageConfig: aspectRatio ? { imageSize: '2K', aspectRatio } : { imageSize: '2K' } },
       }),
     }, Math.min(GEMINI_TIMEOUT_MS, Math.max(0, ctx.budget.remaining() - reserveMs)));
     const json = r.json;
