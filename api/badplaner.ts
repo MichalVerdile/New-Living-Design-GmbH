@@ -938,7 +938,9 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   // Ein zweiter Durchgang, wenn alle Bilder einen groben Fehler haben oder das beste einen schweren Hinweis (Diego, 27.09.).
   // Gewaehlt wird danach das beste aller Bilder; hat es nach dem Produktdurchgang noch einen schweren Hinweis, sieht
   // der Kunde es nicht (unten, seit dem 04.10.).
-  const seriousFaults = chosen.check.status === 'approved' ? chosen.check.serious ?? [] : [];
+  // Ein unbestaetigter Heizkoerper haelt das Bild zurueck, startet aber allein keinen zweiten Durchgang und kommt nicht in den
+  // Auftrag: das Bildmodell haette nichts zu korrigieren, es fehlt nur eine Antwort der Pruefung (15.10.).
+  const seriousFaults = (chosen.check.status === 'approved' ? chosen.check.serious ?? [] : []).filter((hint) => hint !== RADIATOR_UNCONFIRMED);
   if ((chosen.check.status === 'rejected' || seriousFaults.length) && ctx.budget.remaining() >= secondPassMs) {
     // Der ganze Prompt geht nochmals mit; dazu nur die Gruende, nicht eine zweite Liste aller Regeln.
     const retryPrompt = chosen.check.status === 'rejected'
@@ -1059,7 +1061,7 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   if (env.BADPLANER_PRODUCT_PASS !== '0' && productReferences.length) {
     if (ctx.budget.remaining() >= Math.round(firstPassMs * 1.15) + DELIVERY_RESERVE_MS) {
       const edited = await generateImage(productPrompt, gen, productReferences, ctx, photoRatio, secondCheckReserveMs);
-      if (edited.ok === false) productNote = `Produktdurchgang: Bilddienst: ${edited.detail}`;
+      if (edited.ok === false) productNote = `Produktdurchgang nicht möglich (Bilddienst: ${edited.detail})`;
       else {
         const editedCheck = await checkWithUnavailableRetry(edited);
         const seriousBefore = check.status === 'approved' ? check.serious?.length ?? 0 : Number.POSITIVE_INFINITY;
@@ -1067,12 +1069,18 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
           productOther = { name: 'vor-produktdurchgang', image: gen };
           gen = edited;
           check = editedCheck;
-          productNote = 'Produktdurchgang ok';
+          // Ist die Pruefung abgeschaltet, heisst nichts "ok" (Diego, 15.10.).
+          productNote = editedCheck.status === 'disabled' ? 'Produktdurchgang ungeprüft übernommen' : 'Produktdurchgang ok';
         } else {
           productOther = { name: 'produktdurchgang-nicht-gezeigt', image: edited };
           productNote = editedCheck.status === 'rejected' ? `Produktdurchgang verworfen (${editedCheck.reason})`
             : editedCheck.status === 'unavailable' ? `Produktdurchgang ungeprüft (${editedCheck.detail}), nicht gezeigt`
               : `Produktdurchgang nicht gezeigt (${(editedCheck.status === 'approved' ? editedCheck.serious ?? [] : []).join('; ')})`;
+          // Diego, 15.10.: auch was die Pruefung sonst am nicht gezeigten Bild fand, bleibt in der Mail, als solches bezeichnet.
+          if (editedCheck.status === 'approved') {
+            if (editedCheck.note) productNote += `, Bildausschnitt im Produktdurchgang verändert: ${editedCheck.note}`;
+            for (const hint of editedCheck.hints ?? []) if (!editedCheck.serious?.includes(hint)) productNote += `, Hinweis im Produktdurchgang: ${hint}`;
+          }
         }
       }
     } else productNote = 'kein Produktdurchgang (zu wenig Zeit)';
@@ -1095,6 +1103,14 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   for (const hint of check.status === 'approved' ? check.hints ?? [] : []) {
     checkNote = checkNote + ', Hinweis: ' + hint;
     console.info('[badplaner]', hint);
+  }
+  // Diego, 15.10. (Colore): was die Pruefung am gewaehlten Bild vor dem Produktdurchgang fand, bleibt in der Mail, als solches
+  // bezeichnet, auch wenn sie dort nicht moeglich war; ist sie abgeschaltet, sagt "deaktiviert" es fuer beide Bilder (unten).
+  // Etikett und Zurueckhalten urteilen weiter nur nach dem Bild nach dem Produktdurchgang.
+  if (check !== chosen.check && chosen.check.status === 'unavailable') checkNote = checkNote + `, Prüfung vor dem Produktdurchgang nicht möglich (${chosen.check.detail})`;
+  if (check !== chosen.check && chosen.check.status === 'approved') {
+    if (chosen.check.note) checkNote = checkNote + ', Bildausschnitt vor dem Produktdurchgang verändert: ' + chosen.check.note;
+    for (const hint of chosen.check.hints ?? []) checkNote = checkNote + ', Hinweis vor dem Produktdurchgang: ' + hint;
   }
   if (check.status === 'unavailable') {
     checkNote = [`nicht möglich (${check.detail})`, ...(others.length ? [`Bild ${chosen.number} gewählt`] : []), ...[...tries.filter((entry) => !entry.startsWith('kein ')), ...notShown].sort(byNumber), ...(productNote ? [productNote] : [])].join(' | ');
@@ -1690,14 +1706,17 @@ function buildPrompt(v: {
     `PHOTO EDITING TASK, not a design task. Image 1 is a photograph of the customer's existing ${roomName}. The result is that same photograph after the renovation: the same picture from the same spot, with the same lens, the same crop and the same edges, in which only the surfaces and products named under CHANGE have been replaced, each one in its own place. Someone who knows this ${roomName} must recognise it at first glance. Do not design a new ${roomName} and do not show a showroom.${references}`,
     v.layout ? layoutPrompt(v.layout) : '',
     `This is an edit of image 1, not a new picture. Keep image 1 and change only what the CHANGE list names. Everything else stays exactly as it is: the camera position, angle, lens and framing, the same crop and the same aspect ratio, the walls and where they stand, with every niche, ledge, projection and step they have in image 1 and no others, the ceiling and the room height, the room proportions, every window, roof window and door at its exact size and position, and a radiator only where image 1 has one. ${ceilingRule} Never zoom out, never widen the view, never show floor, wall or ceiling beyond the edges of image 1, never create extra floor area. Whatever is built in the immediate foreground at the edge of image 1 belongs to the picture and stays: an open door leaf, a door frame, the edge of a wall. It keeps its place and takes up the same part of the picture as before, and is never removed to show more of the room. A loose piece of furniture at the edge is removed like all loose furniture: the floor and the walls behind it continue, and the camera stays exactly where it is. Every window keeps the same share of the picture it has in image 1; do not move closer to it and do not make it larger. ${windowRule}${glassRule}`,
-    `KEEP THE POSITIONS. A half-height wall, a low built wall or a boxed pre-wall that a fixture stands against is part of the room, not furniture: it keeps its place, its length, its height and its depth, and the fixture stays mounted on it. Every fixture keeps the wall or low wall it stands against in image 1 and its place along it, measured against the corners, the door and the window next to it. The toilet keeps its wall and its place because its drain cannot be moved${v.ceiling === 'sloped' ? ': under the sloping ceiling it stays under that sloping ceiling and is never moved to a straight or rear wall to gain headroom' : ''}. The washbasin keeps its wall and its place.${rightOrder} ${v.layout?.walls.bathtub === 'none' ? 'An old shower tray, its kerb or platform is removed down to the floor.' : "A bathtub that becomes a shower uses only the bathtub's own footprint, on the same wall and in the same direction as the bathtub; the bathtub and any raised base under it are removed down to the floor. So is an old shower tray, its kerb or platform."}${v.wantsShower && v.windows !== '0' && v.layout?.walls.bathtub !== 'none' ? ' A window above the bathtub stays at the same place and size above the new shower; the tiles stop at its frame.' : ''}${v.showerWall && sideEnd ? ` The short end wall of the shower is the ${v.showerWall} wall seen from the camera. Seen from the door, the mixer, the overhead shower and the hand shower are on this ${v.showerWall} wall${besideBasin}${endView}${v.trayShower ? '' : ', and the channel drain lies along its foot'}. The ${v.showerLongWall ?? 'back'} wall of the shower stays empty: only tiles${v.windows !== '0' ? ' and, where image 1 has one there, its window' : ''}, no mixer, no hand shower and no shower head.` : v.showerWall ? ` The short end wall of the shower is the ${v.showerWall} wall seen from the camera: the mixer, the overhead shower and the hand shower sit on it${endView}${v.trayShower ? '' : ', and the channel drain lies along its foot'}; ${v.showerLongWall ? `its long side runs along the ${v.showerLongWall} wall, which carries` : v.showerWall === 'back' ? 'the side walls of the shower carry' : 'the back wall of the shower carries'} no fitting, only tiles.` : ''} NO NEW WALLS: never add a wall, a partition, a half-height wall, a boxed pre-wall, a ledge, a shelf or a niche that image 1 does not show, not behind the toilet, not behind the washbasin and not in the shower. Where image 1 shows one flat wall, the result shows that same flat wall with new tiles: it never steps forward and never gets a flat top at mid-height. NOTHING IS FILLED IN EITHER: every recess, alcove, niche, wall offset, corner step and wall projection that image 1 shows stays exactly where it is, with the same width, depth and height, above all in the shower area. A shower or bathtub that stands in a recess or alcove stays inside it, and the new tiles follow the wall into the recess and around its corners. Never fill a recess, never close an alcove, never tile a niche over flush and never straighten a stepped wall into one flat wall. Only surfaces, sanitary fixtures, taps, furniture and lights change.`,
+    // Colore-Probe vom 14.10. (Befund NLD): der Wandvorsprung mit dem Heizkoerper zwischen Dusche und Waschtisch fehlte schon
+    // vor dem Produktdurchgang, die Dusche lief an der geraden Wand weiter. Darum zaehlen Vorspruenge fuer die Lage, und
+    // der Heizkoerper behaelt Wand und Platz wie ein Sanitaerstueck, auch wenn er einmal ein anderes Modell wird.
+    `KEEP THE POSITIONS. A half-height wall, a low built wall or a boxed pre-wall that a fixture stands against is part of the room, not furniture: it keeps its place, its length, its height and its depth, and the fixture stays mounted on it. Every fixture and every radiator keeps the wall or low wall it stands against in image 1 and its place along it, measured against the corners, the wall projections and steps, the door and the window next to it. The toilet keeps its wall and its place because its drain cannot be moved${v.ceiling === 'sloped' ? ': under the sloping ceiling it stays under that sloping ceiling and is never moved to a straight or rear wall to gain headroom' : ''}. The washbasin keeps its wall and its place.${rightOrder} ${v.layout?.walls.bathtub === 'none' ? 'An old shower tray, its kerb or platform is removed down to the floor.' : "A bathtub that becomes a shower uses only the bathtub's own footprint, on the same wall and in the same direction as the bathtub; the bathtub and any raised base under it are removed down to the floor. So is an old shower tray, its kerb or platform."}${v.wantsShower && v.windows !== '0' && v.layout?.walls.bathtub !== 'none' ? ' A window above the bathtub stays at the same place and size above the new shower; the tiles stop at its frame.' : ''}${v.showerWall && sideEnd ? ` The short end wall of the shower is the ${v.showerWall} wall seen from the camera. Seen from the door, the mixer, the overhead shower and the hand shower are on this ${v.showerWall} wall${besideBasin}${endView}${v.trayShower ? '' : ', and the channel drain lies along its foot'}. The ${v.showerLongWall ?? 'back'} wall of the shower stays empty: only tiles${v.windows !== '0' ? ' and, where image 1 has one there, its window' : ''}, no mixer, no hand shower and no shower head.` : v.showerWall ? ` The short end wall of the shower is the ${v.showerWall} wall seen from the camera: the mixer, the overhead shower and the hand shower sit on it${endView}${v.trayShower ? '' : ', and the channel drain lies along its foot'}; ${v.showerLongWall ? `its long side runs along the ${v.showerLongWall} wall, which carries` : v.showerWall === 'back' ? 'the side walls of the shower carry' : 'the back wall of the shower carries'} no fitting, only tiles.` : ''} NO NEW WALLS: never add a wall, a partition, a half-height wall, a boxed pre-wall, a ledge, a shelf or a niche that image 1 does not show, not behind the toilet, not behind the washbasin and not in the shower. Where image 1 shows one flat wall, the result shows that same flat wall with new tiles: it never steps forward and never gets a flat top at mid-height. NOTHING IS FILLED IN EITHER: every recess, alcove, niche, wall offset, corner step and wall projection that image 1 shows stays exactly where it is, with the same width, depth and height, above all in the shower area. A shower or bathtub that stands in a recess or alcove stays inside it, and the new tiles follow the wall into the recess and around its corners. Never fill a recess, never close an alcove, never tile a niche over flush, never cut back a wall projection or let the shower take its place, and never straighten a stepped wall into one flat wall. Only surfaces, sanitary fixtures, taps, furniture and lights change.`,
     `CHANGE this, and only this, in this ${roomName} (style "${v.packageName}"):${look} ${surfaces}; ${fixtures}; if a toilet is visible in image 1, ${toilet}; ${vanity}; ${v.tapPrompt}.${colours}${accent}`,
     // P7 vom 26.09.: der alte Spiegel blieb, darum steht er auch hier.
     `REMOVE: the bidet, if image 1 has one: its place is finished like the rest of the room, with nothing standing there;${v.mirrorImageNumber ? ' the old mirror or mirror cabinet with its lamp;' : ''} the old shower curtain and its rail; the old shower fittings and their slide rail; towels, bottles, rugs and loose furniture, also a cabinet or shelf cut off at the edge of the picture. The vanity unit is not loose furniture and stays, even when cut off at the edge of the picture.${v.wantsShower ? ' All shower fittings sit together on one wall inside the shower area, never next to the toilet or the washbasin.' : ''}`,
     // Tageslicht in einem Raum ohne Fenster verlangt nach einem Fenster (P4 und P5 vom 25.09.).
     `Photorealistic, ${v.windows === '0' ? 'bright, even light' : 'natural daylight'}, no people, no text.`,
     // P1 vom 26.09.: ein Heizkoerper, den das Foto nicht hat.
-    `BEFORE YOU DRAW, compare with image 1: the same viewpoint and framing, the same walls and ceiling, ${v.windows === '0' ? 'no window at all' : 'the same windows'}, the same door and, at the edge of the picture, the same door leaf or frame in the foreground if image 1 has one, every fixture where image 1 has it, every recess, alcove and step of the walls that image 1 has, and no low wall, ledge, shelf, niche or radiator that image 1 does not have. A small, tight room stays small and tight: never show more of the room than image 1 shows.`,
+    `BEFORE YOU DRAW, compare with image 1: the same viewpoint and framing, the same walls and ceiling, ${v.windows === '0' ? 'no window at all' : 'the same windows'}, the same door and, at the edge of the picture, the same door leaf or frame in the foreground if image 1 has one, every fixture where image 1 has it, every recess, alcove, projection and step of the walls that image 1 has, every radiator where image 1 has it, and no low wall, ledge, shelf, niche or radiator that image 1 does not have. A small, tight room stays small and tight: never show more of the room than image 1 shows.`,
   ].filter(Boolean).join('\n');
 }
 
@@ -1882,6 +1901,10 @@ async function askCheckModel(model: string, question: string, images: Photo[], t
   }
 }
 
+// Diego, 15.10.: der schwere Hinweis, wenn die Pruefung den Platz des Heizkoerpers nicht bestaetigt. Derselbe Satz nimmt ihn
+// aus dem Anlass und dem Auftrag des zweiten Durchgangs (siehe seriousFaults).
+const RADIATOR_UNCONFIRMED = 'the radiator position could not be confirmed: the check could not tell whether the radiator of the photo kept its wall and its place';
+
 /**
  * Fragt ein Gemini-Textmodell, ob das Ideenbild eine Öffnung (Fenster, Dachfenster,
  * Tür, Glasfläche) enthält, die im Foto nicht da ist. Nicht verfügbare oder
@@ -1916,7 +1939,9 @@ async function checkOpenings(
     // Der Ruecksprung soll bleiben (#52): was im Foto schon da ist, ist nicht neu, auch wenn es nachher besser sichtbar ist.
     'Compare the same place in both images: the recess or alcove a shower stands in, the end face of a wall or pre-wall beside the shower and every wall step that image 1 already has are not new, even when they are easier to see in image 2 once the old tray, curtain and fittings are gone. The shower floor itself, level or raised, is not a wall element. ' +
     // Diegos Test vom 20.09., 09:56: der Ruecksprung in der Wand der Dusche war im Ideenbild zugemauert.
-    'Set wall_element_lost true if image 1 has a recess, alcove, niche, wall offset, corner step or wall projection anywhere in the room, in the shower area or elsewhere, that image 2 no longer has because it was filled in, closed or straightened into one flat wall. An old bathtub with its panel, an old shower tray or enclosure, a surface-mounted cistern with its casing, a bidet and loose furniture are not wall elements: removing them is no loss. ' +
+    'Set wall_element_lost true if image 1 has a recess, alcove, niche, wall offset, corner step or wall projection anywhere in the room, in the shower area or elsewhere, that image 2 no longer has because it was filled in, closed or straightened into one flat wall, or that image 2 shows cut back or covered by the shower; a wall projection with a radiator on it counts too. An old bathtub with its panel, an old shower tray or enclosure, a surface-mounted cistern with its casing, a bidet and loose furniture are not wall elements: removing them is no loss. ' +
+    // Diego, 15.10.: der Heizkoerper behaelt Wand und Platz, auch als anderes Modell. Die Pruefung sagt nur, wo er nachher ist.
+    'Set radiator to where the radiator or towel radiator of image 1 is in image 2, whatever its model: "in_place" on the same wall at the same place along it, "moved" on another wall or at another place along the wall, "gone" when image 2 has no radiator, "none" when image 1 has no radiator, "unknown" when you cannot tell. ' +
     'Set point_drain true only if the shower in image 2 has a round or square point drain or grate in its floor, rather than a long narrow channel drain along one wall; false when there is no shower or no drain is visible. ' +
     // P2, P3 und P5 vom 25.09.: erhoehte Duschwanne, obwohl bodeneben verlangt war. Eine flache Wanne im Boden ist keine Stufe (26.09.).
     // Diego, 04.10.: die Gefaelledusche (Walk-in) liegt ganz eben; bei der Duschwanne ist ein Rand von 2 bis 3 cm normal.
@@ -1963,7 +1988,7 @@ async function checkOpenings(
     '"after":{"toilet":"left","washbasin":"left","shower":"none","bathtub":"none","bidet":"none"},' +
     '"order_before":["washbasin","toilet"],"order_after":["washbasin","toilet"],' +
     '"nearest_before":"toilet","nearest_after":"toilet",' +
-    '"toilet_on_low_wall_before":false,"toilet_on_low_wall_after":false,"new_wall_element":false,"wall_element_lost":false,' +
+    '"toilet_on_low_wall_before":false,"toilet_on_low_wall_after":false,"new_wall_element":false,"wall_element_lost":false,"radiator":"unknown",' +
     '"foreground_object_before":false,"foreground_object_after":false,"window_much_bigger":false,"point_drain":false,"drain_wall":"none","shower_fittings_walls":[],' +
     '"shower_step":false,"shower_floor_after":"none","windows_before":0,"windows_after":0,"window_list_before":[],"window_list_after":[],"ceiling_changed":false,' +
     '"washbasins_after":0,"basin_on_top_after":false,"mirror_after":"none","mirror_kept":false,"toilet_kept":false,"bathtub_after":"none","overhead_shower_after":false,' +
@@ -1975,7 +2000,7 @@ async function checkOpenings(
   }
   const parsed = reply.answer;
   const keys = ['before', 'after', 'order_before', 'order_after', 'nearest_before', 'nearest_after',
-    'toilet_on_low_wall_before', 'toilet_on_low_wall_after', 'new_wall_element', 'wall_element_lost', 'foreground_object_before', 'foreground_object_after',
+    'toilet_on_low_wall_before', 'toilet_on_low_wall_after', 'new_wall_element', 'wall_element_lost', 'radiator', 'foreground_object_before', 'foreground_object_after',
     'window_much_bigger', 'point_drain', 'drain_wall', 'shower_fittings_walls',
     'shower_step', 'shower_floor_after', 'windows_before', 'windows_after', 'window_list_before', 'window_list_after', 'ceiling_changed', 'extra_openings', 'view_changed', 'reason',
     'washbasins_after', 'basin_on_top_after', 'mirror_after', 'mirror_kept', 'toilet_kept', 'bathtub_after', 'overhead_shower_after'];
@@ -2042,6 +2067,9 @@ async function checkOpenings(
   if (fault) return { status: 'rejected', reason: fault, flags };
   // Alles Feinere geht als Hinweis in die Lead-Mail: diese Antworten irren oefter, und ein
   // Ideenbild mit einem kleinen Fehler hilft dem Kunden mehr als gar keines (Diego, 25.09.).
+  // Diego, 15.10.: wo der Heizkoerper des Fotos nachher ist. Fehlt die Angabe oder ist sie unbekannt, wird die Antwort nicht
+  // unlesbar (das kostete eine zweite Pruefung), gilt aber auch nicht als bestanden: ein schwerer Hinweis (unten).
+  const radiator = ['in_place', 'moved', 'gone', 'none'].includes(parsed.radiator) ? parsed.radiator as string : 'unknown';
   const hints = [
     compareDepth(after, nearestBefore, nearestAfter),
     parsed.toilet_on_low_wall_before && !parsed.toilet_on_low_wall_after && 'the low wall the toilet stood against is gone',
@@ -2050,7 +2078,6 @@ async function checkOpenings(
     // in P4 der sechsten Probe "Muretto dazu" in der Mail stand und im Bild nichts war: so sehen wir, welche Antwort irrte.
     !parsed.new_wall_element && wanted.cistern === 'unterputz' && !parsed.toilet_on_low_wall_before && parsed.toilet_on_low_wall_after
       && 'the toilet now stands against a low wall or boxed pre-wall that is not in the photo',
-    parsed.wall_element_lost && 'a recess, alcove, niche or step of the wall that is in the photo was filled in or straightened',
     parsed.window_much_bigger && 'the window takes up much more of the result than of the photo',
     // Die Wahl des Kunden (Punkt c): ein unlesbarer Wert zaehlt nicht, die Pruefung bleibt trotzdem gueltig.
     wanted.basin && Number.isInteger(parsed.washbasins_after) && parsed.washbasins_after > 0
@@ -2074,6 +2101,14 @@ async function checkOpenings(
     wanted.bathtubType === 'freistehend' && parsed.bathtub_after === 'built_in' && 'the bathtub is built in, but a freestanding bathtub was chosen',
     wanted.bathtubType === 'einbau' && parsed.bathtub_after === 'freestanding' && 'the bathtub stands free, but a built-in bathtub was chosen',
     !wanted.shower && parsed.overhead_shower_after === true && 'there is an overhead shower, but no shower was chosen',
+    // Diego, 15.10. (Kosten: der zweite Durchgang laeuft oefter, erst mit dem OK des Inhabers): ein verlorener Vorsprung,
+    // Ruecksprung oder eine Stufe der Wand und ein Heizkoerper, der nicht mehr an seinem Platz ist, fallen sofort auf. Ist
+    // sein Platz nicht bestaetigt, ist das ebenso schwer und haelt das Bild zurueck, startet aber allein keinen zweiten
+    // Durchgang (siehe seriousFaults).
+    parsed.wall_element_lost && 'a recess, alcove, niche or step of the wall that is in the photo was filled in or straightened, or a wall projection was cut back or covered',
+    radiator === 'moved' && 'the radiator of the photo is on another wall or at another place',
+    radiator === 'gone' && 'the radiator of the photo is gone',
+    radiator === 'unknown' && RADIATOR_UNCONFIRMED,
   ].filter((hint): hint is string => !!hint);
   // Der Walk-in bodeneben, die Duschwanne ohne Stufe oder Podest darunter (Diego, 04.10.), alle Armaturen an der
   // Stirnwand; beim Walk-in die Rinne an ihrem Fuss, die Duschwanne hat ihren eigenen Ablauf (Diego, 26.09.).
