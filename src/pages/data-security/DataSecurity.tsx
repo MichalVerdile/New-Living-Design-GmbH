@@ -173,9 +173,10 @@ const DataSecurity: React.FC = () => {
               <li><strong>Welche Daten:</strong> Foto des Bads, Name, Telefonnummer, E-Mail-Adresse und Wohnort, die gewählte Ausstattung (Paket, Platten, Farben, Armaturen),
                 optional ein Grundriss und die Bad-Grösse in m².</li>
               <li><strong>Zweck:</strong> Erstellung des Ideenbilds und Kontaktaufnahme für eine Beratung (Telefon, WhatsApp, Termin in der Ausstellung).</li>
-              <li><strong>Bildgenerierung:</strong> Das Foto und die Materialangaben werden an <strong>Google LLC</strong> (Gemini API, USA) übermittelt, um das Ideenbild zu erzeugen.
-                Google verwendet Daten aus der bezahlten API gemäss seinen Nutzungsbedingungen nicht zum Training seiner Modelle. Übermittlung in die USA auf Basis
-                des Data Privacy Framework bzw. von Standardvertragsklauseln.</li>
+              <li><strong>Bildgenerierung und Prüfung:</strong> Das Foto, die Materialangaben und die erzeugten Ideenbilder werden an die <strong>OpenAI API</strong> übermittelt,
+                um das Ideenbild zu erzeugen und Foto und Ideenbild automatisch zu lesen und zu prüfen. OpenAI verwendet Daten aus der API nicht zum Training seiner Modelle,
+                ausser bei ausdrücklicher Zustimmung (Opt-in). OpenAI kann die Daten zur Erkennung von Missbrauch standardmässig bis zu 30 Tage aufbewahren.
+                Die Daten können in den USA verarbeitet werden.</li>
               <li><strong>Keine Speicherung auf unseren Servern:</strong> Foto und Ideenbild werden nicht auf unseren Servern gespeichert. Sie werden uns per E-Mail zugestellt,
                 sobald das Ideenbild erstellt ist, auch wenn Sie danach keine Kontaktangaben hinterlassen; Ihre Kontaktangaben folgen mit einer zweiten E-Mail. Prüfen wir ein Ideenbild
                 vor der Zustellung persönlich, geben Sie Name, Telefonnummer, E-Mail-Adresse und Wohnort vorher an, und wir erhalten Foto, Ideenbild und Kontaktangaben per E-Mail. Als Versanddienst nutzen wir <strong>Resend Inc.</strong> (USA). Fällt dieser aus, gehen die Angaben ohne Bilder über <strong>Formspree Inc.</strong> (USA) an uns.</li>

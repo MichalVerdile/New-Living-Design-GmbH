@@ -1,17 +1,14 @@
 /**
  * Pruefstand des Badplaners (Diego, 27.09.: "misurare invece di indovinare"). Ruft den echten Handler auf, mit echten
- * Aufrufen an Gemini, aber ohne Mails: jede Mail, jedes erzeugte Bild und jede Antwort der Pruefung landet in einem
- * Ordner. So laesst sich dieselbe Probe mehrmals laufen lassen und zaehlen, wie oft ein Punkt gelingt.
+ * Aufrufen an die OpenAI API, aber ohne Mails: jede Mail, jedes erzeugte Bild und jede Antwort der Pruefung landet in einem
+ * Ordner. So laesst sich dieselbe Probe mehrmals laufen lassen und zaehlen, wie oft ein Punkt gelingt. Jeder Lauf kostet:
+ * nur mit Budget und OK des Inhabers.
  *
- *   GEMINI_API_KEY=... node scripts/badplaner-bench.mjs <faelle.json> <ausgabe> [--runs 3] [--only P1,P5] [--parallel 3]
- *     [--env BADPLANER_MODEL=...] [--list-models] [--dry]
+ *   OPENAI_API_KEY=... node scripts/badplaner-bench.mjs <faelle.json> <ausgabe> --env BADPLANER_PHOTO_CHECK_MODEL=...
+ *     [--runs 3] [--only P1,P5] [--parallel 3] [--env BADPLANER_MODEL=...] [--list-models] [--dry]
  *
- * In der Claude-Umgebung Badplaner-Test ohne GEMINI_API_KEY: dort setzt der Proxy (HTTPS_PROXY) den Schluessel selbst ein,
- * der Pruefstand schickt dann kein x-goog-api-key mit. fetch geht in Node 22 nur mit NODE_USE_ENV_PROXY=1 ueber den
- * Proxy (ab Node 22.21):
- *
- *   NODE_USE_ENV_PROXY=1 node scripts/badplaner-bench.mjs --list-models
- *   NODE_USE_ENV_PROXY=1 node scripts/badplaner-bench.mjs <faelle.json> <ausgabe> [--runs 3] [--only P1,P5] [--parallel 3]
+ * Den Schluessel nur in den Umgebungsvariablen der Arbeitsumgebung setzen, nie im Code. Das Ticket-Geheimnis braucht der
+ * Pruefstand nicht von aussen: er loest keine Tickets ein und erzeugt fuer jeden Start ein zufaelliges.
  *
  * faelle.json: [{ "name": "P1", "photo": "fotos/P1.jpg", "paket": "atelier", "fields": { "dusche": "walk-in", ... } }]
  * Die Proben P1 bis P10 der siebten Probe stehen in scripts/badplaner-bench-faelle.json; die Fotos dazu legt man als
@@ -19,6 +16,7 @@
  * Die Muster der Platten kommen aus public/badplaner/swatches, wie nach dem Merge von der Website.
  */
 import { spawnSync } from 'node:child_process';
+import { randomBytes } from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -31,32 +29,22 @@ const flag = (name, fallback) => {
   const index = args.indexOf(`--${name}`);
   return index >= 0 ? args[index + 1] : fallback;
 };
-// --dry: ohne Gemini, mit einem festen Bild und einer leeren Pruefung; nur um den Pruefstand selbst zu pruefen.
+// --dry: ohne Modellaufruf, mit einem festen Bild und einer leeren Pruefung; nur um den Pruefstand selbst zu pruefen.
 const dry = args.includes('--dry');
-const key = dry ? 'dry' : process.env.GEMINI_API_KEY;
-// Ohne Schluessel: Proxy-Modus, der Proxy der Claude-Umgebung setzt ihn bei Google selbst ein.
-const proxy = !key && Boolean(process.env.HTTPS_PROXY || process.env.https_proxy);
-if (!key && !proxy) throw new Error('GEMINI_API_KEY fehlt und kein Proxy (HTTPS_PROXY), der ihn einsetzt: den Schluessel in den Umgebungsvariablen der Arbeitsumgebung setzen, nie im Code.');
-if (proxy && process.env.NODE_USE_ENV_PROXY !== '1') throw new Error('Proxy-Modus ohne GEMINI_API_KEY: mit NODE_USE_ENV_PROXY=1 starten (ab Node 22.21), sonst geht fetch am Proxy vorbei. NODE_USE_ENV_PROXY=1 node scripts/badplaner-bench.mjs ...');
-/** Kopfzeilen an Google: den Wert des Handlers ersetzen durch den gesetzten Schluessel, im Proxy-Modus durch keinen (auch keinen Platzhalter). */
-const googleHeaders = (headers) => {
-  const result = new Headers(headers);
-  result.delete('x-goog-api-key');
-  if (key) result.set('x-goog-api-key', key);
-  return result;
-};
+const key = dry ? 'dry' : process.env.OPENAI_API_KEY;
+if (!key) throw new Error('OPENAI_API_KEY fehlt: den Schluessel in den Umgebungsvariablen der Arbeitsumgebung setzen, nie im Code.');
+const ticketSecret = randomBytes(32).toString('base64url');
 const DRY_PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAIAAAB7QOjdAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAD0lEQVQImWM4ISd3Qk4OAAh3Agn/2+PxAAAAAElFTkSuQmCC';
-const dryFetch = async (url, init) => {
-  const request = JSON.parse(init.body);
-  const parts = request.generationConfig?.responseModalities ? [{ inlineData: { mimeType: 'image/png', data: DRY_PNG } }] : [{ text: '{}' }];
-  return json({ candidates: [{ content: { parts }, finishReason: 'STOP' }] });
-};
+const OPENAI = 'https://api.openai.com/v1/';
+const dryFetch = async (url) => (url.endsWith('/images/edits')
+  ? json({ created: 0, data: [{ b64_json: DRY_PNG }], output_format: 'png' })
+  : json({ status: 'completed', output: [{ type: 'message', content: [{ type: 'output_text', text: '{}' }] }] }));
 
 if (args.includes('--list-models')) {
-  const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200', { headers: googleHeaders() });
-  const json = await r.json();
-  if (!r.ok) throw new Error(`Modellliste: HTTP ${r.status} ${json.error?.message ?? ''}`);
-  for (const model of json.models ?? []) console.log(model.name.replace('models/', ''), '|', (model.supportedGenerationMethods ?? []).join(','));
+  const r = await fetch(`${OPENAI}models`, { headers: { authorization: `Bearer ${key}` } });
+  const list = await r.json();
+  if (!r.ok) throw new Error(`Modellliste: HTTP ${r.status} ${list.error?.message ?? ''}`);
+  for (const model of list.data ?? []) console.log(model.id);
   process.exit(0);
 }
 
@@ -66,6 +54,8 @@ const runs = Number(flag('runs', '1'));
 const only = flag('only', '')?.split(',').filter(Boolean) ?? [];
 const parallel = Number(flag('parallel', '3'));
 const extraEnv = Object.fromEntries(args.flatMap((arg, index) => (arg === '--env' ? [args[index + 1].split(/=(.*)/s).slice(0, 2)] : [])));
+// Die Vorpruefung ist eine eigene Rolle ohne Vorgabe (siehe api/badplaner.ts): ohne sie antwortet der Handler mit 503.
+if (!dry && !extraEnv.BADPLANER_PHOTO_CHECK_MODEL) throw new Error('--env BADPLANER_PHOTO_CHECK_MODEL=... fehlt');
 
 // Derselbe Build wie fuer die Tests.
 const build = fs.mkdtempSync(path.join(os.tmpdir(), 'badplaner-bench-'));
@@ -111,32 +101,35 @@ async function runOnce(testCase, run, dir) {
   const mails = [];
   let generation = 0;
   const fetch = async (url, init = {}) => {
-    if (url.startsWith('https://generativelanguage.googleapis.com/')) {
-      const request = init.body ? JSON.parse(init.body) : {};
-      const parts = request.contents?.[0]?.parts ?? [];
-      const prompt = parts.find((part) => part.text)?.text ?? '';
+    if (url.startsWith(OPENAI)) {
+      const edit = url.endsWith('/images/edits');
+      const request = edit ? null : JSON.parse(init.body);
+      const prompt = edit ? String(init.body.get('prompt') ?? '') : request.input?.[0]?.content?.find((part) => part.type === 'input_text')?.text ?? '';
       const started = Date.now();
-      const response = dry ? await dryFetch(url, init) : await globalThis.fetch(url, { ...init, headers: googleHeaders(init.headers) });
+      const response = dry ? await dryFetch(url) : await globalThis.fetch(url, init);
       const text = await response.text();
       const ms = Date.now() - started;
-      if (request.generationConfig?.responseModalities) {
+      if (edit) {
         generation += 1;
         const number = generation;
         const kind = prompt.startsWith('PRODUCT EDIT') ? 'produkte' : 'bild';
         fs.writeFileSync(path.join(dir, `prompt-${number}-${kind}.txt`), prompt);
         try {
-          const part = JSON.parse(text).candidates?.[0]?.content?.parts?.find((entry) => entry.inlineData?.data);
-          if (part) {
-            const file = `bild-${number}-${kind}.${part.inlineData.mimeType === 'image/png' ? 'png' : 'jpg'}`;
-            fs.writeFileSync(path.join(dir, file), Buffer.from(part.inlineData.data, 'base64'));
-            images.push({ number, kind, file, ms, data: part.inlineData.data });
+          const result = JSON.parse(text);
+          const data = result.data?.[0]?.b64_json;
+          if (data) {
+            const file = `bild-${number}-${kind}.${result.output_format === 'png' ? 'png' : 'jpg'}`;
+            fs.writeFileSync(path.join(dir, file), Buffer.from(data, 'base64'));
+            images.push({ number, kind, file, ms, data });
           } else images.push({ number, kind, file: null, ms, status: response.status, text: text.slice(0, 300) });
         } catch { images.push({ number, kind, file: null, ms, status: response.status, text: text.slice(0, 300) }); }
       } else {
-        const inline = parts.filter((part) => part.inlineData);
-        const answer = (() => { try { return JSON.parse(text).candidates?.[0]?.content?.parts?.map((part) => part.text || '').join(''); } catch { return text.slice(0, 300); } })();
+        const inline = (request.input?.[0]?.content ?? []).filter((part) => part.type === 'input_image');
+        const answer = (() => {
+          try { return JSON.parse(text).output?.flatMap((item) => item.content ?? []).map((part) => part.text ?? part.refusal ?? '').join(''); } catch { return text.slice(0, 300); }
+        })();
         // Welches Bild die Pruefung ansah: das zweite Bild der Anfrage (das erste ist das Foto).
-        const checked = inline[1] ? images.find((image) => image.data === inline[1].inlineData.data)?.number ?? '?' : 'foto';
+        const checked = inline[1] ? images.find((image) => inline[1].image_url.endsWith(`,${image.data}`))?.number ?? '?' : 'foto';
         checks.push({ checked, ms, status: response.status, answer });
       }
       return new Response(text, { status: response.status, headers: { 'content-type': 'application/json' } });
@@ -155,8 +148,8 @@ async function runOnce(testCase, run, dir) {
     }
     return new Response('not in bench', { status: 404 });
   };
-  // Der Handler verlangt einen Schluessel (leer = 503); im Proxy-Modus nur ein Platzhalter, googleHeaders nimmt ihn vor Google heraus.
-  const handler = createHandler({ fetch, env: { GEMINI_API_KEY: key || 'proxy', RESEND_API_KEY: 'bench', VERCEL_ENV: 'preview', ...extraEnv } });
+  // Der Handler verlangt Schluessel und Ticket-Geheimnis (sonst 503); der Schluessel bleibt in der Umgebung, nie in Dateien.
+  const handler = createHandler({ fetch, env: { OPENAI_API_KEY: key, BADPLANER_TICKET_SECRET: ticketSecret, RESEND_API_KEY: 'bench', VERCEL_ENV: 'preview', ...extraEnv } });
   const res = { headers: {}, statusCode: 200, body: null, setHeader(name, value) { this.headers[name] = value; },
     status(code) { this.statusCode = code; return this; }, json(value) { this.body = value; return this; } };
   const started = Date.now();

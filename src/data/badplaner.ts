@@ -719,7 +719,7 @@ export const basinTypes: BasinTypeOption[] = [
 /* ---------- Armaturenserie mit Foto (Colore zur Wahl, Atelier nur zum Ansehen) ---------- */
 
 export const tapSeriesOptions: TapSeriesOption[] = [
-  { id: 'treemme-up', label: 'Treemme Up+', supplier: 'Treemme', shape: 'runde Formen; Waschtisch IT 6B18, Dusche Unterputz mit drei Rosetten und Kopfbrause IT 6586', note: 'Bild zeigt die Formensprache der Serie.', packages: ['colore'], image: '/badplaner/armaturen/armatur-up-chrom.jpg', url: 'https://www.rubinetterie3m.it/it/moderno/up-up', prompt: 'Treemme Up+ fittings in polished chrome, all round, slim and plain: at the washbasin a slim cylindrical single-lever mixer with a flat top standing on the countertop or the washbasin, as tall as the basin needs, with a thin pin lever sticking out on its side near the top and just below it a long round tube spout that slopes down away from the body and bends down at its end; in a shower three small round wall rosettes in one row at the same height: one at the end carries the hose outlet and the holder of a slim stick hand shower on its hose, the other two each a short cylinder with the same thin pin lever hanging down, and above them on the same wall a thin round overhead shower on a round tube arm that comes out of the wall and curves down to it; never square shapes' },
+  { id: 'treemme-up', label: 'Treemme Up+', supplier: 'Treemme', shape: 'runde Formen; Waschtisch IT 6B18, Dusche Unterputz mit drei Rosetten und Kopfbrause IT 6586', note: 'Bild zeigt die Formensprache der Serie.', packages: ['colore'], image: '/badplaner/armaturen/armatur-up-chrom.jpg', url: 'https://www.rubinetterie3m.it/it/moderno/up-up', prompt: 'Treemme Up+ fittings in polished chrome, slim and plain: at the washbasin a slim cylindrical single-lever mixer with a flat top standing on the countertop or the washbasin, as tall as the basin needs, with a thin pin lever sticking out on its side near the top and just below it a long flat spout sloping down from the body and bending down at its tip; in a shower three small round wall rosettes in one row at the same height: one at the end carries the hose outlet and the holder of a slim stick hand shower on its hose, the other two each a short cylinder with the same thin pin lever hanging down, and above them on the same wall a thin round overhead shower on a round tube arm that comes out of the wall and curves down to it' },
   { id: 'treemme-ran', label: 'Treemme Ran', supplier: 'Treemme', shape: 'runder Schaft, flache Klingen', note: 'Bild zeigt die Formensprache der Serie.', packages: ['colore'], image: '/badplaner/armaturen/armatur-ran-chrom.jpg', url: 'https://www.rubinetterie3m.it/it/moderno/ran', prompt: 'Treemme Ran fittings in polished chrome, round bodies with flat blade-shaped parts: at the washbasin a tall slender round column standing on the countertop, with a thin flat blade spout of rectangular section sticking straight out from near its top and a thin flat rectangular lever on its rounded top cap; in a shower exactly two small wall plates with rounded corners, each a little taller than wide and only slightly larger than the mixer lever, one carrying only the concealed mixer, a short round body with a flat, slightly bent blade lever and no second knob, one beside it the hose outlet with the holder of a slim round stick hand shower on its hose, and above them on the same wall a thin flat wall arm of rectangular section with a thin square overhead shower; spout and levers are always thin flat blades' },
   // Atelier: keine Wahl, Treemme Aurelia verchromt, gerendert aus den 3D-Modellen von Treemme (25.09.).
   { id: 'treemme-aurelia-waschtisch', label: 'Aurelia Waschtisch', supplier: 'Treemme', shape: 'Auslauf und Hebel auf zwei runden Rosetten, Unterputz (RWIT 2CC5)', note: 'Bild zeigt die Formensprache der Serie.', packages: ['atelier'], image: '/badplaner/armaturen/armatur-aurelia-waschtisch.jpg', url: 'https://www.rubinetterie3m.it/en/design/aurelia', prompt: '' },
@@ -799,11 +799,13 @@ export const wallOptions: ChoiceOption[] = [
 
 /**
  * Regel von Diego (20.09., PR 53): alle Duscharmaturen an der kurzen Stirnwand, an der langen Wand nichts.
+ * Root, 26.10. (Colore): hier ohne die Annahme Rechteck und kurzes Ende fuer jede Dusche, nur alle Armaturen an einer
+ * Wand; die Stirnwand nennt der Prompt, wenn die Vorpruefung eine laengliche Grundflaeche liest.
  * Die Rinne gehoert nur zum Walk-in: am Fuss der Wand mit den Armaturen (Wortlaut vom 20.09.). Die Duschwanne
  * ist eine sichtbare Wanne mit eigenem Ablauf (Diego, 26.09.: P2 bekam eine Wanne mit Rinne, P3 statt der Wanne
  * einen gefliesten Boden mit Rinne; beide hatten bis dahin denselben Text wie der Walk-in).
  */
-const SHOWER_FITTINGS = 'The shower area is a rectangle; one of its two SHORT ends is a solid wall, the end wall. ALL shower fittings sit together on that short end wall: the mixer, the overhead shower with its wall arm and the hand shower in its holder; the long wall of the shower carries no fitting at all, only tiles.';
+const SHOWER_FITTINGS = 'ALL shower fittings sit together on one solid wall that already bounds the shower: the mixer, the overhead shower with its wall arm and the hand shower in its holder; the other walls of the shower carry no fitting at all, only tiles.';
 // Die Rinne ist mit den Bodenplatten belegt, nie ein Stahlgitter (Diego, 27.09.: in P8 der sechsten Probe richtig, in P9 falsch).
 // "slopes towards it" war der einzige Satz, der einen Hoehenunterschied verlangt (P1: Walk-in erhoeht; Gegenpruefung vom 27.09.).
 const CHANNEL_DRAIN = 'The drain starts from the fittings: a linear channel drain (Duschrinne) lies in the floor at the foot of the very wall that carries the mixer and the hand shower, directly below them, and runs along the foot of that same wall for its whole length inside the shower: one long narrow slot whose cover is tiled with the same floor tiles, so that only two thin steel lines show and never a steel grate, and the shower floor, level with the bathroom floor at its edge, falls only very slightly towards it. When the shower is wider than it is deep, this drain runs through the full depth of the shower, from the back wall towards the glass panel, that is towards the camera: it is perpendicular to the back wall and never runs along it; never a central point drain, never a round or square grate in the shower floor, never a drain along the long wall or at the foot of any wall without fittings.';
@@ -839,7 +841,7 @@ export const basinOptions: ChoiceOption[] = [
 export const mirrorOptions: ChoiceOption[] = [
   // Jonathan am 25.09.: mit einem Wort zeichnete das Modell in 10 von 12 Proben den alten Spiegel nach. Der neue
   // wird beschrieben, der alte ausdruecklich entfernt; das Bild dazu kommt aus server/badplaner/spiegel.ts.
-  { id: 'spiegelschrank', label: 'Spiegelschrank', prompt: 'new rectangular mirror cabinet as wide as the vanity, softly lighting the wall and washbasin from its underside, with flush mirror doors and a slim LED light line on its front along the top and both sides' },
+  { id: 'spiegelschrank', label: 'Spiegelschrank', prompt: 'new rectangular mirror cabinet as wide as the vanity, softly lighting the wall and washbasin from its underside, with two flush mirror doors and a slim LED light line on its front along the top and both sides' },
   { id: 'spiegel', label: 'Spiegel mit LED-Licht', prompt: 'new frameless rectangular mirror without a cabinet, as wide as the vanity, that softly lights the wall above and below it with hidden LED light along its top and bottom edges' },
 ];
 
@@ -924,10 +926,14 @@ export const badplanerFaq: { question: string; answer: string }[] = [
   },
   {
     question: 'Was passiert mit meinem Foto?',
-    answer: 'Ihr Foto wird zur Erstellung des Ideenbilds an Google (Gemini API) übermittelt und normalerweise zusammen mit dem Ergebnis per E-Mail an uns geschickt. Klappt der Versand mit Anhängen nicht, erhalten wir nur Ihre Angaben, ohne Foto und Ideenbild. Wir speichern die Fotos nicht auf unseren Servern und löschen Foto und Ideenbild spätestens 30 Tage nach Abschluss der Anfrage, wenn kein Auftrag zustande kommt. Details stehen in der Datenschutzerklärung.',
+    answer: 'Ihr Foto wird zur Erstellung und automatischen Prüfung des Ideenbilds an die OpenAI API übermittelt und normalerweise zusammen mit dem Ergebnis per E-Mail an uns geschickt. Klappt der Versand mit Anhängen nicht, erhalten wir nur Ihre Angaben, ohne Foto und Ideenbild. Wir speichern die Fotos nicht auf unseren Servern und löschen Foto und Ideenbild spätestens 30 Tage nach Abschluss der Anfrage, wenn kein Auftrag zustande kommt. Details stehen in der Datenschutzerklärung.',
   },
   {
     question: 'Was passiert danach?',
     answer: 'Wir rufen Sie an oder melden uns per WhatsApp, besprechen das Ideenbild und laden Sie in unsere Ausstellung in Zofingen ein. Nach der Besichtigung bei Ihnen zu Hause erhalten Sie eine Offerte mit Fixpreis.',
   },
 ];
+
+// Diego, 01.11. (E34): Zeile der Auswahl, die einen im Ideenbild nicht geprueften Teil nennt. Der Server setzt sie, das Ticket
+// bindet sie, die Seite zeigt sie neben dem Bild, die Mails in der Auswahl.
+export const IDEENBILD_HINWEIS = 'Hinweis zum Ideenbild';

@@ -7,6 +7,7 @@ import {
   accentsForPlacement,
   badplanerFaq,
   essenzaTaps,
+  IDEENBILD_HINWEIS,
   optionsForPackage,
   tilesForLook,
   type AccentPlacementId,
@@ -87,6 +88,8 @@ interface Result {
   mime: string;
   /** Die Produkte, mit denen das Bild entstand; die Auswahl darueber kann sich danach noch aendern. */
   originals: { label: string; image: string; name: string }[];
+  /** Hinweise des Servers zum Bild (Zeilen "Hinweis zum Ideenbild" der Auswahl); sie bleiben nach der Anfrage. */
+  hinweise: string[];
   /** Vorschau: das Bild ist da, die Kontaktangaben noch nicht. Danach fehlt dieses Feld. */
   preview?: { ticket: string; exp: number; auswahl: [string, string][]; paket: unknown; bytes: Blob };
   delivery?: {
@@ -609,6 +612,7 @@ const Badplaner: React.FC = () => {
           mime,
           dataUrl: `data:${mime};base64,${json.image.data}`,
           originals,
+          hinweise: (json.auswahl || []).filter((row: [string, string]) => row[0] === IDEENBILD_HINWEIS).map((row: [string, string]) => row[1]),
           preview: { ticket: json.ticket, exp: json.exp, auswahl: json.auswahl || [], paket: json.paket, bytes: new Blob([bytes], { type: mime }) },
         });
         setStatus('idle');
@@ -673,6 +677,7 @@ const Badplaner: React.FC = () => {
           mime: result.mime,
           dataUrl: result.dataUrl,
           originals: result.originals,
+          hinweise: result.hinweise,
           delivery: {
             lead: 'accepted',
             customer: known.includes(answer.delivery.customer) ? answer.delivery.customer : 'unknown',
@@ -1306,7 +1311,7 @@ const Badplaner: React.FC = () => {
                         <input type="checkbox" id="bp-consent" name="consent" required checked={contact.consent} onChange={(e) => setContact({ ...contact, consent: e.target.checked })} />
                         <span>
                           Ich habe die <Link to="/datenschutz#badplaner" target="_blank" rel="noopener noreferrer">Datenschutzerklärung</Link> gelesen. Mein Foto wird zur
-                          Erstellung des Ideenbilds an Google (Gemini API) übermittelt und uns normalerweise per E-Mail zugestellt.
+                          Erstellung und automatischen Prüfung des Ideenbilds an die OpenAI API übermittelt und uns normalerweise per E-Mail zugestellt.
                           Klappt der Versand mit Anhängen nicht, erhält New Living Design nur die Angaben zur Anfrage, ohne Foto und Ideenbild.
                         </span>
                       </label>
@@ -1421,7 +1426,10 @@ const Badplaner: React.FC = () => {
               <div className={result.preview ? styles.watermark : undefined}>
                 <img src={result.dataUrl} alt={`Ideenbild Ihres Bads im Paket ${pkgInfo.name}`} className={styles.resultImage} />
               </div>
-              <span className={styles.badge}>{result.preview ? 'Vorschau · Ideenbild, kein Plan' : 'Ideenbild, kein Plan'}</span>
+              <span className={styles.badge}>{`${result.preview ? 'Vorschau · ' : ''}Ideenbild${result.hinweise.length ? ' mit Hinweis' : ''}, kein Plan`}</span>
+              {result.hinweise.map((hinweis) => (
+                <p key={hinweis} className={styles.resultNote} role="note"><strong>{IDEENBILD_HINWEIS}:</strong> {hinweis}</p>
+              ))}
               {result.originals.length > 0 && (
                 <div className={styles.originals}>
                   <p>Die gewählten Produkte im Original. Das Ideenbild zeigt die Stimmung; Form und Details der Produkte sehen Sie hier und in unserer Ausstellung.</p>
