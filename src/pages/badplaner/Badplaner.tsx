@@ -41,7 +41,7 @@ const CISTERN_OPTIONS = [
 ];
 const API_URL = '/api/badplaner';
 const MAX_PLAN_PDF_BYTES = 3_000_000; // Base64 + JSON remains below the API request cap.
-const RENDER_TIMEOUT_MS = 240_000; // Server-Deadline 220 s (zwei Durchgaenge) plus Antwort (Ideenbild 2K, mehrere MB) auf dem Handy
+const RENDER_TIMEOUT_MS = 280_000; // Server-Deadline 260 s (maxDuration 270) plus Antwort (Ideenbild 2K, mehrere MB) auf dem Handy
 const TILE_HINT = 'Nur eine kleine Auswahl. Alle Serien und Farben sehen Sie in unserer Ausstellung in Zofingen.';
 const NEWSLETTER_TEXT =
   'Ja, ich möchte gelegentlich Ideen und Neuigkeiten von New Living Design per E-Mail erhalten (jederzeit abbestellbar).';

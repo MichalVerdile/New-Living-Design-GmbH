@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { readFile } from 'node:fs/promises';
 
 // No test can accidentally reach a real provider, even through the default export.
 globalThis.fetch = async () => { throw new Error('External network is forbidden in tests'); };
@@ -16,6 +17,11 @@ const wc = await import(moduleUrl('server/badplaner/wc.js'));
 const spiegel = await import(moduleUrl('server/badplaner/spiegel.js'));
 const modul = await import(moduleUrl('server/badplaner/sanitaermodul.js'));
 const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jX1EAAAAASUVORK5CYII=';
+// Candidata 57 (root, 01.11.): l'Ideenbild arriva solo come JPEG. JPEG e il JPEG 1x1 valido di image-validation.test.mjs;
+// jpegOf ne fa copie distinte con un segmento di commento, jpegSized cambia soltanto le misure nell'intestazione SOF.
+const JPEG = '/9j/4AAQSkZJRgABAQAAAAAAAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEBAQEBAgGBgUGCQgKCgkICQkKDA8MCgsOCwkJDRENDg8QEBEQCgwSExIQEw8QEBD/wAALCAABAAEBAREA/8QAFAABAAAAAAAAAAAAAAAAAAAACf/EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAD8AVN//2Q==';
+const jpegOf = (note) => { const b = Buffer.from(JPEG, 'base64'); return Buffer.concat([b.subarray(0, 2), Buffer.from([0xff, 0xfe, 0, note.length + 2]), Buffer.from(note), b.subarray(2)]).toString('base64'); };
+const jpegSized = (width, height) => { const b = Buffer.from(JPEG, 'base64'); const sof = b.indexOf(Buffer.from([0xff, 0xc0])); b.writeUInt16BE(height, sof + 5); b.writeUInt16BE(width, sof + 7); return b.toString('base64'); };
 
 function payload(changes = {}) {
   const options = optionsForPackage('essenza');
@@ -52,10 +58,13 @@ function fakeClock() {
 }
 
 const response = (body, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
-// Risposte simulate nel formato della OpenAI API: Images edits (data[].b64_json, output_format) e Responses (output_text).
-const OPENAI_EDITS = 'https://api.openai.com/v1/images/edits';
+// Risposte simulate nel formato della OpenAI Responses API: le letture (output_text) e, dalla 57, l'Ideenbild dal solo tool
+// image_generation: un image_generation_call completato con il JPEG in base64 nel result (call e outer cambiano singoli campi).
 const OPENAI_RESPONSES = 'https://api.openai.com/v1/responses';
-const generated = (data = PNG, mimeType = 'image/png') => response({ created: 0, data: [{ b64_json: data }], output_format: mimeType.replace('image/', '') });
+const isImage = (request) => request?.tools?.[0]?.type === 'image_generation';
+const isRead = (entry) => entry.url === OPENAI_RESPONSES && !isImage(entry.request);
+const generated = (data = JPEG, call = {}, outer = {}) => response({ status: 'completed', output: [{ type: 'reasoning', summary: [] },
+  { type: 'image_generation_call', status: 'completed', output_format: 'jpeg', result: data, ...call }, { type: 'message', role: 'assistant', content: [] }], ...outer });
 const answer = (text) => Object.assign(response({ status: 'completed', output: [{ type: 'message', role: 'assistant', content: [{ type: 'output_text', text, annotations: [] }] }] }), { text });
 const photoChecked = (isBathroom = true, text) => answer(text ?? JSON.stringify({ is_bathroom: isBathroom, reason: 'toilet and washbasin visible' }));
 const inv = (changes = {}) => ({ toilet: 'left', washbasin: 'left', shower: 'none', bathtub: 'none', bidet: 'none', ...changes });
@@ -76,26 +85,11 @@ const windowData = (extra = {}) => {
 };
 const checkedInv = (before, after, extra = {}) => answer(JSON.stringify({ before: inv(before), after: inv(after), order_before: order(inv(before)), order_after: order(inv(after)), nearest_before: 'toilet', nearest_after: 'toilet', toilet_on_low_wall_before: false, toilet_on_low_wall_after: false, new_wall_element: false, wall_element_lost: false, point_drain: false, foreground_object_before: false, foreground_object_after: false, window_much_bigger: false, extra_openings: false, view_changed: false, reason: 'inventory', radiator: 'none', ...windowData(extra), ...extra }));
 
-// La richiesta vera a OpenAI, leggibile: Images edits come campi e immagini (multipart), Responses come JSON.
-async function openaiRequest(url, init) {
-  if (url !== OPENAI_EDITS) return JSON.parse(init.body);
-  const fields = {}; const images = [];
-  for (const [name, value] of init.body.entries()) {
-    if (name === 'image[]') images.push({ name: value.name, type: value.type, data: Buffer.from(await value.arrayBuffer()).toString('base64') });
-    else fields[name] = value;
-  }
-  return { fields, images };
-}
-
 // Vista della richiesta come prima della migrazione (testo e immagini come parts, nello stesso ordine): cosi i test esistenti
 // continuano a verificare prompt, immagini e conteggi. generationConfig dice solo se e un'immagine o una lettura.
-function viewOf(url, request) {
-  if (url === OPENAI_EDITS) {
-    return { generationConfig: { responseModalities: ['IMAGE'] },
-      contents: [{ parts: [{ text: request.fields.prompt }, ...request.images.map((image) => ({ inlineData: { mimeType: image.type, data: image.data } }))] }] };
-  }
+function viewOf(request) {
   const content = request.input[0].content;
-  return { generationConfig: { responseMimeType: 'application/json' },
+  return { generationConfig: isImage(request) ? { responseModalities: ['IMAGE'] } : { responseMimeType: 'application/json' },
     contents: [{ parts: content.map((part) => (part.type === 'input_text' ? { text: part.text }
       : { inlineData: { mimeType: part.image_url.slice(5, part.image_url.indexOf(';')), data: part.image_url.slice(part.image_url.indexOf(',') + 1) } })) }] };
 }
@@ -132,21 +126,28 @@ const fullAnswer = (body, init, extra = {}, products = {}) => {
 function harness(settings = {}) {
   const clock = fakeClock();
   const calls = [];
-  let generation = 0; let checks = 0; let photoChecks = 0; let mail = 0; let ids = 0;
+  let generation = 0; let checks = 0; let photoChecks = 0; let mail = 0; let ids = 0; let supports = 0;
   const fetch = async (url, init = {}) => {
     const openai = url.startsWith('https://api.openai.com/');
-    const request = openai ? await openaiRequest(url, init) : undefined;
-    const body = openai ? viewOf(url, request) : init.body ? JSON.parse(init.body) : undefined;
+    let request; try { request = openai ? JSON.parse(init.body) : undefined; } catch { request = undefined; }
+    const body = openai ? request && viewOf(request) : init.body ? JSON.parse(init.body) : undefined;
     calls.push({ url, init, body, request });
     assert.equal(init.redirect, 'error', 'provider redirects must not bypass URL policy');
     assert.ok(init.signal instanceof AbortSignal);
     if (openai) {
-      assert.ok(url === OPENAI_EDITS || url === OPENAI_RESPONSES, `Unexpected OpenAI URL: ${url}`);
+      assert.ok(url === OPENAI_RESPONSES, `Unexpected OpenAI URL: ${url}`);
       assert.equal(init.headers.authorization, 'Bearer fake-not-a-key');
-      if (url === OPENAI_EDITS) {
+      if (isImage(request)) {
         generation += 1;
         clock.advance(settings.generateDelays?.[generation - 1] ?? 0);
         return settings.generations?.[generation - 1]?.(init) ?? generated();
+      }
+      // Root, 01.11. (Kandidat 52): die Lesung des Halts laeuft neben der Pruefung und antwortet hier erst nach ihr, wie im Pruefstand.
+      if (request?.input?.[0]?.content?.[0]?.text?.startsWith('Image 1 is the bathroom before renovation.')) {
+        supports += 1;
+        await new Promise((resolve) => setImmediate(resolve));
+        clock.advance(settings.supportDelays?.[supports - 1] ?? 0);
+        return settings.supports?.[supports - 1]?.(init) ?? answer(JSON.stringify({ head_support: 'solid_wall', control_row: 'same_height', reason: 'fixture' }));
       }
       if ((body.contents?.[0]?.parts || []).filter((part) => part.inlineData).length === 1) {
         photoChecks += 1;
@@ -157,7 +158,7 @@ function harness(settings = {}) {
       clock.advance(settings.checkDelays?.[checks - 1] ?? 0);
       const reply = settings.checks?.[checks - 1]?.(init) ?? checked();
       if (settings.rawChecks) return reply;
-      const prompt = calls.findLast((call) => call.url === OPENAI_EDITS)?.request.fields.prompt;
+      const prompt = calls.findLast((call) => isImage(call.request))?.request.input[0].content[0].text;
       return reply instanceof Promise ? reply.then((resolved) => completeCheck(resolved, request, lastBody, prompt)) : completeCheck(reply, request, lastBody, prompt);
     }
     if (url === 'https://api.resend.com/emails') {
@@ -192,13 +193,13 @@ function harness(settings = {}) {
     assert.equal(clock.timers.size, 0, 'all timeout handles must be cleared');
     return res;
   }
-  return { invoke, clock, calls, counts: () => ({ generation, checks, mail }), photoCount: () => photoChecks };
+  return { invoke, clock, calls, counts: () => ({ generation, checks, mail }), photoCount: () => photoChecks, supportCount: () => supports };
 }
 
 test('approved rendering reaches company and customer, reporting provider acceptance', async () => {
   const h = harness(); const res = await h.invoke();
   assert.equal(res.statusCode, 200); assert.equal(res.body.ok, true);
-  assert.equal(res.body.image.data, PNG); assert.equal(res.body.delivery.lead, 'accepted');
+  assert.equal(res.body.image.data, JPEG); assert.equal(res.body.delivery.lead, 'accepted');
   assert.equal(res.body.delivery.customer, 'accepted'); assert.equal(res.body.delivery.newsletter, 'skipped');
   assert.deepEqual(h.counts(), { generation: 1, checks: 1, mail: 2 });
   assert.match(res.headers['Set-Cookie'], /HttpOnly; Secure; SameSite=Lax/);
@@ -548,36 +549,28 @@ test('das Ideenbild entsteht mit dem genauesten Modell, nicht dem billigsten', a
   // 27.09. an kurz der Standard; in der Probe auf der Vorschau fand Diego es schlechter (1 von 5 Bildern zeigbar).
   const h = harness();
   await h.invoke();
-  // Seit der Migration: Images edits, Kandidat gpt-image-2.5-sunburst; quality nur auf Wunsch (Kosten, AGENTS.md).
+  // 57 (root, 01.11.): Responses mit dem einzigen Werkzeug image_generation; darin bleibt das Bildmodell BADPLANER_MODEL
+  // (Vorgabe gpt-image-2.5-sunburst) und quality nur auf Wunsch (Kosten, AGENTS.md).
   const gen = h.calls.find((call) => call.body?.generationConfig?.responseModalities);
-  assert.equal(gen.url, OPENAI_EDITS);
-  assert.equal(gen.request.fields.model, 'gpt-image-2.5-sunburst');
-  assert.equal(gen.request.fields.n, '1');
-  assert.equal(gen.request.fields.output_format, 'jpeg');
-  assert.equal(gen.request.fields.quality, undefined);
+  assert.equal(gen.url, OPENAI_RESPONSES);
+  assert.equal(gen.request.tools[0].model, 'gpt-image-2.5-sunburst');
+  assert.equal(gen.request.max_tool_calls, 1);
+  assert.equal(gen.request.tools[0].output_format, 'jpeg');
+  assert.equal(gen.request.tools[0].quality, undefined);
 
   // Umschaltbar ohne Codeaenderung, falls ein neueres Modell kommt.
   const other = harness({ env: { BADPLANER_MODEL: 'gpt-image-2', BADPLANER_IMAGE_QUALITY: 'high' } });
   await other.invoke();
   const otherGen = other.calls.find((call) => call.body?.generationConfig?.responseModalities);
-  assert.equal(otherGen.request.fields.model, 'gpt-image-2');
-  assert.equal(otherGen.request.fields.quality, 'high');
+  assert.equal(otherGen.request.tools[0].model, 'gpt-image-2');
+  assert.equal(otherGen.request.tools[0].quality, 'high');
 });
 
 test('ein 2K-Ideenbild passt durch alle Groessengrenzen', async () => {
   // Der erste Lauf mit gemini-3-pro-image scheiterte nach 25 s: drei Grenzen
   // waren auf 1K zugeschnitten und haben das fertige Bild weggeworfen.
-  const { deflateSync } = await import('node:zlib');
-  const crcTable = Array.from({ length: 256 }, (unused, n) => { let c = n; for (let k = 0; k < 8; k += 1) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; return c >>> 0; });
-  const crc = (buf) => { let c = 0xffffffff; for (const byte of buf) c = crcTable[(c ^ byte) & 0xff] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; };
-  const chunk = (type, data) => { const head = Buffer.alloc(4); head.writeUInt32BE(data.length); const body = Buffer.concat([Buffer.from(type, 'ascii'), data]); const tail = Buffer.alloc(4); tail.writeUInt32BE(crc(body)); return Buffer.concat([head, body, tail]); };
-  const width = 1536; const height = 2048;
-  const ihdr = Buffer.alloc(13); ihdr.writeUInt32BE(width, 0); ihdr.writeUInt32BE(height, 4); ihdr[8] = 8; ihdr[9] = 0;
-  const raw = Buffer.alloc(height * (width + 1));
-  const png = Buffer.concat([
-    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
-    chunk('IHDR', ihdr), chunk('IDAT', deflateSync(raw)), chunk('IEND', Buffer.alloc(0)),
-  ]).toString('base64');
+  // 57: l'Ideenbild e un JPEG; 1536x2048 nell'intestazione, come prima il PNG.
+  const png = jpegSized(1536, 2048);
 
   const h = harness({ generations: [() => generated(png)] });
   const res = await h.invoke();
@@ -737,8 +730,11 @@ test('die Wahl des Kunden wird abgelesen: ein leichter Unterschied steht als Hin
   // Seit dem 26.10. zaehlt mirror_kept mit Vorlage des Spiegels nicht mehr: den Spiegel urteilt der Produktvergleich.
   assert.match(retryPrompt, /A previous attempt was wrong because the bathtub is built in, but a freestanding bathtub was chosen; and because there is an overhead shower, but no shower was chosen\. Start again from image 1/);
   assert.doesNotMatch(retryPrompt, /washbasin bowl\(s\)|a flat mirror hangs|still the old one/);
-  // Nur Leichtes: kein zweiter Durchgang.
-  assert.match(await mailOf({ washbasins_after: 1, mirror_after: 'mirror' }), /Hinweis: 1 washbasin bowl\(s\), but a double washbasin was chosen/);
+  // Nur Leichtes: kein zweiter Durchgang. Seit 59-r2 haelt der Spiegeltyp gegen die Wahl (mit Vorlage) das Bild als Unsicherheit zurueck,
+  // weiter ohne zweiten Durchgang; der leichte Hinweis zum Waschtisch bleibt in der Lead-Mail.
+  const light = await mailOf({ washbasins_after: 1, mirror_after: 'mirror' }, 1, 502);
+  assert.match(light, /Hinweis: 1 washbasin bowl\(s\), but a double washbasin was chosen/);
+  assert.match(light, /the mirror type could not be confirmed: the check names a flat mirror above the washbasin, not the selected type/);
   for (const hint of [/1 washbasin bowl\(s\), but a double washbasin was chosen/,
     /the washbasin is a bowl standing on the countertop, but a basin set into the top was chosen/,
     /a flat mirror hangs above the washbasin, but a mirror cabinet was chosen/,
@@ -895,7 +891,7 @@ test('a changed field of view holds the image and starts the one targeted second
   const res = await fixed.invoke(payload({ dusche: 'keine', badewanne: 'keine' }));
   assert.equal(res.statusCode, 200);
   assert.deepEqual(fixed.counts(), { generation: 2, checks: 2, mail: 2 });
-  const second = fixed.calls.filter((call) => call.url === OPENAI_EDITS)[1].request.fields.prompt;
+  const second = fixed.calls.filter((call) => isImage(call.request))[1].request.input[0].content[0].text;
   assert.match(second, /A previous attempt was wrong because the camera or the framing changed against the photo/);
   const held = harness({ checks: [changed, changed] });
   const again = await held.invoke(payload({ dusche: 'keine', badewanne: 'keine' }));
@@ -916,7 +912,7 @@ test('view_changed null (Versuch 30.10.): nicht beurteilbar haelt zurueck ohne n
   const mixed = harness({ rawChecks: true, checks: [(init) => fullAnswer(body, init, { view_changed: null, window_frame: 'changed' }), (init) => fullAnswer(body, init)] });
   assert.equal((await mixed.invoke(body)).statusCode, 200);
   assert.deepEqual(mixed.counts(), { generation: 2, checks: 2, mail: 2 });
-  const retry = mixed.calls.filter((call) => call.url === OPENAI_EDITS)[1].request.fields.prompt;
+  const retry = mixed.calls.filter((call) => isImage(call.request))[1].request.input[0].content[0].text;
   assert.match(retry, /A previous attempt was wrong because a window frame changed its size or its place against the photo\. Start again from image 1/);
   assert.doesNotMatch(retry.slice(retry.indexOf('A previous attempt')), /could not be confirmed|camera and the framing/);
   // Fehlt der Schluessel oder hat er einen anderen Typ, ist die Antwort unlesbar wie bisher: dieselbe Pruefung ein zweites Mal.
@@ -946,7 +942,7 @@ test('Images edits bekommt das wahre Seitenverhaeltnis des Bildes, nicht das nae
   const sizesFor = async (width, height, settings = {}) => {
     const h = harness(settings);
     assert.equal((await h.invoke(payload({ foto: `data:image/png;base64,${sized(width, height)}` }))).statusCode, 200);
-    return h.calls.filter((call) => call.url === OPENAI_EDITS).map((call) => call.request.fields.size);
+    return h.calls.filter((call) => isImage(call.request)).map((call) => call.request.tools[0].size);
   };
   const sides = (size) => size.split('x').map(Number);
   const longOverShort = (size) => { const [w, h] = sides(size); return Math.max(w, h) / Math.min(w, h); };
@@ -961,7 +957,7 @@ test('Images edits bekommt das wahre Seitenverhaeltnis des Bildes, nicht das nae
     assert.ok(longOverShort(size) <= 3 && longOverShort(size) > 2.9, `${size}: das naechste erlaubte Verhaeltnis`);
     assert.equal(w > h, width > height, size);
   }
-  const both = await sizesFor(1280, 803, { env: { BADPLANER_PRODUCT_PASS: '1' }, generations: [() => generated(sized(1360, 2048))] });
+  const both = await sizesFor(1280, 803, { env: { BADPLANER_PRODUCT_PASS: '1' }, generations: [() => generated(jpegSized(1360, 2048))] });
   assert.deepEqual(both, [colore, '1360x2048'], 'Produktdurchgang nach seinem Eingangsbild');
 });
 
@@ -1278,7 +1274,7 @@ test('oversize JSON is rejected before provider calls', async () => {
 });
 
 test('second rejected result is never returned, while the lead and original photo are preserved', async () => {
-  const second = 'iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAIAAAB7QOjdAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAD0lEQVQImWM4ISd3Qk4OAAh3Agn/2+PxAAAAAElFTkSuQmCC';
+  const second = jpegOf('2');
   const h = harness({ generations: [() => generated(), () => generated(second)], checks: [() => checked(true), () => checked(true)] });
   const res = await h.invoke();
   assert.equal(res.body.code, 'RENDER_REJECTED'); assert.equal(res.statusCode, 502);
@@ -1356,13 +1352,13 @@ test('unavailable checker retries once, holds the image back, delivers the lead 
   assert.deepEqual(h.counts(), { generation: 1, checks: 2, mail: 1 });
   const lead = h.calls.find((call) => call.url === 'https://api.resend.com/emails')?.body;
   assert.match(JSON.stringify(lead), /Fensterprüfung.*nicht möglich \(HTTP 503\)/);
-  assert.deepEqual(lead.attachments.map(({ filename }) => filename), ['foto.png', 'zurueckgehalten.png']);
+  assert.deepEqual(lead.attachments.map(({ filename }) => filename), ['foto.png', 'zurueckgehalten.jpg']);
 });
 
 test('ein Ausfall des Bilddienstes wird gemeldet, der Lead aber nicht weggeworfen', async () => {
   // Diegos Probe vom 17.09: erster Versuch scheiterte, und es kam gar keine Mail.
   // Der Kunde hatte das ganze Formular ausgefuellt, wir hatten davon nichts.
-  for (const settings of [{ generateDelays: [125001] }, { generations: [() => generated('AAAA')] }, { generations: [() => generated(PNG, 'image/svg+xml')] }]) {
+  for (const settings of [{ generateDelays: [150001] }, { generations: [() => generated('AAAA')] }, { generations: [() => generated(JPEG, { output_format: 'webp' })] }]) {
     const h = harness(settings); const res = await h.invoke();
     assert.equal(res.statusCode, 502);
     assert.equal(res.body.code, 'RENDER_FAILED');
@@ -1377,9 +1373,9 @@ test('ein Ausfall des Bilddienstes wird gemeldet, der Lead aber nicht weggeworfe
 test('zwei Bilder gleichzeitig: gezeigt wird das bessere, nicht das erste', async () => {
   // Diego, 27.09.: "concentriamoci sul risultato, i costi non sono un problema". In der fuenften Probe brauchten
   // 7 von 8 Bildern einen zweiten Durchgang von rund 35 s, zweimal kam gar kein Bild.
-  const other = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAADElEQVQImWP4z8AAAAMBAQCc479ZAAAAAElFTkSuQmCC';
+  const other = jpegOf('1');
   const two = { BADPLANER_CANDIDATES: '2' };
-  const pair = [() => generated(PNG), () => generated(other)];
+  const pair = [() => generated(JPEG), () => generated(other)];
   // Die Pruefung antwortet je nach Bild, nicht nach der Reihenfolge der Aufrufe.
   const byImage = (answers) => (init) => answers[JSON.parse(init.body).input[0].content.filter((part) => part.type === 'input_image')[1].image_url.split(',')[1]]();
   const mailOf = (h) => JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails').body);
@@ -1389,7 +1385,7 @@ test('zwei Bilder gleichzeitig: gezeigt wird das bessere, nicht das erste', asyn
   assert.equal(plain.counts().generation, 1);
   // Beide ohne groben Fehler: das mit weniger Hinweisen.
   const lowWall = () => checkedInv({}, {}, { toilet_on_low_wall_before: true, toilet_on_low_wall_after: false });
-  const hinted = byImage({ [PNG]: lowWall, [other]: () => checked() });
+  const hinted = byImage({ [JPEG]: lowWall, [other]: () => checked() });
   const h = harness({ env: two, generations: pair, checks: [hinted, hinted] });
   const res = await h.invoke();
   assert.equal(res.statusCode, 200);
@@ -1399,18 +1395,18 @@ test('zwei Bilder gleichzeitig: gezeigt wird das bessere, nicht das erste', asyn
   assert.match(mailOf(h), /Bild 1 nicht gezeigt \(Hinweise: the low wall the toilet stood against is gone\), Bild 2 ok/);
   assert.doesNotMatch(mailOf(h), /, Hinweis:/);
   // Eine fehlende Tuer zaehlt nicht (Diego, 04.10.): das Bild ohne Tuer gilt als fehlerlos und wird gezeigt.
-  const doorless = byImage({ [PNG]: () => checkedInv({}, {}, { foreground_object_before: true, foreground_object_after: false }), [other]: lowWall });
+  const doorless = byImage({ [JPEG]: () => checkedInv({}, {}, { foreground_object_before: true, foreground_object_after: false }), [other]: lowWall });
   const door = harness({ env: two, generations: pair, checks: [doorless, doorless] });
-  assert.equal((await door.invoke()).body.image.data, PNG);
+  assert.equal((await door.invoke()).body.image.data, JPEG);
   assert.doesNotMatch(mailOf(door), /door leaf/);
   // Gegen einen echten anderen Bildausschnitt gewinnt das Bild, dem nur die Tuer fehlt.
-  const framed = byImage({ [PNG]: () => checkedInv({}, {}, { view_changed: true, reason: 'camera moved back' }),
+  const framed = byImage({ [JPEG]: () => checkedInv({}, {}, { view_changed: true, reason: 'camera moved back' }),
     [other]: () => checkedInv({}, {}, { foreground_object_before: true, foreground_object_after: false, view_changed: false }) });
   const frame = harness({ env: two, generations: pair, checks: [framed, framed] });
   assert.equal((await frame.invoke()).body.image.data, other);
   assert.doesNotMatch(mailOf(frame), /Bildausschnitt verändert/);
   // Eines mit grobem Fehler: das andere, ohne zweiten Durchgang.
-  const opening = byImage({ [PNG]: () => checked(true), [other]: () => checked() });
+  const opening = byImage({ [JPEG]: () => checked(true), [other]: () => checked() });
   const one = harness({ env: two, generations: pair, checks: [opening, opening] });
   const oneRes = await one.invoke();
   assert.equal(oneRes.statusCode, 200);
@@ -1418,13 +1414,13 @@ test('zwei Bilder gleichzeitig: gezeigt wird das bessere, nicht das erste', asyn
   assert.equal(oneRes.body.image.data, other);
   assert.match(mailOf(one), /Bild 1 verworfen \(an opening was added or lost.*\), Bild 2 ok/);
   // Beide mit grobem Fehler: ein zweiter Durchgang mit beiden Gruenden, wieder mit zwei Bildern.
-  const round1 = byImage({ [PNG]: () => checked(true), [other]: () => checkedInv({}, {}, { windows_before: 0, windows_after: 1 }) });
-  const round2 = byImage({ [PNG]: () => checked(), [other]: () => checked(true) });
+  const round1 = byImage({ [JPEG]: () => checked(true), [other]: () => checkedInv({}, {}, { windows_before: 0, windows_after: 1 }) });
+  const round2 = byImage({ [JPEG]: () => checked(), [other]: () => checked(true) });
   const again = harness({ env: two, generations: [...pair, ...pair], checks: [round1, round1, round2, round2] });
   const againRes = await again.invoke(payload({ windows: '0' }));
   assert.equal(againRes.statusCode, 200);
   assert.equal(again.counts().generation, 4);
-  assert.equal(againRes.body.image.data, PNG);
+  assert.equal(againRes.body.image.data, JPEG);
   const retryPrompt = again.calls.filter((call) => call.body?.generationConfig?.responseModalities)[2].body.contents[0].parts[0].text;
   assert.match(retryPrompt, /A previous attempt failed the check because an opening was added or lost.*; another one because a window was added/);
   assert.match(mailOf(again), /Bild 1 verworfen \(an opening.*\), Bild 2 verworfen \(a window was added.*\), Bild 4 verworfen \(an opening.*\), Bild 3 ok/);
@@ -1449,32 +1445,32 @@ test('zwei Bilder gleichzeitig: gezeigt wird das bessere, nicht das erste', asyn
 
 test('zwei Bilder: geprueft vor ungeprueft vor verworfen, im zweiten Durchgang das bessere, ohne Pruefung nur eines', async () => {
   // Gegenpruefung vom 27.09.: diese Faelle liess die Testreihe durch, auch wenn die Auswahl falsch war.
-  const other = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAADElEQVQImWP4z8AAAAMBAQCc479ZAAAAAElFTkSuQmCC';
+  const other = jpegOf('1');
   const two = { BADPLANER_CANDIDATES: '2' };
-  const pair = [() => generated(PNG), () => generated(other)];
+  const pair = [() => generated(JPEG), () => generated(other)];
   const byImage = (answers) => (init) => answers[JSON.parse(init.body).input[0].content.filter((part) => part.type === 'input_image')[1].image_url.split(',')[1]]();
   const mailOf = (h) => JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails').body);
   const busy = () => response({ error: 'busy' }, 503);
   // Ungeprueft gegen geprueft mit einem Hinweis: das gepruefte (ohne Hinweis waere es sofort gezeigt worden).
   const lowWall = () => checkedInv({}, {}, { toilet_on_low_wall_before: true, toilet_on_low_wall_after: false });
-  const unchecked = harness({ env: two, generations: pair, checks: [byImage({ [PNG]: busy, [other]: lowWall }), byImage({ [PNG]: busy, [other]: lowWall }), busy] });
+  const unchecked = harness({ env: two, generations: pair, checks: [byImage({ [JPEG]: busy, [other]: lowWall }), byImage({ [JPEG]: busy, [other]: lowWall }), busy] });
   const uncheckedRes = await unchecked.invoke();
   assert.equal(uncheckedRes.body.image.data, other);
   assert.match(mailOf(unchecked), /Bild 1 nicht gezeigt \(ungeprüft\), Bild 2 ok, Hinweis: the low wall the toilet stood against is gone/);
   // Ungeprueft gegen verworfen: gewaehlt wird das ungepruefte, es bleibt aber zurueck (seit der Essenza-Probe: nicht lesbar
   // gilt nicht als bestanden), und die Mail sagt, welches gewaehlt wurde.
-  const risky = harness({ env: two, generations: pair, checks: [byImage({ [PNG]: () => checked(true), [other]: busy }), byImage({ [PNG]: () => checked(true), [other]: busy }), busy] });
+  const risky = harness({ env: two, generations: pair, checks: [byImage({ [JPEG]: () => checked(true), [other]: busy }), byImage({ [JPEG]: () => checked(true), [other]: busy }), busy] });
   const riskyRes = await risky.invoke();
   assert.equal(riskyRes.statusCode, 502);
   assert.equal(riskyRes.body.image, undefined);
   assert.match(mailOf(risky), /nicht möglich \(HTTP 503\) \| Bild 2 gewählt \| Bild 1: an opening was added or lost/);
-  assert.equal(risky.calls.find((call) => call.url === 'https://api.resend.com/emails').body.attachments.find(({ filename }) => filename === 'zurueckgehalten.png').content, other);
+  assert.equal(risky.calls.find((call) => call.url === 'https://api.resend.com/emails').body.attachments.find(({ filename }) => filename === 'zurueckgehalten.jpg').content, other);
   // Ein anderer Bildausschnitt zaehlt wie ein halber Hinweis: das Bild ohne Vermerk.
-  const turned = harness({ env: two, generations: pair, checks: [byImage({ [PNG]: () => checkedInv({}, {}, { view_changed: true, reason: 'camera turned' }), [other]: () => checked() }),
-    byImage({ [PNG]: () => checkedInv({}, {}, { view_changed: true, reason: 'camera turned' }), [other]: () => checked() })] });
+  const turned = harness({ env: two, generations: pair, checks: [byImage({ [JPEG]: () => checkedInv({}, {}, { view_changed: true, reason: 'camera turned' }), [other]: () => checked() }),
+    byImage({ [JPEG]: () => checkedInv({}, {}, { view_changed: true, reason: 'camera turned' }), [other]: () => checked() })] });
   assert.equal((await turned.invoke()).body.image.data, other);
   // Im zweiten Durchgang das bessere, nicht das erste.
-  const round2 = byImage({ [PNG]: () => checked(true), [other]: () => checked() });
+  const round2 = byImage({ [JPEG]: () => checked(true), [other]: () => checked() });
   const later = harness({ env: two, generations: [...pair, ...pair], checks: [() => checked(true), () => checked(true), round2, round2] });
   const laterRes = await later.invoke();
   assert.equal(laterRes.statusCode, 200);
@@ -1491,7 +1487,7 @@ test('zwei Bilder: ist eines ohne Fehler und ohne Hinweis fertig, wartet der Kun
   let release = () => {};
   // Spaetestens nach 50 ms kommt es trotzdem, damit ein Rueckfall als Fehler endet, nicht als haengender Test.
   const slow = () => new Promise((resolve) => { release = () => resolve(generated()); setTimeout(release, 50); });
-  const other = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAADElEQVQImWP4z8AAAAMBAQCc479ZAAAAAElFTkSuQmCC';
+  const other = jpegOf('1');
   // Das langsame Bild kommt erst, wenn die Lead-Mail schon unterwegs ist.
   const h = harness({ env: { BADPLANER_CANDIDATES: '2' }, generations: [slow, () => generated(other)], checks: [() => checked(), () => checked()],
     mails: [() => { release(); return response({ id: 'mail-1' }); }] });
@@ -1513,7 +1509,7 @@ test('fehlt im Ideenbild der Waschtisch, ist das ein grober Fehler wie beim WC',
 test('laesst sich der zweite Versuch nicht pruefen, bleibt er zurueck, mit dem ersten Grund in der Mail', async () => {
   // Gegenpruefung vom 27.09.: dieser Weg hatte nach f3c724f keinen Test mehr. Seit der Essenza-Probe sieht der Kunde ein
   // ungeprueftes Bild nicht mehr; NLD bekommt es als zurueckgehalten.
-  const second = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAADElEQVQImWP4z8AAAAMBAQCc479ZAAAAAElFTkSuQmCC';
+  const second = jpegOf('1');
   const busy = () => response({ error: 'busy' }, 503);
   const h = harness({ generations: [() => generated(), () => generated(second)], checks: [() => checked(true), busy, busy] });
   const res = await h.invoke();
@@ -1521,7 +1517,7 @@ test('laesst sich der zweite Versuch nicht pruefen, bleibt er zurueck, mit dem e
   assert.equal(res.body.image, undefined);
   const lead = h.calls.find((call) => call.url === 'https://api.resend.com/emails').body;
   assert.match(JSON.stringify(lead), /nicht möglich \(HTTP 503\) \| Bild 2 gewählt \| Bild 1: an opening was added or lost/);
-  assert.equal(lead.attachments.find(({ filename }) => filename === 'zurueckgehalten.png').content, second);
+  assert.equal(lead.attachments.find(({ filename }) => filename === 'zurueckgehalten.jpg').content, second);
 });
 
 test('Wanne wird Dusche: die Dusche an der Stirnwand der Wanne ist richtig, an einer anderen Wand nicht', async () => {
@@ -1572,8 +1568,9 @@ test('failed render attempts do not consume the IP counter', async () => {
 });
 
 test('retry is skipped when a second pass of the measured length cannot fit', async () => {
-  // Nur noch im Ausnahmefall: langsamstes Bild, Pruefung erst nach einem 503 lesbar (60 + 19 + 19 s).
-  const h = harness({ generateDelays: [60000], checkDelays: [19000, 19000], checks: [() => response({}, 503), () => checked(true)] });
+  // Nur noch im Ausnahmefall: langsames Bild, Pruefung erst nach einem 503 lesbar (80 + 19 + 19 s). Seit 260 s Budget (Kandidat 52)
+  // passt der zweite Durchgang auch nach 60 s Bild.
+  const h = harness({ generateDelays: [80000], checkDelays: [19000, 19000], checks: [() => response({}, 503), () => checked(true)] });
   const res = await h.invoke();
   assert.equal(res.body.code, 'RENDER_REJECTED'); assert.deepEqual(h.counts(), { generation: 1, checks: 2, mail: 1 });
   assert.match(JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails').body),
@@ -1624,7 +1621,7 @@ for (const [expected, settings] of [
   ['skipped', { env: { RESEND_API_KEY: '' } }],
 ]) test(`customer email ${expected} preserves approved image and honest status`, async () => {
   const h = harness(settings); const res = await h.invoke();
-  assert.equal(res.statusCode, 200); assert.equal(res.body.delivery.customer, expected); assert.equal(res.body.image.data, PNG);
+  assert.equal(res.statusCode, 200); assert.equal(res.body.delivery.customer, expected); assert.equal(res.body.image.data, JPEG);
 });
 
 test('newsletter failures are surfaced separately and never silently marked subscribed', async () => {
@@ -1752,7 +1749,7 @@ test('slow response body is timed out, not only response headers', async () => {
   const h = harness({ generations: [() => new Response(new ReadableStream({ cancel() { cancelCalled = true; } }), { headers: { 'content-type': 'application/json' } })] });
   const pending = h.invoke();
   for (let i = 0; i < 30 && h.counts().generation === 0; i += 1) await Promise.resolve();
-  h.clock.advance(125000);
+  h.clock.advance(150000);
   const res = await pending;
   assert.equal(res.statusCode, 502); assert.equal(cancelCalled, true); assert.equal(h.counts().mail, 1);
 });
@@ -1797,7 +1794,7 @@ test('Vorschau: Bild ohne Kontaktangaben, Entwurf-Mail mit Foto und Bild an NLD,
   const res = await h.invoke(previewPayload());
   assert.equal(res.statusCode, 200);
   assert.equal(res.body.vorschau, true);
-  assert.equal(res.body.image.data, PNG);
+  assert.equal(res.body.image.data, JPEG);
   assert.equal(typeof res.body.ticket, 'string');
   assert.ok(Array.isArray(res.body.auswahl) && res.body.auswahl.length > 3);
   assert.deepEqual(h.counts(), { generation: 1, checks: 1, mail: 1 });
@@ -1960,6 +1957,8 @@ test('Modul nicht vollstaendig pruefbar (Diego, 01.11., Lotto 37): der Hinweis g
   };
   const plain = await previewWith({});
   assert.ok(!plain.preview.auswahl.some(([label]) => label === NOTE), 'ohne nicht geprueftes Modul kein Hinweis');
+  // 57 (root, 01.11., registry 56): "match" con il Fuss "not_visible" porta la stessa riga firmata, non solo una nota interna.
+  assert.deepEqual((await previewWith({ module: { match: 'match', floor: 'not_visible' } })).preview.auswahl.filter(([label]) => label === NOTE), [[NOTE, TEXT]]);
   const { h, preview } = await previewWith({ module: { match: 'unknown', floor: 'not_visible' } });
   assert.deepEqual(preview.auswahl.filter(([label]) => label === NOTE), [[NOTE, TEXT]]);
   // Die echten Zeilen der Auswahl bleiben, wie sie sind; der Hinweis kommt nur dazu.
@@ -2007,8 +2006,9 @@ test('die Pruefung jedes Bildes denkt nicht (none), die Vorpruefung viel (high),
   assert.equal(res.statusCode, 200);
   const openai = h.calls.filter((call) => call.url.startsWith('https://api.openai.com/'));
   const image = openai.find((call) => call.body.generationConfig.responseModalities);
-  assert.equal(image.request.fields.reasoning, undefined);
-  assert.equal(image.request.fields.model, 'gpt-image-2.5-sunburst');
+  // 57: das Bild laeuft ueber Astra mit high und dem Werkzeug; das Bildmodell darin bleibt dasselbe.
+  assert.deepEqual([image.request.model, image.request.reasoning], ['gpt-6-astra', { effort: 'high' }]);
+  assert.equal(image.request.tools[0].model, 'gpt-image-2.5-sunburst');
   const checks = openai.filter((call) => call !== image);
   assert.equal(checks.length, 2);
   assert.deepEqual(checks.map((call) => call.request.reasoning), [{ effort: 'high' }, { effort: 'none' }]);
@@ -2018,7 +2018,7 @@ test('die Pruefung jedes Bildes denkt nicht (none), die Vorpruefung viel (high),
   assert.deepEqual(checks.map((call) => call.request.model), ['gpt-5-fixture-foto', 'gpt-5.4-2026-03-05']);
   // Ein Modell ausserhalb der Familie gpt-5 bekommt reasoning nicht.
   const old = harness({ env: { BADPLANER_CHECK_MODEL: 'fixture-ohne-reasoning', BADPLANER_PHOTO_CHECK_MODEL: 'fixture-ohne-reasoning' } }); await old.invoke();
-  const oldChecks = old.calls.filter((c) => c.url === OPENAI_RESPONSES);
+  const oldChecks = old.calls.filter((c) => isRead(c));
   assert.equal(oldChecks.length, 2);
   for (const call of oldChecks) assert.equal(call.request.reasoning, undefined);
   assert.deepEqual(oldChecks.map((call) => call.request.max_output_tokens), [7500, 4096]);
@@ -2026,14 +2026,14 @@ test('die Pruefung jedes Bildes denkt nicht (none), die Vorpruefung viel (high),
   // high bleibt, Cache 30 min, service_tier default, store false und dieselben Obergrenzen; nur wenn die Umgebung es setzt.
   const astra = harness({ env: { BADPLANER_CHECK_MODEL: 'gpt-6-astra', BADPLANER_PHOTO_CHECK_MODEL: 'gpt-6-astra' } });
   assert.equal((await astra.invoke()).statusCode, 200);
-  assert.deepEqual(astra.calls.filter((c) => c.url === OPENAI_RESPONSES).map(({ request: { input, text, ...rest } }) => rest), [
+  assert.deepEqual(astra.calls.filter((c) => isRead(c)).map(({ request: { input, text, ...rest } }) => rest), [
     { model: 'gpt-6-astra', store: false, reasoning: { effort: 'high' }, prompt_cache_options: { ttl: '30m' }, service_tier: 'default', max_output_tokens: 7500 },
     { model: 'gpt-6-astra', store: false, reasoning: { effort: 'low' }, prompt_cache_options: { ttl: '30m' }, service_tier: 'default', max_output_tokens: 4096 },
   ]);
   // Nur die Pruefung der Bilder mit Astra: die Vorpruefung mit gpt-5 sendet wie bisher.
   const mixed = harness({ env: { BADPLANER_CHECK_MODEL: 'gpt-6-astra' } });
   assert.equal((await mixed.invoke()).statusCode, 200);
-  assert.deepEqual(mixed.calls.filter((c) => c.url === OPENAI_RESPONSES).map((c) => Object.keys(c.request).sort()), [
+  assert.deepEqual(mixed.calls.filter((c) => isRead(c)).map((c) => Object.keys(c.request).sort()), [
     ['input', 'max_output_tokens', 'model', 'reasoning', 'store', 'text'],
     ['input', 'max_output_tokens', 'model', 'prompt_cache_options', 'reasoning', 'service_tier', 'store', 'text'],
   ]);
@@ -2055,11 +2055,11 @@ test('eine langsame Fotopruefung haelt das Bild hoechstens 60 s auf', async () =
 });
 
 test('nach einem Timeout der Pruefung folgt ein kurzer zweiter Anlauf von hoechstens 10 s', async () => {
-  const quick = harness({ checkDelays: [21000, 9000] }); const ok = await quick.invoke();
+  const quick = harness({ checkDelays: [31000, 9000] }); const ok = await quick.invoke();
   assert.equal(ok.statusCode, 200); assert.equal(quick.counts().checks, 2);
   assert.match(JSON.stringify(quick.calls.find((call) => call.url === 'https://api.resend.com/emails').body), /Fensterprüfung.*ok/);
   // Bleibt auch der zweite Anlauf aus, bleibt das Bild zurueck (seit der Essenza-Probe), ohne dritten Anlauf.
-  const slow = harness({ checkDelays: [21000, 11000] }); const late = await slow.invoke();
+  const slow = harness({ checkDelays: [31000, 11000] }); const late = await slow.invoke();
   assert.equal(late.statusCode, 502); assert.equal(slow.counts().checks, 2);
   assert.match(JSON.stringify(slow.calls.find((call) => call.url === 'https://api.resend.com/emails').body), /Fensterprüfung.*nicht möglich \(Timeout\)/);
 });
@@ -2103,7 +2103,7 @@ test('Vorsprung und Heizkoerper im Prompt und in der Pruefung: genauer, je einma
   assert.match(prompt, /the back wall/);
   assert.doesNotMatch(prompt, /(radiator|projection)[^.]*\b(left|right|back|front) wall/);
   const question = h.calls.find((call) => /wall_element_lost/.test(call.body?.contents?.[0]?.parts?.[0]?.text || '')).body.contents[0].parts[0].text;
-  assert.match(question, /straightened into one flat wall, or that image 2 shows cut back or covered by the shower; a wall projection with a radiator on it counts too\./);
+  assert.match(question, /straightened into one flat wall, or that image 2 shows cut back, covered by the shower or with an edge, an end or its base at another place\. Compare, where both images show them, its vertical edges and ends down to the floor and its base, the line where it meets the floor: one that lies clearly higher, lower or further left or right in the picture than in image 1 counts; a wall projection with a radiator on it counts too\./);
   assert.match(question, /Set radiator to where the radiator or towel radiator of image 1 is in image 2, whatever its model: "in_place" on the same wall at the same place along it, .*"unknown" when you cannot tell\./);
   assert.match(question, /"wall_element_lost":false,"radiator":"unknown",/);
 });
@@ -2180,8 +2180,8 @@ test('Vorsprung und Heizkoerper in derselben Pruefung: bekannte Fehler sind schw
 
 test('Produktdurchgang: was die Pruefung davor fand, bleibt in der Mail, bezeichnet; Etikett und Zurueckhalten urteilen nach dem gezeigten Bild', async () => {
   // Diego, 15.10. (Colore): sobald der Produktdurchgang angenommen war, fehlte in der Mail, was die Pruefung davor fand.
-  const first = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAADElEQVQImWP4z8AAAAMBAQCc479ZAAAAAElFTkSuQmCC';
-  const edited = 'iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAIAAAB7QOjdAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAD0lEQVQImWM4ISd3Qk4OAAh3Agn/2+PxAAAAAElFTkSuQmCC';
+  const first = jpegOf('1');
+  const edited = jpegOf('2');
   // Seit dem 25.10. haelt eine andere Kamera das Bild zurueck (eigener Test); hier zaehlt nur der Hinweis davor.
   const added = () => checkedInv({}, {}, { new_wall_element: true });
   const bigger = () => checkedInv({}, {}, { window_much_bigger: true });
@@ -2386,7 +2386,7 @@ test('eine Stufe in der Dusche kostet einen zweiten Durchgang; bleibt sie, sieht
   assert.match(JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails').body),
     /Fensterprüfung.*Bild 2 nicht gezeigt \(Hinweise: the shower floor is raised.*\), Bild 1 mit schwerem Hinweis, Hinweis: the shower floor is raised/);
   // Ohne Stufe im zweiten Durchgang: dieses Bild.
-  const second = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAADElEQVQImWP4z8AAAAMBAQCc479ZAAAAAElFTkSuQmCC';
+  const second = jpegOf('1');
   const fixed = harness({ generations: [() => generated(), () => generated(second)], checks: [step, () => checkedInv({ shower: 'back' }, { shower: 'back' })] });
   const fixedRes = await fixed.invoke(payload({ dusche: 'walk-in', badewanne: 'keine' }));
   assert.equal(fixedRes.body.image.data, second);
@@ -2521,6 +2521,8 @@ test('Armaturen: Colore mit Ran zeigt die Renderings von Treemme, mit Dusche und
   // P9 der sechsten Probe: Mischer und Umsteller auf einer hohen Platte (Ausschnitt von Diego).
   assert.match(shower[0].text, /Treemme Ran fittings in matte black, round bodies .*in a shower exactly two small wall plates with rounded corners, each a little taller than wide and only slightly larger than the mixer lever, one carrying only the concealed mixer, a short round body with a flat, slightly bent blade lever and no second knob/);
   assert.match(shower[0].text, new RegExp(`Image ${images.length} is only a product photo of the shower fittings`));
+  // Ran42 (01.11., Diego): die zwei Platten in einer Reihe auf gleicher Hoehe, in der Perspektive der Wand.
+  assert.match(shower[0].text, /one beside it the hose outlet with the holder of a slim round stick hand shower on its hose, both plates side by side in one row at the same height, following the horizontal lines of that wall in perspective, and above them on the same wall/);
   assert.deepEqual(images.slice(-2).map((part) => part.inlineData.data), [ran.RAN_BASIN_PHOTO.data, ran.RAN_SHOWER_PHOTO.data]);
   // Einbauwanne ohne Dusche: das Bild des Waschtischmischers und das der Wannenarmatur, im Text die vier Platten.
   const bath = await partsOf({ dusche: 'keine', badewanne: 'einbau' }, { bathtub: 'back' });
@@ -2852,8 +2854,8 @@ test('zeigt das Muster einer Grossformat-Platte ein Mosaik, nimmt das Modell nur
 test('Produktdurchgang: das gepruefte Bild geht mit den Produktbildern nochmals an das Bildmodell, gezeigt wird das neue', async () => {
   // Diego, 27.09.: "sistemare una volta per sempre ... se servono immagini per tutto mettile". In sechs Proben blieben die
   // Produkte im ersten Durchgang oft falsch: die Platte wie von Geberit, die Duscharmaturen, der alte Spiegel, Aurelia wie Up+.
-  const first = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAADElEQVQImWP4z8AAAAMBAQCc479ZAAAAAElFTkSuQmCC';
-  const edited = 'iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAIAAAB7QOjdAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAD0lEQVQImWM4ISd3Qk4OAAh3Agn/2+PxAAAAAElFTkSuQmCC';
+  const first = jpegOf('1');
+  const edited = jpegOf('2');
   const h = harness({ env: { BADPLANER_PRODUCT_PASS: '1' }, generations: [() => generated(first), () => generated(edited)] });
   const res = await h.invoke();
   assert.equal(res.statusCode, 200);
@@ -2885,13 +2887,13 @@ test('Produktdurchgang: das gepruefte Bild geht mit den Produktbildern nochmals 
   const leadMail = h.calls.find((call) => call.url === 'https://api.resend.com/emails');
   assert.match(JSON.stringify(leadMail.body), /Fensterprüfung.{0,80}>ok, Produktdurchgang ok</);
   // NLD bekommt auch das Bild davor.
-  assert.deepEqual(leadMail.body.attachments.map(({ filename }) => filename), ['foto.png', 'ideenbild.png', 'vor-produktdurchgang.png']);
+  assert.deepEqual(leadMail.body.attachments.map(({ filename }) => filename), ['foto.png', 'ideenbild.jpg', 'vor-produktdurchgang.jpg']);
   assert.equal(leadMail.body.attachments[2].content, first);
 });
 
 test('Produktdurchgang: faellt das neue Bild durch, hat es einen schweren Hinweis mehr oder kommt keines, bleibt das erste', async () => {
-  const first = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAADElEQVQImWP4z8AAAAMBAQCc479ZAAAAAElFTkSuQmCC';
-  const edited = 'iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAIAAAB7QOjdAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAD0lEQVQImWM4ISd3Qk4OAAh3Agn/2+PxAAAAAElFTkSuQmCC';
+  const first = jpegOf('1');
+  const edited = jpegOf('2');
   const on = { BADPLANER_PRODUCT_PASS: '1' };
   const run = async (settings) => {
     const h = harness({ env: on, generations: [() => generated(first), settings.product ?? (() => generated(edited))], checks: settings.checks, ...settings.extra });
@@ -2904,7 +2906,7 @@ test('Produktdurchgang: faellt das neue Bild durch, hat es einen schweren Hinwei
   const opening = await run({ checks: [() => checked(), () => checked(true)] });
   assert.equal(opening.res.body.image.data, first);
   assert.match(opening.mail, /Fensterprüfung.{0,80}>ok, Produktdurchgang verworfen \(an opening was added or lost/);
-  assert.deepEqual(opening.files, ['foto.png', 'ideenbild.png', 'produktdurchgang-nicht-gezeigt.png']);
+  assert.deepEqual(opening.files, ['foto.png', 'ideenbild.jpg', 'produktdurchgang-nicht-gezeigt.jpg']);
   // Ein anderes WC als gewaehlt (seit dem 26.10. ueber den Produktvergleich): ein schwerer Hinweis mehr als vorher.
   const old = await run({ checks: [() => checked(), () => checkedInv({}, {}, { products: { toilet: 'different' } })] });
   assert.equal(old.res.body.image.data, first);
@@ -2925,9 +2927,9 @@ test('Produktdurchgang: faellt das neue Bild durch, hat es einen schweren Hinwei
   const down = await run({ checks: [() => checked()], product: () => response({ error: 'boom' }, 500) });
   assert.equal(down.res.body.image.data, first);
   assert.match(down.mail, /Fensterprüfung.{0,80}>ok, Produktdurchgang nicht möglich \(Bilddienst: HTTP 500\)</);
-  assert.deepEqual(down.files, ['foto.png', 'ideenbild.png']);
-  // Zu wenig Zeit nach einem langsamen ersten Durchgang (60 s Bild, 503 und 19 s Pruefung zweimal).
-  const slow = await run({ checks: [() => response({}, 503), () => checked()], extra: { generateDelays: [60000], checkDelays: [19000, 19000] } });
+  assert.deepEqual(down.files, ['foto.png', 'ideenbild.jpg']);
+  // Zu wenig Zeit nach einem langsamen ersten Durchgang (80 s Bild, 503 und 19 s Pruefung zweimal; 60 s Bild reichen seit 260 s Budget).
+  const slow = await run({ checks: [() => response({}, 503), () => checked()], extra: { generateDelays: [80000], checkDelays: [19000, 19000] } });
   assert.equal(slow.h.counts().generation, 1);
   assert.match(slow.mail, /Fensterprüfung.{0,80}>ok, kein Produktdurchgang \(zu wenig Zeit\)</);
   // Ohne Pruefmodell laeuft auch er nicht: 503 vor jedem Aufruf (26.10.).
@@ -3101,16 +3103,16 @@ test('die Pruefung fragt, ob das WC noch das alte ist; ohne Vorlage des WC ist d
 });
 
 test('Gegenpruefung des Codes vom 27.09.: Produktdurchgang mit zwei Bildern, ohne WC oder Waschtisch im Foto, ungeprueftes Bild davor', async () => {
-  const other = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAADElEQVQImWP4z8AAAAMBAQCc479ZAAAAAElFTkSuQmCC';
-  const edited = 'iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAIAAAB7QOjdAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAD0lEQVQImWM4ISd3Qk4OAAh3Agn/2+PxAAAAAElFTkSuQmCC';
+  const other = jpegOf('1');
+  const edited = jpegOf('2');
   const on = { BADPLANER_PRODUCT_PASS: '1' };
   const mailOf = (h) => JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails').body);
   const generations = (h) => h.calls.filter((call) => call.body?.generationConfig?.responseModalities);
   // Zwei Bilder, dann der Produktdurchgang auf dem besseren (bis zum 25.10. Standard).
   const byImage = (answers) => (init) => answers[JSON.parse(init.body).input[0].content.filter((part) => part.type === 'input_image')[1].image_url.split(',')[1]]();
   const lowWall = () => checkedInv({}, {}, { toilet_on_low_wall_before: true, toilet_on_low_wall_after: false });
-  const answers = byImage({ [PNG]: lowWall, [other]: () => checked(), [edited]: () => checked() });
-  const two = harness({ env: { ...on, BADPLANER_CANDIDATES: '2' }, generations: [() => generated(PNG), () => generated(other), () => generated(edited)], checks: [answers, answers, answers] });
+  const answers = byImage({ [JPEG]: lowWall, [other]: () => checked(), [edited]: () => checked() });
+  const two = harness({ env: { ...on, BADPLANER_CANDIDATES: '2' }, generations: [() => generated(JPEG), () => generated(other), () => generated(edited)], checks: [answers, answers, answers] });
   const twoRes = await two.invoke();
   assert.equal(twoRes.statusCode, 200);
   assert.equal(generations(two).length, 3);
@@ -3132,7 +3134,7 @@ test('Gegenpruefung des Codes vom 27.09.: Produktdurchgang mit zwei Bildern, ohn
   // Liess sich das Bild davor nicht pruefen und besteht der Produktdurchgang die Pruefung, urteilt die Mail seit der
   // Revision vom 04.10. nach dem gezeigten Bild (eigener Test unten).
   const busy = () => response({ error: 'busy' }, 503);
-  const unchecked = harness({ env: on, generations: [() => generated(PNG), () => generated(edited)], checks: [busy, busy, () => checked()] });
+  const unchecked = harness({ env: on, generations: [() => generated(JPEG), () => generated(edited)], checks: [busy, busy, () => checked()] });
   const uncheckedRes = await unchecked.invoke();
   assert.equal(uncheckedRes.body.image.data, edited);
   // Seit dem 15.10. steht dahinter, dass die Pruefung davor nicht moeglich war; das Etikett bleibt "ok".
@@ -3140,11 +3142,11 @@ test('Gegenpruefung des Codes vom 27.09.: Produktdurchgang mit zwei Bildern, ohn
 });
 
 test('Revision vom 04.10.: das Etikett in der Mail urteilt nur nach dem gezeigten Bild, auch wenn das Bild davor ungeprueft war', async () => {
-  const edited = 'iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAIAAAB7QOjdAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAD0lEQVQImWM4ISd3Qk4OAAh3Agn/2+PxAAAAAElFTkSuQmCC';
+  const edited = jpegOf('2');
   const on = { BADPLANER_PRODUCT_PASS: '1' };
   const busy = () => response({ error: 'busy' }, 503);
   const mailOf = (h) => JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails').body);
-  const run = (productCheck) => harness({ env: on, generations: [() => generated(PNG), () => generated(edited)], checks: [busy, busy, productCheck] });
+  const run = (productCheck) => harness({ env: on, generations: [() => generated(JPEG), () => generated(edited)], checks: [busy, busy, productCheck] });
   // Bild 1 ungeprueft, der Produktdurchgang besteht ohne Hinweis: das Bild geht hinaus, und die Mail sagt nicht "ungeprüft".
   const clean = run(() => checked());
   const cleanRes = await clean.invoke();
@@ -3277,7 +3279,7 @@ test('ein Bild mit schwerem Hinweis nach allen Durchgaengen geht nicht hinaus; e
   assert.equal(mails(anonymous).length, 1);
   const [held] = mails(anonymous);
   assert.match(held.subject, /^Badplaner-Fehler ohne Kontakt – .+ – Ideenbild zurückgehalten \(schwerer Hinweis\)$/);
-  assert.deepEqual(held.attachments.map((attachment) => attachment.filename), ['foto.png', 'zurueckgehalten.png']);
+  assert.deepEqual(held.attachments.map((attachment) => attachment.filename), ['foto.png', 'zurueckgehalten.jpg']);
   const text = JSON.stringify(held);
   assert.match(text, /ohne Kontaktdaten können wir es nicht nachschicken/);
   assert.match(text, /Stirnwand rechts \(Waschtisch am Ende\)/);
@@ -3429,7 +3431,7 @@ test('Versuch persoenliche Pruefung: das Bild geht nur an NLD, ohne Kundenmail u
   assert.ok(!lead.to.includes('fixture@example.invalid'));
   assert.equal(lead.reply_to, 'fixture@example.invalid');
   assert.match(lead.subject, /^Badplaner-Lead: Fixture Person – .+ – Ideenbild persönlich prüfen$/);
-  assert.deepEqual(lead.attachments.map(({ filename }) => filename), ['foto.png', 'ideenbild.png']);
+  assert.deepEqual(lead.attachments.map(({ filename }) => filename), ['foto.png', 'ideenbild.jpg']);
   const text = JSON.stringify(lead);
   assert.match(text, /Persönliche Prüfung \(Versuch\): Der Kunde hat das Ideenbild weder gesehen noch per Mail erhalten/);
   assert.match(text, new RegExp(`>Lead-ID</td><td[^>]*>${res.body.leadId}<`));
@@ -3439,18 +3441,18 @@ test('Versuch persoenliche Pruefung: das Bild geht nur an NLD, ohne Kundenmail u
   // Diego und Carla, 06.10.: er prueft selbst; ein klar richtiges Bild erst nach dem Anruf senden, sonst nicht senden und
   // anrufen (falsch, zweifelhaft oder, seit dem 11.10., eine Duscharmatur, die nicht der gewaehlten Variante entspricht).
   assert.match(text, /Diego prüft das Bild selbst, ohne zweiten Prüfer/);
-  assert.match(text, /Ist das Bild klar richtig: zuerst den Kunden anrufen, dann nur ideenbild\.png per E-Mail senden, keinen anderen Anhang\./);
+  assert.match(text, /Ist das Bild klar richtig: zuerst den Kunden anrufen, dann nur ideenbild\.jpg per E-Mail senden, keinen anderen Anhang\./);
   assert.match(text, /Ist etwas falsch oder zweifelhaft, oder entspricht die Duscharmatur nicht der gewählten Variante \(Zeile Armatur\): nicht senden, den Kunden anrufen und es erklären/);
-  assert.equal(lead.text.split('\n')[0], reviewIntro('ideenbild.png'), 'die ganze Checkliste');
+  assert.equal(lead.text.split('\n')[0], reviewIntro('ideenbild.jpg'), 'die ganze Checkliste');
 
   // Diego, 06.10.: haelt die Pruefung das Bild nur wegen der Armaturen zurueck (moeglicher Fehlalarm, P2/P5), darf er es nach
   // eigener Pruefung und dem Anruf von Hand senden; es kommt als ideenbild.* mit diesem Auftrag. Ein anderer schwerer Hinweis,
   // auch neben den Armaturen, und ein verworfenes Bild bleiben gesperrt. Der Kunde bekommt in allen Faellen weder Bild noch Mail.
   const fittings = (extra = {}) => () => checkedInv({ bathtub: 'back' }, { shower: 'back' }, { shower_fittings_walls: ['back'], shower_floor_after: 'tray', shower_step: false, ...extra });
   for (const [settings, subject, file, finding, sendable] of [
-    [{ photoChecks: [reviewPhoto], checks: [fittings(), fittings()] }, /– Ideenbild zurückgehalten \(Armaturen, möglicher Fehlalarm\)$/, 'ideenbild.png',
-      /nur wegen der Armaturen zurückgehalten \(siehe Fensterprüfung\), möglicherweise ein Fehlalarm\. Diego prüft das Bild selbst.+zuerst den Kunden anrufen, dann nur ideenbild\.png per E-Mail senden, keinen anderen Anhang.+nicht der gewählten Variante \(Zeile Armatur\): nicht senden/, true],
-    [{ photoChecks: [reviewPhoto], checks: [fittings({ products: { mirror: 'different' } }), fittings({ products: { mirror: 'different' } })] }, /– Ideenbild zurückgehalten \(schwerer Hinweis\)$/, 'zurueckgehalten.png',
+    [{ photoChecks: [reviewPhoto], checks: [fittings(), fittings()] }, /– Ideenbild zurückgehalten \(Armaturen, möglicher Fehlalarm\)$/, 'ideenbild.jpg',
+      /nur wegen der Armaturen zurückgehalten \(siehe Fensterprüfung\), möglicherweise ein Fehlalarm\. Diego prüft das Bild selbst.+zuerst den Kunden anrufen, dann nur ideenbild\.jpg per E-Mail senden, keinen anderen Anhang.+nicht der gewählten Variante \(Zeile Armatur\): nicht senden/, true],
+    [{ photoChecks: [reviewPhoto], checks: [fittings({ products: { mirror: 'different' } }), fittings({ products: { mirror: 'different' } })] }, /– Ideenbild zurückgehalten \(schwerer Hinweis\)$/, 'zurueckgehalten.jpg',
       /hat das Bild zurückgehalten \(schwerer Hinweis, siehe Fensterprüfung\): nicht senden, den Kunden anrufen und es erklären/, false],
     [{ checks: [() => checked(true), () => checked(true)] }, /– Ideenbild abgelehnt$/, 'verworfen.jpg', /hat das Bild verworfen \(siehe Fensterprüfung\): nicht senden, den Kunden anrufen und es erklären/, false],
   ]) {
@@ -3491,7 +3493,7 @@ test('Versuch persoenliche Pruefung: die Checkliste nennt die Duscharmatur der g
     assert.equal(res.statusCode, 200, label);
     const [, lead] = reviewMails(h);
     const checklist = lead.text.split('\n')[0];
-    assert.equal(checklist, reviewIntro('ideenbild.png', variant), label);
+    assert.equal(checklist, reviewIntro('ideenbild.jpg', variant), label);
     // Die Zeile Armatur, auf die die Regel verweist, steht in derselben Mail.
     assert.match(JSON.stringify(lead), new RegExp(`>Armatur</td><td[^>]*>${armatur}`), label);
     if (!variant) assert.doesNotMatch(checklist, /Up\+|Rosetten|Säule/, label);
@@ -3532,8 +3534,8 @@ test('Versuch persoenliche Pruefung: auch der alte Weg ohne stage und ohne pruef
   // Bis 6c4f858 gab kind 'render' mit Kontakt, aber ohne stage und ohne pruefung, im Versuch das Bild zurueck und schickte die
   // Kundenmail. Jetzt ist jedes Bild mit Kontakt fuer ein Bad mit Dusche eine persoenliche Pruefung, auch mit Newsletter.
   for (const [changes, settings, subject, file] of [
-    [{}, reviewOk, /– Ideenbild persönlich prüfen$/, 'ideenbild.png'],
-    [{ stage: 'kontakt', pruefung: false, newsletter: true }, reviewOk, /– Ideenbild persönlich prüfen$/, 'ideenbild.png'],
+    [{}, reviewOk, /– Ideenbild persönlich prüfen$/, 'ideenbild.jpg'],
+    [{ stage: 'kontakt', pruefung: false, newsletter: true }, reviewOk, /– Ideenbild persönlich prüfen$/, 'ideenbild.jpg'],
     [{}, { checks: [() => checked(true), () => checked(true)] }, /– Ideenbild abgelehnt$/, 'verworfen.jpg'],
   ]) {
     const h = harness({ env: { ...reviewTrial, RESEND_AUDIENCE_ID: 'fixture-audience' }, ...settings });
@@ -3551,7 +3553,7 @@ test('Versuch persoenliche Pruefung: auch der alte Weg ohne stage und ohne pruef
     assert.deepEqual(lead.attachments.map(({ filename }) => filename), ['foto.png', file]);
     assert.match(lead.text, /\nDusche: Dusche mit Duschwanne\n/);
     assert.match(lead.text, /\nLead-ID: bp-fixture-\d+$/);
-    if (file === 'ideenbild.png') assert.equal(lead.text.split('\n')[0], reviewIntro(file), 'die ganze Checkliste');
+    if (file === 'ideenbild.jpg') assert.equal(lead.text.split('\n')[0], reviewIntro(file), 'die ganze Checkliste');
   }
   // Ohne Dusche und im Gaeste-WC bleibt der alte Weg auch im Versuch: Bild in der Antwort und Kundenmail.
   for (const changes of [{ dusche: 'keine' }, { raum: 'gaeste-wc', dusche: '', badewanne: '', waschtisch: 'einzel' }]) {
@@ -3664,7 +3666,7 @@ test('Versuch persoenliche Pruefung: der Kontakt geht vor Tageslimit und Modella
   assertContactMail(noKey.calls[0].body, 'bp-fixture-1');
 
   // Die Zeit laeuft nach dem Kontakt ab (die Vorpruefung haengt bis nach der Frist): fuer die zweite Mail bleibt keine.
-  const late = harness({ env, photoChecks: [reviewPhoto], photoCheckDelays: [230000] });
+  const late = harness({ env, photoChecks: [reviewPhoto], photoCheckDelays: [270000] });
   const lateRes = await late.invoke(contactRequest);
   assert.equal(lateRes.statusCode, 502);
   assert.deepEqual([lateRes.body.code, lateRes.body.delivery.lead], ['RENDER_FAILED', 'unknown']);
@@ -3831,14 +3833,14 @@ test('Versuch persoenliche Pruefung: unbestaetigte Fenster oder eine unmoegliche
     const [, lead, ...more] = reviewMails(h);
     assert.equal(more.length, 0, 'keine Kundenmail');
     assert.match(lead.subject, subject);
-    assert.deepEqual(lead.attachments.map(({ filename }) => filename), ['foto.png', 'zurueckgehalten.png']);
+    assert.deepEqual(lead.attachments.map(({ filename }) => filename), ['foto.png', 'zurueckgehalten.jpg']);
     assert.doesNotMatch(JSON.stringify(lead), /per E-Mail senden|Fehlalarm/, 'gesperrt: kein Auftrag zum Senden');
   }
 });
 
 test('Produktdurchgang: ein verschobenes oder unbestaetigtes Fenster zeigt das neue Bild nicht', async () => {
-  const first = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAADElEQVQImWP4z8AAAAMBAQCc479ZAAAAAElFTkSuQmCC';
-  const edited = 'iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAIAAAB7QOjdAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAD0lEQVQImWM4ISd3Qk4OAAh3Agn/2+PxAAAAAElFTkSuQmCC';
+  const first = jpegOf('1');
+  const edited = jpegOf('2');
   for (const [product, note] of [
     [() => checkedInv({}, {}, essenzaMoved), new RegExp(`Produktdurchgang verworfen \\(${essenzaReason.source}\\)`)],
     [() => checkedInv({}, {}, { ...windowsSeen([backWide], [backWide]), window_list_after: undefined }), /Produktdurchgang nicht gezeigt \(the window positions could not be confirmed/],
@@ -3849,7 +3851,7 @@ test('Produktdurchgang: ein verschobenes oder unbestaetigtes Fenster zeigt das n
     assert.equal(res.statusCode, 200);
     assert.equal(res.body.image.data, first);
     assert.match(JSON.stringify(leadOf(h)), note);
-    assert.deepEqual(leadOf(h).attachments.map(({ filename }) => filename), ['foto.png', 'ideenbild.png', 'produktdurchgang-nicht-gezeigt.png']);
+    assert.deepEqual(leadOf(h).attachments.map(({ filename }) => filename), ['foto.png', 'ideenbild.jpg', 'produktdurchgang-nicht-gezeigt.jpg']);
     assert.equal(leadOf(h).attachments[2].content, edited);
   }
 });
@@ -3873,30 +3875,44 @@ test('Pruefung und Prompt: die Fenster als Liste; ein Fenster ueber der Wanne bl
 
 /* ---------- Vertrag mit der OpenAI API: Antworten simuliert, sie beweisen weder Zugang zum Konto noch Qualitaet ---------- */
 
-test('Vertrag Images edits: multipart mit den dokumentierten Feldern, das Foto zuerst, hoechstens 16 Bilder', async () => {
-  const h = harness({ env: { BADPLANER_PRODUCT_PASS: '1' } });
-  assert.equal((await h.invoke(payload({ cistern: 'aufputz' }))).statusCode, 200);
-  const edits = h.calls.filter((call) => call.url === OPENAI_EDITS);
-  assert.equal(edits.length, 2, 'erster Durchgang und Produktdurchgang');
-  for (const call of edits) {
-    assert.equal(call.init.method, 'POST');
-    assert.ok(call.init.body instanceof FormData);
-    assert.deepEqual(Object.keys(call.init.headers), ['authorization'], 'content-type mit der Grenze setzt fetch selbst');
-    assert.deepEqual(Object.keys(call.request.fields).sort(), ['model', 'n', 'output_format', 'prompt', 'size']);
-    assert.ok(call.request.images.length >= 2 && call.request.images.length <= 16);
-    for (const [index, image] of call.request.images.entries()) {
-      assert.match(image.type, /^image\/(png|jpeg|webp)$/);
-      assert.equal(image.name, `bild-${index + 1}.${{ 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp' }[image.type]}`);
+test('Vertrag Ideenbild (57, root 01.11.): ein Responses-Aufruf, Astra high 7500, genau ein Werkzeug image_generation, das Foto zuerst, hoechstens 16 Bilder', async () => {
+  const photo = Buffer.from(PNG, 'base64'); photo.writeUInt32BE(640, 16); photo.writeUInt32BE(960, 20); // 640x960 wie das Essenza-Foto
+  const foto = `data:image/png;base64,${photo.toString('base64')}`;
+  const h = harness({ env: { BADPLANER_PRODUCT_PASS: '1', BADPLANER_MODEL: 'gpt-image-2.5-sunburst-2026-09-08', BADPLANER_IMAGE_QUALITY: 'max' } });
+  assert.equal((await h.invoke(payload({ cistern: 'aufputz', foto }))).statusCode, 200);
+  const images = h.calls.filter((call) => isImage(call.request));
+  assert.equal(images.length, 2, 'erster Durchgang und Produktdurchgang');
+  for (const call of images) {
+    assert.equal(call.url, OPENAI_RESPONSES); assert.equal(call.init.method, 'POST');
+    assert.deepEqual(call.init.headers, { authorization: 'Bearer fake-not-a-key', 'content-type': 'application/json' });
+    const { input, tools, ...rest } = call.request;
+    // Die Felder des Prototyps 55; dazu Cache 30 min und service_tier default aus checkReasoning, wie jede Astra-Lesung.
+    assert.deepEqual(rest, { model: 'gpt-6-astra', store: false, reasoning: { effort: 'high' }, prompt_cache_options: { ttl: '30m' }, service_tier: 'default',
+      max_output_tokens: 7500, max_tool_calls: 1, tool_choice: { type: 'image_generation' } });
+    assert.equal(tools.length, 1);
+    const { size, ...tool } = tools[0];
+    assert.deepEqual(tool, { type: 'image_generation', model: 'gpt-image-2.5-sunburst-2026-09-08', action: 'edit', output_format: 'jpeg', quality: 'max' });
+    assert.match(size, /^\d+x\d+$/);
+    assert.equal(input.length, 1); assert.equal(input[0].role, 'user');
+    const [prompt, ...parts] = input[0].content;
+    assert.equal(prompt.type, 'input_text'); assert.match(prompt.text, /KEEP THE CAMERA|PRODUCT EDIT of image 1/);
+    assert.ok(parts.length >= 2 && parts.length <= 16, String(parts.length));
+    for (const part of parts) {
+      assert.deepEqual(Object.keys(part), ['type', 'image_url', 'detail']);
+      assert.equal(part.type, 'input_image'); assert.equal(part.detail, 'high');
+      assert.match(part.image_url, /^data:image\/(png|jpeg|webp);base64,/);
     }
   }
-  assert.equal(edits[0].request.images[0].data, PNG, 'Bild 1 ist das Foto des Kunden');
-  assert.ok(h.calls.every((call) => !/google/i.test(call.url)), 'kein Aufruf an Google');
+  assert.equal(images[0].request.tools[0].size, '1360x2048', 'dieselbe size wie die edits-Anfrage der 52-r2 fuer ein Foto 640x960');
+  assert.equal(images[0].request.input[0].content[1].image_url, foto, 'Bild 1 ist das Foto des Kunden');
+  assert.equal(images[1].request.input[0].content[1].image_url, `data:image/jpeg;base64,${JPEG}`, 'der Produktdurchgang bearbeitet das erste Ideenbild');
+  assert.ok(h.calls.every((call) => !/google|images\/edits/i.test(call.url)), 'kein Aufruf an Google, kein Rueckfall auf Images edits');
 });
 
 test('Vertrag Responses: Text und Bilder als input, JSON-Antwort, store false, keine temperature', async () => {
   const h = harness();
   assert.equal((await h.invoke()).statusCode, 200);
-  const reads = h.calls.filter((call) => call.url === OPENAI_RESPONSES);
+  const reads = h.calls.filter((call) => isRead(call));
   assert.equal(reads.length, 2, 'Vorpruefung des Fotos und Pruefung des Bildes');
   for (const call of reads) {
     assert.equal(call.init.method, 'POST');
@@ -3920,24 +3936,35 @@ test('Vertrag Responses: Text und Bilder als input, JSON-Antwort, store false, k
   assert.ok(reads[1].request.input[0].content.length > 3, 'Pruefung: Foto, Ideenbild und Produktvorlagen');
 });
 
-test('Vertrag Images edits: ohne Bild, falsches Format und Fehler 400/429 zeigen kein Bild, mit nicht mehr Versuchen als bisher', async () => {
+test('Vertrag Ideenbild (57): unvollstaendig, ohne, mehrere oder falsche Bilder und Fehler 400/429 zeigen kein Bild, ein Aufruf, kein Rueckfall', async () => {
+  const two = { status: 'completed', output: ['1', '2'].map((note) => ({ type: 'image_generation_call', status: 'completed', output_format: 'jpeg', result: jpegOf(note) })) };
   const cases = [
-    [() => response({ created: 0, data: [] }), /ohne Bild/],
-    [() => response({ created: 0, data: [{ b64_json: PNG }], output_format: 'webp' }), /Unsupported generated image/],
-    [() => response({ error: { message: 'fixture moderation' } }, 400), /HTTP 400: fixture moderation/],
-    [() => response({ error: { message: 'fixture rate' } }, 429), /HTTP 429: fixture rate/],
+    ['Antwort incomplete', () => generated(JPEG, {}, { status: 'incomplete', incomplete_details: { reason: 'max_output_tokens' } }), /ohne Bild/],
+    ['Werkzeug incomplete', () => generated(JPEG, { status: 'incomplete' }), /ohne Bild/],
+    ['Werkzeug failed', () => generated(JPEG, { status: 'failed', result: null }), /ohne Bild/],
+    ['kein Bildaufruf', () => response({ status: 'completed', output: [{ type: 'message', role: 'assistant', content: [{ type: 'output_text', text: 'no image', annotations: [] }] }] }), /ohne Bild/],
+    ['zwei Bildaufrufe', () => response(two), /ohne Bild/],
+    ['leeres result', () => generated(''), /ohne Bild/],
+    ['anderes Format', () => generated(JPEG, { output_format: 'png' }), /ohne Bild/],
+    ['PNG statt JPEG', () => generated(PNG), /Dateityp und Bildinhalt stimmen nicht überein/],
+    ['Fehler 400', () => response({ error: { message: 'fixture moderation' } }, 400), /HTTP 400: fixture moderation/],
+    ['Fehler 429', () => response({ error: { message: 'fixture rate' } }, 429), /HTTP 429: fixture rate/],
   ];
-  for (const [failure, detail] of cases) {
+  for (const [label, failure, detail] of cases) {
     const h = harness({ generations: [failure, failure] });
     const res = await h.invoke();
-    assert.equal(res.statusCode, 502); assert.equal(res.body.image, undefined); assert.equal(res.body.code, 'RENDER_FAILED');
-    assert.match(JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails').body), detail);
-    assert.deepEqual(h.counts(), { generation: 1, checks: 0, mail: 1 }, 'ein Bildaufruf, ohne Bild keine Pruefung, nur die Lead-Mail');
+    assert.equal(res.statusCode, 502, label); assert.equal(res.body.image, undefined, label); assert.equal(res.body.code, 'RENDER_FAILED', label);
+    assert.match(JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails').body), detail, label);
+    assert.deepEqual(h.counts(), { generation: 1, checks: 0, mail: 1 }, `${label}: ein Bildaufruf, ohne Bild keine Pruefung, nur die Lead-Mail`);
+    assert.ok(h.calls.every((call) => !call.url.includes('/images/')), `${label}: kein Rueckfall auf Images edits`);
   }
 });
 
-test('Vertrag Zeitablauf: Images edits ueber 125 s bricht ab, ohne Bild und ohne offene Zeitgeber', async () => {
-  const h = harness({ generateDelays: [130000] });
+test('Vertrag Zeitablauf (57): das Ideenbild darf 150 s brauchen, ueber 150 s bricht es ab, ohne Bild und ohne offene Zeitgeber', async () => {
+  const within = harness({ generateDelays: [149000] });
+  assert.equal((await within.invoke()).statusCode, 200);
+  assert.deepEqual(within.counts(), { generation: 1, checks: 1, mail: 2 });
+  const h = harness({ generateDelays: [151000] });
   const res = await h.invoke();
   assert.equal(res.statusCode, 502); assert.equal(res.body.image, undefined);
   assert.match(JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails').body), /Timeout/);
@@ -3950,23 +3977,69 @@ test('Vertrag Zeitablauf: ein Bild nach 100 s wird fertig und geprueft, wenn das
   const start = h.clock.now(); const res = await h.invoke();
   assert.equal(res.statusCode, 200, JSON.stringify(res.body));
   assert.deepEqual(h.counts(), { generation: 1, checks: 1, mail: 2 });
-  assert.ok(h.clock.now() - start <= 220000);
+  assert.ok(h.clock.now() - start <= 260000);
 });
 
-test('Vertrag Zeitablauf: verbrauchte Zeit kuerzt das Bild, nie Pruefung und Mails, und 220 s bleiben die Grenze', async () => {
-  // Muster und Vorpruefung zaehlen in der Testuhr nacheinander: vor dem Bild sind rund 90 s weg. Das Bild bekommt nur den Rest
-  // nach Pruefung (20 s) und Mails (10 s), also weniger als 125 s.
-  const slow = harness({ swatchDelay: 15000, photoCheckDelays: [59000], generateDelays: [120000] });
+test('Vertrag Zeitablauf: verbrauchte Zeit kuerzt das Bild, nie Pruefung, Lesung des Halts und Mails, und 260 s bleiben die Grenze', async () => {
+  // Muster und Vorpruefung zaehlen in der Testuhr nacheinander: vor dem Bild sind rund 100 s weg. Das Bild bekommt nur den Rest
+  // nach Pruefung (30 s) und Mails (10 s), also weniger als 150 s.
+  const slow = harness({ swatchDelay: 20000, photoCheckDelays: [59000], generateDelays: [122000] });
   let start = slow.clock.now(); const failed = await slow.invoke();
   assert.equal(failed.statusCode, 502); assert.equal(failed.body.code, 'RENDER_FAILED');
   assert.deepEqual(slow.counts(), { generation: 1, checks: 0, mail: 1 });
   assert.match(JSON.stringify(slow.calls.find((call) => call.url === 'https://api.resend.com/emails').body), /Timeout/);
-  assert.ok(slow.clock.now() - start <= 220000);
-  const fits = harness({ swatchDelay: 15000, photoCheckDelays: [59000], generateDelays: [80000], checkDelays: [19000] });
+  assert.ok(slow.clock.now() - start <= 260000);
+  // Die Saeule laesst 40 s frei: ein Bild von 100 s passt noch (bis 121 s).
+  const fits = harness({ swatchDelay: 20000, photoCheckDelays: [59000], generateDelays: [100000], checkDelays: [29000] });
   start = fits.clock.now(); const ok = await fits.invoke();
   assert.equal(ok.statusCode, 200, JSON.stringify(ok.body));
   assert.deepEqual(fits.counts(), { generation: 1, checks: 1, mail: 2 });
-  assert.ok(fits.clock.now() - start <= 220000);
+  assert.ok(fits.clock.now() - start <= 260000);
+  // Root, 01.11. (Kandidat 52): bei Unterputz-Sets laesst das Bild 70 s frei, fuer die Lesung des Halts (bis 60 s neben der Pruefung)
+  // und die Mails, auch wenn vorher viel Zeit weg ist (hier rund 100 s). Mit 40 s wie bei der Saeule bekaeme das Bild mehr Zeit,
+  // und die Lesung danach liefe ab.
+  const colore = optionsForPackage('colore');
+  const ranBody = payload({ dusche: 'walk-in', badewanne: 'keine', paket: 'colore', format: colore.formats[0], platte: colore.tiles[0].id, unterbau: colore.bases[0].id, top: colore.tops[0].id,
+    becken: 'aufsatz', armaturenserie: 'treemme-ran', finish: colore.finishes[0].id, keramik: colore.sanitary[0].id, wall: colore.walls[0].id, spiegel: colore.mirrors[0].id, waschtisch: colore.basins[0].id });
+  const cut = harness({ swatchDelay: 20000, photoCheckDelays: [59000], generateDelays: [92000] });
+  start = cut.clock.now(); const cutRes = await cut.invoke(ranBody);
+  assert.equal(cutRes.statusCode, 502); assert.equal(cutRes.body.code, 'RENDER_FAILED');
+  assert.deepEqual({ ...cut.counts(), support: cut.supportCount() }, { generation: 1, checks: 0, mail: 1, support: 0 });
+  assert.ok(cut.clock.now() - start <= 260000);
+  // Die Lesung braucht hier 59 s, wie Ran42 in der Diagnose 50, und bekommt sie.
+  const room = harness({ rawChecks: true, checks: [(init) => fullAnswer(ranBody, init)], swatchDelay: 20000, photoCheckDelays: [59000], generateDelays: [90000], supportDelays: [59000] });
+  start = room.clock.now(); const roomRes = await room.invoke(ranBody);
+  assert.equal(roomRes.statusCode, 200, JSON.stringify(roomRes.body));
+  assert.deepEqual({ ...room.counts(), support: room.supportCount() }, { generation: 1, checks: 1, mail: 2, support: 1 });
+  assert.ok(room.clock.now() - start <= 260000);
+  // Auch der zweite Durchgang laesst 70 s frei: nach einem schnellen ersten Bild mit dem Kopf am Glas bekommt das zweite nur den
+  // Rest bis auf 70 s (hier 81 s), und seine Lesung danach ihre volle Zeit.
+  const glass = () => answer(JSON.stringify({ head_support: 'glass', control_row: 'same_height', reason: 'fixture' }));
+  const secondCut = harness({ rawChecks: true, checks: [(init) => fullAnswer(ranBody, init)], swatchDelay: 20000, photoCheckDelays: [59000], generateDelays: [10000, 82000],
+    supports: [glass] });
+  start = secondCut.clock.now(); const secondCutRes = await secondCut.invoke(ranBody);
+  assert.equal(secondCutRes.statusCode, 502);
+  assert.deepEqual({ ...secondCut.counts(), support: secondCut.supportCount() }, { generation: 2, checks: 1, mail: 1, support: 1 });
+  assert.ok(secondCut.clock.now() - start <= 260000);
+  const secondRoom = harness({ rawChecks: true, checks: [(init) => fullAnswer(ranBody, init), (init) => fullAnswer(ranBody, init)], swatchDelay: 20000, photoCheckDelays: [59000],
+    generateDelays: [10000, 80000], supports: [glass], supportDelays: [0, 59000] });
+  start = secondRoom.clock.now(); const secondRoomRes = await secondRoom.invoke(ranBody);
+  assert.equal(secondRoomRes.statusCode, 200, JSON.stringify(secondRoomRes.body));
+  assert.deepEqual({ ...secondRoom.counts(), support: secondRoom.supportCount() }, { generation: 2, checks: 2, mail: 2, support: 2 });
+  assert.ok(secondRoom.clock.now() - start <= 260000);
+  // Die Schranke des zweiten Durchgangs rechnet diese Reserve mit: nach 50 s Bild bleiben 111 s, zu wenig fuer rund 58 s Bild und 70 s.
+  const noRoom = harness({ rawChecks: true, checks: [(init) => fullAnswer(ranBody, init)], swatchDelay: 20000, photoCheckDelays: [59000], generateDelays: [50000],
+    supports: [glass] });
+  assert.equal((await noRoom.invoke(ranBody)).statusCode, 502);
+  assert.deepEqual({ ...noRoom.counts(), support: noRoom.supportCount() }, { generation: 1, checks: 1, mail: 1, support: 1 });
+});
+
+test('Vertrag Zeitablauf (Root, 01.11., Kandidat 52): maxDuration 270 im Core und in vercel.json, die Seite wartet 280 s', async () => {
+  const { config } = await import(moduleUrl('api/badplaner.js'));
+  assert.equal(config.maxDuration, 270);
+  const vercel = JSON.parse(await readFile(new URL('../../vercel.json', import.meta.url), 'utf8'));
+  assert.equal(vercel.functions['api/badplaner.ts'].maxDuration, 270);
+  assert.match(await readFile(new URL('../../src/pages/badplaner/Badplaner.tsx', import.meta.url), 'utf8'), /const RENDER_TIMEOUT_MS = 280_000;/);
 });
 
 test('Vertrag Konfiguration: ohne Schluessel, Ticket-Geheimnis, Pruefmodell oder Modell der Vorpruefung kein Aufruf (503)', async () => {
@@ -4007,7 +4080,7 @@ test('Vertrag Zaehlung: dieselben Aufrufe wie vor der Umstellung, alle an OpenAI
   const h = harness();
   assert.equal((await h.invoke()).statusCode, 200);
   const models = h.calls.filter((call) => call.url !== 'https://api.resend.com/emails' && !call.url.includes('/badplaner/swatches/') && !/gbgroupe|energieker|edonedesign|rexadesign/.test(call.url));
-  assert.deepEqual(models.map((call) => call.url), [OPENAI_RESPONSES, OPENAI_EDITS, OPENAI_RESPONSES], 'Vorpruefung, Bild, Pruefung');
+  assert.deepEqual(models.map((call) => [call.url, isImage(call.request)]), [[OPENAI_RESPONSES, false], [OPENAI_RESPONSES, true], [OPENAI_RESPONSES, false]], 'Vorpruefung, Bild, Pruefung');
   assert.deepEqual(h.counts(), { generation: 1, checks: 1, mail: 2 }); assert.equal(h.photoCount(), 1);
   // Zwei Kandidaten und Produktdurchgang (bis zum 25.10. Standard): zwei Bilder, ein Produktbild, je eine Pruefung.
   const full = harness({ env: { BADPLANER_CANDIDATES: '2', BADPLANER_PRODUCT_PASS: '1' } });
@@ -4045,7 +4118,7 @@ test('die Pruefung bekommt Foto, Ideenbild und jede Vorlage einmal, mit ihrem Sc
     const body = payload({ cistern, dusche: 'walk-in', badewanne: 'keine', spiegel: 'spiegelschrank' });
     const h = harness({ swatch: () => image(), rawChecks: true, checks: [(init) => fullAnswer(body, init)] });
     assert.equal((await h.invoke(body)).statusCode, 200, cistern);
-    const check = h.calls.find((call) => call.url === OPENAI_RESPONSES && call.request.input[0].content.filter((part) => part.type === 'input_image').length >= 2).request;
+    const check = h.calls.find((call) => isRead(call) && call.request.input[0].content.filter((part) => part.type === 'input_image').length >= 2).request;
     const [question, ...images] = check.input[0].content;
     assert.deepEqual(Object.keys(templateOf(check).products), roles, cistern);
     const next = [...roles.slice(1), 'A material sample'];
@@ -4057,7 +4130,7 @@ test('die Pruefung bekommt Foto, Ideenbild und jede Vorlage einmal, mit ihrem Sc
     assert.match(question.text, /never when it can be seen, even small or in part/, cistern);
     // Die Platte OLI Blink: vom 27.09. bis zum 30.10. im ersten Durchgang nur ihr Satz; Versuch: auch ihr Foto, wie in der Pruefung.
     const base64 = (part) => part.image_url.slice(part.image_url.indexOf(',') + 1);
-    assert.equal(h.calls.find((call) => call.url === OPENAI_EDITS).request.images.some((part) => part.data === wc.FLUSH_PLATE_PHOTO.data), cistern === 'unterputz', cistern);
+    assert.equal(h.calls.find((call) => isImage(call.request)).request.input[0].content.some((part) => part.image_url?.endsWith(`,${wc.FLUSH_PLATE_PHOTO.data}`)), cistern === 'unterputz', cistern);
     assert.equal(images.some((part) => base64(part) === wc.FLUSH_PLATE_PHOTO.data), cistern === 'unterputz', cistern);
   }
 });
@@ -4068,7 +4141,7 @@ test('Produkte: different begruendet den einen zweiten Durchgang; versteckt, obw
   const fixed = harness({ rawChecks: true, checks: [(init) => fullAnswer(body, init, {}, { countertop: 'different' }), (init) => fullAnswer(body, init)] });
   assert.equal((await fixed.invoke(body)).statusCode, 200);
   assert.equal(fixed.counts().generation, 2);
-  assert.match(fixed.calls.filter((call) => call.url === OPENAI_EDITS)[1].request.fields.prompt, /A previous attempt was wrong because the countertop does not match the selected product\. Start again/);
+  assert.match(fixed.calls.filter((call) => isImage(call.request))[1].request.input[0].content[0].text, /A previous attempt was wrong because the countertop does not match the selected product\. Start again/);
   for (const [label, extra, products, pattern] of [
     ['Wandplatten versteckt', {}, { wall_tiles: 'not_visible' }, /the wall tiles could not be confirmed: the check called it hidden, but its place is visible/],
     ['WC versteckt, aber im Inventar', {}, { toilet: 'not_visible' }, /the toilet could not be confirmed: the check called it hidden/],
@@ -4082,7 +4155,7 @@ test('Produkte: different begruendet den einen zweiten Durchgang; versteckt, obw
   // Wand ueber dem Waschtisch ausserhalb des Bildes und Sockel des Moduls hinter dem WC: nur vermerkt, das Bild geht hinaus.
   const hidden = harness({ rawChecks: true, checks: [(init) => fullAnswer(body, init, { mirror_after: 'not_visible' }, { mirror: { match: 'not_visible', doors: 0 }, module: { match: 'match', floor: 'not_visible' } })] });
   assert.equal((await hidden.invoke(body)).statusCode, 200);
-  assert.match(mailOf(hidden), /the mirror is hidden in the result and was not judged.*the base of the sanitary module is hidden and was not judged/);
+  assert.match(mailOf(hidden), /the mirror is hidden in the result and was not judged.*the sanitary module details were not fully judged in the result/);
   // Kein Spiegel, obwohl die Wand darueber zu sehen ist (26.10.): "versteckt" und "match" ohne gesehenen Spiegel halten ohne
   // neues Bild zurueck, "different" begruendet den zweiten Durchgang.
   for (const [label, mirror] of [['versteckt', { match: 'not_visible', doors: 0 }], ['match ohne Spiegel', { match: 'match', doors: 2 }]]) {
@@ -4093,7 +4166,7 @@ test('Produkte: different begruendet den einen zweiten Durchgang; versteckt, obw
   }
   const missing = harness({ rawChecks: true, checks: [(init) => fullAnswer(body, init, { mirror_after: 'none' }, { mirror: { match: 'different', doors: 0 } }), (init) => fullAnswer(body, init)] });
   assert.equal((await missing.invoke(body)).statusCode, 200);
-  assert.match(missing.calls.filter((call) => call.url === OPENAI_EDITS)[1].request.fields.prompt, /because the mirror does not match the selected product/);
+  assert.match(missing.calls.filter((call) => isImage(call.request))[1].request.input[0].content[0].text, /because the mirror does not match the selected product/);
   // Ein Modul, das sichtbar ueber dem Boden haengt, ist ein Fehler.
   const floating = harness({ rawChecks: true, checks: [(init) => fullAnswer(body, init, {}, { module: { match: 'match', floor: 'no' } })] });
   assert.equal((await floating.invoke(body)).statusCode, 502);
@@ -4121,8 +4194,7 @@ test('Blink schwarz nur mit Nero Opaco und Unterputz (Lotto 28): jede andere Far
       becken: options.basinTypes[0].id, armaturenserie: 'treemme-ran', finish, keramik: options.sanitary[0].id, wall: options.walls[0].id,
       dusche: options.showers[0].id, badewanne: options.bathtubs[0].id, waschtisch: options.basins[0].id, spiegel: options.mirrors[0].id, cistern }));
     assert.equal(res.statusCode, 200, `${finish} ${cistern}`);
-    const sent = [...h.calls.find((call) => call.url === OPENAI_EDITS).request.images.map((image) => image.data),
-      ...h.calls.filter((call) => call.url === OPENAI_RESPONSES).flatMap((call) => call.request.input[0].content.filter((part) => part.type === 'input_image')
+    const sent = [...h.calls.filter((call) => call.url === OPENAI_RESPONSES).flatMap((call) => call.request.input[0].content.filter((part) => part.type === 'input_image')
         .map((part) => part.image_url.slice(part.image_url.indexOf(',') + 1)))];
     return { black: sent.includes(wc.FLUSH_PLATE_BLACK_PHOTO.data), chrome: sent.includes(wc.FLUSH_PLATE_PHOTO.data) };
   };
@@ -4141,7 +4213,8 @@ test('Modul nicht vollstaendig pruefbar (Diego, 01.11., Lotto 37): not_visible o
   const NOTE = /Hinweis zum Ideenbild.*Das Sanitärmodul konnte im Ideenbild nicht vollständig geprüft werden\./;
   // Lotto 37 (Werte wie gemeldet: Modul unknown, Fuss not_visible, Kamera und Fenster gleich) und ausdruecklich verdeckt:
   // das Bild geht hinaus, der Kunde liest den Hinweis; intern bleibt es ein Vermerk, nie ein "match".
-  for (const module of [{ match: 'unknown', floor: 'not_visible' }, { match: 'not_visible', floor: 'not_visible' }]) {
+  // 57 (root, 01.11., registry 56): anche "match" con il Fuss "not_visible"; la vista incompleta non certifica modello e pulsante.
+  for (const module of [{ match: 'unknown', floor: 'not_visible' }, { match: 'not_visible', floor: 'not_visible' }, { match: 'match', floor: 'not_visible' }]) {
     const { h, res } = await run({ module });
     assert.equal(res.statusCode, 200, JSON.stringify(module)); assert.equal(h.counts().generation, 1);
     const [lead, customer] = mailsOf(h);
@@ -4199,12 +4272,14 @@ test('Dusche der vier Serien: Saeule bei Up+ Aufputz, drei Wandteile bei Up+ Unt
     const ok = harness({ rawChecks: true, checks: [(init) => fullAnswer(body, init, {}, { shower_set: { match: 'match', ...expected } })] });
     assert.equal((await ok.invoke(body)).statusCode, 200, family);
     assert.equal(ok.counts().generation, 1, family);
+    assert.equal(ok.supportCount(), expected.type === 'concealed' ? 1 : 0, family);
     // Lotto 1, Colore: drei runde Teile uebereinander und ein eigener Halter fuer die Handbrause.
     const stacked = { match: 'match', type: 'concealed', pieces: 3, row: 'vertical', handshower: 'separate_holder' };
     const wrong = harness({ rawChecks: true, checks: [(init) => fullAnswer(body, init, {}, { shower_set: stacked }), (init) => fullAnswer(body, init, {}, { shower_set: { match: 'match', ...expected } })] });
     assert.equal((await wrong.invoke(body)).statusCode, 200, family);
     assert.equal(wrong.counts().generation, 2, family);
-    assert.match(wrong.calls.filter((call) => call.url === OPENAI_EDITS)[1].request.fields.prompt,
+    assert.equal(wrong.supportCount(), expected.type === 'concealed' ? 2 : 0, family);
+    assert.match(wrong.calls.filter((call) => isImage(call.request))[1].request.input[0].content[0].text,
       new RegExp(`the shower set has another layout: concealed, 3 wall pieces, row vertical, hand shower separate_holder instead of ${expected.type}, ${expected.pieces} wall pieces`), family);
   }
 });
@@ -4213,15 +4288,15 @@ test('Spiegelschrank Aurora mit zwei Tueren aus der Wahl, nicht aus dem Foto; de
   const cabinet = payload({ spiegel: 'spiegelschrank' });
   const h = harness();
   assert.equal((await h.invoke(cabinet)).statusCode, 200);
-  const prompt = h.calls.find((call) => call.url === OPENAI_EDITS).request.fields.prompt;
+  const prompt = h.calls.find((call) => isImage(call.request)).request.input[0].content[0].text;
   assert.match(prompt, /a product photo of the new mirror cabinet: copy its shape and its light, but give it two doors/);
   assert.match(prompt, /with two flush mirror doors/);
   const three = harness({ rawChecks: true, checks: [(init) => fullAnswer(cabinet, init, {}, { mirror: { match: 'match', doors: 3 } }), (init) => fullAnswer(cabinet, init)] });
   assert.equal((await three.invoke(cabinet)).statusCode, 200);
-  assert.match(three.calls.filter((call) => call.url === OPENAI_EDITS)[1].request.fields.prompt, /the mirror has 3 door\(s\) instead of 2/);
+  assert.match(three.calls.filter((call) => isImage(call.request))[1].request.input[0].content[0].text, /the mirror has 3 door\(s\) instead of 2/);
   const led = harness();
   assert.equal((await led.invoke(payload({ spiegel: 'spiegel' }))).statusCode, 200);
-  const ledPrompt = led.calls.find((call) => call.url === OPENAI_EDITS).request.fields.prompt;
+  const ledPrompt = led.calls.find((call) => isImage(call.request)).request.input[0].content[0].text;
   assert.doesNotMatch(ledPrompt, /doors/);
   assert.match(ledPrompt, /a product photo of the new mirror: copy its shape and its light\./);
 });
@@ -4232,7 +4307,7 @@ test('Fensterrahmen und Deckenlinie im selben Urteil: eine Aenderung begruendet 
   const changed = harness({ rawChecks: true, checks: [(init) => fullAnswer(body, init, { ...one, window_frame: 'changed' }), (init) => fullAnswer(body, init, one)] });
   assert.equal((await changed.invoke(body)).statusCode, 200);
   assert.equal(changed.counts().generation, 2);
-  assert.match(changed.calls.filter((call) => call.url === OPENAI_EDITS)[1].request.fields.prompt, /because a window frame changed its size or its place against the photo/);
+  assert.match(changed.calls.filter((call) => isImage(call.request))[1].request.input[0].content[0].text, /because a window frame changed its size or its place against the photo/);
   const flatPhoto = () => photoChecked(true, JSON.stringify({ is_bathroom: true, reason: 'bathroom', walls: inv(), order: ['washbasin', 'toilet'], nearest: 'toilet', ceiling: 'flat' }));
   const unknownPhoto = () => photoChecked(true, JSON.stringify({ is_bathroom: true, reason: 'bathroom', walls: inv(), order: ['washbasin', 'toilet'], nearest: 'toilet', ceiling: 'unknown' }));
   for (const [label, extra, photoChecks] of [
@@ -4250,17 +4325,17 @@ test('Fensterrahmen und Deckenlinie im selben Urteil: eine Aenderung begruendet 
   }
   const lineMoved = harness({ rawChecks: true, checks: [(init) => fullAnswer(body, init, { ...one, ceiling_line: 'changed' }), (init) => fullAnswer(body, init, one)] });
   assert.equal((await lineMoved.invoke(body)).statusCode, 200);
-  assert.match(lineMoved.calls.filter((call) => call.url === OPENAI_EDITS)[1].request.fields.prompt, /because the line where the walls meet the ceiling moved or changed against the photo/);
+  assert.match(lineMoved.calls.filter((call) => isImage(call.request))[1].request.input[0].content[0].text, /because the line where the walls meet the ceiling moved or changed against the photo/);
   // Root, 30.10.: auch bei unklarer Form bleibt eine verschobene Deckenlinie ein echter Fehler mit zweitem Durchgang.
   const unknownMoved = harness({ rawChecks: true, photoChecks: [unknownPhoto], checks: [(init) => fullAnswer(body, init, { ...one, ceiling_line: 'changed' }), (init) => fullAnswer(body, init, one)] });
   assert.equal((await unknownMoved.invoke(body)).statusCode, 200);
   assert.equal(unknownMoved.counts().generation, 2);
-  assert.match(unknownMoved.calls.filter((call) => call.url === OPENAI_EDITS)[1].request.fields.prompt, /because the line where the walls meet the ceiling moved or changed against the photo/);
+  assert.match(unknownMoved.calls.filter((call) => isImage(call.request))[1].request.input[0].content[0].text, /because the line where the walls meet the ceiling moved or changed against the photo/);
   // Sieht die Vorpruefung ausdruecklich keine Decke (not_visible, root 30.10.), darf "nicht sichtbar" stehen; ein verlorener Balken ist eine andere Decke.
   const noCeilingPhoto = () => photoChecked(true, JSON.stringify({ is_bathroom: true, reason: 'bathroom', walls: inv(), order: ['washbasin', 'toilet'], nearest: 'toilet', ceiling: 'not_visible' }));
   const noCeiling = harness({ rawChecks: true, photoChecks: [noCeilingPhoto], checks: [(init) => fullAnswer(body, init, { ...one, ceiling_line: 'not_visible' })] });
   assert.equal((await noCeiling.invoke(body)).statusCode, 200);
-  const question = noCeiling.calls.find((call) => call.url === OPENAI_RESPONSES && call.request.input[0].content.length > 2).request.input[0].content[0].text;
+  const question = noCeiling.calls.find((call) => isRead(call) && call.request.input[0].content.length > 2).request.input[0].content[0].text;
   assert.match(question, /or a slope or a beam of image 1 that is gone/);
   assert.match(question, /using only the edges you can see in both images: an edge hidden by a curtain, a shower panel or the border of the picture in either image is not judged/);
   assert.match(question, /Set ceiling_line, judged only where the line where the walls meet the ceiling can be seen in both images, to "same"/);
@@ -4273,7 +4348,7 @@ test('Atelier: kein Look als allgemeine Stimmung, die gewaehlte Platte liegt an 
     unterbau: atelier.bases[0].id, top: atelier.tops[0].id, becken: atelier.basinTypes[0].id, finish: atelier.finishes[0].id, keramik: atelier.sanitary[0].id,
     wall: atelier.walls[0].id, spiegel: 'spiegel', waschtisch: atelier.basins[0].id }));
   assert.equal(res.statusCode, 200);
-  const prompt = h.calls.find((call) => call.url === OPENAI_EDITS).request.fields.prompt;
+  const prompt = h.calls.find((call) => isImage(call.request)).request.input[0].content[0].text;
   const tile = atelier.tiles[0];
   assert.ok(!prompt.includes(atelier.looks.find((look) => look.id === tile.look).prompt), 'Look');
   assert.doesNotMatch(prompt, /overall material mood|tile look|two doors|TWO doors/);
@@ -4289,7 +4364,7 @@ test('Die Pruefung nennt die gewaehlte Oberflaeche bei Dusche, Wanne und Platte;
   const room = JSON.parse(checkedInv({ shower: 'back', bathtub: 'right' }, { shower: 'back', bathtub: 'right' }).text);
   const h = harness({ rawChecks: true, checks: [(init) => fullAnswer(body, init, { before: room.before, after: room.after, order_before: room.order_before, order_after: room.order_after })] });
   assert.equal((await h.invoke(body)).statusCode, 200);
-  const question = h.calls.find((call) => call.url === OPENAI_RESPONSES && call.request.input[0].content.length > 2).request.input[0].content[0].text;
+  const question = h.calls.find((call) => isRead(call) && call.request.input[0].content.length > 2).request.input[0].content[0].text;
   for (const part of ['basin_tap: the washbasin tap: Treemme Up+ fittings in matte black', 'shower_set: the shower fittings, in matte black: three small round wall rosettes',
     'bath_tap: the bath mixer, in matte black: at the bathtub, on the wall at its tap end, a bath mixer: ', 'flush_plate: the flush plate of the toilet, in matte black: a flat rectangular plate']) {
     assert.ok(question.includes(part), part);
@@ -4308,7 +4383,7 @@ test('Atelier mit Akzent: die Wandplatten gelten ausserhalb der Akzentflaeche, d
     wall: atelier.walls[0].id, dusche: 'walk-in', badewanne: 'keine', waschtisch: atelier.basins[0].id, spiegel: 'spiegel' });
   const h = harness({ swatch: () => image(), rawChecks: true, checks: [(init) => fullAnswer(body, init)] });
   assert.equal((await h.invoke(body)).statusCode, 200);
-  const check = h.calls.find((call) => call.url === OPENAI_RESPONSES && call.request.input[0].content.length > 2).request;
+  const check = h.calls.find((call) => isRead(call) && call.request.input[0].content.length > 2).request;
   const question = check.input[0].content[0].text;
   assert.deepEqual(Object.keys(templateOf(check).products).slice(0, 3), ['wall_tiles', 'floor_tiles', 'accent_tiles']);
   assert.match(question, /wall_tiles: the wall tiles, .*?, on every wall outside the accent area \(image 3\); floor_tiles: the floor tiles, the same .*?\(image 3\); /);
@@ -4317,7 +4392,7 @@ test('Atelier mit Akzent: die Wandplatten gelten ausserhalb der Akzentflaeche, d
   // Ein falscher Akzent ist ein Fehler des Akzents, nicht der Wandplatten.
   const wrong = harness({ swatch: () => image(), rawChecks: true, checks: [(init) => fullAnswer(body, init, {}, { accent_tiles: 'different' }), (init) => fullAnswer(body, init)] });
   assert.equal((await wrong.invoke(body)).statusCode, 200);
-  const retry = wrong.calls.filter((call) => call.url === OPENAI_EDITS)[1].request.fields.prompt;
+  const retry = wrong.calls.filter((call) => isImage(call.request))[1].request.input[0].content[0].text;
   assert.match(retry, /because the accent area does not match the selected product\. Start again/);
   assert.doesNotMatch(retry, /wall tiles does not match/);
 });
@@ -4329,9 +4404,125 @@ test('Duschset: Teile und Reihe zaehlen nur die Reihe aus Bedienung und Handbrau
     dusche: 'walk-in', badewanne: 'keine' });
   const h = harness({ rawChecks: true, checks: [(init) => fullAnswer(body, init)] });
   assert.equal((await h.invoke(body)).statusCode, 200);
-  const question = h.calls.find((call) => call.url === OPENAI_RESPONSES && call.request.input[0].content.length > 2).request.input[0].content[0].text;
+  const question = h.calls.find((call) => isRead(call) && call.request.input[0].content.length > 2).request.input[0].content[0].text;
   assert.match(question, /pieces, the number of separate wall pieces in the row of controls and hand shower only \(round rosettes or small plates, the hose outlet included; the wall mount and arm of the overhead shower never count; 0 for a column\)/);
   assert.match(question, /row, for that row only: "horizontal" when its pieces stand side by side at the same height on the wall, also where the perspective foreshortens that wall,/);
+  assert.match(question, /both plates side by side in one row at the same height, following the horizontal lines of that wall in perspective/);
+  // Root, 01.11. (Kandidat 52): den Halt der Kopfbrause liest nur die eigene Lesung; die volle Pruefung fragt ihn nicht.
+  assert.doesNotMatch(question, /head_support|control_row/);
+});
+
+test('Halt der Kopfbrause und Reihe der Platten (Root, 01.11., Kandidat 52): eigene Lesung je Bild nur bei Unterputz, drei Bilder, feste Gruende', async () => {
+  const QUESTION_SHA = 'ff8ffeb4e918fe42a6d2d8b148c9324db3c282c3d25c813661c603d056d4058f';
+  const colore = optionsForPackage('colore');
+  const atelier = optionsForPackage('atelier');
+  const shower = { dusche: 'walk-in', badewanne: 'keine' };
+  const coloreFields = (series) => ({ ...shower, paket: 'colore', format: colore.formats[0], platte: colore.tiles[0].id, unterbau: colore.bases[0].id, top: colore.tops[0].id,
+    becken: 'aufsatz', armaturenserie: series, finish: colore.finishes[0].id, keramik: colore.sanitary[0].id, wall: colore.walls[0].id, spiegel: colore.mirrors[0].id, waschtisch: colore.basins[0].id });
+  const atelierBody = payload({ ...shower, paket: 'atelier', look: atelier.tiles[0].look, format: atelier.tiles[0].format, platte: atelier.tiles[0].id, kombination: 'einheitlich',
+    unterbau: atelier.bases[0].id, top: atelier.tops[0].id, becken: atelier.basinTypes[0].id, finish: atelier.finishes[0].id, keramik: atelier.sanitary[0].id,
+    wall: atelier.walls[0].id, spiegel: atelier.mirrors[0].id, waschtisch: atelier.basins[0].id });
+  const isSupport = (call) => isRead(call) && call.request.input[0].content[0].text.startsWith('Image 1 is the bathroom before renovation.');
+  const calls = (h) => ({ photo: h.photoCount(), ...h.counts(), support: h.supportCount(), openai: h.calls.filter((call) => call.url.startsWith('https://api.openai.com/')).length });
+  const sha = async (text) => Buffer.from(await crypto.subtle.digest('SHA-256', Buffer.from(text))).toString('hex');
+  const leadMail = (h) => JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails').body);
+  // Alle Serien: Up+ Unterputz, Ran und Aurelia lesen einmal, mit Foto, Ideenbild und dem Produktfoto ihrer Dusche, mit dem Profil
+  // aus dem Pruefstand (high, 7500, detail high, Cache 30 min, store false, default tier); die Saeule von Up+ Aufputz nie.
+  for (const [family, body, reference] of [['Up+ Unterputz', payload(coloreFields('treemme-up')), up.UP_SHOWER_PHOTO], ['Ran', payload(coloreFields('treemme-ran')), ran.RAN_SHOWER_PHOTO],
+    ['Aurelia', atelierBody, aurelia.AURELIA_SHOWER_PHOTO], ['Up+ Aufputz', payload(shower), null]]) {
+    const h = harness({ rawChecks: true, env: { BADPLANER_CHECK_MODEL: 'gpt-6-astra' }, checks: [(init) => fullAnswer(body, init)] });
+    assert.equal((await h.invoke(body)).statusCode, 200, family);
+    assert.deepEqual(calls(h), { photo: 1, generation: 1, checks: 1, support: reference ? 1 : 0, mail: 2, openai: reference ? 4 : 3 }, family);
+    if (!reference) continue;
+    const [support] = h.calls.filter(isSupport);
+    const qc = h.calls.find((call) => isRead(call) && !isSupport(call) && call.request.input[0].content.length > 2);
+    const [question, ...images] = support.request.input[0].content;
+    assert.equal(await sha(question.text), QUESTION_SHA, family);
+    assert.deepEqual(images, [...qc.request.input[0].content.slice(1, 3), { type: 'input_image', image_url: `data:${reference.mime};base64,${reference.data}`, detail: 'high' }], family);
+    const { input, ...rest } = support.request;
+    assert.deepEqual(rest, { model: 'gpt-6-astra', text: { format: { type: 'json_object' } }, store: false, reasoning: { effort: 'high' },
+      prompt_cache_options: { ttl: '30m' }, service_tier: 'default', max_output_tokens: 7500 }, family);
+  }
+  // Bekannte Fehler: ein fester Satz im Auftrag des zweiten Durchgangs, nie der Text des Modells; eine Lesung je Bild.
+  const body = payload(coloreFields('treemme-ran'));
+  const pass = (init) => fullAnswer(body, init);
+  const reply = (head, row) => () => answer(JSON.stringify({ head_support: head, control_row: row, reason: 'FREE MODEL TEXT about a glass panel' }));
+  for (const [head, row, fault] of [
+    ['glass', 'same_height', 'the overhead shower is fixed on the glass panel, not on a solid wall'],
+    ['ceiling', 'same_height', 'the overhead shower hangs from the ceiling, not on a solid wall'],
+    ['unsupported', 'same_height', 'the overhead shower hangs free, not on a solid wall'],
+    ['solid_wall', 'staggered', 'the small plates of the shower fittings are not in one row at the same height'],
+    ['solid_wall', 'different_walls', 'the small plates of the shower fittings are on different walls'],
+  ]) {
+    const h = harness({ rawChecks: true, checks: [pass, pass], supports: [reply(head, row), reply(head, row)] });
+    assert.equal((await h.invoke(body)).statusCode, 502, `${head} ${row}`);
+    assert.deepEqual(calls(h), { photo: 1, generation: 2, checks: 2, support: 2, mail: 1, openai: 7 }, `${head} ${row}`);
+    const retry = h.calls.filter((call) => isImage(call.request))[1].request.input[0].content[0].text;
+    assert.ok(retry.includes(`A previous attempt was wrong because ${fault}. Start again from image 1`), `${head} ${row}`);
+    assert.doesNotMatch(retry, /FREE MODEL TEXT/, `${head} ${row}`);
+    assert.ok(leadMail(h).includes(fault), `${head} ${row}`);
+  }
+  // Unsicher, ohne Felder, unlesbar, Fehler, Abbruch oder 60 s ohne Antwort: das Bild bleibt zurueck, ohne neues Bild.
+  for (const [label, settings, pattern] of [
+    ['Halt unknown', { supports: [reply('unknown', 'same_height')] }, /the support of the overhead shower could not be confirmed/],
+    ['Reihe unknown', { supports: [reply('solid_wall', 'unknown')] }, /the row of the small plates of the shower fittings could not be confirmed/],
+    ['ohne Felder', { supports: [() => answer('{}')] }, /the support of the overhead shower could not be confirmed/],
+    ['unlesbar', { supports: [() => answer('kein JSON')] }, /the support of the overhead shower and the row of the shower plates could not be confirmed/],
+    ['HTTP 500', { supports: [() => response({ error: { message: 'fixture' } }, 500)] }, /the support of the overhead shower and the row of the shower plates could not be confirmed/],
+    ['abgebrochen', { supports: [() => response({ status: 'incomplete', incomplete_details: { reason: 'max_output_tokens' } })] }, /the support of the overhead shower and the row of the shower plates could not be confirmed/],
+    ['nach 60 s', { supportDelays: [61000] }, /the support of the overhead shower and the row of the shower plates could not be confirmed/],
+  ]) {
+    const h = harness({ rawChecks: true, checks: [pass], ...settings });
+    assert.equal((await h.invoke(body)).statusCode, 502, label);
+    assert.deepEqual(calls(h), { photo: 1, generation: 1, checks: 1, support: 1, mail: 1, openai: 4 }, label);
+    assert.match(leadMail(h), pattern, label);
+  }
+  // 52-r2 (Root, 01.11.): die Frage verlangt eine Notiz, nicht leer und hoechstens 40 Woerter. Fehlt sie, ist sie kein Text, leer oder
+  // laenger: nicht bestaetigt, das Bild bleibt ohne neues Bild zurueck. Ein bekannter Fehler daneben bleibt und fuehrt zum zweiten Bild.
+  const note = (reason, head = 'solid_wall', row = 'same_height') => () => answer(JSON.stringify({ head_support: head, control_row: row, ...(reason === undefined ? {} : { reason }) }));
+  const words = (count) => Array.from({ length: count }, (_, index) => `word${index}`).join(' ');
+  for (const [label, reason] of [['Notiz fehlt', undefined], ['Notiz ist kein Text', 42], ['Notiz leer', '   '], ['Notiz mit 41 Woertern', words(41)]]) {
+    const h = harness({ rawChecks: true, checks: [pass], supports: [note(reason)] });
+    assert.equal((await h.invoke(body)).statusCode, 502, label);
+    assert.deepEqual(calls(h), { photo: 1, generation: 1, checks: 1, support: 1, mail: 1, openai: 4 }, label);
+    assert.match(leadMail(h), /the evidence note for the shower fittings could not be confirmed/, label);
+  }
+  for (const [label, reason] of [['Notiz mit 40 Woertern', words(40)], ['Notiz mit Leerraum aussen', '  The arm ends at a plate on the left marble wall.  ']]) {
+    const h = harness({ rawChecks: true, checks: [pass], supports: [note(reason)] });
+    assert.equal((await h.invoke(body)).statusCode, 200, label);
+    assert.deepEqual(calls(h), { photo: 1, generation: 1, checks: 1, support: 1, mail: 2, openai: 4 }, label);
+    assert.doesNotMatch(leadMail(h), /evidence note/, label);
+  }
+  for (const [head, row, fault] of [['glass', 'same_height', 'the overhead shower is fixed on the glass panel, not on a solid wall'],
+    ['solid_wall', 'staggered', 'the small plates of the shower fittings are not in one row at the same height']]) {
+    const h = harness({ rawChecks: true, checks: [pass, pass], supports: [note(undefined, head, row), note(42, head, row)] });
+    assert.equal((await h.invoke(body)).statusCode, 502, `${head} ${row}`);
+    assert.deepEqual(calls(h), { photo: 1, generation: 2, checks: 2, support: 2, mail: 1, openai: 7 }, `${head} ${row}`);
+    const retry = h.calls.filter((call) => isImage(call.request))[1].request.input[0].content[0].text;
+    assert.ok(retry.includes(`A previous attempt was wrong because ${fault}. Start again from image 1`), `${head} ${row}`);
+    assert.doesNotMatch(retry, /evidence note/, `${head} ${row}`);
+    assert.ok(leadMail(h).includes(fault), `${head} ${row}`);
+    assert.match(leadMail(h), /the evidence note for the shower fittings could not be confirmed/, `${head} ${row}`);
+  }
+  // Laeuft die Pruefung ab, wiederholt ihr kurzer zweiter Anlauf nur sie: weiter eine Lesung fuer das Bild.
+  const retried = harness({ rawChecks: true, checks: [pass, pass], checkDelays: [31000, 9000] });
+  assert.equal((await retried.invoke(body)).statusCode, 200);
+  assert.deepEqual(calls(retried), { photo: 1, generation: 1, checks: 2, support: 1, mail: 2, openai: 5 });
+  // Nur angehaengt: ein grober Fehler der Pruefung bleibt, wie er ist, und der zweite Auftrag nennt nur seinen Grund.
+  const rejected = harness({ rawChecks: true, checks: [(init) => fullAnswer(body, init, { extra_openings: true }), pass], supports: [reply('glass', 'staggered')] });
+  assert.equal((await rejected.invoke(body)).statusCode, 200);
+  assert.deepEqual(calls(rejected), { photo: 1, generation: 2, checks: 2, support: 2, mail: 2, openai: 7 });
+  const rejectedRetry = rejected.calls.filter((call) => isImage(call.request))[1].request.input[0].content[0].text;
+  assert.match(rejectedRetry, /A previous attempt failed the check because an opening was added or lost/);
+  assert.doesNotMatch(rejectedRetry, /overhead shower is fixed|small plates of the shower fittings|FREE MODEL TEXT/);
+  // Nota E34: der Hinweis zum Modul bleibt Zeile der Auswahl, auch neben der Lesung eines Unterputz-Sets.
+  const NOTE = ['Hinweis zum Ideenbild', 'Das Sanitärmodul konnte im Ideenbild nicht vollständig geprüft werden.'];
+  const preview = previewPayload({ ...coloreFields('treemme-ran'), cistern: 'aufputz' });
+  const noted = harness({ rawChecks: true, checks: [(init) => fullAnswer(preview, init, {}, { module: { match: 'unknown', floor: 'not_visible' } })] });
+  const shown = await noted.invoke(preview);
+  assert.equal(shown.statusCode, 200);
+  assert.deepEqual(shown.body.auswahl.filter(([label]) => label === NOTE[0]), [NOTE]);
+  assert.deepEqual(calls(noted), { photo: 1, generation: 1, checks: 1, support: 1, mail: 1, openai: 4 });
 });
 
 test('Gegenpruefung 26.10.: fehlt die Deckenform oder die Wand der Armaturen, bleibt das Bild ohne neues Bild zurueck; true und eine falsche Wand bleiben Fehler', async () => {
@@ -4354,7 +4545,7 @@ test('Gegenpruefung 26.10.: fehlt die Deckenform oder die Wand der Armaturen, bl
     const h = harness({ rawChecks: true, photoChecks: [reading], checks: [missing(extra)] });
     assert.equal((await h.invoke(body)).statusCode, 502, label);
     assert.equal(h.counts().generation, 1, label);
-    assert.match(h.calls.find((call) => call.url === OPENAI_EDITS).request.fields.prompt, /The short end wall of the shower is the right wall seen from the camera/, label);
+    assert.match(h.calls.find((call) => isImage(call.request)).request.input[0].content[0].text, /The short end wall of the shower is the right wall seen from the camera/, label);
     assert.match(JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails').body), pattern, label);
   }
   // Eine erkannte andere Decke und Armaturen an der falschen Wand sind konkrete Fehler: sie begruenden das eine neue Bild.
@@ -4378,7 +4569,7 @@ test('controlli-openai-3: mit Vorlage entscheidet der Produktvergleich, nicht mi
     const h = harness({ rawChecks: true, checks: [(init) => fullAnswer(body, init, { mirror_kept: true, toilet_kept: true }, { [role]: 'different' }), (init) => fullAnswer(body, init)] });
     assert.equal((await h.invoke(body)).statusCode, 200, role);
     assert.equal(h.counts().generation, 2, role);
-    const retry = h.calls.filter((call) => call.url === OPENAI_EDITS)[1].request.fields.prompt;
+    const retry = h.calls.filter((call) => isImage(call.request))[1].request.input[0].content[0].text;
     assert.match(retry, new RegExp(`because the ${role} does not match the selected product\\. Start again`), role);
     assert.doesNotMatch(retry, /still the old one/, role);
   }
@@ -4387,14 +4578,14 @@ test('controlli-openai-3: mit Vorlage entscheidet der Produktvergleich, nicht mi
   const old = harness({ rawChecks: true, photoChecks: [noBasin], checks: [(init) => fullAnswer(body, init, { mirror_kept: true }), (init) => fullAnswer(body, init)] });
   assert.equal((await old.invoke(body)).statusCode, 200);
   assert.equal(old.counts().generation, 2);
-  assert.match(old.calls.filter((call) => call.url === OPENAI_EDITS)[1].request.fields.prompt, /because the mirror above the washbasin is still the old one of the photo\. Start again/);
+  assert.match(old.calls.filter((call) => isImage(call.request))[1].request.input[0].content[0].text, /because the mirror above the washbasin is still the old one of the photo\. Start again/);
 });
 
 test('controlli-openai-3: ein Teil der Dusche ist "none" nur, wenn er klar fehlt; ein unbekannter Teil haelt das Bild ohne neues Bild zurueck', async () => {
   const body = payload({ dusche: 'walk-in', badewanne: 'keine' });
   const first = harness({ rawChecks: true, checks: [(init) => fullAnswer(body, init)] });
   assert.equal((await first.invoke(body)).statusCode, 200);
-  const check = first.calls.find((call) => call.url === OPENAI_RESPONSES && call.request.input[0].content.length > 2).request;
+  const check = first.calls.find((call) => isRead(call) && call.request.input[0].content.length > 2).request;
   assert.match(check.input[0].content[0].text, /For type, row and handshower use "none" only when that part is clearly absent and "unknown" when you cannot tell; give pieces as null when you cannot count them\./);
   assert.deepEqual(templateOf(check).products.shower_set, { match: 'unknown', type: 'unknown', pieces: null, row: 'unknown', handshower: 'unknown' });
   // E-L2: die Handbrause am Steigrohr ist zu sehen; "unknown" oder eine nicht zaehlbare Zahl halten zurueck, ohne neues Bild.
@@ -4419,8 +4610,62 @@ test('controlli-openai-3: ein Teil der Dusche ist "none" nur, wenn er klar fehlt
     (init) => fullAnswer(up, init)] });
   assert.equal((await stacked.invoke(up)).statusCode, 200);
   assert.equal(stacked.counts().generation, 2);
-  const retry = stacked.calls.filter((call) => call.url === OPENAI_EDITS)[1].request.fields.prompt;
+  const retry = stacked.calls.filter((call) => isImage(call.request))[1].request.input[0].content[0].text;
   assert.match(retry, /because the shower set has another layout: concealed, 3 wall pieces, row vertical, hand shower unknown instead of concealed, 3 wall pieces, row horizontal, hand shower end_piece\. Start again/);
   assert.doesNotMatch(retry, /could not be confirmed/);
   assert.match(JSON.stringify(stacked.calls.find((call) => call.url === 'https://api.resend.com/emails').body), /the shower set could not be confirmed: the check did not describe its pieces/);
+});
+
+test('Kandidat 59 (Root, 01.11.): die Breite des Spiegels ist keine Wahl; "as wide as the vanity" bleibt im Bildauftrag und fehlt in der Beschreibung fuer die Pruefung, Typ, Rahmen, LED und Tueren bleiben', async () => {
+  // Kein Feld und kein SKU fuer eine Breite: das Verhaeltnis zum Waschtisch ist eine Vorliebe des Bildauftrags, nie ein anderes Produkt.
+  const described = {
+    spiegelschrank: 'the mirror above the washbasin, a new rectangular mirror cabinet, softly lighting the wall and washbasin from its underside, with two flush mirror doors and a slim LED light line on its front along the top and both sides',
+    spiegel: 'the mirror above the washbasin, a new frameless rectangular mirror without a cabinet, that softly lights the wall above and below it with hidden LED light along its top and bottom edges',
+  };
+  const mirrors = optionsForPackage('essenza').mirrors;
+  assert.deepEqual(mirrors.map((mirror) => mirror.id), ['spiegelschrank', 'spiegel']);
+  for (const mirror of mirrors) {
+    assert.match(mirror.prompt, /as wide as the vanity/, `${mirror.id}: die Vorliebe steht weiter in den Daten`);
+    const h = harness();
+    assert.equal((await h.invoke(payload({ spiegel: mirror.id }))).statusCode, 200, mirror.id);
+    const prompt = h.calls.find((call) => isImage(call.request)).request.input[0].content[0].text;
+    assert.ok(prompt.includes(`and above the vanity a ${mirror.prompt}`), `${mirror.id}: Bildauftrag mit der Vorliebe`);
+    const question = h.calls.find((call) => isRead(call) && call.request.input[0].content.length > 2).request.input[0].content[0].text;
+    assert.ok(question.includes(`mirror: ${described[mirror.id]} (image `), `${mirror.id}: Beschreibung fuer die Pruefung`);
+    assert.doesNotMatch(question, /as wide as/, mirror.id);
+  }
+  // 59-r2 (Root, 01.11.): mit Vorlage widerspricht mirror_after dem gewaehlten Typ, auch wenn der Produktvergleich match und die Tueren
+  // der Wahl sagt: unsicher, 502 ohne zweiten Durchgang. Tueren und "different" bleiben schwere Fehler mit zweitem Durchgang.
+  for (const [label, spiegel, extra, products, generations, patterns] of [
+    ['Schrank genannt, Spiegel gewaehlt', 'spiegel', { mirror_after: 'cabinet' }, { mirror: { match: 'match', doors: 0 } }, 1,
+      [/the mirror type could not be confirmed: the check names a mirror cabinet above the washbasin, not the selected type/]],
+    ['Spiegel genannt, Schrank gewaehlt', 'spiegelschrank', { mirror_after: 'mirror' }, { mirror: { match: 'match', doors: 2 } }, 1,
+      [/the mirror type could not be confirmed: the check names a flat mirror above the washbasin, not the selected type/]],
+    ['Schrank mit Tueren', 'spiegel', { mirror_after: 'cabinet' }, { mirror: { match: 'match', doors: 2 } }, 2,
+      [/the mirror has 2 door\(s\) instead of 0/, /the mirror type could not be confirmed/]],
+    ['anderer Spiegel', 'spiegel', {}, { mirror: { match: 'different', doors: 0 } }, 2, [/the mirror does not match the selected product/]],
+  ]) {
+    const body = payload({ spiegel });
+    const h = harness({ rawChecks: true, checks: [(init) => fullAnswer(body, init, extra, products), (init) => fullAnswer(body, init, extra, products)] });
+    assert.equal((await h.invoke(body)).statusCode, 502, label);
+    assert.equal(h.counts().generation, generations, label);
+    const mails = JSON.stringify(h.calls.filter((call) => call.url === 'https://api.resend.com/emails').map((call) => call.body));
+    for (const pattern of patterns) assert.match(mails, pattern, label);
+  }
+  // Uebereinstimmend: kein Hinweis zum Typ, keine Unsicherheit, das Bild geht hinaus.
+  for (const [spiegel, mirrorAfter] of [['spiegel', 'mirror'], ['spiegelschrank', 'cabinet']]) {
+    const body = payload({ spiegel });
+    const h = harness({ rawChecks: true, checks: [(init) => fullAnswer(body, init, { mirror_after: mirrorAfter })] });
+    assert.equal((await h.invoke(body)).statusCode, 200, spiegel);
+    assert.doesNotMatch(JSON.stringify(h.calls.filter((call) => call.url === 'https://api.resend.com/emails').map((call) => call.body)), /mirror type|was chosen/, spiegel);
+  }
+  // Ohne Vorlage des Spiegels (die Vorpruefung sieht keinen Waschtisch) bleibt der Widerspruch ein leichter Hinweis, wie bisher.
+  const ohne = payload({ spiegel: 'spiegel' });
+  const noBasin = () => photoChecked(true, JSON.stringify({ is_bathroom: true, reason: 'bathroom', walls: inv({ washbasin: 'none' }), order: ['toilet'], nearest: 'toilet' }));
+  const noRef = harness({ rawChecks: true, photoChecks: [noBasin], checks: [(init) => fullAnswer(ohne, init, { mirror_after: 'cabinet' })] });
+  assert.equal((await noRef.invoke(ohne)).statusCode, 200);
+  assert.equal(noRef.counts().generation, 1);
+  const noRefMail = JSON.stringify(noRef.calls.filter((call) => call.url === 'https://api.resend.com/emails').map((call) => call.body));
+  assert.match(noRefMail, /a mirror cabinet hangs above the washbasin, but a flat mirror was chosen/);
+  assert.doesNotMatch(noRefMail, /mirror type could not be confirmed/);
 });

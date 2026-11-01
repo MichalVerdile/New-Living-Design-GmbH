@@ -44,6 +44,9 @@
  *      haelt das Bild zurueck, ohne neues Bild. Leichte Hinweise (Punktablauf, Muretto, Nische, Zahl und
  *      Art der Becken, Spiegelart) stehen nur in der Lead-Mail; eine fehlende Tuer zaehlt nicht.
  *      Ist die Pruefung nicht erreichbar, auch nach einem zweiten Anlauf, bleibt das Bild zurueck wie in 4c.
+ *      Bei Unterputz-Sets liest daneben eine eigene Pruefung mit drei Bildern (Foto, Ideenbild, Produktfoto der Dusche)
+ *      den Halt der Kopfbrause und die Reihe der kleinen Platten, einmal je Bild: ein Fehler dort ist ein schwerer
+ *      Hinweis mit festem Grund, eine fehlende oder unsichere Antwort haelt das Bild zurueck, ohne neues Bild.
  *   4b. Produktdurchgang, nur mit BADPLANER_PRODUCT_PASS=1 (seit dem 25.10. aus): das gewaehlte Bild geht mit den
  *      Produktbildern (WC, Platte oder Modul,
  *      Armaturen, Dusche, Wanne, Spiegel) nochmals an das Bildmodell, das nur die Produkte neu zeichnet. Besteht
@@ -56,7 +59,7 @@
  *      blind wiederholt.
  *   6. Kundenmail und Newsletter mit eigenem Zustellstatus.
  *   Alle Netzwerkaufrufe einschliesslich Body-Lesen laufen unter einer Deadline von
- *   220 s (TOTAL_TIMEOUT_MS, knapp unter maxDuration 230 in vercel.json).
+ *   260 s (TOTAL_TIMEOUT_MS, knapp unter maxDuration 270 in vercel.json).
  *
  * Umgebungsvariablen (Vercel > Settings > Environment Variables):
  *   OPENAI_API_KEY       Pflicht. API-Schluessel von OpenAI fuer Bildmodell, Pruefung und Vorpruefung.
@@ -75,8 +78,8 @@
  *   BADPLANER_DAILY_CAP  Maximale Anfragen mit Ideenbild pro Tag insgesamt (Default 60); jede erzeugt so viele Bilder,
  *                        wie BADPLANER_CANDIDATES sagt, mit zweitem Durchgang doppelt so viele, mit Produktdurchgang
  *                        eines mehr
- *   BADPLANER_MODEL      Bildmodell fuer Images edits (Default gpt-image-2.5-sunburst; Verfuegbarkeit im Konto pruefen)
- *   BADPLANER_IMAGE_QUALITY quality fuer Images edits (low, medium, high, xhigh, max); leer = Vorgabe der API (auto).
+ *   BADPLANER_MODEL      Bildmodell im Werkzeug image_generation der Responses API (Default gpt-image-2.5-sunburst; Verfuegbarkeit im Konto pruefen)
+ *   BADPLANER_IMAGE_QUALITY quality im Werkzeug image_generation (low, medium, high, xhigh, max); leer = Vorgabe der API (auto).
  *                        Hoehere Stufen kosten mehr: nur mit OK des Inhabers (AGENTS.md)
  *   BADPLANER_CHECK_MODEL Modell fuer die Pruefung der Ideenbilder (Default gpt-5.4-2026-03-05, reasoning none). Leer oder
  *                        nur Leerzeichen: 503 vor jedem Modellaufruf; ein Ideenbild ohne Pruefung gibt es nicht
@@ -111,9 +114,10 @@ import { RAN_BASIN_PHOTO, RAN_BATH_PHOTO, RAN_SHOWER_PHOTO } from '../server/bad
 declare const process: any;
 declare const Buffer: any;
 
-// 230 s: ein voller Durchgang (Vorpruefung bis 60 s, Bild bis 125 s, Pruefung 20 s) plus Mails; ein zweiter nur nach einem schnellen ersten.
+// 270 s: ein voller Durchgang (Vorpruefung bis 60 s, Bild bis 125 s, Pruefung 30 s und bei Unterputz-Sets daneben die Lesung des
+// Halts bis 60 s) plus Mails; ein zweiter nur nach einem schnellen ersten. Hoechstwerte, keine Zusage (Root, 01.11.).
 // Vercel erlaubt bis 300 s; vercel.json nennt denselben Wert.
-export const config = { maxDuration: 230 };
+export const config = { maxDuration: 270 };
 
 /* ---------- Grenzen ---------- */
 
@@ -129,19 +133,25 @@ const MAX_SWATCH_BYTES = 5 * 1024 * 1024; // current catalog originals include f
 // lief nur, wenn der erste unter rund 43 s blieb. Um 12:25 lief er und das Bild kam durch.
 // 220 s reichten mit Gemini fuer zwei Durchgaenge in der langsamsten Form (2 x 90 s) plus Mails; mit Bildern von 88 bis
 // 100 s (Root, 31.10.) reichen sie fuer einen, ein zweiter laeuft nur nach einem schnellen ersten (Schranke unten).
-const TOTAL_TIMEOUT_MS = 220000; // 10 seconds below the platform limit (vercel.json maxDuration 230)
+// Root, 01.11. (Kandidat 52, Bild seit 57 bis 150 s): Vorpruefung 60 s, Bild, Lesung des Halts 60 s neben der Pruefung, Mails 10 s;
+// zusammen mehr als 260 s moeglich, darum nimmt das Bild nur den Rest nach den Reserven von 70 oder 40 s (generateImage).
+const TOTAL_TIMEOUT_MS = 260000; // 10 seconds below the platform limit (vercel.json maxDuration 270)
 const DELIVERY_RESERVE_MS = 10000; // Lead- und Kundenmail brauchen zusammen 2 bis 5 s (Logs 19.09.)
 const PER_DEVICE_PER_DAY = 5;                 // Cookie nldbp
 const PER_IP_PER_DAY = 10;                    // In-Memory, muss über dem Gerätelimit liegen
-// Root, 31.10.: Images edits mit gpt-image-2.5-sunburst in Qualitaet max brauchte in den Prueflaeufen 88 bis 100 s; die 65 s
-// aus der Gemini-Zeit liefen jedes Mal ab. 125 s lassen rund 25 % Luft. Ein Hoechstwert, keine Zusage: generateImage nimmt
+// Root, 31.10.: Images edits mit gpt-image-2.5-sunburst in Qualitaet max brauchte 88 bis 100 s (damals 125 s). Root, 01.11. (57):
+// Responses mit dem Werkzeug image_generation brauchte im Prototyp 55 122.6 s, darum 150 s. Ein Hoechstwert, keine Zusage: generateImage nimmt
 // davon nur, was nach Pruefung und Mails im Budget bleibt. Abbruch und Zahl der Versuche bleiben wie bisher.
-const IMAGE_TIMEOUT_MS = 125000;
+const IMAGE_TIMEOUT_MS = 150000;
 // 20.09., 09:25 (Preview, 87 s): Fotopruefung 16 s, Bild 28 s, Pruefung nach 25 s abgelaufen,
 // dieselbe Pruefung nochmals 17 s. Beide Pruefungen denken jetzt nur wenig (heute checkReasoning),
 // darum reichen kuerzere Grenzen; die alten waren auf "medium" zugeschnitten.
-const CHECK_TIMEOUT_MS = 20000;       // liest ein 2K-Bild
+// Vollstaendiger QC: 14 s in Versuch 44; Versuch 46 nach 20 s ohne Antwort abgebrochen. 30 s sind noch live zu pruefen;
+// globale Deadline 260 s.
+const CHECK_TIMEOUT_MS = 30000;       // liest ein 2K-Bild
 const QUICK_CHECK_TIMEOUT_MS = 10000; // zweiter Anlauf nach einem Timeout: kurz, nicht nochmals 20 s
+// Lesung des Halts der Kopfbrause (Root, 01.11., Diagnose 50, Astra high): Ran42 59.1 s, Ran41 9.5 s. Ein Hoechstwert, keine Zusage.
+const SUPPORT_CHECK_TIMEOUT_MS = 60000;
 // haelt das Bild auf; laeuft sie ab, wird ohne Grundriss gerendert. Seit dem 27.09. mit mehr Nachdenken (Problem 1 der
 // siebten Probe: an welcher Wand die Armaturen hingehoeren, liest sie aus der Lage der Wanne), darum 25 statt 12 s.
 // Seit gemini-3.1-pro-preview (27.09.): P2 14 bis 21 s, P9 17 bis 19 s, P7 3 s oder 26 bis 27 s; mit 25 s lief P7 im Pruefstand
@@ -714,7 +724,7 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
     [!noToilet, 'toilet', wcImage, `the toilet, ${wcShape}, wall-hung and rimless, in ${sanitary.prompt}`],
     [!noToilet && cistern === 'aufputz', 'module', moduleImage, `the sanitary module behind the toilet: ${QR_MODULE}`],
     [!noToilet && cistern === 'unterputz', 'flush_plate', plateImage, `the flush plate of the toilet, in ${finish.prompt}: ${BLINK_PLATE}`],
-    [!noBasin && !!mirrorImage, 'mirror', mirrorImage, `the mirror above the washbasin, a ${mirror.prompt}`],
+    [!noBasin && !!mirrorImage, 'mirror', mirrorImage, `the mirror above the washbasin, a ${mirror.prompt.replace(/,? as wide as the vanity/, '')}`], // 59 (Root, 01.11.): keine Breite und kein SKU waehlbar; die Breite bleibt Vorliebe des Bildauftrags, kein Pruefkriterium
   ] as [boolean, ProductRole, Photo | null, string][]).filter(([when]) => when).map(([, role, image, text]): CheckRef => ({ role, image, text,
     ...(role === 'shower_set' && showerSet ? { shower: showerSet } : {}), ...(role === 'mirror' ? { doors: mirror.id === 'spiegelschrank' ? CABINET_DOORS : 0 } : {}) }));
   // Farbige Keramik (siebte Probe): die Produktbilder sind weiss, und Becken und Duschwanne haben kein eigenes Bild.
@@ -911,8 +921,15 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   let checkNote = 'ok';
   const wantedFixtures = { room, shower: shower ? shower.id !== 'keine' : false, showerType: shower?.id, bathtub: bathtub ? bathtub.id !== 'keine' : false, cistern, windows, showerWall, showerLongWall,
     bathtubType: bathtub?.id, basin: basin.id, basinType: basinType?.id, mirror: mirror.id, ceiling: photoCheck.status === 'ok' ? photoCheck.ceiling : undefined, refs: checkRefs };
+  // Root, 01.11. (Kandidat 52): bei Unterputz-Sets laeuft je Bild eine Lesung des Halts neben der Pruefung; der zweite Anlauf
+  // wiederholt nur die Pruefung. Jedes Bild laesst der Pruefung und, bei Unterputz, der Lesung ihre volle Zeit plus Mails frei,
+  // auch im zweiten Durchgang und im Produktdurchgang (checkReserveMs).
+  const supportRef = checkRefs.find((ref) => ref.shower?.type === 'concealed');
+  const checkReserveMs = Math.max(CHECK_TIMEOUT_MS, supportRef ? SUPPORT_CHECK_TIMEOUT_MS : 0) + DELIVERY_RESERVE_MS;
   const checkWithUnavailableRetry = async (image: { mime: string; data: string }): Promise<CheckResult> => {
-    let result = await checkOpenings(photo, image, wantedFixtures, ctx);
+    const checking = checkOpenings(photo, image, wantedFixtures, ctx);
+    const support = supportRef ? checkShowerSupport(photo, image, supportRef.image, ctx) : Promise.resolve<string[]>([]);
+    let result = await checking;
     if (result.status === 'unavailable'
       && ctx.budget.remaining() >= CHECK_RETRY_DELAY_MS + CHECK_TIMEOUT_MS + DELIVERY_RESERVE_MS) {
       // Ein 503 kommt schnell, dann lohnt dieselbe Frage nochmals. Nach einem Timeout nicht
@@ -921,7 +938,10 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
       if (!afterTimeout) await dependencies.sleep(CHECK_RETRY_DELAY_MS);
       result = await checkOpenings(photo, image, wantedFixtures, ctx, afterTimeout ? QUICK_CHECK_TIMEOUT_MS : CHECK_TIMEOUT_MS);
     }
-    return result;
+    // Nur angehaengt: Ergebnis, Grund und Hinweise der Pruefung bleiben, wie sie sind.
+    const faults = await support;
+    return result.status === 'approved' && faults.length
+      ? { ...result, serious: [...(result.serious ?? []), ...faults], hints: [...(result.hints ?? []), ...faults] } : result;
   };
   // Diego, 27.09.: "concentriamoci sul risultato, i costi non sono un problema". Pro Durchgang entstehen zwei Bilder
   // gleichzeitig, gezeigt wird das bessere: ohne groben Fehler vor ungeprueft vor verworfen, dann das mit den wenigsten
@@ -971,7 +991,7 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
     tries.push(...failures);
     discarded.push(...failures);
   };
-  const first = await pass(prompt, 1);
+  const first = await pass(prompt, 1, checkReserveMs);
   if (!first.attempts.length) {
     return res.status(502).json(await leadWithoutImage(`Bilddienst: ${first.failures.map((failure) => failure.replace(/^Bild \d+: Bilddienst: /, '')).join(' | ')}`));
   }
@@ -986,8 +1006,10 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   // Pruefdauer statt mit dem Hoechstwert: am 19.09. bekam sie so nur 25 s und
   // brach ab, obwohl bis zur Schranke noch 65 s frei waren.
   const firstPassMs = dependencies.clock.now() - passStarted;
-  const secondPassMs = Math.round(firstPassMs * 1.15) + DELIVERY_RESERVE_MS;
-  const secondCheckReserveMs = Math.round((firstPassMs - firstGenerationMs) * 1.15) + DELIVERY_RESERVE_MS;
+  // Root, 01.11.: auch hier nie weniger als checkReserveMs; die Schranke rechnet mit, was die Reserve darueber hinaus braucht.
+  const measuredCheckMs = Math.round((firstPassMs - firstGenerationMs) * 1.15) + DELIVERY_RESERVE_MS;
+  const secondCheckReserveMs = Math.max(measuredCheckMs, checkReserveMs);
+  const secondPassMs = Math.round(firstPassMs * 1.15) + DELIVERY_RESERVE_MS + secondCheckReserveMs - measuredCheckMs;
   // Ein zweiter Durchgang, wenn alle Bilder einen groben Fehler haben oder das beste einen schweren Hinweis (Diego, 27.09.).
   // Gewaehlt wird danach das beste aller Bilder; hat es nach dem Produktdurchgang noch einen schweren Hinweis, sieht
   // der Kunde es nicht (unten, seit dem 04.10.).
@@ -1114,7 +1136,7 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   let productNote = '';
   let productOther: { name: string; image: { mime: string; data: string } } | undefined;
   if (env.BADPLANER_PRODUCT_PASS === '1' && productReferences.length) {
-    if (ctx.budget.remaining() >= Math.round(firstPassMs * 1.15) + DELIVERY_RESERVE_MS) {
+    if (ctx.budget.remaining() >= secondPassMs) {
       // Die Grösse nach dem Bild, das hier bearbeitet wird, mit derselben Regel wie beim Foto.
       const genSize = validateImageBytes(Buffer.from(gen.data, 'base64'), gen.mime, GENERATED_IMAGE_LIMITS);
       const edited = await generateImage(productPrompt, gen, productReferences, ctx, editSize(genSize.width, genSize.height), secondCheckReserveMs);
@@ -1894,32 +1916,29 @@ async function loadSwatch(image: string, src: string, ctx: RequestContext): Prom
 
 type GenResult = { ok: true; mime: string; data: string } | { ok: false; error: string; detail: string };
 
-const OPENAI_IMAGE_EDITS_URL = 'https://api.openai.com/v1/images/edits';
 const OPENAI_RESPONSES_URL = 'https://api.openai.com/v1/responses';
-const imageExtension = (mime: string) => (mime === 'image/png' ? 'png' : mime === 'image/webp' ? 'webp' : 'jpg');
 
 async function generateImage(prompt: string, photo: Photo, references: (Photo | null)[], ctx: RequestContext, size = '', reserveMs = CHECK_TIMEOUT_MS + DELIVERY_RESERVE_MS): Promise<GenResult> {
-  // Das Ideenbild ist das Produkt: es soll das Bad des Kunden zeigen, nicht irgendein schoenes Bad. Kandidat fuer genaues
-  // Bearbeiten ist gpt-image-2.5-sunburst; ueber BADPLANER_MODEL waehlbar, Verfuegbarkeit im Konto vor dem ersten Lauf pruefen.
-  const model = env.BADPLANER_MODEL || 'gpt-image-2.5-sunburst';
-  // Images edits, multipart wie im SDK: Bild 1 das Foto, dann die Vorlagen in der Reihenfolge des Prompts (hoechstens 16).
-  // JPEG, weil die Anfrage das Bild als Koerper zuruecktraegt (MAX_ANFRAGE_BYTES unter der Grenze von Vercel).
-  const form = new FormData();
-  form.append('model', model);
-  form.append('prompt', prompt);
-  form.append('n', '1');
-  form.append('output_format', 'jpeg');
-  if (size) form.append('size', size); // aus editSize; ohne bekannte Groesse gilt die Vorgabe der API
-  if (env.BADPLANER_IMAGE_QUALITY) form.append('quality', env.BADPLANER_IMAGE_QUALITY);
-  [photo, ...references].filter((image): image is Photo => Boolean(image)).forEach((image, index) => {
-    form.append('image[]', new Blob([Buffer.from(image.data, 'base64')], { type: image.mime }), `bild-${index + 1}.${imageExtension(image.mime)}`);
-  });
+  // Ein Responses-Aufruf mit genau einem Bildwerkzeug: das Sprachmodell liest Foto und Vorlagen vor der Bearbeitung.
+  // Reihenfolge und Prompt bleiben gleich; kein zweiter Anbieter und kein stiller Rueckfall auf Images edits.
+  const imageModel = env.BADPLANER_MODEL || 'gpt-image-2.5-sunburst';
+  const images = [photo, ...references].filter((image): image is Photo => Boolean(image));
+  const body = {
+    model: 'gpt-6-astra',
+    store: false,
+    ...checkReasoning('gpt-6-astra', 'high'),
+    max_output_tokens: CHECK_OUTPUT_TOKENS.high,
+    max_tool_calls: 1,
+    tool_choice: { type: 'image_generation' },
+    input: [{ role: 'user', content: [{ type: 'input_text', text: prompt }, ...images.map((image) => ({ type: 'input_image', image_url: `data:${image.mime};base64,${image.data}`, detail: 'high' }))] }],
+    tools: [{ type: 'image_generation', model: imageModel, action: 'edit', output_format: 'jpeg', ...(size ? { size } : {}), ...(env.BADPLANER_IMAGE_QUALITY ? { quality: env.BADPLANER_IMAGE_QUALITY } : {}) }],
+  };
 
   try {
-    const r = await request(ctx, OPENAI_IMAGE_EDITS_URL, {
+    const r = await request(ctx, OPENAI_RESPONSES_URL, {
       method: 'POST',
-      headers: { authorization: `Bearer ${env.OPENAI_API_KEY || ''}` },
-      body: form,
+      headers: { authorization: `Bearer ${env.OPENAI_API_KEY || ''}`, 'content-type': 'application/json' },
+      body: JSON.stringify(body),
     }, Math.min(IMAGE_TIMEOUT_MS, Math.max(0, ctx.budget.remaining() - reserveMs)));
     const json = r.json;
     if (!r.ok) {
@@ -1929,14 +1948,14 @@ async function generateImage(prompt: string, photo: Photo, references: (Photo | 
       if (r.status === 429) return { ok: false, error: 'Der Bilddienst ist gerade ausgelastet. Bitte in einer Minute noch einmal versuchen.', detail };
       return { ok: false, error: 'Das Ideenbild konnte nicht erstellt werden. Bitte später noch einmal versuchen oder rufen Sie uns an.', detail };
     }
-    const b64 = json?.data?.[0]?.b64_json;
-    if (typeof b64 !== 'string' || !b64) {
+    const calls = (Array.isArray(json?.output) ? json.output : []).filter((item: any) => item?.type === 'image_generation_call');
+    const call = calls.length === 1 ? calls[0] : null;
+    const b64 = call?.result;
+    if (json?.status !== 'completed' || call?.status !== 'completed' || (call.output_format && call.output_format !== 'jpeg') || typeof b64 !== 'string' || !b64) {
       console.error('[badplaner] Bilddienst ohne Bild');
       return { ok: false, error: 'Aus diesem Foto konnte kein Ideenbild erstellt werden. Bitte ein anderes Foto versuchen: von der Tür aus, das ganze Bad im Bild, Licht an.', detail: 'ohne Bild' };
     }
-    const format = typeof json.output_format === 'string' ? json.output_format : 'jpeg';
-    const mime = format === 'png' ? 'image/png' : format === 'jpeg' ? 'image/jpeg' : '';
-    if (!mime) throw new Error('Unsupported generated image');
+    const mime = 'image/jpeg';
     const data = normalizeBase64(b64, MAX_RESPONSE_BASE64);
     validateImageBytes(Buffer.from(data, 'base64'), mime, GENERATED_IMAGE_LIMITS);
     return { ok: true, mime, data };
@@ -2026,6 +2045,32 @@ const UNCONFIRMED = 'could not be confirmed';
 // aus dem Anlass und dem Auftrag des zweiten Durchgangs (siehe seriousFaults).
 const RADIATOR_UNCONFIRMED = 'the radiator position could not be confirmed: the check could not tell whether the radiator of the photo kept its wall and its place';
 
+// Root, 01.11. (Diagnose 50): die volle Pruefung sah bei Ran42 den Halt der Kopfbrause am Glas und die versetzten Platten nicht; eine
+// eigene Lesung mit drei Bildern (Foto, Ideenbild, Produktfoto der Dusche) traf beides. Die Frage steht woertlich wie im Pruefstand
+// (SHA ff8ffeb4), ohne Zusatz. In den Auftrag des zweiten Durchgangs kommen nur diese festen Saetze, nie der Text des Modells.
+const SUPPORT_QUESTION = 'Image 1 is the bathroom before renovation. Image 2 is the generated bathroom. Image 3 is a product reference, not a room. Inspect only the physical shower installation actually visible in image 2. Do not infer correct installation from the reference. Follow the overhead shower head itself, or its arm if present, to the real fixing plate. A flat head can be fixed directly without a separate arm. Report what actually supports it: solid_wall, glass, ceiling, unsupported, or unknown when the fixing cannot be judged. Use the joins and edges: do not confuse a wall visible through glass with actual fixing on that wall, or foreground glass with the supporting surface. Then inspect the small mixer, diverter and hand-shower fixing plates, excluding the overhead head fixing. Report control_row: same_height only when they form one horizontal row on one actual wall plane, allowing perspective; staggered when their heights clearly differ on that plane; different_walls when they are fixed to different walls; unknown when this cannot be judged. Do not use equal picture-y alone. Report visible evidence only. Return only JSON: {"head_support":"unknown","control_row":"unknown","reason":"short English note explaining support and row, max 40 words"}';
+async function checkShowerSupport(photo: Photo, gen: Photo, reference: Photo | null, ctx: RequestContext): Promise<string[]> {
+  const reply = reference ? await askCheckModel(checkModel(), SUPPORT_QUESTION, [photo, gen, reference], SUPPORT_CHECK_TIMEOUT_MS, ctx, 'high') : { detail: 'kein Produktfoto' };
+  if ('detail' in reply) {
+    console.error('[badplaner] Lesung des Halts nicht möglich', reply.detail);
+    return [`the support of the overhead shower and the row of the shower plates ${UNCONFIRMED}: the reading gave no answer`];
+  }
+  const head = reply.answer?.head_support;
+  const row = reply.answer?.control_row;
+  return [
+    head === 'glass' ? 'the overhead shower is fixed on the glass panel, not on a solid wall'
+      : head === 'ceiling' ? 'the overhead shower hangs from the ceiling, not on a solid wall'
+        : head === 'unsupported' ? 'the overhead shower hangs free, not on a solid wall'
+          : head === 'solid_wall' ? '' : `the support of the overhead shower ${UNCONFIRMED}`,
+    row === 'staggered' ? 'the small plates of the shower fittings are not in one row at the same height'
+      : row === 'different_walls' ? 'the small plates of the shower fittings are on different walls'
+        : row === 'same_height' ? '' : `the row of the small plates of the shower fittings ${UNCONFIRMED}`,
+    // 52-r2 (Root, 01.11.): auch die Notiz zaehlt, wie in der Frage und im Pruefstand: ein Text, nicht leer, hoechstens 40 Woerter.
+    typeof reply.answer?.reason === 'string' && reply.answer.reason.trim() && reply.answer.reason.trim().split(/\s+/).length <= 40 ? ''
+      : `the evidence note for the shower fittings ${UNCONFIRMED}`,
+  ].filter(Boolean);
+}
+
 /**
  * Fragt das Pruefmodell, ob das Ideenbild eine Öffnung (Fenster, Dachfenster,
  * Tür, Glasfläche) enthält, die im Foto nicht da ist. Nicht verfügbare oder
@@ -2077,7 +2122,7 @@ async function checkOpenings(
     // Der Ruecksprung soll bleiben (#52): was im Foto schon da ist, ist nicht neu, auch wenn es nachher besser sichtbar ist.
     'Compare the same place in both images: the recess or alcove a shower stands in, the end face of a wall or pre-wall beside the shower and every wall step that image 1 already has are not new, even when they are easier to see in image 2 once the old tray, curtain and fittings are gone. The shower floor itself, level or raised, is not a wall element. ' +
     // Diegos Test vom 20.09., 09:56: der Ruecksprung in der Wand der Dusche war im Ideenbild zugemauert.
-    'Set wall_element_lost true if image 1 has a recess, alcove, niche, wall offset, corner step or wall projection anywhere in the room, in the shower area or elsewhere, that image 2 no longer has because it was filled in, closed or straightened into one flat wall, or that image 2 shows cut back or covered by the shower; a wall projection with a radiator on it counts too. An old bathtub with its panel, an old shower tray or enclosure, a surface-mounted cistern with its casing, a bidet and loose furniture are not wall elements: removing them is no loss. ' +
+    'Set wall_element_lost true if image 1 has a recess, alcove, niche, wall offset, corner step or wall projection anywhere in the room, in the shower area or elsewhere, that image 2 no longer has because it was filled in, closed or straightened into one flat wall, or that image 2 shows cut back, covered by the shower or with an edge, an end or its base at another place. Compare, where both images show them, its vertical edges and ends down to the floor and its base, the line where it meets the floor: one that lies clearly higher, lower or further left or right in the picture than in image 1 counts; a wall projection with a radiator on it counts too. An old bathtub with its panel, an old shower tray or enclosure, a surface-mounted cistern with its casing, a bidet and loose furniture are not wall elements: removing them is no loss. ' +
     // Diego, 15.10.: der Heizkoerper behaelt Wand und Platz, auch als anderes Modell. Die Pruefung sagt nur, wo er nachher ist.
     'Set radiator to where the radiator or towel radiator of image 1 is in image 2, whatever its model: "in_place" on the same wall at the same place along it, "moved" on another wall or at another place along the wall, "gone" when image 2 has no radiator, "none" when image 1 has no radiator, "unknown" when you cannot tell. ' +
     'Set point_drain true only if the shower in image 2 has a round or square point drain or grate in its floor, rather than a long narrow channel drain along one wall; false when there is no shower or no drain is visible. ' +
@@ -2245,6 +2290,10 @@ async function checkOpenings(
     // controlli-openai-3 (26.10.): mit Vorlage entscheidet der Produktvergleich; in C-L2 sagte dieselbe Antwort mirror match mit
     // zwei Tueren und mirror_kept true. Die alte Frage zaehlt nur noch ohne Vorlage, etwa ohne WC oder Waschtisch im Foto.
     !refs.some((ref) => ref.role === 'mirror') && parsed.mirror_kept === true && 'the mirror above the washbasin is still the old one of the photo',
+    // 59-r2 (Root, 01.11.): mit Vorlage widerspricht ein bekanntes mirror_after dem gewaehlten Typ. Kein Beweis eines Fehlers, aber auch
+    // keine Bestaetigung: unsicher, das Bild bleibt zurueck, ohne zweiten Durchgang; Produktvergleich und Tueren zaehlen weiter fuer sich.
+    refs.some((ref) => ref.role === 'mirror') && (wanted.mirror === 'spiegel' ? parsed.mirror_after === 'cabinet' : wanted.mirror === 'spiegelschrank' && parsed.mirror_after === 'mirror')
+      && `the mirror type ${UNCONFIRMED}: the check names ${parsed.mirror_after === 'cabinet' ? 'a mirror cabinet' : 'a flat mirror'} above the washbasin, not the selected type`,
     !refs.some((ref) => ref.role === 'toilet') && parsed.toilet_kept === true && 'the toilet is still the old one of the photo',
     wanted.bathtubType === 'freistehend' && parsed.bathtub_after === 'built_in' && 'the bathtub is built in, but a freestanding bathtub was chosen',
     wanted.bathtubType === 'einbau' && parsed.bathtub_after === 'freestanding' && 'the bathtub stands free, but a built-in bathtub was chosen',
@@ -2504,7 +2553,8 @@ function compareInventory(
  * immer zu sehen. Ein "match" fuer ein Teil, das die Pruefung selbst nicht sieht, ist ebenso unsicher. Verdeckte Teile werden nur vermerkt.
  * Diego, 01.11. (E34, Lotto 37): "non possiamo verificarne modello, pulsante e base", "Ammetti con nota". Nennt die Pruefung
  * das Modul "not_visible" oder "unknown" und seinen Fuss "not_visible", wird es neutral vermerkt (MODULE_NOT_JUDGED), nie
- * als "match", und der Kunde erhaelt den Hinweis mit dem Bild. "different", "unknown" mit gesehenem oder fehlendem Fuss, jeder
+ * als "match", und der Kunde erhaelt den Hinweis mit dem Bild. Seit 57 (Root, 01.11., registry 56) gilt das auch fuer "match"
+ * mit verdecktem Fuss: die unvollstaendige Sicht bestaetigt Modell und Spueltaste nie. "different", "unknown" mit gesehenem oder fehlendem Fuss, jeder
  * andere Widerspruch und alle anderen Produkte halten weiter zurueck. Grenze (Carla): der verdeckte Fuss allein beweist nicht,
  * dass das Modul verdeckt ist; ein Bildfehler, den die Pruefung "unknown" nennt, kann so mit dem Hinweis hinausgehen.
  */
@@ -2547,7 +2597,7 @@ function compareProducts(refs: CheckRef[], answer: any, after: Inventory, mirror
     if (ref.role === 'module') {
       const floor = word(item?.floor, ['yes', 'no', 'not_visible']);
       if (floor === 'no') serious.push('the sanitary module does not stand on the floor');
-      else if (floor === 'not_visible') notes.push('the base of the sanitary module is hidden and was not judged');
+      else if (floor === 'not_visible') notes.push(MODULE_NOT_JUDGED);
       else if (floor !== 'yes') serious.push(`the floor contact of the sanitary module ${UNCONFIRMED}`);
     }
   }
