@@ -624,7 +624,9 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   // Probe trotzdem eine Platte wie von Geberit, und die Platte mit zwei runden Knoepfen stand im Verdacht, den Waschtisch
   // in P7 auf eine Platte zu setzen. Seither geht sie als plateImage mit.
   const wcImage = isAtelier ? CIELO_WC_PHOTO : WC_PHOTO;
-  const wcShape = isAtelier ? 'its smooth body that narrows towards its rounded underside, with a thin flat seat and lid' : 'its flat, squared back, rounded only at the front';
+  // Root, 02.11. (Diego: WC zu kurz): Masse des Produkts laut Datenblatt Scarabeo 5203/TW, 550 mm Ausladung ab Montageflaeche, 360 mm breit;
+  // keine Pixel-Toleranz. Derselbe Text geht in den Bildauftrag und in die Beschreibung fuer die Pruefung.
+  const wcShape = isAtelier ? 'its smooth body that narrows towards its rounded underside, with a thin flat seat and lid' : 'its elongated body of the Scarabeo 5203/TW, projecting 55 cm from its mounting face at the wall to its front and 36 cm wide, with a flat, squared back, rounded only at the front, keeping these proportions in perspective, never a compact, shortened bowl';
   // Die Armaturen als Produktfoto, weil die Worte allein nur allgemeine Armaturen ergaben (Aurelia am 20.09.,
   // Up+ in P3 und P4 vom 25.09.). Nur Armaturen, kein Raum. Ohne Dusche nur die Waschtischarmatur, im Bild wie
   // im Text: mit dem Duschset zeichnete das Modell am 25.09. (Jonathan, Atelier ohne Dusche) ueber der

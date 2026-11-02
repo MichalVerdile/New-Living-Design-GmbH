@@ -243,7 +243,7 @@ test('Aufputz and Unterputz produce explicit, exclusive toilet branches', async 
       assert.match(prompt, /pill-shaped steel push button with a plus and a minus; no flush plate, never sunk into the wall, not tiled/);
       // P4 und P8 vom 26.09.: ein WC wie das alte. Das neue WC geht als Bild mit (Glam Twist 5203/TW).
       // P1 vom 26.09.: von der Seite ein WC wie das alte. Die Form des Glam Twist steht jetzt auch im Text.
-      assert.match(prompt, /the toilet is the new toilet of image \d+ with its flat, squared back, rounded only at the front, never shaped like the old one, wall-hung and rimless in .*hangs on the module at exactly the old toilet position/);
+      assert.match(prompt, /the toilet is the new toilet of image \d+ with its elongated body of the Scarabeo 5203\/TW, projecting 55 cm from its mounting face at the wall to its front and 36 cm wide, with a flat, squared back, rounded only at the front, keeping these proportions in perspective, never a compact, shortened bowl, never shaped like the old one, wall-hung and rimless in .*hangs on the module at exactly the old toilet position/);
       assert.doesNotMatch(prompt, /new flush plate/);
       // Ein Holzsitz auf weisser Keramik war einer der Befunde vom 16.09.
       assert.match(prompt, /with seat and lid in the same .*, not wood/);
@@ -2873,7 +2873,7 @@ test('Produktdurchgang: das gepruefte Bild geht mit den Produktbildern nochmals 
   assert.match(prompt, /Images 2 to 5 show only products: take nothing from their background, no wall, tile or floor\./);
   assert.doesNotMatch(prompt, /same proportions|plain background/);
   // Das Bild des Glam Twist zeigt das Becken ohne Sitz.
-  assert.match(prompt, /\nImage 2, the toilet: it becomes exactly the toilet of image 2, with its flat, squared back, rounded only at the front, wall-hung and rimless, in white, with seat and lid in the same white, not wood; image 2 shows the bowl without its seat, which is thin and flat\./);
+  assert.match(prompt, /\nImage 2, the toilet: it becomes exactly the toilet of image 2, with its elongated body of the Scarabeo 5203\/TW, projecting 55 cm from its mounting face at the wall to its front and 36 cm wide, with a flat, squared back, rounded only at the front, keeping these proportions in perspective, never a compact, shortened bowl, wall-hung and rimless, in white, with seat and lid in the same white, not wood; image 2 shows the bowl without its seat, which is thin and flat\./);
   // Weisse Keramik: kein Satz zur Farbe.
   assert.doesNotMatch(prompt, /keeps? (its|their) shape and place/);
   assert.match(prompt, /\nImage 3, the flush plate of the toilet: it becomes exactly the OLI Blink plate of image 3, in polished chrome: a flat rectangular plate, wider than high, with two equal round solid metal knobs about 3 cm across that stand slightly out of it side by side at mid-height, the gap between them a little wider than one knob, a small plus just below the left one and a small minus just below the right one, and nothing else on the plate\./);
