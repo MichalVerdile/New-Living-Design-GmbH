@@ -269,7 +269,7 @@ test('Aufputz and Unterputz produce explicit, exclusive toilet branches', async 
       // Unterputz: die neue Platte OLI Blink in der Oberflaeche der Armaturen (Diego, 26.09.). Sechste Probe: in allen
       // Bildern eine Platte wie von Geberit, mit einem grossen und einem kleinen Knopf (Ausschnitt von Diego).
       // Gegenpruefung vom 27.09.: beschrieben wird die Platte aus dem Bild, nicht die von Geberit, die nicht kommen soll.
-      assert.match(prompt, /its old flush plate is replaced, at the same place on the wall, by a new flat rectangular flush plate in polished chrome, wider than high, with two equal round solid metal knobs about 3 cm across that stand slightly out of it side by side at mid-height, the gap between them a little wider than one knob, a small plus just below the left one and a small minus just below the right one, and nothing else on the plate/);
+      assert.match(prompt, /its old flush plate is replaced, at the same place on the wall, by a new flat rectangular flush plate in brushed stainless steel matching the OLI Blink product reference, wider than high, with two equal round solid metal knobs about 3 cm across that stand slightly out of it side by side at mid-height, the gap between them a little wider than one knob, a small plus just below the left one and a small minus just below the right one, and nothing else on the plate/);
       assert.doesNotMatch(prompt, /one big and one small/);
       assert.match(JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails').body), /Betätigungsplatte.{0,80}OLI Blink/);
     }
@@ -1016,7 +1016,7 @@ test('Unterputz carries no module image and forbids a module in front of the wal
   const plate = Number(/Image (\d+) is only a product photo of the new flush plate: copy its shape, not its finish\./.exec(prompt)?.[1]);
   assert.equal(parts.filter((part) => part.inlineData)[plate - 1]?.inlineData.data, wc.FLUSH_PLATE_PHOTO.data);
   assert.match(prompt, new RegExp(`Image ${plate + 1} is only a product photo of the new toilet bowl`));
-  assert.match(prompt, /its old flush plate is replaced, at the same place on the wall, by a new flat rectangular flush plate in polished chrome, wider than high, with two equal round solid metal knobs about 3 cm across that stand slightly out of it side by side at mid-height, the gap between them a little wider than one knob, a small plus just below the left one and a small minus just below the right one, and nothing else on the plate/);
+  assert.match(prompt, /its old flush plate is replaced, at the same place on the wall, by a new flat rectangular flush plate in brushed stainless steel matching the OLI Blink product reference, wider than high, with two equal round solid metal knobs about 3 cm across that stand slightly out of it side by side at mid-height, the gap between them a little wider than one knob, a small plus just below the left one and a small minus just below the right one, and nothing else on the plate/);
   assert.match(prompt, /no sanitary module is added/);
 });
 
@@ -1358,7 +1358,7 @@ test('unavailable checker retries once, holds the image back, delivers the lead 
 test('ein Ausfall des Bilddienstes wird gemeldet, der Lead aber nicht weggeworfen', async () => {
   // Diegos Probe vom 17.09: erster Versuch scheiterte, und es kam gar keine Mail.
   // Der Kunde hatte das ganze Formular ausgefuellt, wir hatten davon nichts.
-  for (const settings of [{ generateDelays: [150001] }, { generations: [() => generated('AAAA')] }, { generations: [() => generated(JPEG, { output_format: 'webp' })] }]) {
+  for (const settings of [{ generateDelays: [220001] }, { generations: [() => generated('AAAA')] }, { generations: [() => generated(JPEG, { output_format: 'webp' })] }]) {
     const h = harness(settings); const res = await h.invoke();
     assert.equal(res.statusCode, 502);
     assert.equal(res.body.code, 'RENDER_FAILED');
@@ -1749,7 +1749,7 @@ test('slow response body is timed out, not only response headers', async () => {
   const h = harness({ generations: [() => new Response(new ReadableStream({ cancel() { cancelCalled = true; } }), { headers: { 'content-type': 'application/json' } })] });
   const pending = h.invoke();
   for (let i = 0; i < 30 && h.counts().generation === 0; i += 1) await Promise.resolve();
-  h.clock.advance(150000);
+  h.clock.advance(220000); // 86: ohne Wartezeit davor laeuft das Bild bis 260 - 40 s
   const res = await pending;
   assert.equal(res.statusCode, 502); assert.equal(cancelCalled, true); assert.equal(h.counts().mail, 1);
 });
@@ -2447,6 +2447,13 @@ test('Armaturen: Essenza zeigt die Form von Treemme Up+, nicht irgendeine Armatu
   assert.match(prompt, /mixer with a flat top standing on the countertop or the washbasin/);
   // Aufputz: in der Dusche der sichtbare Mischer (Diego, 20.09.), mit Steigrohr und runder Kopfbrause.
   assert.match(prompt, /exposed shower column: .*standing clearly out from the tiles .*not a flat concealed plate.*riser pipe .*large thin round overhead shower/);
+  const handshower = "with a slim stick hand shower held upright in a slider on the riser, the holder and the hand shower to the left of the riser when facing the column, as in its product reference, and its hose hanging on that same side down to the mixer bar";
+  assert.ok(prompt.includes(handshower));
+  assert.ok(h.calls.filter(isRead).some((call) => call.request.input[0].content[0].text.includes(handshower)));
+  // 83 (Faelle 79 und 82): Steigrohr aus der Mitte des Mischerkoerpers und alle Teile wie im Produktfoto, im Bildauftrag und in der Pruefung.
+  const joints = ['from the central part of the bar body, never near a knob or an end of the bar, a slim round riser pipe runs straight up', 'bar body, riser joint, arm, overhead shower and hand shower with its slider all shaped and joined as in that product reference'];
+  assert.ok(joints.every((text) => prompt.includes(text)));
+  assert.ok(h.calls.filter(isRead).some((call) => joints.every((text) => call.request.input[0].content[0].text.includes(text))));
   // Die Produktbilder von Treemme gehen als letzte Vorlage mit (P3 vom 25.09.: ohne Bild kein Up+).
   const images = parts.filter((part) => part.inlineData);
   assert.match(prompt, new RegExp(`Image ${images.length - 1} is only a product photo of the washbasin tap`));
@@ -2876,7 +2883,7 @@ test('Produktdurchgang: das gepruefte Bild geht mit den Produktbildern nochmals 
   assert.match(prompt, /\nImage 2, the toilet: it becomes exactly the toilet of image 2, with its elongated body of the Scarabeo 5203\/TW, projecting 55 cm from its mounting face at the wall to its front and 36 cm wide, with a flat, squared back, rounded only at the front, keeping these proportions in perspective, never a compact, shortened bowl, wall-hung and rimless, in white, with seat and lid in the same white, not wood; image 2 shows the bowl without its seat, which is thin and flat\./);
   // Weisse Keramik: kein Satz zur Farbe.
   assert.doesNotMatch(prompt, /keeps? (its|their) shape and place/);
-  assert.match(prompt, /\nImage 3, the flush plate of the toilet: it becomes exactly the OLI Blink plate of image 3, in polished chrome: a flat rectangular plate, wider than high, with two equal round solid metal knobs about 3 cm across that stand slightly out of it side by side at mid-height, the gap between them a little wider than one knob, a small plus just below the left one and a small minus just below the right one, and nothing else on the plate\./);
+  assert.match(prompt, /\nImage 3, the flush plate of the toilet: it becomes exactly the OLI Blink plate of image 3, in brushed stainless steel matching the OLI Blink product reference: a flat rectangular plate, wider than high, with two equal round solid metal knobs about 3 cm across that stand slightly out of it side by side at mid-height, the gap between them a little wider than one knob, a small plus just below the left one and a small minus just below the right one, and nothing else on the plate\./);
   assert.match(prompt, /\nImage 4, the tap at each washbasin: it becomes exactly the fitting of image 4: exposed surface-mounted \(Aufputz\) Treemme Up\+ fittings/);
   assert.match(prompt, /\nImage 5, the mirror above the washbasin: it becomes exactly the mirror of image 5: a new rectangular mirror cabinet/);
   assert.doesNotMatch(prompt, /shower fittings|bath mixer|sanitary module/);
@@ -3960,11 +3967,15 @@ test('Vertrag Ideenbild (57): unvollstaendig, ohne, mehrere oder falsche Bilder 
   }
 });
 
-test('Vertrag Zeitablauf (57): das Ideenbild darf 150 s brauchen, ueber 150 s bricht es ab, ohne Bild und ohne offene Zeitgeber', async () => {
-  const within = harness({ generateDelays: [149000] });
+test('Vertrag Zeitablauf (86): das Ideenbild nimmt den Rest bis auf Pruefung und Mails, auch ueber 150 s; darueber bricht es ab, ohne Bild und ohne offene Zeitgeber', async () => {
+  // Root, 03.11. (84 und 85): der feste Hoechstwert von 150 s schnitt das Bild ab, obwohl Zeit fuer Pruefung und Mails blieb. Ohne Wartezeit
+  // davor bleiben dem Bild 260 - 40 = 220 s: ein Bild von 219 s wird mit 29 s Pruefung geprueft und gezeigt, innerhalb von 260 s.
+  const within = harness({ generateDelays: [219000], checkDelays: [29000] });
+  const start = within.clock.now();
   assert.equal((await within.invoke()).statusCode, 200);
   assert.deepEqual(within.counts(), { generation: 1, checks: 1, mail: 2 });
-  const h = harness({ generateDelays: [151000] });
+  assert.ok(within.clock.now() - start <= 260000);
+  const h = harness({ generateDelays: [221000] });
   const res = await h.invoke();
   assert.equal(res.statusCode, 502); assert.equal(res.body.image, undefined);
   assert.match(JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails').body), /Timeout/);
@@ -4194,6 +4205,11 @@ test('Blink schwarz nur mit Nero Opaco und Unterputz (Lotto 28): jede andere Far
       becken: options.basinTypes[0].id, armaturenserie: 'treemme-ran', finish, keramik: options.sanitary[0].id, wall: options.walls[0].id,
       dusche: options.showers[0].id, badewanne: options.bathtubs[0].id, waschtisch: options.basins[0].id, spiegel: options.mirrors[0].id, cistern }));
     assert.equal(res.statusCode, 200, `${finish} ${cistern}`);
+    if (finish === 'treemme-cromo' && cistern === 'unterputz') {
+      const text = h.calls.filter(isRead).map((call) => call.request.input[0].content[0].text).join('\n');
+      assert.ok(text.includes('flush_plate: the flush plate of the toilet, in brushed stainless steel matching the OLI Blink product reference:'));
+      assert.ok(!text.includes('flush_plate: the flush plate of the toilet, in polished chrome:'));
+    }
     const sent = [...h.calls.filter((call) => call.url === OPENAI_RESPONSES).flatMap((call) => call.request.input[0].content.filter((part) => part.type === 'input_image')
         .map((part) => part.image_url.slice(part.image_url.indexOf(',') + 1)))];
     return { black: sent.includes(wc.FLUSH_PLATE_BLACK_PHOTO.data), chrome: sent.includes(wc.FLUSH_PLATE_PHOTO.data) };
@@ -4273,6 +4289,10 @@ test('Dusche der vier Serien: Saeule bei Up+ Aufputz, drei Wandteile bei Up+ Unt
     assert.equal((await ok.invoke(body)).statusCode, 200, family);
     assert.equal(ok.counts().generation, 1, family);
     assert.equal(ok.supportCount(), expected.type === 'concealed' ? 1 : 0, family);
+    const question = ok.calls.filter(isRead).map((call) => call.request.input[0].content[0].text).find((text) => text.includes('PRODUCTS, in image 2 only'));
+    const columnRules = ['For a shower column the match needs its parts joined as in its description and reference', 'one side of the bar body is much shorter than the other',
+      'never the wall rosettes', 'strongly foreshortened, and no other clear difference can be seen, set "unknown"', 'in the picture alone does not establish a difference'];
+    assert.deepEqual(columnRules.map((rule) => question.includes(rule)), columnRules.map(() => expected.type === 'column'), family);
     // Lotto 1, Colore: drei runde Teile uebereinander und ein eigener Halter fuer die Handbrause.
     const stacked = { match: 'match', type: 'concealed', pieces: 3, row: 'vertical', handshower: 'separate_holder' };
     const wrong = harness({ rawChecks: true, checks: [(init) => fullAnswer(body, init, {}, { shower_set: stacked }), (init) => fullAnswer(body, init, {}, { shower_set: { match: 'match', ...expected } })] });

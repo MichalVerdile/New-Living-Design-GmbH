@@ -133,16 +133,16 @@ const MAX_SWATCH_BYTES = 5 * 1024 * 1024; // current catalog originals include f
 // lief nur, wenn der erste unter rund 43 s blieb. Um 12:25 lief er und das Bild kam durch.
 // 220 s reichten mit Gemini fuer zwei Durchgaenge in der langsamsten Form (2 x 90 s) plus Mails; mit Bildern von 88 bis
 // 100 s (Root, 31.10.) reichen sie fuer einen, ein zweiter laeuft nur nach einem schnellen ersten (Schranke unten).
-// Root, 01.11. (Kandidat 52, Bild seit 57 bis 150 s): Vorpruefung 60 s, Bild, Lesung des Halts 60 s neben der Pruefung, Mails 10 s;
+// Root, 01.11. (Kandidat 52; seit 86 ohne festen Hoechstwert fuer das Bild): Vorpruefung 60 s, Bild, Lesung des Halts 60 s neben der Pruefung, Mails 10 s;
 // zusammen mehr als 260 s moeglich, darum nimmt das Bild nur den Rest nach den Reserven von 70 oder 40 s (generateImage).
 const TOTAL_TIMEOUT_MS = 260000; // 10 seconds below the platform limit (vercel.json maxDuration 270)
 const DELIVERY_RESERVE_MS = 10000; // Lead- und Kundenmail brauchen zusammen 2 bis 5 s (Logs 19.09.)
 const PER_DEVICE_PER_DAY = 5;                 // Cookie nldbp
 const PER_IP_PER_DAY = 10;                    // In-Memory, muss über dem Gerätelimit liegen
-// Root, 31.10.: Images edits mit gpt-image-2.5-sunburst in Qualitaet max brauchte 88 bis 100 s (damals 125 s). Root, 01.11. (57):
-// Responses mit dem Werkzeug image_generation brauchte im Prototyp 55 122.6 s, darum 150 s. Ein Hoechstwert, keine Zusage: generateImage nimmt
-// davon nur, was nach Pruefung und Mails im Budget bleibt. Abbruch und Zahl der Versuche bleiben wie bisher.
-const IMAGE_TIMEOUT_MS = 150000;
+// Root, 31.10.: Images edits mit gpt-image-2.5-sunburst in Qualitaet max brauchte 88 bis 100 s, Responses im Prototyp 55 122.6 s.
+// Kandidat 86 (Root, 03.11.): kein fester Hoechstwert mehr fuer das Bild. In 84 und 85 brach es bei den damaligen 150 s ab, obwohl nach
+// Pruefung und Mails noch rund 26 und 10 s im Budget waren; generateImage nimmt jetzt den ganzen Rest bis auf die Reserven von 40 oder 70 s.
+// Budget 260 s, Reserven, Abbruch und Zahl der Versuche bleiben wie bisher.
 // 20.09., 09:25 (Preview, 87 s): Fotopruefung 16 s, Bild 28 s, Pruefung nach 25 s abgelaufen,
 // dieselbe Pruefung nochmals 17 s. Beide Pruefungen denken jetzt nur wenig (heute checkReasoning),
 // darum reichen kuerzere Grenzen; die alten waren auf "medium" zugeschnitten.
@@ -618,6 +618,7 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   // diesem Bild (checkRefs), das Bildmodell bekam bis dahin nur ihren Satz.
   // Lotto 28: in Nero Opaco die schwarze Platte als eigenes Bild, jede andere Farbe behaelt das bisherige.
   const plateImage = cistern === 'unterputz' ? (finish.id === 'treemme-nero-opaco' ? FLUSH_PLATE_BLACK_PHOTO : FLUSH_PLATE_PHOTO) : null;
+  const plateFinish = finish.id === 'treemme-cromo' ? 'brushed stainless steel matching the OLI Blink product reference' : finish.prompt;
   // Das neue WC als Bild (Diego, 26.09.): mit Worten allein blieb in P4 und P8 ein WC wie das alte. In der fuenften
   // Probe war es 7 von 8 Mal das neue. Das Atelier hat die Keramik von Cielo, das WC Mare (Diego, 27.09.). Die Platte
   // OLI Blink ging bis zum 30.10. im ersten Durchgang nur als Text mit: ihr Bild ergab in P2, P4, P7 und P8 der fuenften
@@ -693,7 +694,7 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   const noBasin = photoWalls?.washbasin === 'none';
   const products = ([
     [noToilet ? null : wcImage, (n: number) => `Image ${n}, the toilet: it becomes exactly the toilet of image ${n}, with ${wcShape}, wall-hung and rimless, in ${sanitary.prompt}, with seat and lid in the same ${sanitary.prompt}, not wood${isAtelier ? '' : `; image ${n} shows the bowl without its seat, which is thin and flat`}.`],
-    [!noToilet && cistern === 'unterputz' ? plateImage : null, (n: number) => `Image ${n}, the flush plate of the toilet: it becomes exactly the OLI Blink plate of image ${n}, in ${finish.prompt}: ${BLINK_PLATE}.`],
+    [!noToilet && cistern === 'unterputz' ? plateImage : null, (n: number) => `Image ${n}, the flush plate of the toilet: it becomes exactly the OLI Blink plate of image ${n}, in ${plateFinish}: ${BLINK_PLATE}.`],
     [noToilet ? null : moduleImage, (n: number) => `Image ${n}, the sanitary module behind the toilet: it becomes exactly the OLI QR module of image ${n}: ${QR_MODULE.replace('that wall', 'the wall').replace('in front of it', 'in front of the wall')}; no flush plate. Where image 1 shows it flatter, sunk in or boxed in, it stands out to this depth, and the toilet hangs on its front.`],
     [noBasin ? null : tapsImage, (n: number) => `Image ${n}, the tap at each washbasin: it becomes exactly the fitting of image ${n}: ${basinTaps.replace(/, all fittings for the requested fixtures from the same series and in the same [^,;]+ finish$/, '')}.`],
     // Die Wand des Duschsets sagt die Vorpruefung, wie im ersten Durchgang; sonst die Wand der Handbrause im Bild. P2 der
@@ -725,7 +726,7 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
     [!!bathImage, 'bath_tap', bathImage, `the bath mixer, in ${finish.prompt}: ${bathFiller.replace(/^; /, '').replace(' of the same series and finish', '')}`],
     [!noToilet, 'toilet', wcImage, `the toilet, ${wcShape}, wall-hung and rimless, in ${sanitary.prompt}`],
     [!noToilet && cistern === 'aufputz', 'module', moduleImage, `the sanitary module behind the toilet: ${QR_MODULE}`],
-    [!noToilet && cistern === 'unterputz', 'flush_plate', plateImage, `the flush plate of the toilet, in ${finish.prompt}: ${BLINK_PLATE}`],
+    [!noToilet && cistern === 'unterputz', 'flush_plate', plateImage, `the flush plate of the toilet, in ${plateFinish}: ${BLINK_PLATE}`],
     [!noBasin && !!mirrorImage, 'mirror', mirrorImage, `the mirror above the washbasin, a ${mirror.prompt.replace(/,? as wide as the vanity/, '')}`], // 59 (Root, 01.11.): keine Breite und kein SKU waehlbar; die Breite bleibt Vorliebe des Bildauftrags, kein Pruefkriterium
   ] as [boolean, ProductRole, Photo | null, string][]).filter(([when]) => when).map(([, role, image, text]): CheckRef => ({ role, image, text,
     ...(role === 'shower_set' && showerSet ? { shower: showerSet } : {}), ...(role === 'mirror' ? { doors: mirror.id === 'spiegelschrank' ? CABINET_DOORS : 0 } : {}) }));
@@ -776,7 +777,7 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
     plateImageNumber: imageNumber(plateImage),
     wcImageNumber: imageNumber(wcImage),
     wcShape,
-    plateFinish: finish.prompt,
+    plateFinish,
     tapsImageNumber: imageNumber(tapsImage),
     showerImageNumber: imageNumber(showerImage),
     bathImageNumber: imageNumber(bathImage),
@@ -1646,7 +1647,8 @@ function tapDescription(
     // mit Stifthebel seitlich oben und langem flachem Auslauf; Dusche IT 6B60, Aufputzmischer mit Steigrohr und runder Kopfbrause.
     // Aufputz (Diego, 20.09.): die Probe von 09:56 zeigte in der Dusche eine Unterputz-Rosette. Darum steht der
     // sichtbare Koerper ausdruecklich da, und am Waschtisch die Standarmatur statt eines Wandauslaufs.
-    prompt: 'exposed surface-mounted (Aufputz) Treemme Up+ fittings in polished chrome for the requested fixtures only, slim and plain: at the washbasin a slim cylindrical single-lever mixer with a flat top standing on the countertop or the washbasin, as tall as the basin needs, with a thin pin lever sticking out on its side near the top and just below it a long flat spout sloping down from the body and bending down at its tip; in a shower an exposed shower column: a slim round horizontal chrome mixer bar about 25 cm long with a round knob at each end, standing clearly out from the tiles on two short wall connectors, not a flat concealed plate, and from its middle a slim round riser pipe runs straight up the same wall and at the top bends forward into a short arm that holds a large thin round overhead shower, with a slim stick hand shower in a slider on the riser and its hose hanging down to the mixer bar',
+    // 83 (Diego, 03.11., Faelle 79 und 82): das Steigrohr kommt aus der Mitte des Mischerkoerpers, nie bei einem Knauf oder Ende; alle Teile wie im Produktfoto.
+    prompt: 'exposed surface-mounted (Aufputz) Treemme Up+ fittings in polished chrome for the requested fixtures only, slim and plain: at the washbasin a slim cylindrical single-lever mixer with a flat top standing on the countertop or the washbasin, as tall as the basin needs, with a thin pin lever sticking out on its side near the top and just below it a long flat spout sloping down from the body and bending down at its tip; in a shower an exposed shower column: a slim round horizontal chrome mixer bar about 25 cm long with a round knob at each end, standing clearly out from the tiles on two short wall connectors, not a flat concealed plate, and from the central part of the bar body, never near a knob or an end of the bar, a slim round riser pipe runs straight up the same wall and at the top bends forward into a short arm that holds a large thin round overhead shower, with a slim stick hand shower held upright in a slider on the riser, the holder and the hand shower to the left of the riser when facing the column, as in its product reference, and its hose hanging on that same side down to the mixer bar: bar body, riser joint, arm, overhead shower and hand shower with its slider all shaped and joined as in that product reference',
     label: seriesText,
   };
 }
@@ -1941,7 +1943,7 @@ async function generateImage(prompt: string, photo: Photo, references: (Photo | 
       method: 'POST',
       headers: { authorization: `Bearer ${env.OPENAI_API_KEY || ''}`, 'content-type': 'application/json' },
       body: JSON.stringify(body),
-    }, Math.min(IMAGE_TIMEOUT_MS, Math.max(0, ctx.budget.remaining() - reserveMs)));
+    }, Math.max(0, ctx.budget.remaining() - reserveMs));
     const json = r.json;
     if (!r.ok) {
       const apiMessage = typeof json?.error?.message === 'string' ? json.error.message.slice(0, 160) : '';
@@ -2098,6 +2100,8 @@ async function checkOpenings(
       + 'For each key compare what image 2 shows at that place with its description and reference: "match" when shape, colour and finish clearly agree; "different" when they clearly do not, or when the product is missing although its place can be seen; '
       + '"not_visible" only when that thing is hidden behind something or outside the picture in image 2, never when it can be seen, even small or in part; "unknown" when it can be seen but you cannot decide. '
       + (refs.some((ref) => ref.shower) ? 'For shower_set also report what image 2 shows: type "column" for an exposed riser pipe, "concealed" for separate pieces set on the wall, or "none"; pieces, the number of separate wall pieces in the row of controls and hand shower only (round rosettes or small plates, the hose outlet included; the wall mount and arm of the overhead shower never count; 0 for a column); row, for that row only: "horizontal" when its pieces stand side by side at the same height on the wall, also where the perspective foreshortens that wall, "vertical" when they stand one above the other, "other", or "none"; handshower, where the hand shower is held: "riser", "end_piece" for the piece at one end of the row, "separate_holder", or "none". For type, row and handshower use "none" only when that part is clearly absent and "unknown" when you cannot tell; give pieces as null when you cannot count them. ' : '')
+      // 83 (Diego, 03.11., Faelle 79 und 82): bei der Saeule zaehlen die Verbindungen, nicht nur Typ und Teile; die Richtung der Kopfbrause im Bild allein ist kein Unterschied.
+      + (refs.some((ref) => ref.shower?.type === 'column') ? 'For a shower column the match needs its parts joined as in its description and reference, not only the type column and its pieces: compare the mixer bar body and its riser joint, arm, overhead shower and hand shower with slider. Set "different" for a clear change in shape or connections, including a riser joined clearly off-centre so that one side of the bar body is much shorter than the other, or the hand shower and its slider clearly on the wrong side of the riser. Judge the two ends of the bar body taking perspective into account, never the wall rosettes. If the bar joint cannot be judged because an end is hidden or the bar is strongly foreshortened, and no other clear difference can be seen, set "unknown". The side to which the arm and overhead shower point in the picture alone does not establish a difference. ' : '')
       + (refs.some((ref) => ref.doors !== undefined) ? 'For mirror also give doors, the number of mirror doors you can see, 0 for a mirror without a cabinet. ' : '')
       + (refs.some((ref) => ref.role === 'module') ? 'For module also give floor: "yes" when it stands on the floor, "no" when it clearly hangs above it, "not_visible" when the toilet or the edge of the picture hides its base. '
         + 'Its match may be "not_visible" also when only a narrow strip of the module is in the picture, cut by the edge of the picture or a door frame or behind the toilet, so that neither its front nor its flush button can be judged; its floor is then "not_visible" too. '
