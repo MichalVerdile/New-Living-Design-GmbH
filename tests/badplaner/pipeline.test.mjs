@@ -4689,3 +4689,33 @@ test('Kandidat 59 (Root, 01.11.): die Breite des Spiegels ist keine Wahl; "as wi
   assert.match(noRefMail, /a mirror cabinet hangs above the washbasin, but a flat mirror was chosen/);
   assert.doesNotMatch(noRefMail, /mirror type could not be confirmed/);
 });
+
+test('96: product review notes remain in server logs without camera labels or changes to withholding and retries', async (t) => {
+  const info = t.mock.method(console, 'info', () => {});
+  const body = payload({ dusche: 'walk-in', badewanne: 'keine', spiegel: 'spiegelschrank' });
+  const reason = 'The hand-shower arm reaches bare riser instead of its slider collar';
+  for (const [state, status, generations] of [['different', 502, 2], ['unknown', 502, 1], ['match', 200, 1]]) {
+    info.mock.resetCalls();
+    const reply = (init) => fullAnswer(body, init, { reason, view_changed: false }, { shower_set: {
+      match: state, type: 'column', pieces: 0, row: 'none', handshower: 'riser',
+    } });
+    const h = harness({ rawChecks: true, checks: [reply, reply] });
+    const result = await h.invoke(body);
+    assert.equal(result.statusCode, status, state);
+    assert.equal(h.counts().generation, generations, state);
+    assert.equal(h.counts().checks, generations, state);
+    const notes = info.mock.calls.filter((call) => call.arguments[0] === '[badplaner] Pruefnotiz bei Produkthinweis:');
+    assert.equal(notes.length, state === 'match' ? 0 : generations, state);
+    for (const note of notes) assert.equal(note.arguments[1], reason);
+    const mails = JSON.stringify(h.calls.filter((call) => call.url === 'https://api.resend.com/emails').map((call) => call.body));
+    assert.doesNotMatch(mails, /Bildausschnitt verändert|Pruefnotiz bei Produkthinweis|bare riser/);
+    if (state === 'different') assert.match(mails, /the shower set does not match the selected product/);
+    if (state !== 'match') assert.equal(result.body.image, undefined);
+    const generationPrompt = h.calls.find((call) => isImage(call.request)).request.input[0].content[0].text;
+    const qcPrompt = h.calls.find((call) => isRead(call) && call.request.input[0].content.filter((part) => part.type === 'input_image').length >= 2).request.input[0].content[0].text;
+    for (const prompt of [generationPrompt, qcPrompt]) {
+      assert.match(prompt, /a slider collar wraps around the riser at the height of the lower end/);
+      assert.match(prompt, /A short solid arm runs from this slider collar to the hand-shower holder/);
+    }
+  }
+});
