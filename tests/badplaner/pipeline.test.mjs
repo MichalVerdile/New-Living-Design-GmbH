@@ -2442,7 +2442,7 @@ test('Armaturen: Essenza zeigt die Form von Treemme Up+, nicht irgendeine Armatu
   const parts = h.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts;
   const prompt = parts[0].text;
   // Artikel vom 25.09.: Waschtisch IT 6B18 (Stifthebel seitlich oben, langer flacher Auslauf), Dusche IT 6B60 Aufputz.
-  assert.match(prompt, /Treemme Up\+ fittings in polished chrome .*thin pin lever sticking out on its side near the top and just below it a long flat spout sloping down from the body and bending down at its tip/);
+  assert.match(prompt, /Treemme Up\+ fittings in polished chrome .*thin pin lever sticking out on its side near the top and just below it a long flat blade spout with planar faces, sloping down from the body to an angular downturned tip/);
   assert.doesNotMatch(prompt, /long round tube spout/);
   assert.match(prompt, /mixer with a flat top standing on the countertop or the washbasin/);
   // Aufputz: in der Dusche der sichtbare Mischer (Diego, 20.09.), mit Steigrohr und runder Kopfbrause.
@@ -2504,7 +2504,7 @@ test('Armaturen: Colore mit Up+ hat in der Dusche drei runde Rosetten, keine Pla
   const parts = h.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts;
   assert.match(parts[0].text, /in a shower three small round wall rosettes in one row at the same height: .*stick hand shower .*thin pin lever hanging down, .*thin round overhead shower on a round tube arm/);
   // Ablauf-Lauf vom 26.10.: am Waschtisch ein runder, gebogener Rohrauslauf statt des flachen Auslaufs von IT 6B18.
-  assert.match(parts[0].text, /a long flat spout sloping down from the body and bending down at its tip/);
+  assert.match(parts[0].text, /a long flat blade spout with planar faces, sloping down from the body to an angular downturned tip/);
   assert.doesNotMatch(parts[0].text, /long round tube spout/);
   assert.doesNotMatch(parts[0].text, /rectangular wall plate|slide bar/);
   const images = parts.filter((part) => part.inlineData);
