@@ -58,13 +58,25 @@ function fakeClock() {
 }
 
 const response = (body, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
-// Risposte simulate nel formato della OpenAI Responses API: le letture (output_text) e, dalla 57, l'Ideenbild dal solo tool
-// image_generation: un image_generation_call completato con il JPEG in base64 nel result (call e outer cambiano singoli campi).
+// Letture simulate in formato Responses; generazione in formato Images API data/b64_json.
+// transport e input sono solo la vista del harness: la richiesta reale resta la FormData conservata in init.body.
 const OPENAI_RESPONSES = 'https://api.openai.com/v1/responses';
-const isImage = (request) => request?.tools?.[0]?.type === 'image_generation';
+const OPENAI_IMAGES = 'https://api.openai.com/v1/images/edits';
+const isImage = (request) => request?.transport === 'images/edits';
 const isRead = (entry) => entry.url === OPENAI_RESPONSES && !isImage(entry.request);
-const generated = (data = JPEG, call = {}, outer = {}) => response({ status: 'completed', output: [{ type: 'reasoning', summary: [] },
-  { type: 'image_generation_call', status: 'completed', output_format: 'jpeg', result: data, ...call }, { type: 'message', role: 'assistant', content: [] }], ...outer });
+const generated = (data = JPEG, item = {}, outer = {}) => response({ data: [{ b64_json: data, ...item }], ...outer });
+
+async function multipartView(form) {
+  const entries = [...form.entries()];
+  const fields = Object.fromEntries(entries.filter(([, value]) => typeof value === 'string'));
+  const uploads = await Promise.all(entries.filter(([, value]) => typeof value !== 'string').map(async ([field, file]) => ({
+    field, filename: file.name, mime: file.type, bytes: Buffer.from(await file.arrayBuffer()),
+  })));
+  const content = [{ type: 'input_text', text: fields.prompt }, ...uploads.map((file) => ({
+    type: 'input_image', image_url: `data:${file.mime};base64,${file.bytes.toString('base64')}`, detail: 'high',
+  }))];
+  return { fields, uploads, request: { transport: 'images/edits', ...fields, input: [{ role: 'user', content }] } };
+}
 const answer = (text) => Object.assign(response({ status: 'completed', output: [{ type: 'message', role: 'assistant', content: [{ type: 'output_text', text, annotations: [] }] }] }), { text });
 const photoChecked = (isBathroom = true, text) => answer(text ?? JSON.stringify({ is_bathroom: isBathroom, reason: 'toilet and washbasin visible' }));
 const inv = (changes = {}) => ({ toilet: 'left', washbasin: 'left', shower: 'none', bathtub: 'none', bidet: 'none', ...changes });
@@ -129,13 +141,14 @@ function harness(settings = {}) {
   let generation = 0; let checks = 0; let photoChecks = 0; let mail = 0; let ids = 0; let supports = 0;
   const fetch = async (url, init = {}) => {
     const openai = url.startsWith('https://api.openai.com/');
-    let request; try { request = openai ? JSON.parse(init.body) : undefined; } catch { request = undefined; }
+    const multipart = init.body instanceof FormData ? await multipartView(init.body) : undefined;
+    let request; try { request = multipart?.request ?? (openai ? JSON.parse(init.body) : undefined); } catch { request = undefined; }
     const body = openai ? request && viewOf(request) : init.body ? JSON.parse(init.body) : undefined;
-    calls.push({ url, init, body, request });
+    calls.push({ url, init, body, request, multipart });
     assert.equal(init.redirect, 'error', 'provider redirects must not bypass URL policy');
     assert.ok(init.signal instanceof AbortSignal);
     if (openai) {
-      assert.ok(url === OPENAI_RESPONSES, `Unexpected OpenAI URL: ${url}`);
+      assert.equal(url, multipart ? OPENAI_IMAGES : OPENAI_RESPONSES, `Unexpected OpenAI URL: ${url}`);
       assert.equal(init.headers.authorization, 'Bearer fake-not-a-key');
       if (isImage(request)) {
         generation += 1;
@@ -362,19 +375,30 @@ test('die Fotopruefung bekommt nur das Kundenfoto, nicht Muster oder Modul', asy
   assert.match(parts[0].text, /is_bathroom/);
 });
 
-test('eine unlesbare Fotopruefung haelt den Badplaner nicht auf', async () => {
-  // Im Zweifel durchlassen: ein ausgeraeumtes Bad darf nicht abgewiesen werden.
-  const h = harness({ photoChecks: [() => photoChecked(true, 'kein JSON'), () => photoChecked(true, '{}')] });
-  const res = await h.invoke();
-  assert.equal(res.statusCode, 200);
-  assert.equal(h.counts().generation, 1);
+test('eine unlesbare Fotopruefung stoppt vor dem Bild und bewahrt Foto und Auswahl in der Lead-Mail', async () => {
+  for (const text of ['kein JSON', '{}']) {
+    const h = harness({ photoChecks: [() => photoChecked(true, text)] });
+    const res = await h.invoke();
+    assert.equal(res.statusCode, 502);
+    assert.equal(res.body.code, 'RENDER_FAILED');
+    assert.match(res.body.error, /Ihr Foto konnte gerade nicht geprüft werden/);
+    assert.equal(res.body.image, undefined);
+    assert.equal(h.photoCount(), 1);
+    assert.deepEqual(h.counts(), { generation: 0, checks: 0, mail: 1 });
+    const mail = h.calls.find((call) => call.url === 'https://api.resend.com/emails').body;
+    assert.match(JSON.stringify(mail), /Fotoprüfung nicht möglich – keine Bildgenerierung gestartet/);
+    assert.deepEqual(mail.attachments.map(({ filename }) => filename), ['foto.png']);
+  }
 });
 
-test('faellt die Fotopruefung aus, wird trotzdem gerendert', async () => {
+test('faellt die Fotopruefung aus, startet weder Bildgenerierung noch Qualitaetspruefung', async () => {
   const h = harness({ photoChecks: [() => response({ error: 'quota' }, 429)] });
   const res = await h.invoke();
-  assert.equal(res.statusCode, 200);
-  assert.equal(h.counts().generation, 1);
+  assert.equal(res.statusCode, 502);
+  assert.equal(res.body.code, 'RENDER_FAILED');
+  assert.match(res.body.error, /Ihr Foto konnte gerade nicht geprüft werden/);
+  assert.equal(h.photoCount(), 1);
+  assert.deepEqual(h.counts(), { generation: 0, checks: 0, mail: 1 });
 });
 
 test('das Bidet wird weggeraeumt, und ein stehengebliebenes Bidet wird verworfen', async () => {
@@ -544,26 +568,31 @@ test('eine unbrauchbare Antwort der Pruefung gilt als nicht verfuegbar, nicht al
   }
 });
 
-test('das Ideenbild entsteht mit dem genauesten Modell, nicht dem billigsten', async () => {
-  // Qualitaet vor Ersparnis: das Bild ist das Produkt. 2K kostet bei diesem Modell gleich viel wie 1K. Flash war vom
-  // 27.09. an kurz der Standard; in der Probe auf der Vorschau fand Diego es schlechter (1 von 5 Bildern zeigbar).
+test('das Ideenbild behält Modell und optionale Qualitaet beim direkten Images-Aufruf', async () => {
   const h = harness();
   await h.invoke();
-  // 57 (root, 01.11.): Responses mit dem einzigen Werkzeug image_generation; darin bleibt das Bildmodell BADPLANER_MODEL
-  // (Vorgabe gpt-image-2.5-sunburst) und quality nur auf Wunsch (Kosten, AGENTS.md).
-  const gen = h.calls.find((call) => call.body?.generationConfig?.responseModalities);
-  assert.equal(gen.url, OPENAI_RESPONSES);
-  assert.equal(gen.request.tools[0].model, 'gpt-image-2.5-sunburst');
-  assert.equal(gen.request.max_tool_calls, 1);
-  assert.equal(gen.request.tools[0].output_format, 'jpeg');
-  assert.equal(gen.request.tools[0].quality, undefined);
+  const gen = h.calls.find((call) => isImage(call.request));
+  assert.equal(gen.url, OPENAI_IMAGES);
+  assert.equal(gen.multipart.fields.model, 'gpt-image-2.5-sunburst');
+  assert.equal(gen.multipart.fields.n, '1');
+  assert.equal(gen.multipart.fields.output_format, 'jpeg');
+  assert.equal(gen.multipart.fields.quality, undefined);
+  assert.equal(gen.multipart.fields.complexity, undefined, '2.5 behaelt seine bisherigen Felder');
+  assert.equal(gen.request.reasoning, undefined, 'kein zusaetzlicher Sprachmodell-Orchestrator');
 
-  // Umschaltbar ohne Codeaenderung, falls ein neueres Modell kommt.
   const other = harness({ env: { BADPLANER_MODEL: 'gpt-image-2', BADPLANER_IMAGE_QUALITY: 'high' } });
   await other.invoke();
-  const otherGen = other.calls.find((call) => call.body?.generationConfig?.responseModalities);
-  assert.equal(otherGen.request.tools[0].model, 'gpt-image-2');
-  assert.equal(otherGen.request.tools[0].quality, 'high');
+  const otherGen = other.calls.find((call) => isImage(call.request));
+  assert.equal(otherGen.multipart.fields.model, 'gpt-image-2');
+  assert.equal(otherGen.multipart.fields.quality, 'high');
+  assert.equal(otherGen.multipart.fields.complexity, undefined);
+
+  const latest = harness({ env: { BADPLANER_MODEL: 'gpt-image-2.6-sunburst', BADPLANER_IMAGE_QUALITY: 'max' } });
+  await latest.invoke(payload({ foto: `data:image/jpeg;base64,${jpegSized(1280, 803)}` }));
+  const latestGen = latest.calls.find((call) => isImage(call.request));
+  assert.deepEqual({ model: latestGen.multipart.fields.model, quality: latestGen.multipart.fields.quality,
+    complexity: latestGen.multipart.fields.complexity, size: latestGen.multipart.fields.size, n: latestGen.multipart.fields.n },
+  { model: 'gpt-image-2.6-sunburst', quality: 'max', complexity: 'high', size: '2048x1280', n: '1' });
 });
 
 test('ein 2K-Ideenbild passt durch alle Groessengrenzen', async () => {
@@ -583,7 +612,8 @@ test('scheitert der Bilddienst, steht der technische Grund in der Lead-Mail', as
   const res = await h.invoke();
   assert.equal(res.statusCode, 502);
   const leadMail = h.calls.find((call) => call.url === 'https://api.resend.com/emails');
-  assert.match(JSON.stringify(leadMail.body), /HTTP 400: image size 2K is not supported/);
+  assert.match(JSON.stringify(leadMail.body), /HTTP 400/);
+  assert.doesNotMatch(JSON.stringify(leadMail.body), /image size 2K is not supported/, 'keine beliebige Providerantwort in der Mail');
   // Der Kunde liest davon nichts.
   assert.doesNotMatch(res.body.error, /HTTP 400/);
 });
@@ -942,7 +972,7 @@ test('Images edits bekommt das wahre Seitenverhaeltnis des Bildes, nicht das nae
   const sizesFor = async (width, height, settings = {}) => {
     const h = harness(settings);
     assert.equal((await h.invoke(payload({ foto: `data:image/png;base64,${sized(width, height)}` }))).statusCode, 200);
-    return h.calls.filter((call) => isImage(call.request)).map((call) => call.request.tools[0].size);
+    return h.calls.filter((call) => isImage(call.request)).map((call) => call.multipart.fields.size);
   };
   const sides = (size) => size.split('x').map(Number);
   const longOverShort = (size) => { const [w, h] = sides(size); return Math.max(w, h) / Math.min(w, h); };
@@ -1358,7 +1388,7 @@ test('unavailable checker retries once, holds the image back, delivers the lead 
 test('ein Ausfall des Bilddienstes wird gemeldet, der Lead aber nicht weggeworfen', async () => {
   // Diegos Probe vom 17.09: erster Versuch scheiterte, und es kam gar keine Mail.
   // Der Kunde hatte das ganze Formular ausgefuellt, wir hatten davon nichts.
-  for (const settings of [{ generateDelays: [220001] }, { generations: [() => generated('AAAA')] }, { generations: [() => generated(JPEG, { output_format: 'webp' })] }]) {
+  for (const settings of [{ generateDelays: [250001] }, { generations: [() => generated('AAAA')] }, { generations: [() => generated(JPEG, { output_format: 'webp' })] }]) {
     const h = harness(settings); const res = await h.invoke();
     assert.equal(res.statusCode, 502);
     assert.equal(res.body.code, 'RENDER_FAILED');
@@ -1568,9 +1598,9 @@ test('failed render attempts do not consume the IP counter', async () => {
 });
 
 test('retry is skipped when a second pass of the measured length cannot fit', async () => {
-  // Nur noch im Ausnahmefall: langsames Bild, Pruefung erst nach einem 503 lesbar (80 + 19 + 19 s). Seit 260 s Budget (Kandidat 52)
-  // passt der zweite Durchgang auch nach 60 s Bild.
-  const h = harness({ generateDelays: [80000], checkDelays: [19000, 19000], checks: [() => response({}, 503), () => checked(true)] });
+  // 290-s-Budget: 95 s Bild plus 19 s Pruefung, Wiederholung und 19 s passen,
+  // ein zweiter Durchgang derselben gemessenen Dauer aber nicht mehr.
+  const h = harness({ generateDelays: [95000], checkDelays: [19000, 19000], checks: [() => response({}, 503), () => checked(true)] });
   const res = await h.invoke();
   assert.equal(res.body.code, 'RENDER_REJECTED'); assert.deepEqual(h.counts(), { generation: 1, checks: 2, mail: 1 });
   assert.match(JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails').body),
@@ -1749,7 +1779,7 @@ test('slow response body is timed out, not only response headers', async () => {
   const h = harness({ generations: [() => new Response(new ReadableStream({ cancel() { cancelCalled = true; } }), { headers: { 'content-type': 'application/json' } })] });
   const pending = h.invoke();
   for (let i = 0; i < 30 && h.counts().generation === 0; i += 1) await Promise.resolve();
-  h.clock.advance(220000); // 86: ohne Wartezeit davor laeuft das Bild bis 260 - 40 s
+  h.clock.advance(250000); // 106: ohne Wartezeit davor laeuft das Bild bis 290 - 40 s
   const res = await pending;
   assert.equal(res.statusCode, 502); assert.equal(cancelCalled, true); assert.equal(h.counts().mail, 1);
 });
@@ -2006,9 +2036,9 @@ test('die Pruefung jedes Bildes denkt nicht (none), die Vorpruefung viel (high),
   assert.equal(res.statusCode, 200);
   const openai = h.calls.filter((call) => call.url.startsWith('https://api.openai.com/'));
   const image = openai.find((call) => call.body.generationConfig.responseModalities);
-  // 57: das Bild laeuft ueber Astra mit high und dem Werkzeug; das Bildmodell darin bleibt dasselbe.
-  assert.deepEqual([image.request.model, image.request.reasoning], ['gpt-6-astra', { effort: 'high' }]);
-  assert.equal(image.request.tools[0].model, 'gpt-image-2.5-sunburst');
+  // Direktes Images-Edit: dasselbe Bildmodell, ohne zusaetzlichen Astra-Aufruf.
+  assert.equal(image.request.model, 'gpt-image-2.5-sunburst');
+  assert.equal(image.request.reasoning, undefined);
   const checks = openai.filter((call) => call !== image);
   assert.equal(checks.length, 2);
   assert.deepEqual(checks.map((call) => call.request.reasoning), [{ effort: 'high' }, { effort: 'none' }]);
@@ -2039,17 +2069,26 @@ test('die Pruefung jedes Bildes denkt nicht (none), die Vorpruefung viel (high),
   ]);
 });
 
-test('eine langsame Fotopruefung haelt das Bild hoechstens 60 s auf', async () => {
+test('eine Fotopruefung ueber 90 s stoppt die anonyme Vorschau vor Bildgenerierung und Qualitaetspruefung', async () => {
   const withLayout = () => photoChecked(true, JSON.stringify({ is_bathroom: true, reason: 'bathroom', walls: inv(), order: ['washbasin', 'toilet'], nearest: 'toilet' }));
-  const slow = harness({ photoCheckDelays: [61000], photoChecks: [withLayout] }); const res = await slow.invoke();
-  assert.equal(res.statusCode, 200);
-  assert.equal(slow.counts().generation, 1);
-  const prompt = slow.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text;
-  assert.doesNotMatch(prompt, /WHAT IMAGE 1 SHOWS/);
-  // Root, 31.10.: die Vorpruefung brauchte bis 40.2 s; nach 50 s und knapp unter 60 s wird sie noch gelesen.
-  for (const delay of [50000, 59000]) {
+  const slow = harness({ photoCheckDelays: [91000], photoChecks: [withLayout] }); const res = await slow.invoke(previewPayload());
+  assert.equal(res.statusCode, 502);
+  assert.equal(res.body.code, 'RENDER_FAILED');
+  assert.match(res.body.error, /Ihr Foto konnte gerade nicht geprüft werden\. Es wurde kein Ideenbild erstellt\./);
+  assert.equal(res.body.image, undefined);
+  assert.equal(res.body.ticket, undefined);
+  assert.equal(res.headers['Set-Cookie'], undefined);
+  assert.equal(slow.photoCount(), 1);
+  assert.deepEqual(slow.counts(), { generation: 0, checks: 0, mail: 1 });
+  const mail = slow.calls.find((call) => call.url === 'https://api.resend.com/emails').body;
+  assert.match(mail.subject, /^Badplaner-Fehler ohne Kontakt/);
+  assert.match(JSON.stringify(mail), /Fotoprüfung nicht möglich – keine Bildgenerierung gestartet/);
+  assert.doesNotMatch(mail.html, /Die Bildgenerierung ist fehlgeschlagen/);
+  assert.deepEqual(mail.attachments.map(({ filename }) => filename), ['foto.png']);
+  // Die frische Fotolesung bleibt innerhalb ihrer eigenen 90-s-Grenze auswertbar.
+  for (const delay of [50000, 59000, 89000]) {
     const inTime = harness({ photoCheckDelays: [delay], photoChecks: [withLayout] });
-    await inTime.invoke();
+    assert.equal((await inTime.invoke()).statusCode, 200);
     assert.match(inTime.calls.find((call) => call.body?.generationConfig?.responseModalities).body.contents[0].parts[0].text, /WHAT IMAGE 1 SHOWS/);
   }
 });
@@ -2935,8 +2974,8 @@ test('Produktdurchgang: faellt das neue Bild durch, hat es einen schweren Hinwei
   assert.equal(down.res.body.image.data, first);
   assert.match(down.mail, /Fensterprüfung.{0,80}>ok, Produktdurchgang nicht möglich \(Bilddienst: HTTP 500\)</);
   assert.deepEqual(down.files, ['foto.png', 'ideenbild.jpg']);
-  // Zu wenig Zeit nach einem langsamen ersten Durchgang (80 s Bild, 503 und 19 s Pruefung zweimal; 60 s Bild reichen seit 260 s Budget).
-  const slow = await run({ checks: [() => response({}, 503), () => checked()], extra: { generateDelays: [80000], checkDelays: [19000, 19000] } });
+  // Zu wenig Zeit im 290-s-Budget nach 95 s Bild, 503 und zweimal 19 s Pruefung.
+  const slow = await run({ checks: [() => response({}, 503), () => checked()], extra: { generateDelays: [95000], checkDelays: [19000, 19000] } });
   assert.equal(slow.h.counts().generation, 1);
   assert.match(slow.mail, /Fensterprüfung.{0,80}>ok, kein Produktdurchgang \(zu wenig Zeit\)</);
   // Ohne Pruefmodell laeuft auch er nicht: 503 vor jedem Aufruf (26.10.).
@@ -3673,7 +3712,7 @@ test('Versuch persoenliche Pruefung: der Kontakt geht vor Tageslimit und Modella
   assertContactMail(noKey.calls[0].body, 'bp-fixture-1');
 
   // Die Zeit laeuft nach dem Kontakt ab (die Vorpruefung haengt bis nach der Frist): fuer die zweite Mail bleibt keine.
-  const late = harness({ env, photoChecks: [reviewPhoto], photoCheckDelays: [270000] });
+  const late = harness({ env, photoChecks: [reviewPhoto], photoCheckDelays: [300000] });
   const lateRes = await late.invoke(contactRequest);
   assert.equal(lateRes.statusCode, 502);
   assert.deepEqual([lateRes.body.code, lateRes.body.delivery.lead], ['RENDER_FAILED', 'unknown']);
@@ -3882,38 +3921,42 @@ test('Pruefung und Prompt: die Fenster als Liste; ein Fenster ueber der Wanne bl
 
 /* ---------- Vertrag mit der OpenAI API: Antworten simuliert, sie beweisen weder Zugang zum Konto noch Qualitaet ---------- */
 
-test('Vertrag Ideenbild (57, root 01.11.): ein Responses-Aufruf, Astra high 7500, genau ein Werkzeug image_generation, das Foto zuerst, hoechstens 16 Bilder', async () => {
-  const photo = Buffer.from(PNG, 'base64'); photo.writeUInt32BE(640, 16); photo.writeUInt32BE(960, 20); // 640x960 wie das Essenza-Foto
+test('Vertrag Images: ein Multipart-Edit mit unveraendertem Modell, Originalbytes und geordneten Vorlagen, kein Sprachmodell-Orchestrator', async () => {
+  const photo = Buffer.from(PNG, 'base64'); photo.writeUInt32BE(640, 16); photo.writeUInt32BE(960, 20);
   const foto = `data:image/png;base64,${photo.toString('base64')}`;
-  const h = harness({ env: { BADPLANER_PRODUCT_PASS: '1', BADPLANER_MODEL: 'gpt-image-2.5-sunburst-2026-09-08', BADPLANER_IMAGE_QUALITY: 'max' } });
-  assert.equal((await h.invoke(payload({ cistern: 'aufputz', foto }))).statusCode, 200);
+  const h = harness({ env: { BADPLANER_PRODUCT_PASS: '1', BADPLANER_MODEL: 'gpt-image-2.5-sunburst-2026-09-08', BADPLANER_IMAGE_QUALITY: 'max' },
+    checks: [() => checkedInv({ shower: 'back' }, { shower: 'back' }), () => checkedInv({ shower: 'back' }, { shower: 'back' })],
+    generations: [() => generated(JPEG, { url: null }, { url: null }), () => generated(JPEG)] });
+  assert.equal((await h.invoke(payload({ cistern: 'aufputz', spiegel: 'spiegelschrank', dusche: 'duschwanne', badewanne: 'keine', foto }))).statusCode, 200);
   const images = h.calls.filter((call) => isImage(call.request));
   assert.equal(images.length, 2, 'erster Durchgang und Produktdurchgang');
-  for (const call of images) {
-    assert.equal(call.url, OPENAI_RESPONSES); assert.equal(call.init.method, 'POST');
-    assert.deepEqual(call.init.headers, { authorization: 'Bearer fake-not-a-key', 'content-type': 'application/json' });
-    const { input, tools, ...rest } = call.request;
-    // Die Felder des Prototyps 55; dazu Cache 30 min und service_tier default aus checkReasoning, wie jede Astra-Lesung.
-    assert.deepEqual(rest, { model: 'gpt-6-astra', store: false, reasoning: { effort: 'high' }, prompt_cache_options: { ttl: '30m' }, service_tier: 'default',
-      max_output_tokens: 7500, max_tool_calls: 1, tool_choice: { type: 'image_generation' } });
-    assert.equal(tools.length, 1);
-    const { size, ...tool } = tools[0];
-    assert.deepEqual(tool, { type: 'image_generation', model: 'gpt-image-2.5-sunburst-2026-09-08', action: 'edit', output_format: 'jpeg', quality: 'max' });
-    assert.match(size, /^\d+x\d+$/);
-    assert.equal(input.length, 1); assert.equal(input[0].role, 'user');
-    const [prompt, ...parts] = input[0].content;
-    assert.equal(prompt.type, 'input_text'); assert.match(prompt.text, /KEEP THE CAMERA|PRODUCT EDIT of image 1/);
-    assert.ok(parts.length >= 2 && parts.length <= 16, String(parts.length));
-    for (const part of parts) {
-      assert.deepEqual(Object.keys(part), ['type', 'image_url', 'detail']);
-      assert.equal(part.type, 'input_image'); assert.equal(part.detail, 'high');
-      assert.match(part.image_url, /^data:image\/(png|jpeg|webp);base64,/);
-    }
-  }
-  assert.equal(images[0].request.tools[0].size, '1360x2048', 'dieselbe size wie die edits-Anfrage der 52-r2 fuer ein Foto 640x960');
-  assert.equal(images[0].request.input[0].content[1].image_url, foto, 'Bild 1 ist das Foto des Kunden');
-  assert.equal(images[1].request.input[0].content[1].image_url, `data:image/jpeg;base64,${JPEG}`, 'der Produktdurchgang bearbeitet das erste Ideenbild');
-  assert.ok(h.calls.every((call) => !/google|images\/edits/i.test(call.url)), 'kein Aufruf an Google, kein Rueckfall auf Images edits');
+  const expected = [
+    [{ mime: 'image/png', data: photo.toString('base64') }, spiegel.MIRROR_CABINET_PHOTO, modul.SANITARY_MODULE_PHOTO, wc.WC_PHOTO, up.UP_BASIN_PHOTO, up.UP_AUFPUTZ_SHOWER_PHOTO],
+    [{ mime: 'image/jpeg', data: JPEG }, wc.WC_PHOTO, modul.SANITARY_MODULE_PHOTO, up.UP_BASIN_PHOTO, up.UP_AUFPUTZ_SHOWER_PHOTO, spiegel.MIRROR_CABINET_PHOTO],
+  ];
+  images.forEach((call, pass) => {
+    assert.equal(call.url, OPENAI_IMAGES); assert.equal(call.init.method, 'POST');
+    assert.deepEqual(call.init.headers, { authorization: 'Bearer fake-not-a-key' });
+    assert.ok(call.init.body instanceof FormData, 'fetch setzt den Multipart-Boundary selbst');
+    const { fields, uploads } = call.multipart;
+    assert.deepEqual(Object.keys(fields).sort(), ['model', 'n', 'output_format', 'prompt', 'quality', 'size']);
+    assert.deepEqual({ model: fields.model, n: fields.n, output_format: fields.output_format, quality: fields.quality },
+      { model: 'gpt-image-2.5-sunburst-2026-09-08', n: '1', output_format: 'jpeg', quality: 'max' });
+    assert.match(fields.prompt, /KEEP THE CAMERA|PRODUCT EDIT of image 1/);
+    assert.match(fields.size, /^\d+x\d+$/);
+    assert.ok(uploads.length >= 1 && uploads.length <= 16);
+    assert.equal(uploads.length, expected[pass].length);
+    uploads.forEach((file, index) => {
+      const reference = expected[pass][index];
+      assert.equal(file.field, 'image[]');
+      assert.equal(file.mime, reference.mime);
+      assert.equal(file.filename, `image-${index + 1}.${reference.mime.split('/')[1]}`);
+      assert.deepEqual(file.bytes, Buffer.from(reference.data, 'base64'), `Pass ${pass + 1}, Bild ${index + 1}: unveraenderte Bytes und Reihenfolge`);
+    });
+  });
+  assert.equal(images[0].multipart.fields.size, '1360x2048');
+  assert.equal(h.calls.filter(isRead).length, 3, 'eine frische Fotolesung und QC je Bild, kein zusaetzlicher Responses-Orchestrator');
+  assert.ok(h.calls.every((call) => !/google|images\/generations/i.test(call.url)), 'kein anderer Anbieter oder stiller Generierungsweg');
 });
 
 test('Vertrag Responses: Text und Bilder als input, JSON-Antwort, store false, keine temperature', async () => {
@@ -3943,39 +3986,140 @@ test('Vertrag Responses: Text und Bilder als input, JSON-Antwort, store false, k
   assert.ok(reads[1].request.input[0].content.length > 3, 'Pruefung: Foto, Ideenbild und Produktvorlagen');
 });
 
-test('Vertrag Ideenbild (57): unvollstaendig, ohne, mehrere oder falsche Bilder und Fehler 400/429 zeigen kein Bild, ein Aufruf, kein Rueckfall', async () => {
-  const two = { status: 'completed', output: ['1', '2'].map((note) => ({ type: 'image_generation_call', status: 'completed', output_format: 'jpeg', result: jpegOf(note) })) };
+test('Vertrag Images: fehlende, mehrere, URL-only, falsch deklarierte oder ungueltige Bilder und HTTP400/429 zeigen kein Bild, ohne Rueckfall', async () => {
   const cases = [
-    ['Antwort incomplete', () => generated(JPEG, {}, { status: 'incomplete', incomplete_details: { reason: 'max_output_tokens' } }), /ohne Bild/],
-    ['Werkzeug incomplete', () => generated(JPEG, { status: 'incomplete' }), /ohne Bild/],
-    ['Werkzeug failed', () => generated(JPEG, { status: 'failed', result: null }), /ohne Bild/],
-    ['kein Bildaufruf', () => response({ status: 'completed', output: [{ type: 'message', role: 'assistant', content: [{ type: 'output_text', text: 'no image', annotations: [] }] }] }), /ohne Bild/],
-    ['zwei Bildaufrufe', () => response(two), /ohne Bild/],
-    ['leeres result', () => generated(''), /ohne Bild/],
-    ['anderes Format', () => generated(JPEG, { output_format: 'png' }), /ohne Bild/],
-    ['PNG statt JPEG', () => generated(PNG), /Dateityp und Bildinhalt stimmen nicht überein/],
-    ['Fehler 400', () => response({ error: { message: 'fixture moderation' } }, 400), /HTTP 400: fixture moderation/],
-    ['Fehler 429', () => response({ error: { message: 'fixture rate' } }, 429), /HTTP 429: fixture rate/],
+    ['kein data', () => response({}), /ohne Bild/],
+    ['leeres data', () => response({ data: [] }), /ohne Bild/],
+    ['zwei Bilder', () => response({ data: [{ b64_json: JPEG }, { b64_json: jpegOf('2') }] }), /ohne Bild/],
+    ['URL statt Bytes', () => response({ data: [{ url: 'https://example.invalid/untrusted.jpg' }] }), /ohne Bild/],
+    ['URL trotz Bytes', () => generated(JPEG, { url: 'https://example.invalid/untrusted.jpg' }), /ohne Bild/],
+    ['URL im Umschlag', () => generated(JPEG, {}, { url: 'https://example.invalid/untrusted.jpg' }), /ohne Bild/],
+    ['leere Bytes', () => generated(''), /ohne Bild/],
+    ['Format im Umschlag', () => generated(JPEG, {}, { output_format: 'png' }), /ohne Bild/],
+    ['Format im Bild', () => generated(JPEG, { output_format: 'png' }), /ohne Bild/],
+    ['MIME im Bild', () => generated(JPEG, { mime_type: 'image/png' }), /ohne Bild/],
+    ['ungueltiges Base64', () => generated('not-base64!'), /Ungültige Bildantwort/],
+    ['ungueltiges JPEG', () => generated('AAAA'), /Ungültige Bildantwort/],
+    ['PNG statt JPEG', () => generated(PNG), /Ungültige Bildantwort/],
+    ['Fehler 400', () => response({ error: { message: 'fixture moderation' } }, 400), /HTTP 400/],
+    ['Fehler 429', () => response({ error: { message: 'fixture rate' } }, 429), /HTTP 429/],
   ];
   for (const [label, failure, detail] of cases) {
     const h = harness({ generations: [failure, failure] });
     const res = await h.invoke();
     assert.equal(res.statusCode, 502, label); assert.equal(res.body.image, undefined, label); assert.equal(res.body.code, 'RENDER_FAILED', label);
-    assert.match(JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails').body), detail, label);
-    assert.deepEqual(h.counts(), { generation: 1, checks: 0, mail: 1 }, `${label}: ein Bildaufruf, ohne Bild keine Pruefung, nur die Lead-Mail`);
-    assert.ok(h.calls.every((call) => !call.url.includes('/images/')), `${label}: kein Rueckfall auf Images edits`);
+    const mail = JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails').body);
+    assert.match(mail, detail, label);
+    assert.doesNotMatch(mail, /fixture moderation|fixture rate/, label);
+    assert.deepEqual(h.counts(), { generation: 1, checks: 0, mail: 1 }, label);
+    assert.equal(h.photoCount(), 1, label);
+    assert.deepEqual(h.calls.filter((call) => call.url.startsWith('https://api.openai.com/')).map((call) => call.url),
+      [OPENAI_RESPONSES, OPENAI_IMAGES], `${label}: keine URL abgerufen, keine QC oder zweite Generierung`);
+  }
+});
+
+test('Vertrag Images: strukturierte Diagnose ohne freie Providertexte, Ausnahme mit cause-Code und numerische Verarbeitungszeit', async (t) => {
+  const captured = { error: [], info: [] };
+  t.mock.method(console, 'error', (...args) => captured.error.push(args));
+  t.mock.method(console, 'info', (...args) => captured.info.push(args));
+  const marker = '[badplaner] Bildbearbeitung abgeschlossen';
+  const privateMessage = 'private-message prompt=private-prompt foto=private-photo credential=private-key';
+  const lastDiagnostic = (level) => {
+    const entry = captured[level].findLast((args) => args[0] === marker);
+    assert.ok(entry, `${level}: strukturierte Bilddienst-Diagnose fehlt`);
+    return JSON.parse(entry[1]);
+  };
+  const http = harness({ generations: [() => new Response(JSON.stringify({ error: {
+    type: 'invalid_request_error', code: 'invalid_image', param: 'image[]', message: privateMessage,
+  } }), { status: 400, headers: { 'content-type': 'application/json', 'openai-processing-ms': '12.5' } })] });
+  assert.equal((await http.invoke()).statusCode, 502);
+  assert.deepEqual(lastDiagnostic('error').error, { type: 'invalid_request_error', code: 'invalid_image', param: 'image[]' });
+  assert.equal(lastDiagnostic('error').httpStatus, 400);
+  assert.equal(lastDiagnostic('error').processingMs, 12.5);
+  assert.equal(captured.info.filter((args) => args[0] === marker).length, 0);
+
+  const transport = harness({ generations: [() => { throw Object.assign(new Error(privateMessage), {
+    name: 'FetchError', code: 'private invalid code', cause: { code: 'UND_ERR_CONNECT_TIMEOUT', message: privateMessage },
+  }); }] });
+  assert.equal((await transport.invoke()).statusCode, 502);
+  assert.deepEqual(lastDiagnostic('error').exception, { name: 'FetchError', code: 'UND_ERR_CONNECT_TIMEOUT' });
+  assert.equal(lastDiagnostic('error').outcome, 'request-error');
+
+  const invalid = harness({ generations: [() => new Response(JSON.stringify({ error: {
+    type: 'x'.repeat(101), code: 'free text is forbidden', param: 'image[]\nprivate', message: privateMessage,
+  } }), { status: 400, headers: { 'content-type': 'application/json', 'openai-processing-ms': 'Infinity' } })] });
+  assert.equal((await invalid.invoke()).statusCode, 502);
+  assert.equal(lastDiagnostic('error').error, undefined);
+  assert.equal(lastDiagnostic('error').processingMs, undefined);
+
+  const success = harness({ generations: [() => new Response(JSON.stringify({ data: [{ b64_json: JPEG }] }), {
+    headers: { 'content-type': 'application/json', 'openai-processing-ms': '0' },
+  })] });
+  assert.equal((await success.invoke()).statusCode, 200);
+  assert.equal(lastDiagnostic('info').outcome, 'ok');
+  assert.equal(lastDiagnostic('info').processingMs, 0);
+  assert.equal(captured.error.filter((args) => args[0] === marker).length, 3);
+  const allLogs = JSON.stringify(captured);
+  for (const secret of [privateMessage, 'private-prompt', 'private-photo', 'private-key', 'free text is forbidden', 'private invalid code']) {
+    assert.ok(!allLogs.includes(secret), 'freie Texte und Eingaben gehoeren nicht ins Log');
+  }
+});
+
+test('Vertrag Zeitablauf (106): 61 s frische Fotolesung plus 170 s Image-Edit und 25 s QC liefern ein geprueftes Bild innerhalb 290 s', async () => {
+  const withLayout = () => photoChecked(true, JSON.stringify({ is_bathroom: true, reason: 'bathroom', walls: inv(), order: ['washbasin', 'toilet'], nearest: 'toilet' }));
+  const h = harness({ photoChecks: [withLayout], photoCheckDelays: [61000], generateDelays: [170000], checkDelays: [25000] });
+  const started = h.clock.now();
+  const res = await h.invoke(previewPayload());
+  assert.equal(res.statusCode, 200, JSON.stringify(res.body));
+  assert.equal(res.body.image.data, JPEG);
+  assert.equal(typeof res.body.ticket, 'string');
+  assert.equal(h.photoCount(), 1);
+  assert.deepEqual(h.counts(), { generation: 1, checks: 1, mail: 1 });
+  assert.match(h.calls.find((call) => isImage(call.request)).multipart.fields.prompt, /WHAT IMAGE 1 SHOWS/);
+  assert.deepEqual(h.calls.filter((call) => call.url.startsWith('https://api.openai.com/')).map((call) => call.url), [OPENAI_RESPONSES, OPENAI_IMAGES, OPENAI_RESPONSES]);
+  assert.equal(h.clock.now() - started, 256000);
+  assert.ok(h.clock.now() - started <= 290000);
+});
+
+test('Vertrag Reserve (106): die reale Fotozeit laesst dem Image-Edit 209, 161 oder 131 s und bewahrt die QC- und Mailreserve', async () => {
+  const colore = optionsForPackage('colore');
+  const concealed = payload({ paket: 'colore', format: colore.formats[0], platte: colore.tiles[0].id, unterbau: colore.bases[0].id, top: colore.tops[0].id,
+    becken: 'aufsatz', armaturenserie: 'treemme-ran', finish: colore.finishes[0].id, keramik: colore.sanitary[0].id, wall: colore.walls[0].id,
+    spiegel: colore.mirrors[0].id, waschtisch: colore.basins[0].id, dusche: 'walk-in', badewanne: 'keine' });
+  for (const [label, photoMs, imageWindowMs, choice] of [
+    ['Foto41 Saeule', 41000, 209000, payload()],
+    ['Foto89 Saeule', 89000, 161000, payload()],
+    ['Foto89 Unterputz', 89000, 131000, concealed],
+  ]) {
+    const fits = harness({ rawChecks: true, photoCheckDelays: [photoMs], generateDelays: [imageWindowMs - 1], checks: [(init) => fullAnswer(choice, init)] });
+    const ok = await fits.invoke(choice);
+    assert.equal(ok.statusCode, 200, label + ': kurz vor der Grenze bleibt QC moeglich');
+    assert.equal(fits.photoCount(), 1, label);
+    assert.equal(fits.counts().generation, 1, label);
+    assert.equal(fits.counts().checks, 1, label);
+
+    const late = harness({ photoCheckDelays: [photoMs], generateDelays: [imageWindowMs + 1] });
+    const failed = await late.invoke(choice);
+    assert.equal(failed.statusCode, 502, label);
+    assert.equal(failed.body.code, 'RENDER_FAILED', label);
+    assert.equal(failed.body.image, undefined, label);
+    assert.equal(late.photoCount(), 1, label);
+    assert.deepEqual(late.counts(), { generation: 1, checks: 0, mail: 1 }, label);
+    assert.equal(late.supportCount(), 0, label);
+    assert.match(JSON.stringify(late.calls.find((call) => call.url === 'https://api.resend.com/emails').body), /Timeout/, label);
+    assert.equal(late.calls.filter((call) => call.url === OPENAI_IMAGES).length, 1, label + ': kein weiterer Generierungsversuch');
   }
 });
 
 test('Vertrag Zeitablauf (86): das Ideenbild nimmt den Rest bis auf Pruefung und Mails, auch ueber 150 s; darueber bricht es ab, ohne Bild und ohne offene Zeitgeber', async () => {
   // Root, 03.11. (84 und 85): der feste Hoechstwert von 150 s schnitt das Bild ab, obwohl Zeit fuer Pruefung und Mails blieb. Ohne Wartezeit
-  // davor bleiben dem Bild 260 - 40 = 220 s: ein Bild von 219 s wird mit 29 s Pruefung geprueft und gezeigt, innerhalb von 260 s.
-  const within = harness({ generateDelays: [219000], checkDelays: [29000] });
+  // davor bleiben dem Bild 290 - 40 = 250 s: ein Bild von 249 s wird mit 29 s Pruefung geprueft und gezeigt, innerhalb von 290 s.
+  const within = harness({ generateDelays: [249000], checkDelays: [29000] });
   const start = within.clock.now();
   assert.equal((await within.invoke()).statusCode, 200);
   assert.deepEqual(within.counts(), { generation: 1, checks: 1, mail: 2 });
-  assert.ok(within.clock.now() - start <= 260000);
-  const h = harness({ generateDelays: [221000] });
+  assert.ok(within.clock.now() - start <= 290000);
+  const h = harness({ generateDelays: [251000] });
   const res = await h.invoke();
   assert.equal(res.statusCode, 502); assert.equal(res.body.image, undefined);
   assert.match(JSON.stringify(h.calls.find((call) => call.url === 'https://api.resend.com/emails').body), /Timeout/);
@@ -3988,69 +4132,69 @@ test('Vertrag Zeitablauf: ein Bild nach 100 s wird fertig und geprueft, wenn das
   const start = h.clock.now(); const res = await h.invoke();
   assert.equal(res.statusCode, 200, JSON.stringify(res.body));
   assert.deepEqual(h.counts(), { generation: 1, checks: 1, mail: 2 });
-  assert.ok(h.clock.now() - start <= 260000);
+  assert.ok(h.clock.now() - start <= 290000);
 });
 
-test('Vertrag Zeitablauf: verbrauchte Zeit kuerzt das Bild, nie Pruefung, Lesung des Halts und Mails, und 260 s bleiben die Grenze', async () => {
+test('Vertrag Zeitablauf: verbrauchte Zeit kuerzt das Bild, nie Pruefung, Lesung des Halts und Mails, und 290 s bleiben die Grenze', async () => {
   // Muster und Vorpruefung zaehlen in der Testuhr nacheinander: vor dem Bild sind rund 100 s weg. Das Bild bekommt nur den Rest
-  // nach Pruefung (30 s) und Mails (10 s), also weniger als 150 s.
-  const slow = harness({ swatchDelay: 20000, photoCheckDelays: [59000], generateDelays: [122000] });
+  // nach Pruefung (30 s) und Mails (10 s), rund 151 s im 290-s-Budget.
+  const slow = harness({ swatchDelay: 20000, photoCheckDelays: [59000], generateDelays: [152000] });
   let start = slow.clock.now(); const failed = await slow.invoke();
   assert.equal(failed.statusCode, 502); assert.equal(failed.body.code, 'RENDER_FAILED');
   assert.deepEqual(slow.counts(), { generation: 1, checks: 0, mail: 1 });
   assert.match(JSON.stringify(slow.calls.find((call) => call.url === 'https://api.resend.com/emails').body), /Timeout/);
-  assert.ok(slow.clock.now() - start <= 260000);
-  // Die Saeule laesst 40 s frei: ein Bild von 100 s passt noch (bis 121 s).
+  assert.ok(slow.clock.now() - start <= 290000);
+  // Die Saeule laesst 40 s frei: ein Bild von 100 s passt noch (bis rund 151 s).
   const fits = harness({ swatchDelay: 20000, photoCheckDelays: [59000], generateDelays: [100000], checkDelays: [29000] });
   start = fits.clock.now(); const ok = await fits.invoke();
   assert.equal(ok.statusCode, 200, JSON.stringify(ok.body));
   assert.deepEqual(fits.counts(), { generation: 1, checks: 1, mail: 2 });
-  assert.ok(fits.clock.now() - start <= 260000);
+  assert.ok(fits.clock.now() - start <= 290000);
   // Root, 01.11. (Kandidat 52): bei Unterputz-Sets laesst das Bild 70 s frei, fuer die Lesung des Halts (bis 60 s neben der Pruefung)
   // und die Mails, auch wenn vorher viel Zeit weg ist (hier rund 100 s). Mit 40 s wie bei der Saeule bekaeme das Bild mehr Zeit,
   // und die Lesung danach liefe ab.
   const colore = optionsForPackage('colore');
   const ranBody = payload({ dusche: 'walk-in', badewanne: 'keine', paket: 'colore', format: colore.formats[0], platte: colore.tiles[0].id, unterbau: colore.bases[0].id, top: colore.tops[0].id,
     becken: 'aufsatz', armaturenserie: 'treemme-ran', finish: colore.finishes[0].id, keramik: colore.sanitary[0].id, wall: colore.walls[0].id, spiegel: colore.mirrors[0].id, waschtisch: colore.basins[0].id });
-  const cut = harness({ swatchDelay: 20000, photoCheckDelays: [59000], generateDelays: [92000] });
+  const cut = harness({ swatchDelay: 20000, photoCheckDelays: [59000], generateDelays: [122000] });
   start = cut.clock.now(); const cutRes = await cut.invoke(ranBody);
   assert.equal(cutRes.statusCode, 502); assert.equal(cutRes.body.code, 'RENDER_FAILED');
   assert.deepEqual({ ...cut.counts(), support: cut.supportCount() }, { generation: 1, checks: 0, mail: 1, support: 0 });
-  assert.ok(cut.clock.now() - start <= 260000);
+  assert.ok(cut.clock.now() - start <= 290000);
   // Die Lesung braucht hier 59 s, wie Ran42 in der Diagnose 50, und bekommt sie.
-  const room = harness({ rawChecks: true, checks: [(init) => fullAnswer(ranBody, init)], swatchDelay: 20000, photoCheckDelays: [59000], generateDelays: [90000], supportDelays: [59000] });
+  const room = harness({ rawChecks: true, checks: [(init) => fullAnswer(ranBody, init)], swatchDelay: 20000, photoCheckDelays: [59000], generateDelays: [120000], supportDelays: [59000] });
   start = room.clock.now(); const roomRes = await room.invoke(ranBody);
   assert.equal(roomRes.statusCode, 200, JSON.stringify(roomRes.body));
   assert.deepEqual({ ...room.counts(), support: room.supportCount() }, { generation: 1, checks: 1, mail: 2, support: 1 });
-  assert.ok(room.clock.now() - start <= 260000);
+  assert.ok(room.clock.now() - start <= 290000);
   // Auch der zweite Durchgang laesst 70 s frei: nach einem schnellen ersten Bild mit dem Kopf am Glas bekommt das zweite nur den
-  // Rest bis auf 70 s (hier 81 s), und seine Lesung danach ihre volle Zeit.
+  // Rest bis auf 70 s (hier rund 111 s), und seine Lesung danach ihre volle Zeit.
   const glass = () => answer(JSON.stringify({ head_support: 'glass', control_row: 'same_height', reason: 'fixture' }));
-  const secondCut = harness({ rawChecks: true, checks: [(init) => fullAnswer(ranBody, init)], swatchDelay: 20000, photoCheckDelays: [59000], generateDelays: [10000, 82000],
+  const secondCut = harness({ rawChecks: true, checks: [(init) => fullAnswer(ranBody, init)], swatchDelay: 20000, photoCheckDelays: [59000], generateDelays: [10000, 112000],
     supports: [glass] });
   start = secondCut.clock.now(); const secondCutRes = await secondCut.invoke(ranBody);
   assert.equal(secondCutRes.statusCode, 502);
   assert.deepEqual({ ...secondCut.counts(), support: secondCut.supportCount() }, { generation: 2, checks: 1, mail: 1, support: 1 });
-  assert.ok(secondCut.clock.now() - start <= 260000);
+  assert.ok(secondCut.clock.now() - start <= 290000);
   const secondRoom = harness({ rawChecks: true, checks: [(init) => fullAnswer(ranBody, init), (init) => fullAnswer(ranBody, init)], swatchDelay: 20000, photoCheckDelays: [59000],
-    generateDelays: [10000, 80000], supports: [glass], supportDelays: [0, 59000] });
+    generateDelays: [10000, 110000], supports: [glass], supportDelays: [0, 59000] });
   start = secondRoom.clock.now(); const secondRoomRes = await secondRoom.invoke(ranBody);
   assert.equal(secondRoomRes.statusCode, 200, JSON.stringify(secondRoomRes.body));
   assert.deepEqual({ ...secondRoom.counts(), support: secondRoom.supportCount() }, { generation: 2, checks: 2, mail: 2, support: 2 });
-  assert.ok(secondRoom.clock.now() - start <= 260000);
-  // Die Schranke des zweiten Durchgangs rechnet diese Reserve mit: nach 50 s Bild bleiben 111 s, zu wenig fuer rund 58 s Bild und 70 s.
-  const noRoom = harness({ rawChecks: true, checks: [(init) => fullAnswer(ranBody, init)], swatchDelay: 20000, photoCheckDelays: [59000], generateDelays: [50000],
+  assert.ok(secondRoom.clock.now() - start <= 290000);
+  // Die Schranke rechnet die Reserve mit: nach 65 s Bild bleiben rund 126 s, zu wenig fuer rund 75 s Bild und 70 s.
+  const noRoom = harness({ rawChecks: true, checks: [(init) => fullAnswer(ranBody, init)], swatchDelay: 20000, photoCheckDelays: [59000], generateDelays: [65000],
     supports: [glass] });
   assert.equal((await noRoom.invoke(ranBody)).statusCode, 502);
   assert.deepEqual({ ...noRoom.counts(), support: noRoom.supportCount() }, { generation: 1, checks: 1, mail: 1, support: 1 });
 });
 
-test('Vertrag Zeitablauf (Root, 01.11., Kandidat 52): maxDuration 270 im Core und in vercel.json, die Seite wartet 280 s', async () => {
+test('Vertrag Zeitablauf (Root, 01.11., Kandidat 52): maxDuration 300 im Core und in vercel.json, die Seite wartet 310 s', async () => {
   const { config } = await import(moduleUrl('api/badplaner.js'));
-  assert.equal(config.maxDuration, 270);
+  assert.equal(config.maxDuration, 300);
   const vercel = JSON.parse(await readFile(new URL('../../vercel.json', import.meta.url), 'utf8'));
-  assert.equal(vercel.functions['api/badplaner.ts'].maxDuration, 270);
-  assert.match(await readFile(new URL('../../src/pages/badplaner/Badplaner.tsx', import.meta.url), 'utf8'), /const RENDER_TIMEOUT_MS = 280_000;/);
+  assert.equal(vercel.functions['api/badplaner.ts'].maxDuration, 300);
+  assert.match(await readFile(new URL('../../src/pages/badplaner/Badplaner.tsx', import.meta.url), 'utf8'), /const RENDER_TIMEOUT_MS = 310_000;/);
 });
 
 test('Vertrag Konfiguration: ohne Schluessel, Ticket-Geheimnis, Pruefmodell oder Modell der Vorpruefung kein Aufruf (503)', async () => {
@@ -4091,7 +4235,7 @@ test('Vertrag Zaehlung: dieselben Aufrufe wie vor der Umstellung, alle an OpenAI
   const h = harness();
   assert.equal((await h.invoke()).statusCode, 200);
   const models = h.calls.filter((call) => call.url !== 'https://api.resend.com/emails' && !call.url.includes('/badplaner/swatches/') && !/gbgroupe|energieker|edonedesign|rexadesign/.test(call.url));
-  assert.deepEqual(models.map((call) => [call.url, isImage(call.request)]), [[OPENAI_RESPONSES, false], [OPENAI_RESPONSES, true], [OPENAI_RESPONSES, false]], 'Vorpruefung, Bild, Pruefung');
+  assert.deepEqual(models.map((call) => [call.url, isImage(call.request)]), [[OPENAI_RESPONSES, false], [OPENAI_IMAGES, true], [OPENAI_RESPONSES, false]], 'Vorpruefung, Bild, Pruefung');
   assert.deepEqual(h.counts(), { generation: 1, checks: 1, mail: 2 }); assert.equal(h.photoCount(), 1);
   // Zwei Kandidaten und Produktdurchgang (bis zum 25.10. Standard): zwei Bilder, ein Produktbild, je eine Pruefung.
   const full = harness({ env: { BADPLANER_CANDIDATES: '2', BADPLANER_PRODUCT_PASS: '1' } });
@@ -4210,7 +4354,7 @@ test('Blink schwarz nur mit Nero Opaco und Unterputz (Lotto 28): jede andere Far
       assert.ok(text.includes('flush_plate: the flush plate of the toilet, in brushed stainless steel matching the OLI Blink product reference:'));
       assert.ok(!text.includes('flush_plate: the flush plate of the toilet, in polished chrome:'));
     }
-    const sent = [...h.calls.filter((call) => call.url === OPENAI_RESPONSES).flatMap((call) => call.request.input[0].content.filter((part) => part.type === 'input_image')
+    const sent = [...h.calls.filter((call) => call.url === OPENAI_RESPONSES || call.url === OPENAI_IMAGES).flatMap((call) => call.request.input[0].content.filter((part) => part.type === 'input_image')
         .map((part) => part.image_url.slice(part.image_url.indexOf(',') + 1)))];
     return { black: sent.includes(wc.FLUSH_PLATE_BLACK_PHOTO.data), chrome: sent.includes(wc.FLUSH_PLATE_PHOTO.data) };
   };

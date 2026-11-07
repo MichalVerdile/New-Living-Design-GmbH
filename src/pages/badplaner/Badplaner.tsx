@@ -41,7 +41,7 @@ const CISTERN_OPTIONS = [
 ];
 const API_URL = '/api/badplaner';
 const MAX_PLAN_PDF_BYTES = 3_000_000; // Base64 + JSON remains below the API request cap.
-const RENDER_TIMEOUT_MS = 280_000; // Server-Deadline 260 s (maxDuration 270) plus Antwort (Ideenbild 2K, mehrere MB) auf dem Handy
+const RENDER_TIMEOUT_MS = 310_000; // Server-Deadline 290 s (maxDuration 300) plus Antwort (Ideenbild 2K, mehrere MB) auf dem Handy
 const TILE_HINT = 'Nur eine kleine Auswahl. Alle Serien und Farben sehen Sie in unserer Ausstellung in Zofingen.';
 const NEWSLETTER_TEXT =
   'Ja, ich möchte gelegentlich Ideen und Neuigkeiten von New Living Design per E-Mail erhalten (jederzeit abbestellbar).';
@@ -156,8 +156,8 @@ const howSteps = [
   { n: '1', title: 'Raum, Stil und Ausstattung wählen', text: 'Badezimmer oder Gäste-WC wählen. Danach Stil, Materialien und die passenden Positionen bestimmen oder direkt eine individuelle Beratung anfragen.' },
   { n: '2', title: 'Foto vom Raum machen', text: 'Am Handy neu aufnehmen oder ein Foto aus der Galerie wählen. Von der Tür aus, den ganzen Raum im Bild, Licht an. Das Foto wird vor dem Senden verkleinert.' },
   REVIEW_TRIAL
-    ? { n: '3', title: 'Ideenbild ansehen oder persönlich prüfen lassen', text: 'Ohne Dusche sehen Sie Ihr Bad nach ein bis zwei Minuten mit den gewählten Materialien als Vorschau; mit Ihren Kontaktangaben erhalten Sie es in voller Qualität per E-Mail, dazu den Fixpreis des Pakets und eine kostenlose Beratung. Bei einem Bad mit Dusche prüfen wir das Ideenbild zuerst: Sie hinterlassen Ihre Kontaktdaten, wir schauen das Bild selbst an und melden uns bei Ihnen.' }
-    : { n: '3', title: 'Ideenbild ansehen, dann in voller Qualität erhalten', text: 'Nach ein bis zwei Minuten sehen Sie Ihr Bad mit den gewählten Materialien als Vorschau. Mit Ihren Kontaktangaben erhalten Sie es in voller Qualität per E-Mail, dazu den Fixpreis des Pakets und eine kostenlose Beratung.' },
+    ? { n: '3', title: 'Ideenbild ansehen oder persönlich prüfen lassen', text: 'Ohne Dusche sehen Sie Ihr Bad nach der Erstellung und Prüfung mit den gewählten Materialien als Vorschau; mit Ihren Kontaktangaben erhalten Sie es in voller Qualität per E-Mail, dazu den Fixpreis des Pakets und eine kostenlose Beratung. Bei einem Bad mit Dusche prüfen wir das Ideenbild zuerst: Sie hinterlassen Ihre Kontaktdaten, wir schauen das Bild selbst an und melden uns bei Ihnen.' }
+    : { n: '3', title: 'Ideenbild ansehen, dann in voller Qualität erhalten', text: 'Nach der Erstellung und Prüfung sehen Sie Ihr Bad mit den gewählten Materialien als Vorschau. Mit Ihren Kontaktangaben erhalten Sie es in voller Qualität per E-Mail, dazu den Fixpreis des Pakets und eine kostenlose Beratung.' },
 ];
 
 /** Musterbild; fehlt es (noch nicht geladen), zeigt es eine farbige Fläche. */
@@ -1066,8 +1066,8 @@ const Badplaner: React.FC = () => {
             <a href="#ablauf" className={styles.ctaSecondary}>So funktioniert's</a>
           </div>
           <p className={styles.heroText}>{REVIEW_TRIAL
-            ? 'Materialien wählen, Foto vom Bad hochladen: ohne Dusche sehen Sie Ihr Bad nach ein bis zwei Minuten neu. Bei einem Bad mit Dusche prüfen wir das Ideenbild zuerst und melden uns bei Ihnen.'
-            : 'Materialien wählen, Foto vom Bad hochladen: nach ein bis zwei Minuten sehen Sie Ihr Bad neu.'} Kostenlos und unverbindlich, aus Zofingen.</p>
+            ? 'Materialien wählen, Foto vom Bad hochladen: ohne Dusche sehen Sie Ihr Bad nach der Erstellung und Prüfung neu. Bei einem Bad mit Dusche prüfen wir das Ideenbild zuerst und melden uns bei Ihnen.'
+            : 'Materialien wählen, Foto vom Bad hochladen: nach der Erstellung und Prüfung sehen Sie Ihr Bad neu.'} Kostenlos und unverbindlich, aus Zofingen.</p>
           <p className={styles.heroNote}>
             Ideenbild, kein Plan: Das Bild zeigt eine Stimmung mit den gewählten Materialien. Masse, Leitungen und Details klären wir vor Ort.
           </p>
@@ -1324,7 +1324,7 @@ const Badplaner: React.FC = () => {
                       {status === 'sending' && (
                         <div className={styles.progress} role="status" aria-live="polite">
                           <div className={styles.progressBar}><span /></div>
-                          <p className={styles.progressText}>{reviewStep === 'form' ? 'Wir erstellen das Ideenbild für unsere persönliche Prüfung.' : 'Wir gestalten Ihr Bad und prüfen das Bild.'} Das dauert meist ein bis zwei Minuten, bei einem zweiten Anlauf bis zu vier; bitte lassen Sie die Seite offen.</p>
+                          <p className={styles.progressText}>{reviewStep === 'form' ? 'Wir erstellen das Ideenbild für unsere persönliche Prüfung.' : 'Wir gestalten Ihr Bad und prüfen das Bild.'} Das kann rund fünf Minuten dauern; bitte lassen Sie die Seite offen.</p>
                         </div>
                       )}
                       {status === 'error' && !result && (

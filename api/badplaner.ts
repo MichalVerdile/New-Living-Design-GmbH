@@ -59,7 +59,7 @@
  *      blind wiederholt.
  *   6. Kundenmail und Newsletter mit eigenem Zustellstatus.
  *   Alle Netzwerkaufrufe einschliesslich Body-Lesen laufen unter einer Deadline von
- *   260 s (TOTAL_TIMEOUT_MS, knapp unter maxDuration 270 in vercel.json).
+ *   290 s (TOTAL_TIMEOUT_MS, knapp unter maxDuration 300 in vercel.json).
  *
  * Umgebungsvariablen (Vercel > Settings > Environment Variables):
  *   OPENAI_API_KEY       Pflicht. API-Schluessel von OpenAI fuer Bildmodell, Pruefung und Vorpruefung.
@@ -78,8 +78,8 @@
  *   BADPLANER_DAILY_CAP  Maximale Anfragen mit Ideenbild pro Tag insgesamt (Default 60); jede erzeugt so viele Bilder,
  *                        wie BADPLANER_CANDIDATES sagt, mit zweitem Durchgang doppelt so viele, mit Produktdurchgang
  *                        eines mehr
- *   BADPLANER_MODEL      Bildmodell im Werkzeug image_generation der Responses API (Default gpt-image-2.5-sunburst; Verfuegbarkeit im Konto pruefen)
- *   BADPLANER_IMAGE_QUALITY quality im Werkzeug image_generation (low, medium, high, xhigh, max); leer = Vorgabe der API (auto).
+ *   BADPLANER_MODEL      Bildmodell fuer Images edits (Default gpt-image-2.5-sunburst; Verfuegbarkeit im Konto pruefen)
+ *   BADPLANER_IMAGE_QUALITY quality fuer Images edits (low, medium, high, xhigh, max); leer = Vorgabe der API (auto).
  *                        Hoehere Stufen kosten mehr: nur mit OK des Inhabers (AGENTS.md)
  *   BADPLANER_CHECK_MODEL Modell fuer die Pruefung der Ideenbilder (Default gpt-5.4-2026-03-05, reasoning none). Leer oder
  *                        nur Leerzeichen: 503 vor jedem Modellaufruf; ein Ideenbild ohne Pruefung gibt es nicht
@@ -92,7 +92,8 @@
  *                        dieselbe Variable beim Build fuer ihre Texte.
  *
  * Fotos und Ideenbilder werden NICHT gespeichert (kein Blob, kein KV): sie gehen
- * nur an die OpenAI API zur Bilderzeugung und Pruefung (Responses mit store: false; das ist keine Zero Data Retention)
+ * nur an die OpenAI API zur Bilderzeugung (Images edits) und Pruefung (Responses mit store: false);
+ * diese Einstellungen sind keine Zero Data Retention
  * und per E-Mail an uns und an den Kunden. Es gibt
  * darum auch keine dauerhafte Lead-Ablage und keine Idempotenz; die Annahme durch
  * den Mail-Anbieter ist kein Nachweis der Zustellung. Siehe /datenschutz#badplaner.
@@ -114,10 +115,9 @@ import { RAN_BASIN_PHOTO, RAN_BATH_PHOTO, RAN_SHOWER_PHOTO } from '../server/bad
 declare const process: any;
 declare const Buffer: any;
 
-// 270 s: ein voller Durchgang (Vorpruefung bis 60 s, Bild bis 125 s, Pruefung 30 s und bei Unterputz-Sets daneben die Lesung des
-// Halts bis 60 s) plus Mails; ein zweiter nur nach einem schnellen ersten. Hoechstwerte, keine Zusage (Root, 01.11.).
-// Vercel erlaubt bis 300 s; vercel.json nennt denselben Wert.
-export const config = { maxDuration: 270 };
+// 300 s Plattformgrenze, 290 s gemeinsame Deadline fuer Vorpruefung, Bild, strenge Pruefung und Mails.
+// Vorpruefung bis 90 s; das Bild bekommt nur den Rest nach den unveraenderten Reserven von 40 oder 70 s.
+export const config = { maxDuration: 300 };
 
 /* ---------- Grenzen ---------- */
 
@@ -134,30 +134,30 @@ const MAX_SWATCH_BYTES = 5 * 1024 * 1024; // current catalog originals include f
 // 220 s reichten mit Gemini fuer zwei Durchgaenge in der langsamsten Form (2 x 90 s) plus Mails; mit Bildern von 88 bis
 // 100 s (Root, 31.10.) reichen sie fuer einen, ein zweiter laeuft nur nach einem schnellen ersten (Schranke unten).
 // Root, 01.11. (Kandidat 52; seit 86 ohne festen Hoechstwert fuer das Bild): Vorpruefung 60 s, Bild, Lesung des Halts 60 s neben der Pruefung, Mails 10 s;
-// zusammen mehr als 260 s moeglich, darum nimmt das Bild nur den Rest nach den Reserven von 70 oder 40 s (generateImage).
-const TOTAL_TIMEOUT_MS = 260000; // 10 seconds below the platform limit (vercel.json maxDuration 270)
+// zusammen mehr als 290 s moeglich, darum nimmt das Bild nur den Rest nach den Reserven von 70 oder 40 s (generateImage).
+const TOTAL_TIMEOUT_MS = 290000; // 10 seconds below the platform limit (vercel.json maxDuration 300)
 const DELIVERY_RESERVE_MS = 10000; // Lead- und Kundenmail brauchen zusammen 2 bis 5 s (Logs 19.09.)
 const PER_DEVICE_PER_DAY = 5;                 // Cookie nldbp
 const PER_IP_PER_DAY = 10;                    // In-Memory, muss über dem Gerätelimit liegen
 // Root, 31.10.: Images edits mit gpt-image-2.5-sunburst in Qualitaet max brauchte 88 bis 100 s, Responses im Prototyp 55 122.6 s.
 // Kandidat 86 (Root, 03.11.): kein fester Hoechstwert mehr fuer das Bild. In 84 und 85 brach es bei den damaligen 150 s ab, obwohl nach
 // Pruefung und Mails noch rund 26 und 10 s im Budget waren; generateImage nimmt jetzt den ganzen Rest bis auf die Reserven von 40 oder 70 s.
-// Budget 260 s, Reserven, Abbruch und Zahl der Versuche bleiben wie bisher.
+// Seit Kandidat 106 Budget 290 s; Reserven, Abbruch und Zahl der Versuche bleiben gleich.
 // 20.09., 09:25 (Preview, 87 s): Fotopruefung 16 s, Bild 28 s, Pruefung nach 25 s abgelaufen,
 // dieselbe Pruefung nochmals 17 s. Beide Pruefungen denken jetzt nur wenig (heute checkReasoning),
 // darum reichen kuerzere Grenzen; die alten waren auf "medium" zugeschnitten.
 // Vollstaendiger QC: 14 s in Versuch 44; Versuch 46 nach 20 s ohne Antwort abgebrochen. 30 s sind noch live zu pruefen;
-// globale Deadline 260 s.
+// globale Deadline 290 s.
 const CHECK_TIMEOUT_MS = 30000;       // liest ein 2K-Bild
 const QUICK_CHECK_TIMEOUT_MS = 10000; // zweiter Anlauf nach einem Timeout: kurz, nicht nochmals 20 s
 // Lesung des Halts der Kopfbrause (Root, 01.11., Diagnose 50, Astra high): Ran42 59.1 s, Ran41 9.5 s. Ein Hoechstwert, keine Zusage.
 const SUPPORT_CHECK_TIMEOUT_MS = 60000;
-// haelt das Bild auf; laeuft sie ab, wird ohne Grundriss gerendert. Seit dem 27.09. mit mehr Nachdenken (Problem 1 der
+// haelt das Bild auf; laeuft sie ab, wird kein Ideenbild erzeugt. Seit dem 27.09. mit mehr Nachdenken (Problem 1 der
 // siebten Probe: an welcher Wand die Armaturen hingehoeren, liest sie aus der Lage der Wanne), darum 25 statt 12 s.
 // Seit gemini-3.1-pro-preview (27.09.): P2 14 bis 21 s, P9 17 bis 19 s, P7 3 s oder 26 bis 27 s; mit 25 s lief P7 im Pruefstand
 // dreimal ab. Root, 31.10.: gpt-6-astra mit reasoning high brauchte 11 bis 40.2 s und lief zweimal ueber 40 s; 60 s lassen
-// Luft. Laeuft sie trotzdem ab, wird wie bisher ohne Grundriss gerendert.
-const PHOTO_CHECK_TIMEOUT_MS = 60000;
+// Luft. Kandidat 106 gibt ihr bis 90 s. Laeuft sie trotzdem ab, endet die Anfrage vor der Bildgenerierung.
+const PHOTO_CHECK_TIMEOUT_MS = 90000;
 const CHECK_RETRY_DELAY_MS = 750;
 // Die Pruefmodelle lesen nur ab und fuellen JSON aus: kein Nachdenken fuer das Ideenbild, viel fuer die Vorpruefung.
 // Root, 26.10. (C6/C7): gpt-5.4-2026-03-05 mit reasoning none antwortete in 4.9 bis 7.3 s; mit low lief es nach 20 s ab
@@ -892,19 +892,24 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
     });
   }
 
-  console.info('[badplaner] Bildgrösse', photoSize || 'automatisch');
   // Wenn der Bilddienst nichts liefert, war der Kunde trotzdem da: Name, Telefon
   // und Foto sind das Wertvolle. Frueher ging bei einem Fehler alles verloren.
   const leadWithoutImage = async (note: string, discarded?: { mime: string; data: string }) => {
+    const photoUnavailable = photoCheck.status === 'unavailable';
+    const failureMessage = photoUnavailable
+      ? 'Ihr Foto konnte gerade nicht geprüft werden. Es wurde kein Ideenbild erstellt.'
+      : 'Ihr Ideenbild konnte leider nicht erstellt werden.';
     const failDelivery = await sendLeadMail({
       subject: preview
         ? `Badplaner-Fehler ohne Kontakt – ${isGuestWc ? 'Gäste-WC' : pkg.name} – kein Ideenbild`
         : `Badplaner-Lead: ${name} - ${isGuestWc ? 'Gaeste-WC' : pkg.name} - kein Ideenbild erzeugt`,
       replyTo: email || undefined,
-      intro: preview
-        ? 'Anonymer Badplaner-Versuch ohne Kontaktdaten. Die Bildgenerierung ist fehlgeschlagen; der Besucher hat kein Ideenbild gesehen. Foto und Auswahl liegen bei.'
-        : 'Die Bildgenerierung ist fehlgeschlagen; der Kunde hat kein Ideenbild gesehen. Foto und Auswahl liegen bei.',
-      details: leadDetails(note, preview ? RENDER_FAILURE_LABELS.RENDER_FAILED : 'nicht erzeugt: Bilddienst hat nicht geliefert'),
+      intro: photoUnavailable
+        ? `${preview ? 'Anonymer Badplaner-Versuch ohne Kontaktdaten. ' : ''}Die Fotoprüfung war nicht möglich. Deshalb wurde kein Ideenbild erzeugt. Foto und Auswahl liegen bei.`
+        : preview
+          ? 'Anonymer Badplaner-Versuch ohne Kontaktdaten. Die Bildgenerierung ist fehlgeschlagen; der Besucher hat kein Ideenbild gesehen. Foto und Auswahl liegen bei.'
+          : 'Die Bildgenerierung ist fehlgeschlagen; der Kunde hat kein Ideenbild gesehen. Foto und Auswahl liegen bei.',
+      details: leadDetails(note, photoUnavailable ? 'nicht erzeugt: Fotoprüfung nicht möglich' : preview ? RENDER_FAILURE_LABELS.RENDER_FAILED : 'nicht erzeugt: Bilddienst hat nicht geliefert'),
       attachments: [
         { filename: photoName, content: photo.data },
         ...(discarded ? [{ filename: 'verworfen.jpg', content: discarded.data }] : []),
@@ -914,13 +919,18 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
       ok: false as const, code: 'RENDER_FAILED',
       delivery: { lead: failDelivery.status, leadProvider: failDelivery.provider, leadAttachments: failDelivery.attachments },
       error: preview
-        ? 'Ihr Ideenbild konnte leider nicht erstellt werden. Hinterlassen Sie uns Ihre Kontaktdaten – wir besprechen Ihre Badideen gerne persönlich mit Ihnen.'
+        ? `${failureMessage} Hinterlassen Sie uns Ihre Kontaktdaten – wir besprechen Ihre Badideen gerne persönlich mit Ihnen.`
         : failDelivery.status === 'accepted'
-          ? 'Ihr Ideenbild konnte leider nicht erstellt werden. Ihre Angaben und Ihr Foto sind bei uns. Wir melden uns persönlich bei Ihnen.'
-          : 'Ihr Ideenbild konnte leider nicht erstellt werden. Die Übermittlung Ihrer Anfrage konnte nicht bestätigt werden. Bitte kontaktieren Sie uns telefonisch.',
+          ? `${failureMessage} Ihre Angaben und Ihr Foto sind bei uns. Wir melden uns persönlich bei Ihnen.`
+          : `${failureMessage} Die Übermittlung Ihrer Anfrage konnte nicht bestätigt werden. Bitte kontaktieren Sie uns telefonisch.`,
     };
   };
 
+  if (photoCheck.status === 'unavailable') {
+    return res.status(502).json(await leadWithoutImage('Fotoprüfung nicht möglich – keine Bildgenerierung gestartet'));
+  }
+
+  console.info('[badplaner] Bildgrösse', photoSize || 'automatisch');
   let checkNote = 'ok';
   const wantedFixtures = { room, shower: shower ? shower.id !== 'keine' : false, showerType: shower?.id, bathtub: bathtub ? bathtub.id !== 'keine' : false, cistern, windows, showerWall, showerLongWall,
     bathtubType: bathtub?.id, basin: basin.id, basinType: basinType?.id, mirror: mirror.id, ceiling: photoCheck.status === 'ok' ? photoCheck.ceiling : undefined, refs: checkRefs };
@@ -930,6 +940,8 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
   const supportRef = checkRefs.find((ref) => ref.shower?.type === 'concealed');
   const checkReserveMs = Math.max(CHECK_TIMEOUT_MS, supportRef ? SUPPORT_CHECK_TIMEOUT_MS : 0) + DELIVERY_RESERVE_MS;
   const checkWithUnavailableRetry = async (image: { mime: string; data: string }): Promise<CheckResult> => {
+    const checkStarted = dependencies.clock.now();
+    let checks = 1;
     const checking = checkOpenings(photo, image, wantedFixtures, ctx);
     const support = supportRef ? checkShowerSupport(photo, image, supportRef.image, ctx) : Promise.resolve<string[]>([]);
     let result = await checking;
@@ -939,10 +951,15 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
       // wieder die volle Zeit (20.09.: 25 s abgelaufen, dann 17 s): ein kurzer zweiter Anlauf.
       const afterTimeout = result.detail === 'Timeout';
       if (!afterTimeout) await dependencies.sleep(CHECK_RETRY_DELAY_MS);
+      checks += 1;
       result = await checkOpenings(photo, image, wantedFixtures, ctx, afterTimeout ? QUICK_CHECK_TIMEOUT_MS : CHECK_TIMEOUT_MS);
     }
     // Nur angehaengt: Ergebnis, Grund und Hinweise der Pruefung bleiben, wie sie sind.
     const faults = await support;
+    console.info('[badplaner] Bildpruefung abgeschlossen', JSON.stringify({
+      durationMs: Math.max(0, dependencies.clock.now() - checkStarted), status: result.status,
+      checks, supportChecks: supportRef ? 1 : 0, remainingMs: ctx.budget.remaining(),
+    }));
     return result.status === 'approved' && faults.length
       ? { ...result, serious: [...(result.serious ?? []), ...faults], hints: [...(result.hints ?? []), ...faults] } : result;
   };
@@ -1923,58 +1940,114 @@ type GenResult = { ok: true; mime: string; data: string } | { ok: false; error: 
 
 const OPENAI_RESPONSES_URL = 'https://api.openai.com/v1/responses';
 
+const OPENAI_IMAGE_EDITS_URL = 'https://api.openai.com/v1/images/edits';
+
 async function generateImage(prompt: string, photo: Photo, references: (Photo | null)[], ctx: RequestContext, size = '', reserveMs = CHECK_TIMEOUT_MS + DELIVERY_RESERVE_MS): Promise<GenResult> {
-  // Ein Responses-Aufruf mit genau einem Bildwerkzeug: das Sprachmodell liest Foto und Vorlagen vor der Bearbeitung.
-  // Reihenfolge und Prompt bleiben gleich; kein zweiter Anbieter und kein stiller Rueckfall auf Images edits.
+  // Eine direkte Bearbeitung, ohne Sprachmodell als Orchestrator. Foto, Vorlagen und Prompt bleiben in derselben Reihenfolge.
   const imageModel = env.BADPLANER_MODEL || 'gpt-image-2.5-sunburst';
   const images = [photo, ...references].filter((image): image is Photo => Boolean(image));
-  const body = {
-    model: 'gpt-6-astra',
-    store: false,
-    ...checkReasoning('gpt-6-astra', 'high'),
-    max_output_tokens: CHECK_OUTPUT_TOKENS.high,
-    max_tool_calls: 1,
-    tool_choice: { type: 'image_generation' },
-    input: [{ role: 'user', content: [{ type: 'input_text', text: prompt }, ...images.map((image) => ({ type: 'input_image', image_url: `data:${image.mime};base64,${image.data}`, detail: 'high' }))] }],
-    tools: [{ type: 'image_generation', model: imageModel, action: 'edit', output_format: 'jpeg', ...(size ? { size } : {}), ...(env.BADPLANER_IMAGE_QUALITY ? { quality: env.BADPLANER_IMAGE_QUALITY } : {}) }],
-  };
+  const started = dependencies.clock.now();
+  let timeoutMs = 0;
+  let httpStatus: number | undefined;
+  let processingMs: number | undefined;
+  let responseJson: any;
+  let exception: { name?: string; code?: string } | undefined;
+  const diagnosticToken = (value: unknown) => typeof value === 'string' && /^[A-Za-z0-9._:[\]-]{1,100}$/.test(value) ? value : null;
+  let outcome = 'request-error';
+  let failureDetail = 'Bilddienstfehler';
 
   try {
-    const r = await request(ctx, OPENAI_RESPONSES_URL, {
+    if (images.length > 16 || images.some((image) => !['image/jpeg', 'image/png', 'image/webp'].includes(image.mime))) {
+      outcome = 'invalid-input';
+      return { ok: false, error: 'Das Ideenbild konnte nicht erstellt werden. Bitte später noch einmal versuchen oder rufen Sie uns an.', detail: 'Ungültige Bildvorlagen' };
+    }
+    const body = new FormData();
+    body.set('model', imageModel);
+    body.set('prompt', prompt);
+    body.set('n', '1');
+    body.set('output_format', 'jpeg');
+    if (size) body.set('size', size);
+    if (env.BADPLANER_IMAGE_QUALITY) body.set('quality', env.BADPLANER_IMAGE_QUALITY);
+    if (/^gpt-image-2\.6-/.test(imageModel)) body.set('complexity', 'high');
+    for (const [index, image] of images.entries()) {
+      body.append('image[]', new Blob([Buffer.from(image.data, 'base64')], { type: image.mime }), `image-${index + 1}.${image.mime.slice(6)}`);
+    }
+    timeoutMs = Math.max(0, ctx.budget.remaining() - reserveMs);
+    const r = await request(ctx, OPENAI_IMAGE_EDITS_URL, {
       method: 'POST',
-      headers: { authorization: `Bearer ${env.OPENAI_API_KEY || ''}`, 'content-type': 'application/json' },
-      body: JSON.stringify(body),
-    }, Math.max(0, ctx.budget.remaining() - reserveMs));
-    const json = r.json;
+      // fetch setzt Content-Type samt Multipart-Grenze selbst.
+      headers: { authorization: `Bearer ${env.OPENAI_API_KEY || ''}` },
+      body,
+    }, timeoutMs);
+    httpStatus = r.status;
+    const processing = r.headers.get('openai-processing-ms');
+    const parsedProcessing = processing?.trim() ? Number(processing) : NaN;
+    if (Number.isFinite(parsedProcessing) && parsedProcessing >= 0) processingMs = parsedProcessing;
+    const json = responseJson = r.json;
     if (!r.ok) {
-      const apiMessage = typeof json?.error?.message === 'string' ? json.error.message.slice(0, 160) : '';
-      console.error('[badplaner] Bilddienst-Fehler', r.status, apiMessage);
-      const detail = `HTTP ${r.status}${apiMessage ? ': ' + apiMessage : ''}`;
+      outcome = 'http-error';
+      // Providertexte koennen Eingaben wiederholen: nur HTTP-Status in Details, begrenzte Diagnosetokens in Logs.
+      const detail = `HTTP ${r.status}`;
       if (r.status === 429) return { ok: false, error: 'Der Bilddienst ist gerade ausgelastet. Bitte in einer Minute noch einmal versuchen.', detail };
       return { ok: false, error: 'Das Ideenbild konnte nicht erstellt werden. Bitte später noch einmal versuchen oder rufen Sie uns an.', detail };
     }
-    const calls = (Array.isArray(json?.output) ? json.output : []).filter((item: any) => item?.type === 'image_generation_call');
-    const call = calls.length === 1 ? calls[0] : null;
-    const b64 = call?.result;
-    if (json?.status !== 'completed' || call?.status !== 'completed' || (call.output_format && call.output_format !== 'jpeg') || typeof b64 !== 'string' || !b64) {
-      console.error('[badplaner] Bilddienst ohne Bild');
+    const image = Array.isArray(json?.data) && json.data.length === 1 ? json.data[0] : null;
+    const b64 = image?.b64_json;
+    if (!image || typeof image !== 'object' || Array.isArray(image)
+      || image.url != null || json.url != null
+      || (json.output_format !== undefined && json.output_format !== 'jpeg')
+      || (image.output_format !== undefined && image.output_format !== 'jpeg')
+      || (image.mime_type !== undefined && image.mime_type !== 'image/jpeg')
+      || typeof b64 !== 'string' || !b64) {
+      outcome = 'invalid-response';
       return { ok: false, error: 'Aus diesem Foto konnte kein Ideenbild erstellt werden. Bitte ein anderes Foto versuchen: von der Tür aus, das ganze Bad im Bild, Licht an.', detail: 'ohne Bild' };
     }
+    failureDetail = 'Ungültige Bildantwort';
     const mime = 'image/jpeg';
     const data = normalizeBase64(b64, MAX_RESPONSE_BASE64);
     validateImageBytes(Buffer.from(data, 'base64'), mime, GENERATED_IMAGE_LIMITS);
+    outcome = 'ok';
     return { ok: true, mime, data };
   } catch (err: any) {
+    const name = diagnosticToken(err?.name);
+    const code = diagnosticToken(err?.code) ?? diagnosticToken(err?.cause?.code);
+    exception = { ...(name ? { name } : {}), ...(code ? { code } : {}) };
     const timeout = err && (err.name === 'AbortError' || err.name === 'TimeoutError');
-    const detail = timeout ? 'Timeout' : String(err?.message || err).slice(0, 160);
-    console.error('[badplaner] Bilddienst nicht erreichbar', detail);
+    outcome = timeout ? 'timeout' : failureDetail === 'Ungültige Bildantwort' ? 'invalid-response' : 'request-error';
     return {
       ok: false,
       error: timeout
         ? 'Das hat zu lange gedauert. Bitte noch einmal versuchen.'
         : 'Der Bilddienst ist im Moment nicht erreichbar. Bitte später noch einmal versuchen.',
-      detail,
+      detail: timeout ? 'Timeout' : failureDetail,
     };
+  } finally {
+    const modelForLog = (value: unknown) => typeof value === 'string' && /^[A-Za-z0-9._:-]{1,100}$/.test(value) ? value : null;
+    const error: Record<string, string> = {};
+    for (const key of ['type', 'code', 'param']) {
+      const value = diagnosticToken(responseJson?.error?.[key]);
+      if (value) error[key] = value;
+    }
+    const usage: Record<string, number> = {};
+    const numeric = (value: unknown): value is number => Number.isSafeInteger(value) && (value as number) >= 0;
+    for (const key of ['input_tokens', 'output_tokens', 'total_tokens']) {
+      const value = responseJson?.usage?.[key];
+      if (numeric(value)) usage[key] = value;
+    }
+    for (const group of ['input_tokens_details', 'output_tokens_details']) {
+      for (const key of ['image_tokens', 'text_tokens']) {
+        const value = responseJson?.usage?.[group]?.[key];
+        if (numeric(value)) usage[`${group}.${key}`] = value;
+      }
+    }
+    (outcome === 'ok' ? console.info : console.error)('[badplaner] Bildbearbeitung abgeschlossen', JSON.stringify({
+      durationMs: Math.max(0, dependencies.clock.now() - started), timeoutMs, outcome,
+      ...(httpStatus === undefined ? {} : { httpStatus }), ...(processingMs === undefined ? {} : { processingMs }),
+      ...(Object.keys(error).length ? { error } : {}),
+      ...(exception && Object.keys(exception).length ? { exception } : {}), requestedModel: modelForLog(imageModel),
+      ...(modelForLog(responseJson?.model) ? { returnedModel: modelForLog(responseJson.model) } : {}),
+      ...(Object.keys(usage).length ? { usage } : {}),
+    }));
   }
 }
 
@@ -2380,7 +2453,8 @@ async function checkOpenings(
 }
 
 /**
- * Vorpruefung des Kundenfotos, vor der teuren Bildgenerierung: zeigt es
+ * Vorpruefung des Kundenfotos, vor der teuren Bildgenerierung. Timeout oder unlesbare Antwort:
+ * unavailable, keine Bildgenerierung. Bei lesbarer Antwort fragt sie: zeigt es
  * ueberhaupt ein Bad oder ein WC? Ein Balkon, ein Wohnzimmer oder ein
  * Screenshot zwingt das Bildmodell, den ganzen Raum zu erfinden. Die
  * Oeffnungspruefung verwirft das Ergebnis danach ohnehin, nur eben nach zwei
@@ -2397,6 +2471,9 @@ type PhotoCheck = { status: 'ok'; layout?: Layout; ceiling?: Ceiling; showerWall
 
 async function checkPhoto(photo: Photo, room: 'badezimmer' | 'gaeste-wc', ctx: RequestContext): Promise<PhotoCheck> {
   const model = photoCheckModel();
+  const started = dependencies.clock.now();
+  let status: PhotoCheck['status'] = 'unavailable';
+  try {
   if (!model) return { status: 'unavailable' };
   const question =
     `A customer uploaded this photo as the ${room === 'gaeste-wc' ? 'guest WC' : 'bathroom'} they want renovated. ` +
@@ -2435,7 +2512,10 @@ async function checkPhoto(photo: Photo, room: 'badezimmer' | 'gaeste-wc', ctx: R
   if (!parsed || Array.isArray(parsed) || typeof parsed.is_bathroom !== 'boolean' || typeof parsed.reason !== 'string'
     || !parsed.reason.trim() || parsed.reason.length > 200
     || Object.keys(parsed).some((key) => !['is_bathroom', 'reason', 'walls', 'order', 'nearest', 'ceiling', 'shower_shape', 'shower_left', 'shower_right', 'shower_back', 'basin_beside_end'].includes(key))) return { status: 'unavailable' };
-  if (!parsed.is_bathroom) return { status: 'wrong_room', reason: parsed.reason.slice(0, 200) };
+  if (!parsed.is_bathroom) {
+    status = 'wrong_room';
+    return { status, reason: parsed.reason.slice(0, 200) };
+  }
   // Der Grundriss ist eine Zugabe: fehlt er oder ist er unlesbar, wird ohne ihn gerendert.
   const walls = inventory(parsed.walls);
   const seen = order(parsed.order);
@@ -2478,7 +2558,13 @@ async function checkPhoto(photo: Photo, room: 'badezimmer' | 'gaeste-wc', ctx: R
       : '',
     `Decke ${ceiling === 'flat' ? 'flach' : ceiling === 'sloped' ? 'schräg' : '–'}`,
   ].filter(Boolean).join('; ');
-  return { status: 'ok', layout: walls && seen && near ? { walls, order: seen, nearest: near } : undefined, ceiling, showerWall, showerLongWall: showerWall ? showerLong : undefined, summary };
+  status = 'ok';
+  return { status, layout: walls && seen && near ? { walls, order: seen, nearest: near } : undefined, ceiling, showerWall, showerLongWall: showerWall ? showerLong : undefined, summary };
+  } finally {
+    console.info('[badplaner] Fotopruefung abgeschlossen', JSON.stringify({
+      durationMs: Math.max(0, dependencies.clock.now() - started), status, requestedModel: model || null,
+    }));
+  }
 }
 
 /**
