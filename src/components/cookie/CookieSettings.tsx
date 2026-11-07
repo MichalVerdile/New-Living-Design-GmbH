@@ -68,7 +68,7 @@ const CookieSettings: React.FC<CookieSettingsProps> = ({ onSettingsChange }) => 
         <p>
           Hier können Sie Ihre Cookie-Präferenzen anpassen. Notwendige Cookies sind immer aktiv,
           da sie für die Grundfunktionen der Website erforderlich sind. Statistik und Marketing
-          laden wir erst nach Ihrer Zustimmung.
+          können Sie hier getrennt steuern. Statistik ist standardmässig aktiv; Marketing laden wir erst nach Ihrer Zustimmung.
         </p>
       </div>
 
@@ -83,7 +83,7 @@ const CookieSettings: React.FC<CookieSettingsProps> = ({ onSettingsChange }) => 
             <div className="cookie-toggle">
               <input
                 type="checkbox"
-                id="necessary"
+                id="necessary" aria-label="Notwendige Cookies"
                 checked={settings.necessary}
                 disabled={true}
                 className="cookie-checkbox"
@@ -112,7 +112,7 @@ const CookieSettings: React.FC<CookieSettingsProps> = ({ onSettingsChange }) => 
             <div className="cookie-toggle">
               <input
                 type="checkbox"
-                id="analytics"
+                id="analytics" aria-label="Statistik"
                 checked={settings.analytics}
                 onChange={() => handleToggle('analytics')}
                 className="cookie-checkbox"
@@ -143,7 +143,7 @@ const CookieSettings: React.FC<CookieSettingsProps> = ({ onSettingsChange }) => 
             <div className="cookie-toggle">
               <input
                 type="checkbox"
-                id="marketing"
+                id="marketing" aria-label="Marketing"
                 checked={settings.marketing}
                 onChange={() => handleToggle('marketing')}
                 className="cookie-checkbox"
@@ -193,7 +193,7 @@ const CookieSettings: React.FC<CookieSettingsProps> = ({ onSettingsChange }) => 
       </div>
 
       {savedMessage && (
-        <div className="cookie-success-message">
+        <div className="cookie-success-message" role="status">
           Ihre Cookie-Einstellungen wurden gespeichert.
         </div>
       )}

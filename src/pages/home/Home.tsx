@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { SEOHead } from '../../components';
+import SEOHead from '../../components/seo/SEOHead';
 import { business, bathPackages, localBusinessJsonLd } from '../../config/business';
 import { homeReferencePhotos, photoUrl, referenceById } from '../../data/references';
 import { areaById, areaHref, areas, imageOf, supplierHref, suppliers, suppliersInArea, type AreaId, type SupplierImage, type SupplierKey } from '../../data/suppliers';
@@ -33,7 +33,7 @@ const creditOf = (shot: Shot, area: AreaId) => shot.credit ?? (shot.supplier ? {
 const Figure: React.FC<{ shot: Shot; area: AreaId; sizes: string; className?: string }> = ({ shot, area, sizes, className }) => {
   const credit = creditOf(shot, area);
   return (
-    <figure className={className}>
+    <figure className={className} data-reveal="image">
       <img {...shot.image} sizes={sizes} loading="lazy" decoding="async" />
       {credit && <figcaption>{shot.supplier ? 'Marke' : 'Referenz'}: <Link to={credit.href}>{credit.label}</Link></figcaption>}
     </figure>
@@ -41,6 +41,15 @@ const Figure: React.FC<{ shot: Shot; area: AreaId; sizes: string; className?: st
 };
 
 const Home: React.FC = () => {
+  const [activeChapter, setActiveChapter] = useState<AreaId>('bad');
+  useEffect(() => {
+    if (!('IntersectionObserver' in window)) return;
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(entry => { if (entry.isIntersecting) setActiveChapter(entry.target.id.replace('bereich-', '') as AreaId); });
+    }, { rootMargin: '-25% 0px -45% 0px', threshold: 0 });
+    document.querySelectorAll('[data-story]').forEach(el => observer.observe(el));
+    return () => observer.disconnect();
+  }, []);
   const showroomImage = photoUrl('ausstellung-zofingen-01.webp');
   return (
     <main id="main-content" className={styles.home}>
@@ -52,13 +61,13 @@ const Home: React.FC = () => {
       {/* Hero: vollflächiges Projektbild, Typografie-Panel ragt in den nächsten Abschnitt */}
       <section className={styles.hero} aria-labelledby="home-title">
         <figure className={styles.heroFigure}>
-          <img src={photoUrl('bad-marmor-grau-02.webp')} alt={heroPhoto?.alt ?? ''} width="1600" height="1102" fetchPriority="high" />
+          <img src={photoUrl('bad-marmor-grau-02.webp')} alt={heroPhoto?.alt ?? ''} srcSet={`${photoUrl('bad-marmor-grau-02.webp', true)} 480w, ${photoUrl('bad-marmor-grau-02.webp')} 1600w`} sizes="(max-width: 767px) 100vw, 58vw" width="1600" height="1102" {...{ fetchpriority: 'high' }} />
           {heroRef && <figcaption><Link to={`/referenzen#${heroRef.id}`}>{heroRef.title}</Link></figcaption>}
         </figure>
         <div className={styles.heroPanel}>
           <p className={styles.eyebrow}><span className={styles.dot} /> Ausstellung in Zofingen</p>
           <h1 id="home-title" className={styles.heroTitle}>Bad, Küchen, Platten &amp; Wellness.</h1>
-          <p className={styles.heroLead}>Nicht einzeln ausgesucht. Als Raum gedacht.</p>
+          <p className={styles.heroLead}>Nicht einzeln ausgesucht. <em>Als Raum gedacht.</em></p>
           <p className={styles.heroText}>Wir kombinieren Materialien, Farben und Produkte so, dass sie zu Ihrem Raum, Ihrem Stil und Ihrem Budget passen. Wir beraten Sie persönlich in unserer Ausstellung in Zofingen. Bad und Küche visualisieren wir auf Wunsch in 3D.</p>
           <div className={styles.actions}>
             <Link to="/kontakt" className={`${styles.button} ${styles.buttonLight}`}>Ausstellungsberatung anfragen</Link>
@@ -68,22 +77,32 @@ const Home: React.FC = () => {
         </div>
       </section>
 
+      <section className={styles.positioning} aria-labelledby="positioning-title">
+        <div className={styles.container} data-reveal="text">
+          <p className={styles.eyebrow}>New Living Design · Zofingen</p>
+          <h2 id="positioning-title">Ein Raum beginnt mit einer Idee.<br /><em>Und mit Menschen, die zuhören.</em></h2>
+          <p>Materialien fühlen. Farben vergleichen. Möglichkeiten entdecken. In unserer Ausstellung verbinden wir Ihre Wünsche mit einer Auswahl, die als Ganzes funktioniert.</p>
+          <Link to="/ueber-uns" className={styles.textLink}>New Living Design kennenlernen ↗</Link>
+        </div>
+      </section>
+
       {/* Vier Bereiche als Kapitel: Index, dann je ein Hauptbild mit zwei Nebenbildern */}
       <section id="sortiment" className={styles.journey} aria-labelledby="sortiment-title">
         <div className={styles.container}>
           <div className={styles.journeyHead}>
             <div><p className={styles.eyebrow}>Bad, Küchen, Platten und Wellness</p><h2 id="sortiment-title">Vier Bereiche. Eine stimmige Auswahl.</h2></div>
-            <nav aria-label="Bereiche" className={styles.index}>
-              <ol>{chapters.map((c, i) => <li key={c.id}><a href={`#bereich-${c.id}`}><span>{String(i + 1).padStart(2, '0')}</span>{areaById(c.id)?.title}</a></li>)}</ol>
-            </nav>
+
             <Link to="/produkte" className={styles.textLink}>Alle Produkte ansehen</Link>
           </div>
+            <nav aria-label="Bereiche" className={styles.index}>
+              <ol>{chapters.map((c, i) => <li key={c.id}><a href={`#bereich-${c.id}`} aria-current={activeChapter === c.id ? 'location' : undefined}><span>{String(i + 1).padStart(2, '0')}</span>{areaById(c.id)?.title}</a></li>)}</ol>
+            </nav>
           {chapters.map((c, i) => {
             const brands = suppliersInArea(c.id);
             const area = areaById(c.id)!;
             return (
-              <article key={c.id} id={`bereich-${c.id}`} className={`${styles.chapter} ${i % 2 ? styles.chapterAlt : ''} ${c.main.image.height > c.main.image.width ? styles.chapterPortrait : ''}`} aria-labelledby={`bereich-${c.id}-title`}>
-                <div className={styles.chapterText}>
+              <article data-story="" key={c.id} id={`bereich-${c.id}`} className={`${styles.chapter} ${i % 2 ? styles.chapterAlt : ''} ${c.main.image.height > c.main.image.width ? styles.chapterPortrait : ''}`} aria-labelledby={`bereich-${c.id}-title`}>
+                <div className={styles.chapterText} data-reveal="text">
                   <span className={styles.storyNumber} aria-hidden="true">{String(i + 1).padStart(2, '0')}</span>
                   <h3 id={`bereich-${c.id}-title`}>{area.title}</h3>
                   <p className={styles.storyLabel}>{area.label}</p>
@@ -101,6 +120,45 @@ const Home: React.FC = () => {
             );
           })}
           <p className={styles.imageNote}>Die gezeigte Küche wurde von uns realisiert. Weitere Motive zeigen ausgewählte Produkte unserer Lieferanten. Auswahl und Verfügbarkeit klären wir persönlich mit Ihnen.</p>
+        </div>
+      </section>
+
+      <section className={styles.process} aria-labelledby="process-title">
+        <div className={styles.container}>
+          <div className={styles.sectionHead} data-reveal="text"><div><p className={styles.eyebrow}>Persönlich begleitet</p><h2 id="process-title">Von der ersten Idee<br />bis zum letzten Detail.</h2></div><Link to="/dienstleistungen" className={styles.textLink}>Unsere Dienstleistungen ↗</Link></div>
+          <ol className={styles.processSteps}>
+            <li data-reveal="text"><span>01</span><h3>Verstehen &amp; beraten</h3><p>Wir klären Ihre Wünsche, die Raumsituation und das Budget. In Zofingen vergleichen Sie Materialien direkt am Muster.</p></li>
+            <li data-reveal="text"><span>02</span><h3>Auswählen &amp; planen</h3><p>Produkte, Farben und Oberflächen werden aufeinander abgestimmt. Bad und Küche visualisieren wir auf Wunsch in 3D.</p></li>
+            <li data-reveal="text"><span>03</span><h3>Koordinieren &amp; umsetzen</h3><p>Wir begleiten die vereinbarten Schritte bis zur Lieferung und Montage. Umfang und Ablauf halten wir gemeinsam fest.</p></li>
+          </ol>
+        </div>
+      </section>
+
+      <section className={`${styles.section} ${styles.references}`} aria-labelledby="references-title">
+        <div className={styles.container}>
+          <div className={styles.sectionHead} data-reveal="text"><div><p className={styles.eyebrow}>Echte Projekte aus der Region</p><h2 id="references-title">Von uns geplant. Für Kunden realisiert.</h2></div><Link to="/referenzen" className={styles.textLink}>Referenzen ansehen</Link></div>
+          <div className={styles.referenceGrid}>
+            {homeReferencePhotos.map(({ reference, photo }) => (
+              <Link key={reference.id} to={`/referenzen#${reference.id}`} className={styles.referenceCard} data-reveal="image">
+                <img src={photoUrl(photo.file, true)} srcSet={`${photoUrl(photo.file, true)} 480w, ${photoUrl(photo.file)} 1067w`} sizes="(max-width: 767px) 100vw, 40vw" alt={photo.alt} loading="lazy" decoding="async" width="480" height="640" /><div><h3>{reference.title}</h3></div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className={styles.planner} aria-labelledby="planner-title">
+        <div className={`${styles.container} ${styles.plannerInner}`}>
+          <div><p className={styles.eyebrow}>Ein erster Eindruck</p><h2 id="planner-title">Ein Ideenbild, bevor Sie sich festlegen.</h2><p>Mit dem Badplaner probieren Sie ausgewählte Materialien und Farben auf einem Foto Ihres Badezimmers aus. Das Ergebnis ist eine erste Inspiration – kostenlos und unverbindlich, aber keine verbindliche Planung.</p></div>
+          <Link to="/badplaner" className={`${styles.button} ${styles.buttonLight}`}>Badplaner ausprobieren</Link>
+        </div>
+      </section>
+
+      <section className={`${styles.section} ${styles.renovation}`} aria-labelledby="renovation-title">
+        <div className={styles.container}>
+          <div className={styles.sectionHead} data-reveal="text"><div><p className={styles.eyebrow}>Wenn Sie nicht nur Produkte suchen</p><h2 id="renovation-title">Vom ausgewählten Bad zum kompletten Umbau.</h2><p className={styles.renovationIntro}>Für Badumbauten im Umkreis von rund 40 km um Zofingen koordinieren wir auf Wunsch den gesamten Ablauf – von der Demontage über Sanitär-, Elektro- und Plattenarbeiten bis zur Montage und Übergabe. Unsere drei Badpakete geben Ihnen dafür eine klare erste Preisorientierung.</p></div><Link to="/badumbau-zofingen" className={styles.textLink}>Badumbau und Pakete ansehen</Link></div>
+          <div className={styles.packageRow}>{bathPackages.map((pkg) => <Link key={pkg.id} to={`/badumbau-zofingen#paket-${pkg.id}`}><span>{pkg.name}</span><strong>ab CHF {pkg.priceLabel}</strong></Link>)}</div>
+          <p className={styles.imageNote}>Richtpreise inkl. Material, Montage und MwSt. Der Fixpreis gilt nach der Besichtigung vor Ort.</p>
         </div>
       </section>
 
@@ -132,7 +190,7 @@ const Home: React.FC = () => {
 
       <section className={styles.showroom} aria-labelledby="showroom-title">
         <div className={`${styles.container} ${styles.showroomGrid}`}>
-          <figure className={styles.showroomFigure}>
+          <figure className={styles.showroomFigure} data-reveal="image">
             <img src={showroomImage} srcSet={`${photoUrl('ausstellung-zofingen-01.webp', true)} 480w, ${showroomImage} 1200w`} sizes="(max-width: 767px) 100vw, 40vw" alt="Einblick in unsere Ausstellung in Zofingen: Waschtische, ovale Spiegel und eine Wand in Onyxoptik" width="1200" height="1600" loading="lazy" decoding="async" />
             <figcaption><span>New Living Design</span><span>Unsere Ausstellung</span></figcaption>
           </figure>
@@ -149,34 +207,6 @@ const Home: React.FC = () => {
             <div className={styles.visitLinks}><a href={business.mapsLink} target="_blank" rel="noopener noreferrer" className={styles.textLink}>Route planen</a><a href={`tel:${business.phone.e164}`} className={styles.textLink}>{business.phone.display}</a></div>
             <a href={business.mapsLink} target="_blank" rel="noopener noreferrer" className={styles.reviewLink}>Kundenstimmen auf Google lesen</a>
           </div>
-        </div>
-      </section>
-
-      <section className={`${styles.section} ${styles.references}`} aria-labelledby="references-title">
-        <div className={styles.container}>
-          <div className={styles.sectionHead}><div><p className={styles.eyebrow}>Echte Projekte aus der Region</p><h2 id="references-title">Von uns geplant. Für Kunden realisiert.</h2></div><Link to="/referenzen" className={styles.textLink}>Referenzen ansehen</Link></div>
-          <div className={styles.referenceGrid}>
-            {homeReferencePhotos.map(({ reference, photo }) => (
-              <Link key={reference.id} to={`/referenzen#${reference.id}`} className={styles.referenceCard}>
-                <img src={photoUrl(photo.file, true)} srcSet={`${photoUrl(photo.file, true)} 480w, ${photoUrl(photo.file)} 1067w`} sizes="(max-width: 767px) 100vw, 40vw" alt={photo.alt} loading="lazy" decoding="async" width="480" height="640" /><div><h3>{reference.title}</h3></div>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className={styles.planner} aria-labelledby="planner-title">
-        <div className={`${styles.container} ${styles.plannerInner}`}>
-          <div><p className={styles.eyebrow}>Ein erster Eindruck</p><h2 id="planner-title">Ein Ideenbild, bevor Sie sich festlegen.</h2><p>Mit dem Badplaner probieren Sie ausgewählte Materialien und Farben auf einem Foto Ihres Badezimmers aus. Das Ergebnis ist eine erste Inspiration – kostenlos und unverbindlich, aber keine verbindliche Planung.</p></div>
-          <Link to="/badplaner" className={`${styles.button} ${styles.buttonLight}`}>Badplaner ausprobieren</Link>
-        </div>
-      </section>
-
-      <section className={`${styles.section} ${styles.renovation}`} aria-labelledby="renovation-title">
-        <div className={styles.container}>
-          <div className={styles.sectionHead}><div><p className={styles.eyebrow}>Wenn Sie nicht nur Produkte suchen</p><h2 id="renovation-title">Vom ausgewählten Bad zum kompletten Umbau.</h2><p className={styles.renovationIntro}>Für Badumbauten im Umkreis von rund 40 km um Zofingen koordinieren wir auf Wunsch den gesamten Ablauf – von der Demontage über Sanitär-, Elektro- und Plattenarbeiten bis zur Montage und Übergabe. Unsere drei Badpakete geben Ihnen dafür eine klare erste Preisorientierung.</p></div><Link to="/badumbau-zofingen" className={styles.textLink}>Badumbau und Pakete ansehen</Link></div>
-          <div className={styles.packageRow}>{bathPackages.map((pkg) => <Link key={pkg.id} to={`/badumbau-zofingen#paket-${pkg.id}`}><span>{pkg.name}</span><strong>ab CHF {pkg.priceLabel}</strong></Link>)}</div>
-          <p className={styles.imageNote}>Richtpreise inkl. Material, Montage und MwSt. Der Fixpreis gilt nach der Besichtigung vor Ort.</p>
         </div>
       </section>
 

@@ -1,6 +1,6 @@
 import { StrictMode } from 'react'
 import type { ComponentProps } from 'react'
-import { renderToString } from 'react-dom/server'
+import { renderToReadableStream } from 'react-dom/server.browser'
 import { StaticRouter } from 'react-router-dom'
 import { HelmetProvider } from 'react-helmet-async'
 import './index.css'
@@ -21,10 +21,10 @@ export interface RenderResult {
  * nach dem Client-Build aufgerufen, damit Suchmaschinen und KI-Crawler
  * den Seiteninhalt ohne JavaScript sehen.
  */
-export function render(url: string): RenderResult {
+export async function render(url: string): Promise<RenderResult> {
   const helmetContext: HelmetContext = {}
 
-  const html = renderToString(
+  const app = (
     <StrictMode>
       <HelmetProvider context={helmetContext}>
         <StaticRouter location={url}>
@@ -33,6 +33,12 @@ export function render(url: string): RenderResult {
       </HelmetProvider>
     </StrictMode>
   )
+
+  let renderError: unknown
+  const stream = await renderToReadableStream(app, { onError(error) { renderError = error } })
+  await stream.allReady
+  if (renderError) throw renderError
+  const html = await new Response(stream).text()
 
   const h = helmetContext.helmet
   const head = h

@@ -499,3 +499,35 @@
 .priceLine { margin: 1.25rem 0 0; padding: 1rem 1.25rem; border-radius: .9rem; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.18); font-size: 1.05rem; font-weight: 600; line-height: 1.5; color: #fff; }
 .extra .consent span { color: #d1d5db; }
 .extra .consent a { color: #fff; }
+
+/* A calm workspace for the existing planner, without changing its API contract. */
+.page { color: var(--nld-ink); background: var(--nld-paper); }
+.hero, .heroCompact { background: var(--nld-deep); padding: clamp(3rem,6vw,5.5rem) var(--nld-gutter); }
+.heroContent, .heroContent.visible { opacity: 1; transform: none; text-align: left; max-width: 1100px; }
+.heroTitle { max-width: 23ch; font-family: var(--nld-display); font-weight: 400; font-size: clamp(2.4rem,5vw,4.6rem); letter-spacing: -.04em; }
+.heroText, .heroNote { margin-left: 0; }
+.heroActions { justify-content: flex-start; }
+.eyebrow { border: 0; padding: 0; color: #d7cdb6; background: none; border-radius: 0; }
+.section { padding-block: var(--nld-section); }
+.light { background: var(--nld-paper); color: var(--nld-ink); }
+.dark { background: var(--nld-deep); }
+.sectionTitle { font-family: var(--nld-display); font-weight: 400; font-size: clamp(2rem,3.8vw,3.4rem); letter-spacing: -.035em; }
+.sectionLabel { padding: 0; background: none; border-radius: 0; color: inherit; }
+.step, .stepOpen, .package, .positionPanel, .upload, .extra, .faqItem, .resultImage, .preview img { border-radius: 3px; box-shadow: none; }
+.stepOpen { border-color: var(--nld-brass); }
+.stepNumber { background: var(--nld-stone); color: var(--nld-ink); border-radius: 2px; }
+.stepDone .stepNumber { background: var(--nld-ink); }
+.ctaPrimary, .ctaSecondary, .ctaDark, .ctaLight { border-radius: 2px; box-shadow: none; min-height: 48px; }
+.ctaDark, .ctaDark:hover { background: var(--nld-ink); box-shadow: none; }
+.ctaPrimary, .ctaPrimary:hover { background: var(--nld-paper); color: var(--nld-ink); box-shadow: none; }
+.field input, .field select, .field textarea { border-radius: 2px; font-size: 1rem; }
+.field input:focus-visible, .field select:focus-visible, .field textarea:focus-visible { outline: 3px solid var(--nld-brass); outline-offset: 3px; }
+.stepNavigation { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: .5rem; max-width: 900px; margin: 0 auto; }
+.stepNavigation button { min-width: 0; display: flex; align-items: center; gap: .75rem; padding: .85rem; text-align: left; background: none; border: 0; border-bottom: 2px solid var(--nld-line); border-radius: 0; color: var(--nld-muted); font-size: .85rem; }
+.stepNavigation button[aria-current] { border-color: var(--nld-ink); color: var(--nld-ink); font-weight: 700; }
+.stepNavigation button:disabled { opacity: .6; }
+.stepNavigation span { color: var(--nld-accent-text); font-size: .7rem; }
+.stepStatus { max-width: 900px; margin: 1rem auto 1.5rem; color: var(--nld-muted); font-size: .8rem; }
+.privacyNote { padding: 1rem; margin: 1.5rem 0; background: var(--nld-paper); border-left: 2px solid var(--nld-brass); font-size: .85rem; line-height: 1.75; color: var(--nld-muted); }
+.privacyNote a { color: var(--nld-ink); text-decoration: underline; }
+@media(max-width: 600px) { .stepNavigation button { flex-direction: column; align-items: flex-start; gap: .3rem; padding: .6rem .3rem; font-size: .75rem; } .stepHead { gap: .65rem; padding: 1rem; } }

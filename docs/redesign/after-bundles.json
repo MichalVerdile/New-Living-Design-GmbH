@@ -1,0 +1,26 @@
+{
+  "initialJS": [
+    {
+      "file": "assets/helmet-jBFxtET_.js",
+      "bytes": 14306,
+      "gzip": 5506
+    },
+    {
+      "file": "assets/index-SeobIXze.js",
+      "bytes": 166812,
+      "gzip": 56375
+    },
+    {
+      "file": "assets/vendor-D5adFJ6A.js",
+      "bytes": 174135,
+      "gzip": 57282
+    }
+  ],
+  "initialCSS": [
+    {
+      "file": "assets/index-CuQo8MRR.css",
+      "bytes": 45420,
+      "gzip": 9542
+    }
+  ]
+}

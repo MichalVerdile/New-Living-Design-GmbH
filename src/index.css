@@ -1,86 +1,43 @@
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-
-  /* Die Seite ist hell. Ohne diese Angabe erbte sie das dunkle Vite-Template
-     und zeigte im Dark Mode des Geraets helle Schrift auf hellem Grund. */
-  color-scheme: light;
-  color: #213547;
-  background-color: #ffffff;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  /* Existing NLD palette; shared by all page templates. */
+  --nld-ink: #23302b; --nld-deep: #1b2420; --nld-muted: #59645d;
+  --nld-paper: #f5f3ed; --nld-stone: #ebe8df; --nld-line: #d9ddd4;
+  --nld-brass: #b08d57; --nld-accent-text: #806334;
+  --nld-display: Georgia, 'Times New Roman', serif;
+  --nld-body: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --nld-gutter: clamp(1.25rem, 4.2vw, 4rem); --nld-section: clamp(3.5rem, 7vw, 7rem); --nld-width: 1440px;
+  --nld-fast: 180ms; --nld-reveal: 700ms; --nld-ease: cubic-bezier(.2,.7,.2,1);
+  font-family: var(--nld-body); line-height: 1.6; font-weight: 400;
+  color-scheme: light; color: var(--nld-ink); background: var(--nld-paper);
+  font-synthesis: none; text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased;
 }
-
-* {
-  box-sizing: border-box;
-}
-
-/* Skip link for accessibility */
-.skip-link {
-  position: absolute;
-  top: -40px;
-  left: 6px;
-  background: #000;
-  color: #fff;
-  padding: 8px;
-  text-decoration: none;
-  border-radius: 0 0 4px 4px;
-  z-index: 10000;
-  font-weight: bold;
-  transition: top 0.3s;
-}
-
-.skip-link:focus {
-  top: 0;
-}
-
-html {
-  width: 100%;
-  margin: 0;
-  padding: 0;
-}
-
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
-}
-
-body {
-  margin: 0;
-  padding: 0;
-  width: 100%;
-  min-height: 100vh;
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-}
-
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
-
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; width: 100%; }
+html { scroll-padding-top: 7rem; }
+body { min-width: 0; min-height: 100vh; }
+img { max-width: 100%; }
+a { color: inherit; text-underline-offset: .2em; }
+button, input, textarea, select { font: inherit; }
+button { cursor: pointer; }
+button, input, select { min-height: 44px; }
+button:disabled { cursor: not-allowed; }
+button, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
+:focus-visible { outline: 3px solid var(--nld-brass); outline-offset: 4px; }
+:target { scroll-margin-top: 7rem; }
+main { min-width: 0; overflow-wrap: break-word; }
+main:focus { outline: none; }
+h1, h2, h3 { text-wrap: balance; }
+input, textarea, select { max-width: 100%; }
+::selection { background: #d7cdb6; color: #1b2420; }
+.skip-link { position: fixed; top: .5rem; left: .5rem; z-index: 1000000; transform: translateY(-200%); background: var(--nld-paper); color: var(--nld-ink); padding: .8rem 1.2rem; }
+.skip-link:focus { transform: none; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.page-loading { min-height: 70vh; padding: 10rem var(--nld-gutter); background: var(--nld-paper); }
+.nld-button { display: inline-flex; align-items: center; justify-content: center; gap: 1rem; min-height: 48px; padding: .85rem 1.3rem; border: 1px solid currentColor; background: var(--nld-ink); color: var(--nld-paper); text-decoration: none; font-weight: 600; font-size: .9rem; border-radius: 2px; }
+.nld-button:hover { background: #435449; color: #fff; }
+.nld-link { display: inline-flex; align-items: center; min-height: 44px; text-decoration: underline; font-weight: 600; }
+.nld-field-error { display: block; margin: .4rem 0 0; color: #ffd4c7; font-size: .85rem; }
+[aria-invalid="true"] { border-color: #e7a58c !important; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }

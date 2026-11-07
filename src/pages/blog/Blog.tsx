@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import styles from './Blog.module.css';
-import { SEOHead } from '../../components';
+import SEOHead from '../../components/seo/SEOHead';
 import { business, localBusinessJsonLd } from '../../config/business';
 import { posts, formatDate, BLOG_NAME, BLOG_URL } from '../../lib/blog';
 import { generateBreadcrumbStructuredData } from '../../utils/structuredData';

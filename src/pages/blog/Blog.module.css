@@ -77,3 +77,19 @@
   .list { padding: 2.5rem 0 3.5rem; }
   .grid { grid-template-columns: 1fr; }
 }
+
+.page { background: var(--nld-paper); color: var(--nld-ink); }
+.hero, .intro, .cta, .contact { background: var(--nld-deep); }
+.title { font-family: var(--nld-display); font-weight: 400; font-size: clamp(2.25rem,4.5vw,4rem); letter-spacing: -.035em; }
+.sectionLabel { padding: 0; border-radius: 0; background: none; color: #d7cdb6; }
+.list { background: var(--nld-paper); }
+.featured, .card, .featured img, .card img, .cover img, .contact, .package, .ctaPrimary, .ctaSecondary { border-radius: 2px; box-shadow: none; }
+.ctaPrimary, .ctaSecondary { white-space: normal; min-height: 48px; }
+.featuredText h2, .cardText h2, .body h2, .packages h2 { font-family: var(--nld-display); font-weight: 400; }
+.body { color: var(--nld-ink); line-height: 1.85; }
+.body h2 { font-size: clamp(1.7rem,3vw,2.25rem); }
+.body [data-table-wrap] { max-width: 100%; }
+.toc { background: var(--nld-stone); border-top: 1px solid var(--nld-line); padding: clamp(1.25rem,3vw,2rem); margin-bottom: 2.5rem; }
+.toc h2 { font-family: var(--nld-display); font-weight: 400; margin-top: 0; }
+.toc ol { padding-left: 1.2rem; margin-bottom: 0; }
+.toc a { display: inline-flex; align-items: center; min-height: 44px; font-size: .95rem; text-decoration: underline; }

@@ -220,3 +220,35 @@
   .formRow { grid-template-columns: 1fr; }
   .form { padding: 1.25rem; }
 }
+
+.page { color: var(--nld-ink); background: var(--nld-paper); }
+.container { max-width: var(--nld-width); padding-inline: var(--nld-gutter); }
+.hero { min-height: 36rem; height: auto; padding-block: var(--nld-section); background: var(--nld-deep); }
+.heroContent { opacity: 1; transform: none; text-align: left; }
+.heroTitle { font-family: var(--nld-display); font-weight: 400; font-size: clamp(2.5rem,5vw,5rem); letter-spacing: -.045em; }
+.heroActions { justify-content: flex-start; }
+.heroText { margin-left: 0; }
+.heroOverlay { background: linear-gradient(90deg,#1b2420ee,#1b242088); }
+.section { padding-block: var(--nld-section); }
+.light { background: var(--nld-paper); color: var(--nld-ink); }
+.dark { background: var(--nld-deep); }
+.sectionHeader { text-align: left; }
+.sectionTitle { font-family: var(--nld-display); font-weight: 400; font-size: clamp(2rem,3.8vw,3.6rem); letter-spacing: -.035em; }
+.sectionLabel { background: none; color: inherit; padding: 0; border-radius: 0; }
+.sectionIntro, .sectionIntroLight { margin-left: 0; }
+.package { border-radius: 2px; box-shadow: none; padding: clamp(1.25rem,2.5vw,2rem); }
+.packageHighlight { background: #fff; border-color: var(--nld-brass); color: var(--nld-ink); }
+.packageName { font-family: var(--nld-display); font-weight: 400; font-size: 2.2rem; }
+.packageBadge { border-radius: 0; background: var(--nld-ink); color: #fff; }
+.packageCta, .ctaPrimary, .ctaSecondary, .ctaDark, .plannerBox, .form, .faqItem, .reference, .step { border-radius: 2px; box-shadow: none; }
+.field input, .field select, .field textarea { border-radius: 2px; }
+.field input:focus-visible, .field select:focus-visible, .field textarea:focus-visible { outline: 3px solid var(--nld-brass); outline-offset: 3px; }
+.comparison { margin-top: 2rem; padding: 1.5rem 0; border-block: 1px solid var(--nld-line); }
+.comparison summary { cursor: pointer; min-height: 44px; font-weight: 600; }
+.comparison p { font-size: .85rem; color: var(--nld-muted); }
+.comparisonScroll { overflow-x: auto; }
+.comparison table { width: 100%; min-width: 760px; border-collapse: collapse; font-size: .88rem; }
+.comparison th, .comparison td { padding: 1rem; vertical-align: top; text-align: left; border: 1px solid var(--nld-line); width: 25%; }
+.comparison thead { background: var(--nld-ink); color: #fff; }
+.comparison caption { text-align: left; padding: .75rem 0; font-weight: 600; }
+@media(max-width: 767px) { .hero { min-height: 0; padding-block: 4rem; } .packages { grid-template-columns: 1fr; } }

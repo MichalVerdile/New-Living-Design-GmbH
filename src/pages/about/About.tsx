@@ -79,7 +79,7 @@ const About: React.FC = () => {
           <div className={styles["hero-overlay"]}></div>
           <img
             src={heroImg}
-            alt="Showroom / Innenausstattung"
+            alt="Materialien und Innenausstattung als Inspiration" {...{ fetchpriority: 'high' }}
             className={styles["hero-bg-image"]}
           />
         </div>
@@ -111,7 +111,7 @@ const About: React.FC = () => {
           </div>
 
           <div className={styles.grid}>
-            <article className={styles.card}>
+            <article data-reveal="text" className={styles.card}>
               <h3>Der Blick fürs Material</h3>
               <p>
                 Unsere Arbeit begann bei Oberflächen, Formaten und ihrer sauberen Verarbeitung.
@@ -119,7 +119,7 @@ const About: React.FC = () => {
               </p>
             </article>
 
-            <article className={styles.card}>
+            <article data-reveal="text" className={styles.card}>
               <h3>Die Ausstellung in Zofingen</h3>
               <p>
                 Ein Muster auf dem Bildschirm ersetzt nicht den Eindruck vor Ort. Deshalb können Kundinnen und Kunden
@@ -127,7 +127,7 @@ const About: React.FC = () => {
               </p>
             </article>
 
-            <article className={styles.card}>
+            <article data-reveal="text" className={styles.card}>
               <h3>Der ganze Raum</h3>
               <p>
                 Heute beraten wir zu Bad, Küchen, Platten und Wellness. Je nach Projekt kommen 3D-Visualisierung,
@@ -150,7 +150,7 @@ const About: React.FC = () => {
             <div className={styles.fact}>
               <div className={styles["fact-badge"]}>2023</div>
               <div className={styles["fact-content"]}>
-                <h4>New Living Design GmbH</h4>
+                <h3>New Living Design GmbH</h3>
                 <p>Seit 2023 als GmbH im Kanton Aargau eingetragen.</p>
               </div>
             </div>
@@ -158,7 +158,7 @@ const About: React.FC = () => {
             <div className={styles.fact}>
               <div className={styles["fact-badge"]}>Ansprechpartner</div>
               <div className={styles["fact-content"]}>
-                <h4>Emanuel Verdile</h4>
+                <h3>Emanuel Verdile</h3>
                 <p>Ihr Ansprechpartner für Beratung, Termine und Projektanfragen.</p>
               </div>
             </div>
@@ -166,7 +166,7 @@ const About: React.FC = () => {
             <div className={styles.fact}>
               <div className={styles["fact-badge"]}>Ausstellung</div>
               <div className={styles["fact-content"]}>
-                <h4>Zofingen</h4>
+                <h3>Zofingen</h3>
                 <p>Materialien und Produkte in unserer Ausstellung im Römerquartier vergleichen.</p>
               </div>
             </div>
@@ -190,7 +190,7 @@ const About: React.FC = () => {
                   <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2"/>
                 </svg>
               </div>
-              <h4>Am Material entscheiden</h4>
+              <h3>Am Material entscheiden</h3>
               <p>Wir zeigen reale Muster und erklären Unterschiede bei Wirkung, Nutzung und Pflege.</p>
             </div>
 
@@ -201,7 +201,7 @@ const About: React.FC = () => {
                   <circle cx="9" cy="7" r="4" stroke="currentColor" strokeWidth="2"/>
                 </svg>
               </div>
-              <h4>Als Ganzes prüfen</h4>
+              <h3>Als Ganzes prüfen</h3>
               <p>
                 Wir betrachten nicht nur das einzelne Produkt, sondern auch Proportionen, Anschlüsse, Farben und die
                 Produkte daneben.
@@ -214,7 +214,7 @@ const About: React.FC = () => {
                   <path d="M3 12h6l3 7 3-14 3 7h3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
               </div>
-              <h4>Vereinbarungen klar festhalten</h4>
+              <h3>Vereinbarungen klar festhalten</h3>
               <p>
                 Produkte, Leistungen und Zuständigkeiten werden vor Bestellung oder Ausführung nachvollziehbar
                 beschrieben.

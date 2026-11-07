@@ -37,3 +37,8 @@
 @media (prefers-reduced-motion: reduce) {
   .track { scroll-behavior: auto; }
 }
+
+.open { display: block; position: relative; padding: 0; border: 0; width: 100%; background: #1b2420; cursor: zoom-in; }
+.expandHint { position: absolute; right: 1rem; bottom: 1rem; padding: .55rem .8rem; color: #fff; background: #1b2420e6; font-size: .75rem; }
+.controls { justify-content: center; }
+.slide { min-width: 0; }

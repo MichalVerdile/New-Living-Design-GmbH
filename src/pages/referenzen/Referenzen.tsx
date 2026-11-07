@@ -1,7 +1,8 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import ImageLightbox from '../../components/gallery/ImageLightbox';
 import styles from './Referenzen.module.css';
-import { SEOHead } from '../../components';
+import SEOHead from '../../components/seo/SEOHead';
 import { business, localBusinessJsonLd } from '../../config/business';
 import { references, categoryLabels, photoUrl } from '../../data/references';
 import type { ReferenceCategory } from '../../data/references';
@@ -33,7 +34,7 @@ const Referenzen: React.FC = () => {
     if (location.hash) {
       const id = location.hash.slice(1);
       const t = setTimeout(() => {
-        document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        document.getElementById(id)?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth', block: 'start' });
       }, 150);
       return () => clearTimeout(t);
     }
@@ -43,33 +44,6 @@ const Referenzen: React.FC = () => {
   const visible = references
     .map((r, index) => ({ r, index }))
     .filter(({ r }) => filter === 'alle' || r.category === filter);
-
-  const close = useCallback(() => setLightbox(null), []);
-
-  const move = useCallback((dir: 1 | -1) => {
-    setLightbox((cur) => {
-      if (!cur) return cur;
-      const photos = references[cur.refIndex].photos;
-      const next = (cur.photoIndex + dir + photos.length) % photos.length;
-      return { ...cur, photoIndex: next };
-    });
-  }, []);
-
-  useEffect(() => {
-    if (!lightbox) return undefined;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') close();
-      if (e.key === 'ArrowRight') move(1);
-      if (e.key === 'ArrowLeft') move(-1);
-    };
-    window.addEventListener('keydown', onKey);
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      window.removeEventListener('keydown', onKey);
-      document.body.style.overflow = prevOverflow;
-    };
-  }, [lightbox, close, move]);
 
   const galleryJsonLd = {
     '@context': 'https://schema.org',
@@ -96,7 +70,6 @@ const Referenzen: React.FC = () => {
   ];
 
   const current = lightbox ? references[lightbox.refIndex] : null;
-  const currentPhoto = current && lightbox ? current.photos[lightbox.photoIndex] : null;
 
   return (
     <main id="main-content" className={styles.page}>
@@ -118,13 +91,12 @@ const Referenzen: React.FC = () => {
             Diese Bilder zeigen keine Musterwohnungen, sondern ausgeführte Projekte aus unserer Arbeit. Zu jedem Raum
             sehen Sie, welche Platten, Farben, Produkte und Details zusammengebracht wurden.
           </p>
-          <div className={styles.filters} role="tablist" aria-label="Kategorie">
+          <div className={styles.filters} role="group" aria-label="Kategorie">
             {filters.map((f) => (
               <button
                 key={f.key}
                 type="button"
-                role="tab"
-                aria-selected={filter === f.key}
+                aria-pressed={filter === f.key}
                 className={`${styles.filter} ${filter === f.key ? styles.filterActive : ''}`}
                 onClick={() => setFilter(f.key)}
               >
@@ -136,9 +108,10 @@ const Referenzen: React.FC = () => {
       </section>
 
       <section className={styles.list}>
+        <p className={styles.resultCount} role="status">{visible.length} Projekte in dieser Auswahl</p>
         <div className={styles.container}>
           {visible.map(({ r, index }) => (
-            <article key={r.id} id={r.id} className={styles.project}>
+            <article data-reveal="text" key={r.id} id={r.id} className={styles.project}>
               <div className={styles.projectText}>
                 <span className={styles.category}>{categoryLabels[r.category]}</span>
                 <h2>{r.title}</h2>
@@ -184,23 +157,10 @@ const Referenzen: React.FC = () => {
         </div>
       </section>
 
-      {current && currentPhoto && lightbox && (
-        <div className={styles.lightbox} role="dialog" aria-modal="true" aria-label={current.title} onClick={close}>
-          <button type="button" className={styles.lbClose} onClick={close} aria-label="Schliessen">×</button>
-          {current.photos.length > 1 && (
-            <>
-              <button type="button" className={`${styles.lbNav} ${styles.lbPrev}`} onClick={(e) => { e.stopPropagation(); move(-1); }} aria-label="Vorheriges Foto">‹</button>
-              <button type="button" className={`${styles.lbNav} ${styles.lbNext}`} onClick={(e) => { e.stopPropagation(); move(1); }} aria-label="Nächstes Foto">›</button>
-            </>
-          )}
-          <figure className={styles.lbFigure} onClick={(e) => e.stopPropagation()}>
-            <img src={photoUrl(currentPhoto.file)} alt={currentPhoto.alt} />
-            <figcaption>
-              {current.title} · {lightbox.photoIndex + 1}/{current.photos.length}
-            </figcaption>
-          </figure>
-        </div>
-      )}
+      {current && lightbox && <ImageLightbox
+        images={current.photos.map(photo => ({ src: photoUrl(photo.file), alt: photo.alt }))}
+        initialIndex={lightbox.photoIndex} label={current.title} onClose={() => setLightbox(null)} />}
+
     </main>
   );
 };

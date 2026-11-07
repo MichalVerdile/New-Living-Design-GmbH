@@ -142,6 +142,7 @@ const Footer: React.FC<FooterProps> = ({ className = '' }) => {
               <a href="/impressum" className="footer-bottom-link">Impressum</a>
               <span className="footer-divider">|</span>
               <a href="/agb" className="footer-bottom-link">AGB</a>
+              <a href="/datenschutz#cookie-settings" className="footer-bottom-link">Cookie-Einstellungen</a>
             </div>
           </div>
         </div>

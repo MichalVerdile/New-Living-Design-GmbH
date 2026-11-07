@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
 import styles from './Booking.module.css';
 
@@ -19,8 +19,6 @@ const galleryImages = [
 ];
 
 const Booking: React.FC = () => {
-  const [isVisible, setIsVisible] = useState(false);
-  useEffect(() => setIsVisible(true), []);
 
   return (
     <main id="main-content" className={styles.home}>
@@ -85,7 +83,7 @@ const Booking: React.FC = () => {
           />
         </div>
         <div className={styles['hero-container']}>
-          <div className={`${styles['hero-content']} ${isVisible ? styles.visible : ''}`}>
+          <div className={styles['hero-content']}>
             <h1 className={styles['hero-title']}>
               <span>Der passende Termin für Ihre nächste Entscheidung.</span>
             </h1>
@@ -97,6 +95,7 @@ const Booking: React.FC = () => {
               </p>
             </div>
           </div>
+          <p className={styles.requestNote}>Sie stellen eine Anfrage. Ein Termin ist erst vereinbart, wenn wir ihn persönlich bestätigt haben.</p>
           <div className={styles['hero-scroll-indicator']}>
             <div className={styles['scroll-dot']} />
             <span>Scrollen Sie nach unten</span>
@@ -105,7 +104,7 @@ const Booking: React.FC = () => {
       </section>
 
       {/* Abschnitt: Besichtigungstermin vor Ort */}
-      <section className={styles.services}>
+      <section data-reveal="text" className={styles.services}>
         <div className={styles['services-container']}>
           <div className={styles['section-header']}>
             <span className={styles['section-label']}>Wenn der bestehende Raum zählt</span>
@@ -126,7 +125,7 @@ const Booking: React.FC = () => {
                       </svg>
                     </div>
                     <div className={styles['feature-content']}>
-                      <h4>Ca. 1&nbsp;Stunde</h4>
+                      <h3>Ca. 1&nbsp;Stunde</h3>
                       <p>Richtwert für den ersten Termin</p>
                     </div>
                   </div>
@@ -139,7 +138,7 @@ const Booking: React.FC = () => {
                       </svg>
                     </div>
                     <div className={styles['feature-content']}>
-                      <h4>Bei Ihnen zu Hause</h4>
+                      <h3>Bei Ihnen zu Hause</h3>
                       <p>Im vereinbarten Ausführungsgebiet</p>
                     </div>
                   </div>
@@ -155,7 +154,7 @@ const Booking: React.FC = () => {
                       </svg>
                     </div>
                     <div className={styles['feature-content']}>
-                      <h4>Beschreibung</h4>
+                      <h3>Beschreibung</h3>
                       <p>
                         Eine Besichtigung ist sinnvoll, wenn Sie Bad, Küche oder einen weiteren Raum umbauen möchten. Wir sehen
                         uns die Raumsituation an, nehmen die nötigen Masse auf und klären Anschlüsse, Zugänglichkeit und den
@@ -199,11 +198,11 @@ const Booking: React.FC = () => {
       </section>
 
       {/* Abschnitt: Ausstellungsraum mieten */}
-      <section className={styles.products}>
+      <section data-reveal="text" className={styles.products}>
         <div className={styles['products-container']}>
           <div className={styles['section-header']}>
             <span className={styles['section-label']}>Für Architektinnen und Architekten</span>
-            <h2 className={styles['section-title']}>Showroom für Ihr Kundengespräch reservieren</h2>
+            <h2 className={styles['section-title']}>Showroom für Ihr Kundengespräch anfragen</h2>
           </div>
 
           <div className={styles['products-content']}>
@@ -219,7 +218,7 @@ const Booking: React.FC = () => {
                     </svg>
                   </div>
                   <div className={styles['feature-content']}>
-                    <h4>Bis zu 3&nbsp;Stunden</h4>
+                    <h3>Bis zu 3&nbsp;Stunden</h3>
                     <p>Nach Vereinbarung</p>
                   </div>
                 </div>
@@ -231,7 +230,7 @@ const Booking: React.FC = () => {
                     </svg>
                   </div>
                   <div className={styles['feature-content']}>
-                    <h4>Im Römerquartier 4A</h4>
+                    <h3>Im Römerquartier 4A</h3>
                     <p>4800 Zofingen</p>
                   </div>
                 </div>
@@ -247,7 +246,7 @@ const Booking: React.FC = () => {
                     </svg>
                   </div>
                   <div className={styles['feature-content']}>
-                    <h4>Beschreibung</h4>
+                    <h3>Beschreibung</h3>
                     <p>
                       Nutzen Sie unsere Ausstellung, um mit Ihren Kundinnen und Kunden Materialien, Farben und Produkte direkt
                       am Muster zu besprechen. Der Showroom bietet Platz für das Gespräch und für den Vergleich unterschiedlicher
@@ -265,7 +264,7 @@ const Booking: React.FC = () => {
                       </svg>
                     </div>
                     <div className={styles['feature-content']}>
-                      <h4>Vorteile</h4>
+                      <h3>Vorteile</h3>
                       <p>- Sitzungsbereich</p>
                       <p>- Bildschirm für Pläne und Präsentationen</p>
                       <p>- Musik und Getränke</p>
@@ -281,7 +280,7 @@ const Booking: React.FC = () => {
                     </svg>
                   </div>
                   <div className={styles['feature-content']}>
-                    <h4>Hinweis</h4>
+                    <h3>Hinweis</h3>
                     <p>
                       Die Nutzung ist für ausgewählte Architekturbüros kostenlos und erfolgt nach bestätigter Anfrage.
                       Materialien und Produkte aus dem Termin werden über New Living Design bezogen. Details und Verfügbarkeit
@@ -302,18 +301,11 @@ const Booking: React.FC = () => {
             </div>
           </div>
           <div className={styles['products-image-container']}>
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-                  gap: '1rem',
-                  height: '100%',
-                }}
-              >
+              <div className={styles.showroomGrid}>
                 {galleryImages.map((src, i) => (
-                  <div key={i} className={styles['image-frame']} style={{ height: 240 }}>
+                  <div key={i} className={styles['image-frame']}>
                     <img
-                      src={src}
+                      src={src} loading="lazy" decoding="async"
                       alt="Unsere Ausstellung in Zofingen – für Bemusterung und Kundengespräche."
                       className={styles['products-img']}
                     />

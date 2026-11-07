@@ -65,3 +65,16 @@
   .legal { padding: 4rem 0 5rem; }
   .container { padding: 0 1rem; }
 }
+
+/* Legal text stays intact; common typography and spacing only. */
+.hero { min-height: 0; height: auto; padding-block: clamp(3rem,6vw,5rem); background: var(--nld-deep); }
+.hero-content { opacity: 1; transform: none; animation: none; margin: 0; }
+.hero-title { font-family: var(--nld-display); font-size: clamp(2.3rem,5vw,4.5rem); font-weight: 400; letter-spacing: -.035em; animation: none; }
+.container { max-width: 960px; padding-inline: var(--nld-gutter); }
+.section { padding-block: var(--nld-section); }
+.section.light { background: var(--nld-paper); color: var(--nld-ink); }
+.section.dark { background: var(--nld-deep); }
+.card { border-radius: 0; box-shadow: none; line-height: 1.85; }
+.card h3 { font-family: var(--nld-display); font-weight: 400; font-size: 1.6rem; }
+.card p, .card li { max-width: 72ch; }
+.card a { overflow-wrap: anywhere; text-decoration: underline; }

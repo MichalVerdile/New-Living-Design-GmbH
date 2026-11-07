@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
 import styles from './Services.module.css';
 import heroImage from '../../assets/shutterstock_2583534585.webp';
@@ -8,24 +8,6 @@ import lieferungImage from '../../assets/shutterstock_236748076.webp';
 import { Helmet } from 'react-helmet-async';
 
 const Services: React.FC = () => {
-  const [isVisible, setIsVisible] = useState(false);
-
-  useEffect(() => {
-    setIsVisible(true);
-
-    // CSS-Module-kompatible Reveal-Animation
-    const timer = setTimeout(() => {
-      const allElements = document.querySelectorAll('.' + styles['scroll-reveal']);
-      allElements.forEach((el, index) => {
-        setTimeout(() => {
-          el.classList.add(styles.visible);
-        }, index * 200);
-      });
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, []);
-
   return (
     <main id="main-content" className={styles['services-page']}>
       <Helmet>
@@ -43,17 +25,17 @@ const Services: React.FC = () => {
       </Helmet>
 
       {/* Hero Section */}
-      <section className={styles.hero}>
+      <section data-reveal="text" className={styles.hero}>
         <div className={styles['hero-background']}>
           <div className={styles['hero-overlay']}></div>
           <img
             src={heroImage}
-            alt="Dienstleistungen"
+            alt="Raumgestaltung und Materialauswahl für Ihr Projekt" {...{ fetchpriority: 'high' }}
             className={styles['hero-bg-image']}
           />
         </div>
         <div className={styles['hero-container']}>
-          <div className={`${styles['hero-content']} ${isVisible ? styles.visible : ''}`}>
+          <div className={styles['hero-content']}>
             <h1 className={styles['hero-title']}>
               <span className={styles['title-line']}>Von der Auswahl</span>
               <span>bis zur Umsetzung.</span>
@@ -74,7 +56,7 @@ const Services: React.FC = () => {
       </section>
 
       {/* Introduction Section */}
-      <section className={`${styles.introduction} ${styles['scroll-reveal']}`}>
+      <section data-reveal="text" className={`${styles.introduction} `}>
         <div className={styles['introduction-container']}>
           <div className={styles['section-header']}>
             <span className={styles['section-label']}>Was wir für Sie übernehmen</span>
@@ -95,14 +77,14 @@ const Services: React.FC = () => {
       </section>
 
       {/* Services Sections */}
-      <section className={styles['services-categories']}>
+      <section data-reveal="text" className={styles['services-categories']}>
         <div className={styles['categories-container']}>
 
           {/* Beratung */}
-          <div className={`${styles['service-section']} ${styles.light} ${styles['scroll-reveal']}`}>
+          <div className={`${styles['service-section']} ${styles.light} `}>
             <div className={styles['service-content']}>
               <div className={styles['service-text']}>
-                <h3 className={styles['service-title']}>Auswahlberatung in der Ausstellung</h3>
+                <h2 className={styles['service-title']}>Auswahlberatung in der Ausstellung</h2>
                 <div className={styles['service-description']}>
                   <p>
                     Bringen Sie Fotos, Grundriss, Masse oder vorhandene Muster mit. In unserer Ausstellung vergleichen
@@ -118,17 +100,17 @@ const Services: React.FC = () => {
                   </div>
                 </div>
               </div>
-              <div className={styles['service-image']}>
+              <div className={styles['service-image']} data-reveal="image">
                 <img src={beratungImage} alt="Beratungsgespräch mit Unterlagen am Tisch" />
               </div>
             </div>
           </div>
 
           {/* Offerte und 3D-Visualisierung */}
-          <div className={`${styles['service-section']} ${styles.dark} ${styles.reverse} ${styles['scroll-reveal']}`}>
+          <div className={`${styles['service-section']} ${styles.dark} ${styles.reverse} `}>
             <div className={styles['service-content']}>
               <div className={styles['service-text']}>
-                <h3 className={styles['service-title']}>Entscheiden, bevor bestellt wird</h3>
+                <h2 className={styles['service-title']}>Entscheiden, bevor bestellt wird</h2>
                 <div className={styles['service-description']}>
                   <p>
                     Sobald Produkte, Masse und Leistungsumfang geklärt sind, erhalten Sie eine nachvollziehbare Offerte.
@@ -144,17 +126,17 @@ const Services: React.FC = () => {
                   </div>
                 </div>
               </div>
-              <div className={styles['service-image']}>
+              <div className={styles['service-image']} data-reveal="image">
                 <img src={visualisierungImage} alt="3D-Visualisierung" />
               </div>
             </div>
           </div>
 
           {/* Lieferung und Montage */}
-          <div className={`${styles['service-section']} ${styles.light} ${styles['scroll-reveal']}`}>
+          <div className={`${styles['service-section']} ${styles.light} `}>
             <div className={styles['service-content']}>
               <div className={styles['service-text']}>
-                <h3 className={styles['service-title']}>Abgestimmt statt einzeln organisiert</h3>
+                <h2 className={styles['service-title']}>Abgestimmt statt einzeln organisiert</h2>
                 <div className={styles['service-description']}>
                   <p>
                     Wir stimmen Liefertermine, Zugang und Montage auf Ihr Projekt ab. Benötigt die Umsetzung weitere
@@ -170,7 +152,7 @@ const Services: React.FC = () => {
                   </div>
                 </div>
               </div>
-              <div className={styles['service-image']}>
+              <div className={styles['service-image']} data-reveal="image">
                 <img src={lieferungImage} alt="Montage von Wandplatten auf der Baustelle" />
               </div>
             </div>
@@ -180,7 +162,7 @@ const Services: React.FC = () => {
       </section>
 
       {/* Process Section */}
-      <section className={`${styles['process-section']} ${styles['scroll-reveal']}`}>
+      <section data-reveal="text" className={`${styles['process-section']} `}>
         <div className={styles['process-container']}>
           <div className={styles['section-header']}>
             <span className={styles['section-label']}>Der Ablauf</span>
@@ -189,7 +171,7 @@ const Services: React.FC = () => {
           <div className={styles['process-steps']}>
             <div className={styles['process-step']}>
               <div className={styles['step-number']}>01</div>
-              <h4 className={styles['step-title']}>Projekt klären</h4>
+              <h3 className={styles['step-title']}>Projekt klären</h3>
               <p className={styles['step-description']}>
                 Wir besprechen Raum, Nutzung, Wünsche und Budget in der Ausstellung oder – wenn erforderlich –
                 bei Ihnen vor Ort.
@@ -197,7 +179,7 @@ const Services: React.FC = () => {
             </div>
             <div className={styles['process-step']}>
               <div className={styles['step-number']}>02</div>
-              <h4 className={styles['step-title']}>Auswahl und Offerte</h4>
+              <h3 className={styles['step-title']}>Auswahl und Offerte</h3>
               <p className={styles['step-description']}>
                 Wir kombinieren Produkte und Materialien, prüfen Masse und Anschlüsse und erstellen die Offerte.
                 Bei Bad und Küche ergänzt eine 3D-Visualisierung die Planung, wenn sie für die Entscheidung sinnvoll ist.
@@ -205,7 +187,7 @@ const Services: React.FC = () => {
             </div>
             <div className={styles['process-step']}>
               <div className={styles['step-number']}>03</div>
-              <h4 className={styles['step-title']}>Lieferung und Umsetzung</h4>
+              <h3 className={styles['step-title']}>Lieferung und Umsetzung</h3>
               <p className={styles['step-description']}>
                 Nach Ihrer Freigabe bestellen wir die Produkte, stimmen die Termine ab und koordinieren Lieferung,
                 Montage und die vereinbarten Arbeiten.
@@ -216,7 +198,7 @@ const Services: React.FC = () => {
       </section>
 
       {/* CTA Section */}
-      <section className={`${styles['cta-section']} ${styles['scroll-reveal']}`}>
+      <section data-reveal="text" className={`${styles['cta-section']} `}>
         <div className={styles['cta-container']}>
           <div className={styles['cta-content']}>
             <h2 className={styles['cta-title']}>Womit sollen wir beginnen?</h2>

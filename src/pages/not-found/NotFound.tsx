@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { SEOHead } from '../../components';
+import SEOHead from '../../components/seo/SEOHead';
 import styles from '../blog/BlogPost.module.css';
 
 /** Seite für unbekannte Adressen. Vercel liefert sie als dist/404.html mit Status 404. */

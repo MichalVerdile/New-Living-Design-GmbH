@@ -37,6 +37,7 @@ function parseBlocks(markdown: string): Block[] {
   const lines = markdown.replace(/\r\n/g, '\n').split('\n');
   const blocks: Block[] = [];
   let i = 0;
+  const ids = new Map<string, number>();
 
   while (i < lines.length) {
     const line = lines[i];
@@ -49,7 +50,10 @@ function parseBlocks(markdown: string): Block[] {
     const heading = trimmed.match(/^(#{1,3})\s+(.+?)\s*#*$/);
     if (heading) {
       const level = heading[1].length <= 2 ? 2 : 3; // "#" wird wie "##" behandelt, H1 ist der Titel
-      blocks.push({ type: 'heading', level, text: heading[2], id: slugify(heading[2]) });
+      const base = slugify(heading[2]);
+      const count = (ids.get(base) ?? 0) + 1;
+      ids.set(base, count);
+      blocks.push({ type: 'heading', level, text: heading[2], id: count === 1 ? base : `${base}-${count}` });
       i++;
       continue;
     }
@@ -156,6 +160,12 @@ interface MarkdownProps {
   className?: string;
 }
 
+export const TableOfContents: React.FC<MarkdownProps> = ({ source, className }) => {
+  const headings = parseBlocks(source).filter((b): b is Extract<Block, { type: 'heading' }> => b.type === 'heading' && b.level === 2);
+  if (headings.length < 3) return null;
+  return <nav className={className} aria-label="In diesem Artikel"><h2>In diesem Artikel</h2><ol>{headings.map(h => <li key={h.id}><a href={`#${h.id}`}>{renderInline(h.text)}</a></li>)}</ol></nav>;
+};
+
 /** Rendert den Markdown-Text eines Artikels als HTML-Elemente. */
 export const Markdown: React.FC<MarkdownProps> = ({ source, className }) => {
   const blocks = parseBlocks(source);
@@ -189,7 +199,7 @@ export const Markdown: React.FC<MarkdownProps> = ({ source, className }) => {
             );
           case 'table':
             return (
-              <div key={key} data-table-wrap="">
+              <div key={key} data-table-wrap="" tabIndex={0} role="region" aria-label="Artikeltabelle, bei Bedarf horizontal scrollbar">
                 <table>
                   <thead>
                     <tr>{b.header.map((h, j) => <th key={j} scope="col">{renderInline(h, `${key}-h${j}`)}</th>)}</tr>

@@ -455,3 +455,14 @@
 .footer-quicklinks { display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; margin: 1rem 0 1.25rem; }
 .footer-quicklink { color: #d1d5db; text-decoration: none; font-size: 0.9rem; font-weight: 500; border-bottom: 1px solid transparent; transition: color .2s ease, border-color .2s ease; }
 .footer-quicklink:hover { color: #fff; border-bottom-color: #fff; }
+
+/* Shared brand palette, quieter footer and reliable narrow-screen wrapping. */
+.footer, .footer-main, .footer-bottom { background: var(--nld-deep); }
+.footer { border-top: 1px solid #ffffff25; }
+.footer-container { max-width: var(--nld-width); padding-inline: var(--nld-gutter); }
+.footer-brand-name { font-family: var(--nld-display); font-weight: 400; }
+.footer-social-link, .footer-quicklink { border-radius: 2px; box-shadow: none; }
+.footer-quicklink { min-height: 44px; display: inline-flex; align-items: center; }
+.footer-contact-link { overflow-wrap: anywhere; min-height: 44px; display: flex; align-items: center; }
+.footer :focus-visible { outline: 3px solid #d7cdb6; outline-offset: 4px; }
+.footer-bottom-link { display: inline-flex; align-items: center; min-height: 44px; }

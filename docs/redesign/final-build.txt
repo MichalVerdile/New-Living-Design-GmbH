@@ -1,0 +1,186 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> new-living-design@0.0.0 build
+> node scripts/fetch-swatches.mjs && tsc -b && vite build && node scripts/prerender.mjs
+
+[swatches] alle 299 Swatches vorhanden.
+vite v7.1.7 building for production...
+transforming...
+✓ 196 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/assets/logoNaici-2024-450x144_2vy550ra-4YxYFQoS.png                                        4.11 kB
+dist/assets/logo-BY6ZR_Bf.png                                                                   4.29 kB
+dist/assets/SCARABEO-ROMA-removebg-preview-EltSIk1W.avif                                        4.40 kB
+dist/assets/inkiostrobianco-Dk-EwW5G.avif                                                       4.72 kB
+dist/index.html                                                                                 5.01 kB │ gzip:  1.90 kB
+dist/assets/viv-au2420bmset5_5-2zLZgZ5X.avif                                                    5.68 kB
+dist/assets/laminam-CwDlEfOE.avif                                                               5.69 kB
+dist/assets/new_logo_acquariodue_nero_tiff-DO7cM4hA.avif                                        5.93 kB
+dist/assets/S__2_-removebg-preview_edited-jyeHvtmG.avif                                         6.20 kB
+dist/assets/24474a_8daa13b2557747f0ba8902b544c1ae44~mv2-BGKYzzV0.jpeg                          11.31 kB
+dist/assets/image-nlDz-VBU.avif                                                                12.40 kB
+dist/assets/LAVASTONE-DpraQsD-.avif                                                            13.03 kB
+dist/assets/S__2_-removebg-preview_edited (1)-BX-ZL88T.avif                                    13.21 kB
+dist/assets/logo (2)-BgelZH8s.png                                                              14.53 kB
+dist/assets/LogoScarabeo_Bianco-64C_yp2v.png                                                   14.56 kB
+dist/assets/24474a_88fdcd26b8d84f8aafc286c06dab7168~mv2-BZC6FZMw.jpeg                          16.64 kB
+dist/assets/cropped-lamborghini-logo-total-living-negative-BBf_LUmT.png                        19.19 kB
+dist/assets/ixycxivw-B65oD13J.avif                                                             19.72 kB
+dist/.vite/manifest.json                                                                       20.30 kB │ gzip:  3.23 kB
+dist/assets/2025-09-10 (4)-CP5wA5bX.webp                                                       25.71 kB
+dist/assets/shutterstock_2600181185-C2hkDALj.webp                                              29.90 kB
+dist/assets/2025-09-10 (2)-CcwoR1UT.webp                                                       31.98 kB
+dist/assets/2025-09-10 (1)-QQtoJZ1E.webp                                                       35.70 kB
+dist/assets/2025-09-10 (2)-C38k8cuG.jpg                                                        39.59 kB
+dist/assets/2025-09-10 (3)-DSQn_nlV.webp                                                       40.21 kB
+dist/assets/2025-09-10-rzIGngA2.webp                                                           45.81 kB
+dist/assets/shutterstock_2580645597-CgDe9zIo.webp                                              53.47 kB
+dist/assets/shutterstock_2600582595-AykPw6aQ.webp                                              57.47 kB
+dist/assets/shutterstock_2583534585-Dbef69ll.webp                                              65.51 kB
+dist/assets/shutterstock_2479065515-BViAmOT8.webp                                              66.89 kB
+dist/assets/shutterstock_2286698317-UeJLcsQu.webp                                              71.70 kB
+dist/assets/22-Private-House-Club-Room.jpg-DCy0dgXf.webp                                       73.81 kB
+dist/assets/shutterstock_2626257257-BX_rIW47.webp                                              75.44 kB
+dist/assets/Ambiente-Set-5-BRdcU5tu.webp                                                       76.45 kB
+dist/assets/Newform_Deltazero_P2-BM3w1Ko7.webp                                                 81.43 kB
+dist/assets/Zen_Combi_duo_Linear_6-1030x1030-DfYPnly4.webp                                     90.94 kB
+dist/assets/shutterstock_236748076-BnpppBpC.webp                                              101.89 kB
+dist/assets/kaffeebart-KrPulSdUetk-unsplash-Dep9lAxd.webp                                     107.95 kB
+dist/assets/cytonn-photography-n95VMLxqM2I-unsplash-DmVCh3Ce.webp                             135.71 kB
+dist/assets/shutterstock_2336703843-B54n2Ccq.webp                                             151.49 kB
+dist/assets/PRIME_mobili_generale-DrzISJou.webp                                               176.18 kB
+dist/assets/Inediti_05_HP_desktop-BHsWo0o2.webp                                               179.26 kB
+dist/assets/giammarco-boscaro-zeH-ljawHtg-unsplash-WRK8RfEa.webp                              188.77 kB
+dist/assets/devon-devon_CELINEPTWH_04-zgpYAZeq.jpg                                            197.11 kB
+dist/assets/Trinidad-A-AMB1-3.jpg-Dg38m0AK.webp                                               201.76 kB
+dist/assets/FebalCasa_Cucina_Moderna_Origina_AntaProfiloAlluminio_Vol1_Compo8e-DQzpbs6h.webp  207.35 kB
+dist/assets/14264-rchi-mirabilia-villas-01-DKBlsXR3.webp                                      279.72 kB
+dist/assets/Dosem_Onyx_WhiteBlue_60x120120x270_bathroom_HD_1-B_dIYlnQ.jpg                     286.40 kB
+dist/assets/Laminam_Slate_02-Burgundi_Part_B_Anteprima-01-2048x1448-BlcZ-vdk.jpg              428.78 kB
+dist/assets/Deluxe_cover-DOxW663k.jpg                                                         489.45 kB
+dist/assets/Rexa_mobili_moode_gallery_7-D2Fj5EXa.jpg                                          542.90 kB
+dist/assets/SupplierPage-DpoWjLeo.css                                                           1.29 kB │ gzip:  0.62 kB
+dist/assets/Partners-Cj7CzcqR.css                                                               1.39 kB │ gzip:  0.61 kB
+dist/assets/ImageLightbox-DooyqsPJ.css                                                          1.93 kB │ gzip:  0.80 kB
+dist/assets/SupplierDirectory-PHGUcBLp.css                                                      4.21 kB │ gzip:  1.40 kB
+dist/assets/Impressum-XKOZUsn5.css                                                              5.16 kB │ gzip:  1.68 kB
+dist/assets/Blog-DlIRlpwO.css                                                                   5.51 kB │ gzip:  1.59 kB
+dist/assets/Referenzen-Bw29lst4.css                                                             6.06 kB │ gzip:  1.84 kB
+dist/assets/Catalog-CBTt4iMT.css                                                                6.19 kB │ gzip:  1.73 kB
+dist/assets/DataSecurity-ucy05F3g.css                                                           8.90 kB │ gzip:  2.52 kB
+dist/assets/Products-CjbxBar1.css                                                              10.32 kB │ gzip:  2.54 kB
+dist/assets/About-DG0zeg1G.css                                                                 10.39 kB │ gzip:  2.51 kB
+dist/assets/Contact-Bp_M-kVC.css                                                               11.47 kB │ gzip:  2.89 kB
+dist/assets/Booking-CBUbcsjs.css                                                               12.98 kB │ gzip:  2.96 kB
+dist/assets/Badumbau-CAP5m_hH.css                                                              13.43 kB │ gzip:  3.33 kB
+dist/assets/Services-DOHZvCo4.css                                                              14.50 kB │ gzip:  3.16 kB
+dist/assets/Badplaner-Bye5Nrte.css                                                             33.06 kB │ gzip:  6.85 kB
+dist/assets/index-CuQo8MRR.css                                                                 45.42 kB │ gzip:  9.60 kB
+dist/assets/Catalog.module-C2QcpztR.js                                                          0.68 kB │ gzip:  0.34 kB
+dist/assets/ImageLightbox-eTXGn7d0.js                                                           2.49 kB │ gzip:  1.14 kB
+dist/assets/CategoryPage-DRvI6P5w.js                                                            2.74 kB │ gzip:  1.22 kB
+dist/assets/Partners-CJc4dBLV.js                                                                2.88 kB │ gzip:  1.22 kB
+dist/assets/SupplierDirectory-N_6etp49.js                                                       3.14 kB │ gzip:  1.41 kB
+dist/assets/Blog-BPx2PwFw.js                                                                    4.43 kB │ gzip:  1.85 kB
+dist/assets/Referenzen-MO3Aa_mz.js                                                              5.19 kB │ gzip:  2.33 kB
+dist/assets/SupplierPage-DkNjYRT8.js                                                            6.12 kB │ gzip:  2.54 kB
+dist/assets/Impressum-C64Ssv5P.js                                                               9.03 kB │ gzip:  3.07 kB
+dist/assets/blog-CQXnCr-y.js                                                                    9.40 kB │ gzip:  4.37 kB
+dist/assets/BlogPost-DYyhAAAs.js                                                                9.67 kB │ gzip:  3.61 kB
+dist/assets/About-Cljp_Exn.js                                                                  10.03 kB │ gzip:  3.01 kB
+dist/assets/Services-DdJCcOeE.js                                                               12.07 kB │ gzip:  3.45 kB
+dist/assets/Booking-B_ZiFW6d.js                                                                13.38 kB │ gzip:  3.26 kB
+dist/assets/Agb-Dtm3sBc1.js                                                                    13.75 kB │ gzip:  4.34 kB
+dist/assets/helmet-jBFxtET_.js                                                                 14.31 kB │ gzip:  5.52 kB
+dist/assets/Contact-0Tyg1DyX.js                                                                14.70 kB │ gzip:  4.51 kB
+dist/assets/Badumbau-CINsgBUI.js                                                               19.86 kB │ gzip:  6.80 kB
+dist/assets/DataSecurity-DT_rFCQE.js                                                           20.10 kB │ gzip:  6.13 kB
+dist/assets/Products-DT5dvqW4.js                                                               22.61 kB │ gzip:  9.26 kB
+dist/assets/index-SeobIXze.js                                                                 166.81 kB │ gzip: 56.99 kB
+dist/assets/vendor-D5adFJ6A.js                                                                174.14 kB │ gzip: 57.41 kB
+dist/assets/Badplaner-BnLhMY0a.js                                                             309.81 kB │ gzip: 48.67 kB
+✓ built in 2.15s
+vite v7.1.7 building SSR bundle for production...
+transforming...
+✓ 150 modules transformed.
+rendering chunks...
+dist-ssr/assets/Catalog.module-D4Fyj1OH.js       1.02 kB
+dist-ssr/assets/Partners--sQJne42.js             4.21 kB
+dist-ssr/assets/ImageLightbox-C5zt0eX3.js        4.39 kB
+dist-ssr/assets/CategoryPage-C81rjHAH.js         4.77 kB
+dist-ssr/assets/SupplierDirectory-BcxvN-Ww.js    5.21 kB
+dist-ssr/assets/Blog-fXfyKIFB.js                 6.87 kB
+dist-ssr/assets/Referenzen-DaeATh7k.js           8.27 kB
+dist-ssr/assets/blog-CsqUHLMV.js                10.19 kB
+dist-ssr/assets/SupplierPage-CU9cIIbt.js        10.45 kB
+dist-ssr/assets/Impressum-DjPfnOES.js           12.98 kB
+dist-ssr/assets/About-ZA3jHu-i.js               15.15 kB
+dist-ssr/assets/BlogPost-Caq0OU_E.js            16.31 kB
+dist-ssr/assets/Services-DuHB4Rpl.js            16.85 kB
+dist-ssr/assets/Booking-l6Ghcpeh.js             19.80 kB
+dist-ssr/assets/Agb-MCVz--VD.js                 20.38 kB
+dist-ssr/assets/Contact-COvH-Cuo.js             23.44 kB
+dist-ssr/assets/Badumbau-BrzW9U7S.js            29.43 kB
+dist-ssr/assets/DataSecurity-D0bdp8Gd.js        30.07 kB
+dist-ssr/assets/Products-DOOEQ6Ka.js            30.14 kB
+dist-ssr/entry-server.js                       227.90 kB
+dist-ssr/assets/Badplaner-bSmt3BFO.js          373.84 kB
+✓ built in 1.32s
+[prerender] / -> dist/index.html (42 KB)
+[prerender] /badumbau-zofingen -> dist/badumbau-zofingen/index.html (46 KB)
+[prerender] /referenzen -> dist/referenzen/index.html (47 KB)
+[prerender] /badplaner -> dist/badplaner/index.html (28 KB)
+[prerender] /blog -> dist/blog/index.html (24 KB)
+[prerender] /produkte -> dist/produkte/index.html (56 KB)
+[prerender] /dienstleistungen -> dist/dienstleistungen/index.html (26 KB)
+[prerender] /partner -> dist/partner/index.html (64 KB)
+[prerender] /booking -> dist/booking/index.html (28 KB)
+[prerender] /ueber-uns -> dist/ueber-uns/index.html (25 KB)
+[prerender] /kontakt -> dist/kontakt/index.html (26 KB)
+[prerender] /datenschutz -> dist/datenschutz/index.html (32 KB)
+[prerender] /impressum -> dist/impressum/index.html (24 KB)
+[prerender] /agb -> dist/agb/index.html (28 KB)
+[prerender] /produkte/bad -> dist/produkte/bad/index.html (50 KB)
+[prerender] /produkte/bad/rexa -> dist/produkte/bad/rexa/index.html (28 KB)
+[prerender] /produkte/bad/edone -> dist/produkte/bad/edone/index.html (28 KB)
+[prerender] /produkte/bad/archeda -> dist/produkte/bad/archeda/index.html (25 KB)
+[prerender] /produkte/bad/froidevaux -> dist/produkte/bad/froidevaux/index.html (27 KB)
+[prerender] /produkte/bad/pirovano -> dist/produkte/bad/pirovano/index.html (31 KB)
+[prerender] /produkte/bad/treemme -> dist/produkte/bad/treemme/index.html (27 KB)
+[prerender] /produkte/bad/newform -> dist/produkte/bad/newform/index.html (30 KB)
+[prerender] /produkte/bad/gessi -> dist/produkte/bad/gessi/index.html (27 KB)
+[prerender] /produkte/bad/luce -> dist/produkte/bad/luce/index.html (26 KB)
+[prerender] /produkte/bad/cielo -> dist/produkte/bad/cielo/index.html (30 KB)
+[prerender] /produkte/bad/scarabeo -> dist/produkte/bad/scarabeo/index.html (33 KB)
+[prerender] /produkte/bad/galassia -> dist/produkte/bad/galassia/index.html (27 KB)
+[prerender] /produkte/bad/azzurra -> dist/produkte/bad/azzurra/index.html (30 KB)
+[prerender] /produkte/bad/megius -> dist/produkte/bad/megius/index.html (27 KB)
+[prerender] /produkte/bad/novellini -> dist/produkte/bad/novellini/index.html (27 KB)
+[prerender] /produkte/bad/vismaravetro -> dist/produkte/bad/vismaravetro/index.html (33 KB)
+[prerender] /produkte/bad/capannoli -> dist/produkte/bad/capannoli/index.html (29 KB)
+[prerender] /produkte/bad/antrax -> dist/produkte/bad/antrax/index.html (29 KB)
+[prerender] /produkte/bad/cordivari -> dist/produkte/bad/cordivari/index.html (34 KB)
+[prerender] /produkte/bad/caleido -> dist/produkte/bad/caleido/index.html (27 KB)
+[prerender] /produkte/kuechen -> dist/produkte/kuechen/index.html (22 KB)
+[prerender] /produkte/kuechen/febal -> dist/produkte/kuechen/febal/index.html (28 KB)
+[prerender] /produkte/platten -> dist/produkte/platten/index.html (37 KB)
+[prerender] /produkte/platten/energieker -> dist/produkte/platten/energieker/index.html (28 KB)
+[prerender] /produkte/platten/emilgroup -> dist/produkte/platten/emilgroup/index.html (27 KB)
+[prerender] /produkte/platten/lafabbrica -> dist/produkte/platten/lafabbrica/index.html (28 KB)
+[prerender] /produkte/platten/supergres -> dist/produkte/platten/supergres/index.html (30 KB)
+[prerender] /produkte/platten/ariana -> dist/produkte/platten/ariana/index.html (28 KB)
+[prerender] /produkte/platten/acquario -> dist/produkte/platten/acquario/index.html (27 KB)
+[prerender] /produkte/platten/sicis -> dist/produkte/platten/sicis/index.html (28 KB)
+[prerender] /produkte/platten/mosavit -> dist/produkte/platten/mosavit/index.html (26 KB)
+[prerender] /produkte/platten/skema -> dist/produkte/platten/skema/index.html (27 KB)
+[prerender] /produkte/platten/deco -> dist/produkte/platten/deco/index.html (27 KB)
+[prerender] /produkte/platten/zenon -> dist/produkte/platten/zenon/index.html (28 KB)
+[prerender] /produkte/platten/inkiostro -> dist/produkte/platten/inkiostro/index.html (26 KB)
+[prerender] /produkte/wellness -> dist/produkte/wellness/index.html (34 KB)
+[prerender] /produkte/wellness/novellini -> dist/produkte/wellness/novellini/index.html (31 KB)
+[prerender] /produkte/wellness/albatros -> dist/produkte/wellness/albatros/index.html (29 KB)
+[prerender] /produkte/wellness/megius -> dist/produkte/wellness/megius/index.html (31 KB)
+[prerender] /blog/badumbau-steuern-abziehen-bis-2028 -> dist/blog/badumbau-steuern-abziehen-bis-2028/index.html (35 KB)
+[prerender] /404 -> dist/404.html (19 KB)
+[prerender] 55/55 Routen statisch gerendert.

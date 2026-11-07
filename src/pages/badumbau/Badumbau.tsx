@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import styles from './Badumbau.module.css';
-import { SEOHead } from '../../components';
+import SEOHead from '../../components/seo/SEOHead';
 import { business, bathPackages, packageNote, localBusinessJsonLd } from '../../config/business';
 import { badumbauFaq } from '../../data/faq';
 import { references, photoUrl } from '../../data/references';
@@ -19,12 +19,10 @@ const steps = [
 ];
 
 const Badumbau: React.FC = () => {
-  const [isVisible, setIsVisible] = useState(false);
+  const submitting = useRef(false);
+  const [selectedPackage, setSelectedPackage] = useState('');
   const [status, setStatus] = useState<'idle' | 'sending' | 'ok' | 'error'>('idle');
 
-  useEffect(() => {
-    setIsVisible(true);
-  }, []);
 
   const referenceProjects = references.filter((r) => r.category === 'bad').slice(0, 3);
 
@@ -71,29 +69,33 @@ const Badumbau: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (submitting.current) return;
     const form = e.currentTarget;
     const data = new FormData(form);
     if ((data.get('_gotcha') || '').toString().trim() !== '') return; // Honeypot
     const name = (data.get('name') || '').toString().trim();
     data.append('_subject', `Badumbau-Anfrage: ${name}`);
     data.append('quelle', 'Seite Badumbau Zofingen');
+    submitting.current = true;
     setStatus('sending');
     try {
       const res = await fetch(business.formspreeEndpoint, {
         method: 'POST',
         body: data,
         headers: { Accept: 'application/json' },
+        signal: AbortSignal.timeout(20000),
       });
       if (res.ok) {
         setStatus('ok');
         form.reset();
+        setSelectedPackage('');
         trackLead('form', 'badumbau-formular');
       } else {
         setStatus('error');
       }
     } catch {
       setStatus('error');
-    }
+    } finally { submitting.current = false; }
   };
 
   return (
@@ -116,10 +118,10 @@ const Badumbau: React.FC = () => {
             src={photoUrl('bad-marmor-grau-02.webp')}
             alt="Badumbau von New Living Design: Bad in grauer Marmoroptik mit schwarzen Armaturen"
             className={styles.heroImage}
-            fetchPriority="high"
+            {...{ fetchpriority: 'high' }}
           />
         </div>
-        <div className={`${styles.heroContent} ${isVisible ? styles.visible : ''}`}>
+        <div className={`${styles.heroContent} ${styles.visible}`}>
           <p className={styles.eyebrow}>Badumbau in Zofingen und Umgebung</p>
           <h1 className={styles.heroTitle}>
             Ein neues Bad.
@@ -161,7 +163,7 @@ const Badumbau: React.FC = () => {
 
           <div className={styles.packages}>
             {bathPackages.map((p) => (
-              <article key={p.id} id={`paket-${p.id}`} className={`${styles.package} ${p.highlight ? styles.packageHighlight : ''}`}>
+              <article data-reveal="text" key={p.id} id={`paket-${p.id}`} className={`${styles.package} ${p.highlight ? styles.packageHighlight : ''}`}>
                 {p.highlight && <span className={styles.packageBadge}>Häufig gewählt</span>}
                 <h3 className={styles.packageName}>{p.name}</h3>
                 <p className={styles.packageClaim}>{p.claim}</p>
@@ -178,10 +180,29 @@ const Badumbau: React.FC = () => {
                 <p className={styles.packageFoot}>
                   Bauzeit {p.duration} · über 21 m² Platten: + CHF {p.extraPerSqm} pro m²
                 </p>
-                <a href="#anfrage" className={styles.packageCta}>Paket {p.name} anfragen</a>
+                <a href="#anfrage" onClick={() => setSelectedPackage(p.name)} className={styles.packageCta}>Paket {p.name} anfragen</a>
               </article>
             ))}
           </div>
+          <details className={styles.comparison}>
+            <summary>Pakete im direkten Vergleich</summary>
+            <p>Auf schmalen Bildschirmen können Sie die Tabelle seitlich bewegen. Alle Leistungen finden Sie auch in den Paketkarten oben.</p>
+            <div className={styles.comparisonScroll} tabIndex={0} role="region" aria-label="Vergleich der drei Badpakete, horizontal scrollbar">
+              <table><caption>Leistungen und Richtpreise der bestehenden Badpakete</caption>
+                <thead><tr><th scope="col">Leistung</th>{bathPackages.map(p => <th scope="col" key={p.id}>{p.name}</th>)}</tr></thead>
+                <tbody>
+                  <tr><th scope="row">Richtpreis inkl. MwSt.</th>{bathPackages.map(p => <td key={p.id}>ab CHF {p.priceLabel}</td>)}</tr>
+                  {[
+                    ['Platten', /^(Platten|Grossformat)/], ['WC', /WC/], ['Möbel', /^(Badmöbel|Möbel)/],
+                    ['Spiegel', /^Spiegel/], ['Dusche / Badewanne', /^(Duschwanne|Farbige Duschwanne|Freistehende)/],
+                    ['Armaturen', /^(Aufputz|Armaturen:|Unterputz)/], ['Planung', /^3D-/],
+                  ].map(([label, pattern]) => <tr key={String(label)}><th scope="row">{String(label)}</th>{bathPackages.map(p => <td key={p.id}>{p.includes.find(item => (pattern as RegExp).test(item)) ?? 'In der Paketbeschreibung nicht aufgeführt'}</td>)}</tr>)}
+                  <tr><th scope="row">Bauzeit</th>{bathPackages.map(p => <td key={p.id}>{p.duration}</td>)}</tr>
+                  <tr><th scope="row">Zusätzliche Plattenfläche über 21 m²</th>{bathPackages.map(p => <td key={p.id}>CHF {p.extraPerSqm} pro m²</td>)}</tr>
+                </tbody>
+              </table>
+            </div>
+          </details>
           <p className={styles.note}>{packageNote}</p>
 
           {/* Hinweis auf den Badplaner */}
@@ -291,7 +312,7 @@ const Badumbau: React.FC = () => {
             </p>
           </div>
 
-          <form className={styles.form} onSubmit={handleSubmit}>
+          <form className={styles.form} onSubmit={handleSubmit} aria-busy={status === 'sending'}>
             <input type="text" name="_gotcha" tabIndex={-1} autoComplete="off" className={styles.honeypot} aria-hidden="true" />
             <div className={styles.formRow}>
               <label className={styles.field}>
@@ -325,7 +346,7 @@ const Badumbau: React.FC = () => {
               </label>
               <label className={styles.field}>
                 <span>Interessiert an</span>
-                <select name="paket" defaultValue="">
+                <select name="paket" value={selectedPackage} onChange={e => setSelectedPackage(e.target.value)}>
                   <option value="">Noch offen</option>
                   {bathPackages.map((p) => (
                     <option key={p.id} value={p.name}>Paket {p.name}, ab CHF {p.priceLabel}</option>
@@ -341,10 +362,10 @@ const Badumbau: React.FC = () => {
               <button type="submit" className={styles.ctaPrimary} disabled={status === 'sending'}>
                 {status === 'sending' ? 'Wird gesendet…' : 'Rückruf anfordern'}
               </button>
-              {status === 'ok' && <p className={styles.success}>Danke. Ihre Anfrage ist bei uns angekommen. Wir melden uns persönlich bei Ihnen.</p>}
+              {status === 'ok' && <p className={styles.success} role="status">Danke. Ihre Anfrage ist bei uns angekommen. Wir melden uns persönlich bei Ihnen.</p>}
               {status === 'error' && (
-                <p className={styles.error}>
-                  Die Anfrage konnte nicht gesendet werden. Rufen Sie uns unter{' '}
+                <p className={styles.error} role="alert">
+                  Die Zustellung konnte nicht bestätigt werden. Ihre Eingaben bleiben erhalten. Rufen Sie uns unter{' '}
                   <a href={`tel:${business.phone.e164}`} data-lead="badumbau-fehler">{business.phone.display}</a> an
                   oder versuchen Sie es später erneut.
                 </p>

@@ -1,10 +1,10 @@
 import React from 'react';
 import { Link, useParams } from 'react-router-dom';
 import styles from './BlogPost.module.css';
-import { SEOHead } from '../../components';
+import SEOHead from '../../components/seo/SEOHead';
 import { business, bathPackages, localBusinessJsonLd } from '../../config/business';
 import { getPost, posts, formatDate, BLOG_NAME, BLOG_URL } from '../../lib/blog';
-import Markdown from '../../lib/markdown';
+import Markdown, { TableOfContents } from '../../lib/markdown';
 import { generateBreadcrumbStructuredData } from '../../utils/structuredData';
 
 const whatsappHref = (title: string) =>
@@ -107,10 +107,11 @@ const BlogPost: React.FC = () => {
 
       <article className={styles.article}>
         <figure className={styles.cover}>
-          <img src={post.image} alt={post.imageAlt} />
+          <img src={post.image} alt={post.imageAlt} width="1200" height="800" {...{ fetchpriority: 'high' }} />
           <figcaption>{post.imageAlt}</figcaption>
         </figure>
 
+        <TableOfContents source={post.body} className={styles.toc} />
         <Markdown source={post.body} className={styles.body} />
 
         <aside className={styles.contact} aria-label="Kontakt">
