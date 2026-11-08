@@ -676,7 +676,11 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
               ? ': an exposed horizontal round bar mixer on two short wall connections just above the rim, with a round tube spout that bends down over the rim, a small diverter knob on top and a thin pin lever, and a slim stick hand shower on its hose in a small separate wall holder above it'
               : ': a wall spout above the rim and the mixer on a flat wall plate, concealed in the wall, and a hand shower on a hose in a small wall holder'}`;
   const basinTaps = taps.prompt.replace(/; in a shower [^;]*/, '');
-  const tapPrompt = !noShower ? taps.prompt + bathFiller
+  const clarifyUpperCollarForGeneration = (text: string) => text.replace(
+    'On the Up+ shower riser show the separate upper collar.',
+    'On the Up+ shower riser, place a separate upper collar at the height of the top of the upright hand shower, with the small round projection to the right of the riser as in the reference.',
+  );
+  const tapPrompt = !noShower ? clarifyUpperCollarForGeneration(taps.prompt) + bathFiller
     : bathFiller ? `${basinTaps}${bathFiller}; no overhead shower, no shower rail and no shower mixer anywhere`
     : `${basinTaps}; no shower mixer, bath filler or shower controls`;
 
@@ -699,7 +703,7 @@ async function handleRender(req: any, res: any, body: RenderBody, ctx: RequestCo
     [noBasin ? null : tapsImage, (n: number) => `Image ${n}, the tap at each washbasin: it becomes exactly the fitting of image ${n}: ${basinTaps.replace(/, all fittings for the requested fixtures from the same series and in the same [^,;]+ finish$/, '')}.`],
     // Die Wand des Duschsets sagt die Vorpruefung, wie im ersten Durchgang; sonst die Wand der Handbrause im Bild. P2 der
     // sechsten Probe: Armaturen an zwei Waenden. Die Wannenarmatur hat ihre eigene Handbrause und bleibt.
-    [showerTaps ? showerImage : null, (n: number) => `Image ${n}, the shower fittings: they become exactly the fittings of image ${n}, in ${finish.prompt}: ${showerTaps}. They all sit together on ${showerWall
+    [showerTaps ? showerImage : null, (n: number) => `Image ${n}, the shower fittings: they become exactly the fittings of image ${n}, in ${finish.prompt}: ${clarifyUpperCollarForGeneration(showerTaps ?? '')}. They all sit together on ${showerWall
       ? `the ${showerWall} wall seen from the camera, the short end wall of the shower${shower?.id === 'walk-in' ? ', at whose foot the channel drain lies' : ''}, ${showerWall === 'back' ? 'facing the camera' : 'seen from the side and foreshortened; the back wall of the shower carries none'}`
       : 'the wall where image 1 has the hand shower'}; any other shower mixer, plate or hand shower inside the shower area is removed, and the wall surface simply continues over its place.${bathFiller ? ' The bath mixer at the bathtub is separate and stays.' : ''}`],
     [bathImage, (n: number) => `Image ${n}, the bath mixer: it becomes exactly the fitting of image ${n}, in ${finish.prompt}: ${bathFiller.replace(/^; /, '').replace(' of the same series and finish', '')}.`],
