@@ -1,8 +1,10 @@
 import React from 'react';
-import { Link, Navigate, useParams } from 'react-router-dom';
-import { SEOHead } from '../../components';
+import { Link, useParams } from 'react-router-dom';
+import SEOHead from '../../components/seo/SEOHead';
 import Gallery from '../../components/suppliers/Gallery';
 import { areaById, areaHref, groupSlug, seriesInArea, supplierByKey, supplierHref, suppliers, type SupplierKey } from '../../data/suppliers';
+import NotFound from '../not-found/NotFound';
+import { generateBreadcrumbStructuredData } from '../../utils/structuredData';
 import styles from './Catalog.module.css';
 
 /** Titel mit höchstens 65 Zeichen (Google kürzt längere): so viele Fachgebiete wie Platz haben, «Zofingen» wenn es passt. */
@@ -22,7 +24,7 @@ const SupplierPage: React.FC = () => {
   const area = areaById(areaId);
   const supplier = suppliers.find((s) => s.key === key);
   const inArea = supplier?.areas.find((a) => a.id === area?.id);
-  if (!area || !supplier || !inArea) return <Navigate to="/produkte" replace />;
+  if (!area || !supplier || !inArea) return <NotFound />;
   const all = seriesInArea(supplier, area.id);
   const series = all.filter((s) => !s.extra);
   const extras = all.filter((s) => s.extra);
@@ -36,29 +38,31 @@ const SupplierPage: React.FC = () => {
         description={`${supplier.name} bei New Living Design in Zofingen: ${inArea.specialties.join(', ')}. Auswahl, Beratung und Planung persönlich mit Ihnen.`}
         url={supplierHref(supplier.key, area.id)}
         type="website"
+        structuredData={generateBreadcrumbStructuredData([{ name: 'Home', url: '/' }, { name: 'Inspiration', url: '/produkte' }, { name: area.title, url: areaHref(area.id) }, { name: supplier.name, url: supplierHref(supplier.key, area.id) }])}
         image={all[0] ? `https://newlivingdesign.ch${all[0].images[0].src}` : undefined}
       />
       <div className={styles.container}>
         <nav aria-label="Brotkrumen" className={styles.crumbs}>
           <ol>
-            <li><Link to="/produkte">Produkte</Link></li>
+            <li><Link to="/produkte">Inspiration</Link></li>
             <li><Link to={areaHref(area.id)}>{area.title}</Link></li>
             <li><Link to={`${areaHref(area.id)}#${groupSlug(group.title)}`}>{group.title}</Link></li>
             <li aria-current="page">{supplier.name}</li>
           </ol>
         </nav>
         <header className={styles.supplierHead}>
-          <div>
+          <div data-reveal="stagger">
             <p className={styles.eyebrow}>{inArea.specialties.join(' · ')}</p>
-            <h1>{supplier.name}</h1>
+            <h1>{supplier.name}</h1><p className={styles.lead}>Eine Möglichkeit für Ihr Projekt. Wir beraten Sie zur passenden Auswahl und stimmen Planung und Umsetzung mit Ihnen ab.</p>
             <p className={styles.facts}>{all.length ? `${series.length} ${series.length === 1 ? 'Serie' : 'Serien'} · ${all.reduce((n, s) => n + s.images.length, 0)} Bilder` : 'Bilder folgen'}</p>
           </div>
           <div className={styles.supplierActions}>
             <a href={supplier.url} target="_blank" rel="noopener noreferrer">Offizielle Website<span className={styles.srOnly}> von {supplier.name} (öffnet in neuem Fenster)</span></a>
-            <Link to="/kontakt">Beratung anfragen</Link>
+            <Link className="nld-button" to="/kontakt">Beratung anfragen</Link>
             {otherAreas.map((a) => <Link key={a.id} to={supplierHref(supplier.key, a.id)}>{supplier.name} im Bereich {a.title}</Link>)}
           </div>
         </header>
+        {all.length > 1 && <nav className={styles.seriesIndex} aria-label="Produktserien"><span>Direkt zur Serie</span>{series.map((item, i) => <a key={item.name} href={`#serie-${i}`}>{item.name}</a>)}{extras.length > 0 && <a href="#weitere-bilder">Weitere Bilder</a>}</nav>}
         {series.length ? series.map((s, i) => (
           <section key={s.name} className={styles.series} aria-labelledby={`serie-${i}`}>
             <div className={styles.seriesHead}>
@@ -82,6 +86,7 @@ const SupplierPage: React.FC = () => {
             <Gallery images={extras.flatMap((s) => s.images)} label={`${supplier.name}: weitere Bilder`} eager={!series.length} />
           </section>
         )}
+        <aside className={styles.consultation}><h2>{supplier.name} persönlich entdecken.</h2><p>Wir klären mit Ihnen, welche Serien, Oberflächen und Kombinationen zu Ihrem Projekt passen.</p><Link className="nld-button" to="/kontakt">Beratung zu {supplier.name} anfragen ↗</Link></aside>
         {neighbours.length > 0 && (
           <nav aria-label={`Weitere Marken: ${group.title}`} className={styles.otherAreas}>
             <p>Weitere Marken: {group.title}</p>

@@ -20,6 +20,8 @@ for (const p of blogPosts) {
 
 // https://vite.dev/config/
 export default defineConfig({
+  // Exact host used by the isolated development preview; never allow arbitrary hosts.
+  server: { allowedHosts: ['terminal.local'] },
   plugins: [
     react(),
     createSitemap({
@@ -34,6 +36,7 @@ export default defineConfig({
     })
   ],
   build: {
+    manifest: true,
     // Enable code splitting for better loading performance
     rollupOptions: {
       output: {

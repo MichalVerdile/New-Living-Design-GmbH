@@ -1,0 +1,22 @@
+[
+  {
+    "file": "index-CZbrZBv3.css",
+    "bytes": 147371,
+    "gzip": 24958
+  },
+  {
+    "file": "index-19gG1ta9.js",
+    "bytes": 636487,
+    "gzip": 147527
+  },
+  {
+    "file": "helmet-M9MNrN8j.js",
+    "bytes": 14306,
+    "gzip": 5506
+  },
+  {
+    "file": "vendor-Bn1IIQ57.js",
+    "bytes": 174720,
+    "gzip": 57455
+  }
+]

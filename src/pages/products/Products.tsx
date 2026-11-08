@@ -7,7 +7,8 @@ import sanitaerapparateImage from '../../assets/Ambiente-Set-5.webp';
 import heizkoerperImage from '../../assets/image.avif';
 import beleuchtungenImage from '../../assets/BEAM_STICK_family_color_edited.avif';
 import accessoiresImage from '../../assets/viv-au2420bmset5_5.avif';
-import { SEOHead } from '../../components';
+import SEOHead from '../../components/seo/SEOHead';
+import PageIntro from '../../components/layout/PageIntro';
 import { photoUrl, referenceById } from '../../data/references';
 import { areaHref, groupSlug, imageOf, supplierByKey, supplierHref, suppliersInArea, type AreaId, type SupplierImage, type SupplierKey } from '../../data/suppliers';
 
@@ -71,7 +72,8 @@ const HERO_SIZES = '(max-width: 1024px) calc(100vw - 3rem), 680px';
 const SubcategoryGrid: React.FC<{ items: SubcategoryCard[]; label: string; area: AreaId }> = ({ items, label, area }) => {
   const brands = suppliersInArea(area);
   return (
-    <>
+    <details className={styles.materialDetails}>
+      <summary>{label.replace('-Kategorien', '')}: Materialien und Marken entdecken</summary>
       <ul className={styles['subcategory-grid']} aria-label={label}>
         {items.map((card) => {
           const categoryHref = `${areaHref(area)}#${groupSlug(card.group ?? card.title)}`;
@@ -81,7 +83,7 @@ const SubcategoryGrid: React.FC<{ items: SubcategoryCard[]; label: string; area:
                 <img {...card.image} sizes="(max-width: 1024px) 50vw, 300px" loading="lazy" decoding="async" />
               </Link>
               <figcaption>
-                <h4 className={styles['subcategory-title']}><Link to={categoryHref}>{card.title}</Link></h4>
+                <h3 className={styles['subcategory-title']}><Link to={categoryHref}>{card.title}</Link></h3>
                 <Link to={supplierHref(card.supplier, area)} className={styles['subcategory-brand']}>{supplierByKey(card.supplier).name}</Link>
               </figcaption>
             </figure>
@@ -97,7 +99,7 @@ const SubcategoryGrid: React.FC<{ items: SubcategoryCard[]; label: string; area:
           ))}
         </ul>
       </div>
-    </>
+    </details>
   );
 };
 
@@ -110,67 +112,27 @@ const Products: React.FC = () => {
     <main id="main-content" className={styles['products-page']}>
       <SEOHead
         title="Bad, Küchen, Platten & Wellness | New Living Design Zofingen"
-        description="Badmöbel, Küchen, Platten und Wellness in Zofingen vergleichen. Persönliche Auswahlberatung, 3D-Planung sowie Lieferung und Montage."
+        description="Inspiration für Bad, Küchen, Platten und Wellness – mit Beratung, Planung und Umsetzung durch New Living Design in Zofingen."
         keywords="Badmöbel Zofingen, Küchenplanung Zofingen, Küchenmontage, Keramikplatten kaufen, Wellnesskabine, Ausstellung Zofingen, Schweiz"
         url="/produkte"
         type="website"
         image="https://newlivingdesign.ch/assets/14264-rchi-mirabilia-villas-01.webp"
       />
 
-      {/* Hero: echte Ausstellung in Zofingen statt Symbolbild */}
-      <section className={styles.hero}>
-        <div className={styles['hero-content']}>
-          <h1 className={styles['hero-title']}>
-            <span className={styles['title-line']}>Bad, Küchen, Platten</span>
-            <span>&amp; Wellness.</span>
-          </h1>
-          <div className={styles['hero-description']}>
-            <p>
-              Eine Auswahl, die zusammenpasst.
-            </p>
-          </div>
-          <p className={styles['hero-scroll-indicator']}>Scrollen Sie nach unten</p>
-        </div>
-        <figure className={styles['hero-figure']}>
-          <img
-            src={photoUrl(heroFile)}
-            srcSet={`${photoUrl(heroFile, true)} 480w, ${photoUrl(heroFile)} 1200w`}
-            sizes="(max-width: 767px) 100vw, 45vw"
-            alt={heroAlt}
-            width="1200"
-            height="1600"
-            fetchPriority="high"
-          />
-        </figure>
-      </section>
+      <PageIntro eyebrow="Inspiration für Ihr Vorhaben" title="Möglichkeiten für Ihren Raum." description="Bad, Küche, Platten oder Wellness: Wir verbinden Ihre Wünsche mit einer durchdachten Planung und der passenden Umsetzung. Hier bekommen Sie einen ersten Eindruck." image={{ src: photoUrl(heroFile), srcSet: `${photoUrl(heroFile, true)} 480w, ${photoUrl(heroFile)} 1200w`, width: 1200, height: 1600, alt: heroAlt }}><Link to="/dienstleistungen" className="nld-link">Wie wir Sie begleiten →</Link></PageIntro>
 
       {/* Introduction Section */}
-      <section className={`${styles.introduction}`}>
-        <div className={styles['introduction-container']}>
-          <div className={styles['section-header']}>
-            <span className={styles['section-label']}>Ausstellung in Zofingen</span>
-            <h2 className={styles['section-title']}>Nicht möglichst viel. Sondern das, was zusammenpasst.</h2>
-          </div>
-          <div className={styles['introduction-content']}>
-            <p>
-              Ein stimmiger Raum entsteht nicht durch möglichst viele Produkte. Entscheidend ist, dass Proportionen,
-              Farben, Oberflächen und Nutzung zusammenpassen.
-            </p>
-            <p>
-              In unserer Ausstellung vergleichen Sie Farben, Oberflächen und Formate direkt am Material.
-            </p>
-          </div>
-        </div>
-      </section>
-
+      <nav className={styles.areaIndex} aria-label="Unsere Fachbereiche">
+        {(['bad', 'kuechen', 'platten', 'wellness'] as AreaId[]).map((id, i) => <a key={id} href={`#${id}`}><span>0{i + 1}</span>{['Bad', 'Küchen', 'Platten', 'Wellness'][i]}<span aria-hidden="true">↓</span></a>)}
+      </nav>
       {/* Product Categories */}
       <section className={styles['product-categories']}>
         <div className={styles['categories-container']}>
           {/* Badmöbel */}
-          <div id="bad" className={`${styles['category-section']} ${styles.light}`}>
+          <div id="bad" className={styles['category-section']}>
             <div className={styles['category-content']}>
-              <div className={styles['category-text']}>
-                <h3 className={styles['category-title']}>Badprodukte gemeinsam auswählen</h3>
+              <div className={styles['category-text']} data-reveal="text">
+                <h2 className={styles['category-title']}>Ihr Bad. Gemeinsam geplant.</h2>
                 <div className={styles['category-description']}>
                   <p>
                     Wir wählen mit Ihnen Badmöbel, Waschtisch, WC, Armaturen, Dusche, Badewanne und Zubehör als
@@ -185,7 +147,7 @@ const Products: React.FC = () => {
                   <Link to="/kontakt" className={styles['category-link']}>Badberatung anfragen</Link>
                 </div>
               </div>
-              <div className={styles['category-image']}>
+              <div className={styles['category-image']} data-reveal="image">
                 <img {...heroes.bad} sizes={HERO_SIZES} />
               </div>
             </div>
@@ -193,10 +155,10 @@ const Products: React.FC = () => {
           </div>
 
           {/* Küchen */}
-          <div id="kuechen" className={`${styles['category-section']} ${styles.dark} ${styles.reverse}`}>
+          <div id="kuechen" className={`${styles['category-section']} ${styles.reverse}`}>
             <div className={styles['category-content']}>
-              <div className={styles['category-text']}>
-                <h3 className={styles['category-title']}>Eine Küche, die im Alltag funktioniert</h3>
+              <div className={styles['category-text']} data-reveal="text">
+                <h2 className={styles['category-title']}>Eine Küche, die im Alltag funktioniert</h2>
                 <div className={styles['category-description']}>
                   <p>
                     Eine Küche muss morgens, beim Kochen und mit Gästen funktionieren. Wir planen Raumaufteilung,
@@ -210,7 +172,7 @@ const Products: React.FC = () => {
                   <Link to="/kontakt" className={styles['category-link']}>Küchenberatung anfragen</Link>
                 </div>
               </div>
-              <div className={styles['category-image']}>
+              <div className={styles['category-image']} data-reveal="image">
                 <img {...heroes.kuechen} sizes={HERO_SIZES} />
               </div>
             </div>
@@ -218,10 +180,10 @@ const Products: React.FC = () => {
           </div>
 
           {/* Wellness */}
-          <div id="wellness" className={`${styles['category-section']} ${styles.light}`}>
+          <div id="wellness" className={styles['category-section']}>
             <div className={styles['category-content']}>
-              <div className={styles['category-text']}>
-                <h3 className={styles['category-title']}>Wellness beginnt mit den Möglichkeiten des Raums</h3>
+              <div className={styles['category-text']} data-reveal="text">
+                <h2 className={styles['category-title']}>Wellness für Ihr Zuhause.</h2>
                 <div className={styles['category-description']}>
                   <p>
                     Sauna, Dampfbad, Wellnesskabine oder Whirlwanne benötigen die passende Fläche und die richtigen
@@ -237,7 +199,7 @@ const Products: React.FC = () => {
                   <Link to="/kontakt" className={styles['category-link']}>Wellness-Beratung anfragen</Link>
                 </div>
               </div>
-              <div className={styles['category-image']}>
+              <div className={styles['category-image']} data-reveal="image">
                 <img {...heroes.wellness} sizes={HERO_SIZES} />
               </div>
             </div>
@@ -245,10 +207,10 @@ const Products: React.FC = () => {
           </div>
 
           {/* Platten */}
-          <div id="platten" className={`${styles['category-section']} ${styles.dark} ${styles.reverse}`}>
+          <div id="platten" className={`${styles['category-section']} ${styles.reverse}`}>
             <div className={styles['category-content']}>
-              <div className={styles['category-text']}>
-                <h3 className={styles['category-title']}>Platten für Wand, Boden und Aussenbereich</h3>
+              <div className={styles['category-text']} data-reveal="text">
+                <h2 className={styles['category-title']}>Passende Oberflächen. Sauber umgesetzt.</h2>
                 <div className={styles['category-description']}>
                   <p>
                     Platten bestimmen nicht nur die Farbe eines Raums, sondern auch Fugenbild, Pflege und Trittsicherheit.
@@ -262,7 +224,7 @@ const Products: React.FC = () => {
                   <Link to="/kontakt" className={styles['category-link']}>Plattenberatung anfragen</Link>
                 </div>
               </div>
-              <div className={styles['category-image']}>
+              <div className={styles['category-image']} data-reveal="image">
                 <img {...heroes.platten} sizes={HERO_SIZES} />
               </div>
             </div>
@@ -271,44 +233,44 @@ const Products: React.FC = () => {
 
           {/* Weitere Themen: ruhiges Raster statt sechs gleich gewichteter Vollbreiten-Abschnitte.
               Die drei 380x347-Bilder werden nie breiter als ihre Originalgrösse gezeigt (siehe .detail-small). */}
-          <div className={styles.details}>
+          <details className={styles.materialDetails}><summary>Weitere Materialien und Ausstattungsdetails</summary><div className={styles.details}>
             {/* Wandverkleidungen */}
             <article className={styles.detail}>
               <img src={wandverkleidungenImage} alt="Wohnraum mit gemusterter Wandverkleidung" width="1400" height="787" loading="lazy" decoding="async" />
-              <h3 className={styles['category-title']}>Nicht jede Wand braucht dieselbe Oberfläche</h3>
+              <h2 className={styles['category-title']}>Nicht jede Wand braucht dieselbe Oberfläche</h2>
               <p>Neben Keramik bieten wir Glasfaser- und Vinyltapeten, Holzverkleidungen, Mosaik und Vetrite. Wir zeigen Ihnen, welche Oberfläche für den jeweiligen Raum geeignet ist und wie sie sich mit Boden, Möbeln und Licht kombinieren lässt.</p>
             </article>
             {/* Armaturen */}
             <article className={styles.detail}>
               <img src={armaturenImage} alt="Schwarze Wannenarmatur mit Handbrause auf einer dunklen Steinfläche" width="1400" height="989" loading="lazy" decoding="async" />
-              <h3 className={styles['category-title']}>Form und Oberfläche konsequent weiterführen</h3>
+              <h2 className={styles['category-title']}>Form und Oberfläche konsequent weiterführen</h2>
               <p>Rund oder eckig, verchromt, schwarz, gebürstet oder in einer PVD-Oberfläche: Wir stimmen Waschtisch-, Dusch- und Wannenarmaturen auf Keramik, Möbel und Zubehör ab. Dabei berücksichtigen wir Bedienung, Anschlüsse und Pflege ebenso wie die Gestaltung.</p>
             </article>
             {/* Sanitärapparate */}
             <article className={styles.detail}>
               <img src={sanitaerapparateImage} alt="Wandhängendes WC und Bidet in Schwarz neben einem Waschtischmöbel aus Holz" width="1400" height="1000" loading="lazy" decoding="async" />
-              <h3 className={styles['category-title']}>Keramik und Ausstattung passend zum Raum</h3>
+              <h2 className={styles['category-title']}>Keramik und Ausstattung passend zum Raum</h2>
               <p>Unser Sortiment umfasst Waschtische, WCs, Dusch-WCs, Badewannen, Duschwannen und Duschlösungen. Wir achten darauf, dass Masse, Anschlüsse und Nutzung zur Raumsituation passen und die einzelnen Produkte eine gemeinsame Linie bilden.</p>
             </article>
             {/* Heizkörper */}
             <article className={`${styles.detail} ${styles['detail-small']}`}>
               <img src={heizkoerperImage} alt="Vertikaler Designheizkörper in einem Wohnraum" width="380" height="347" loading="lazy" decoding="async" />
-              <h3 className={styles['category-title']}>Wärme, Format und Anschluss zusammen planen</h3>
+              <h2 className={styles['category-title']}>Wärme, Format und Anschluss zusammen planen</h2>
               <p>Handtuch- und Designheizkörper sind in unterschiedlichen Grössen, Formen und Farben erhältlich. Wir stimmen Modell, Heizleistung und Anschlussposition auf den Raum und die übrige Ausstattung ab.</p>
             </article>
             {/* Beleuchtungen */}
             <article className={`${styles.detail} ${styles['detail-small']}`}>
               <img src={beleuchtungenImage} alt="Zylindrische Pendelleuchten in Schwarz mit Messingdetails" width="380" height="347" loading="lazy" decoding="async" />
-              <h3 className={styles['category-title']}>Licht für Alltag und Atmosphäre</h3>
+              <h2 className={styles['category-title']}>Licht für Alltag und Atmosphäre</h2>
               <p>Gutes Licht am Spiegel erfüllt eine andere Aufgabe als die Beleuchtung des gesamten Raums. Wir kombinieren Funktions- und Stimmungslicht passend zu Oberflächen, Farben und Nutzung.</p>
             </article>
             {/* Accessoires */}
             <article className={`${styles.detail} ${styles['detail-small']}`}>
               <img src={accessoiresImage} alt="Schwarzer Wandhalter mit zwei Seifenspendern" width="380" height="347" loading="lazy" decoding="async" />
-              <h3 className={styles['category-title']}>Die letzte Auswahl soll nicht zufällig sein</h3>
+              <h2 className={styles['category-title']}>Die letzte Auswahl soll nicht zufällig sein</h2>
               <p>Handtuchhalter, Papierrollenhalter, Haken, Seifenhalter und weitere Accessoires führen Form und Oberfläche der Armaturen weiter. So wirkt der Raum bis ins Detail abgestimmt.</p>
             </article>
-          </div>
+          </div></details>
         </div>
       </section>
 
@@ -345,7 +307,7 @@ const Products: React.FC = () => {
           "itemListElement": [
             { name: "Badmöbel, Armaturen und Keramik", anchor: "bad" },
             { name: "Küchenplanung, Lieferung, Montage und Renovation", anchor: "kuechen" },
-            { name: "Platten für Wand, Boden und Aussenbereich", anchor: "platten" },
+            { name: "Passende Oberflächen. Sauber umgesetzt.", anchor: "platten" },
             { name: "Wellness für Ihr Zuhause", anchor: "wellness" }
           ].map((cat, i) => ({
             "@type": "ListItem",

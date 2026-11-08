@@ -1,0 +1,335 @@
+{
+  "note": "Read-only HTTP check of current public pages; timings are not Core Web Vitals.",
+  "pages": [
+    {
+      "route": "/",
+      "status": 200,
+      "title": "Bad, Küchen, Platten &amp; Wellness in Zofingen | New Living Design",
+      "seconds": 5.79
+    },
+    {
+      "route": "/badumbau-zofingen",
+      "status": 200,
+      "title": "Badumbau in Zofingen &amp; Umgebung | New Living Design",
+      "seconds": 5.87
+    },
+    {
+      "route": "/referenzen",
+      "status": 200,
+      "title": "Referenzen: Bäder, Küchen &amp; Wohnräume | New Living Design",
+      "seconds": 6.02
+    },
+    {
+      "route": "/badplaner",
+      "status": 200,
+      "title": "Badplaner für Badezimmer und Gäste-WC | New Living Design",
+      "seconds": 5.89
+    },
+    {
+      "route": "/blog",
+      "status": 200,
+      "title": "Ratgeber zu Badumbau, Materialien &amp; Kosten | New Living Design",
+      "seconds": 5.82
+    },
+    {
+      "route": "/produkte",
+      "status": 200,
+      "title": "Bad, Küchen, Platten &amp; Wellness | New Living Design Zofingen",
+      "seconds": 5.6
+    },
+    {
+      "route": "/dienstleistungen",
+      "status": 200,
+      "title": "Beratung, 3D-Planung &amp; Montage | New Living Design",
+      "seconds": 5.62
+    },
+    {
+      "route": "/partner",
+      "status": 200,
+      "title": "Marken &amp; Partner | New Living Design Zofingen",
+      "seconds": 5.45
+    },
+    {
+      "route": "/booking",
+      "status": 200,
+      "title": "Beratung &amp; Ausstellung in Zofingen | New Living Design",
+      "seconds": 6.0
+    },
+    {
+      "route": "/ueber-uns",
+      "status": 200,
+      "title": "Über New Living Design | Ausstellung in Zofingen",
+      "seconds": 5.97
+    },
+    {
+      "route": "/kontakt",
+      "status": 200,
+      "title": "Kontakt &amp; Ausstellung | New Living Design Zofingen",
+      "seconds": 5.96
+    },
+    {
+      "route": "/datenschutz",
+      "status": 200,
+      "title": "Datenschutzerklärung | New Living Design GmbH",
+      "seconds": 5.88
+    },
+    {
+      "route": "/impressum",
+      "status": 200,
+      "title": "Impressum | New Living Design GmbH",
+      "seconds": 5.96
+    },
+    {
+      "route": "/agb",
+      "status": 200,
+      "title": "AGB | New Living Design GmbH",
+      "seconds": 6.04
+    },
+    {
+      "route": "/produkte/bad",
+      "status": 200,
+      "title": "Bad: Marken und Serien | New Living Design Zofingen",
+      "seconds": 5.92
+    },
+    {
+      "route": "/produkte/bad/rexa",
+      "status": 200,
+      "title": "Rexa Design: Badmöbel | New Living Design Zofingen",
+      "seconds": 5.87
+    },
+    {
+      "route": "/produkte/bad/edone",
+      "status": 200,
+      "title": "Edoné: Badmöbel | New Living Design Zofingen",
+      "seconds": 6.01
+    },
+    {
+      "route": "/produkte/bad/archeda",
+      "status": 200,
+      "title": "Archeda: Badmöbel | New Living Design Zofingen",
+      "seconds": 5.95
+    },
+    {
+      "route": "/produkte/bad/froidevaux",
+      "status": 200,
+      "title": "Froidevaux AG: Badmöbel | New Living Design Zofingen",
+      "seconds": 5.95
+    },
+    {
+      "route": "/produkte/bad/pirovano",
+      "status": 200,
+      "title": "Pirovano Bagni: Badmöbel | New Living Design Zofingen",
+      "seconds": 5.85
+    },
+    {
+      "route": "/produkte/bad/treemme",
+      "status": 200,
+      "title": "Rubinetterie Treemme: Armaturen | New Living Design Zofingen",
+      "seconds": 5.86
+    },
+    {
+      "route": "/produkte/bad/newform",
+      "status": 200,
+      "title": "Newform: Armaturen | New Living Design Zofingen",
+      "seconds": 5.84
+    },
+    {
+      "route": "/produkte/bad/gessi",
+      "status": 200,
+      "title": "Gessi: Armaturen | New Living Design Zofingen",
+      "seconds": 5.87
+    },
+    {
+      "route": "/produkte/bad/luce",
+      "status": 200,
+      "title": "Luce Rubinetterie: Armaturen | New Living Design Zofingen",
+      "seconds": 5.83
+    },
+    {
+      "route": "/produkte/bad/cielo",
+      "status": 200,
+      "title": "Ceramica Cielo: Sanitärkeramik | New Living Design Zofingen",
+      "seconds": 5.85
+    },
+    {
+      "route": "/produkte/bad/scarabeo",
+      "status": 200,
+      "title": "Scarabeo Ceramiche: Sanitärkeramik | New Living Design Zofingen",
+      "seconds": 5.83
+    },
+    {
+      "route": "/produkte/bad/galassia",
+      "status": 200,
+      "title": "Ceramica Galassia: Sanitärkeramik | New Living Design Zofingen",
+      "seconds": 5.8
+    },
+    {
+      "route": "/produkte/bad/azzurra",
+      "status": 200,
+      "title": "Azzurra Ceramica: Sanitärkeramik | New Living Design Zofingen",
+      "seconds": 5.88
+    },
+    {
+      "route": "/produkte/bad/megius",
+      "status": 200,
+      "title": "Megius: Duschen &amp; Duschabtrennungen | New Living Design Zofingen",
+      "seconds": 5.84
+    },
+    {
+      "route": "/produkte/bad/novellini",
+      "status": 200,
+      "title": "Novellini: Duschen &amp; Duschabtrennungen | New Living Design",
+      "seconds": 5.83
+    },
+    {
+      "route": "/produkte/bad/vismaravetro",
+      "status": 200,
+      "title": "Vismaravetro: Duschen &amp; Duschabtrennungen | New Living Design",
+      "seconds": 5.8
+    },
+    {
+      "route": "/produkte/bad/capannoli",
+      "status": 200,
+      "title": "Capannoli: Badaccessoires | New Living Design Zofingen",
+      "seconds": 5.74
+    },
+    {
+      "route": "/produkte/bad/antrax",
+      "status": 200,
+      "title": "Antrax IT: Designheizkörper | New Living Design Zofingen",
+      "seconds": 5.82
+    },
+    {
+      "route": "/produkte/bad/cordivari",
+      "status": 200,
+      "title": "Cordivari Design: Designheizkörper | New Living Design Zofingen",
+      "seconds": 5.85
+    },
+    {
+      "route": "/produkte/bad/caleido",
+      "status": 200,
+      "title": "Caleido: Designheizkörper | New Living Design Zofingen",
+      "seconds": 5.83
+    },
+    {
+      "route": "/produkte/kuechen",
+      "status": 200,
+      "title": "Küchen: Marken und Serien | New Living Design Zofingen",
+      "seconds": 5.86
+    },
+    {
+      "route": "/produkte/kuechen/febal",
+      "status": 200,
+      "title": "Febal Casa: Küchenwelten | New Living Design Zofingen",
+      "seconds": 5.78
+    },
+    {
+      "route": "/produkte/platten",
+      "status": 200,
+      "title": "Platten: Marken und Serien | New Living Design Zofingen",
+      "seconds": 5.75
+    },
+    {
+      "route": "/produkte/platten/energieker",
+      "status": 200,
+      "title": "Energieker: Keramik | New Living Design Zofingen",
+      "seconds": 5.72
+    },
+    {
+      "route": "/produkte/platten/emilgroup",
+      "status": 200,
+      "title": "Emilgroup: Keramik | New Living Design Zofingen",
+      "seconds": 5.7
+    },
+    {
+      "route": "/produkte/platten/lafabbrica",
+      "status": 200,
+      "title": "La Fabbrica AVA: Keramik | New Living Design Zofingen",
+      "seconds": 5.9
+    },
+    {
+      "route": "/produkte/platten/supergres",
+      "status": 200,
+      "title": "Supergres: Keramik | New Living Design Zofingen",
+      "seconds": 5.78
+    },
+    {
+      "route": "/produkte/platten/ariana",
+      "status": 200,
+      "title": "Ariana Ceramiche / Gardenia&amp;Ariana: Keramik | New Living Design",
+      "seconds": 5.79
+    },
+    {
+      "route": "/produkte/platten/acquario",
+      "status": 200,
+      "title": "Acquario Due: Keramik | New Living Design Zofingen",
+      "seconds": 5.8
+    },
+    {
+      "route": "/produkte/platten/sicis",
+      "status": 200,
+      "title": "SICIS: Mosaik | New Living Design Zofingen",
+      "seconds": 5.91
+    },
+    {
+      "route": "/produkte/platten/mosavit",
+      "status": 200,
+      "title": "Mosavit / Trip by Mosavit: Mosaik | New Living Design Zofingen",
+      "seconds": 5.82
+    },
+    {
+      "route": "/produkte/platten/skema",
+      "status": 200,
+      "title": "Skema: Parkett &amp; Holz | New Living Design Zofingen",
+      "seconds": 5.79
+    },
+    {
+      "route": "/produkte/platten/deco",
+      "status": 200,
+      "title": "Déco: SPC &amp; Designböden | New Living Design Zofingen",
+      "seconds": 5.63
+    },
+    {
+      "route": "/produkte/platten/zenon",
+      "status": 200,
+      "title": "Zenon Bath &amp; SPC Surfaces: SPC &amp; Designböden | New Living Design",
+      "seconds": 5.96
+    },
+    {
+      "route": "/produkte/platten/inkiostro",
+      "status": 200,
+      "title": "Inkiostro Bianco | New Living Design",
+      "seconds": 5.91
+    },
+    {
+      "route": "/produkte/wellness",
+      "status": 200,
+      "title": "Wellness: Marken und Serien | New Living Design Zofingen",
+      "seconds": 5.83
+    },
+    {
+      "route": "/produkte/wellness/novellini",
+      "status": 200,
+      "title": "Novellini: Whirlpool &amp; Minipool | New Living Design Zofingen",
+      "seconds": 5.83
+    },
+    {
+      "route": "/produkte/wellness/albatros",
+      "status": 200,
+      "title": "Albatros Wellness: Whirlpool &amp; Minipool | New Living Design",
+      "seconds": 5.85
+    },
+    {
+      "route": "/produkte/wellness/megius",
+      "status": 200,
+      "title": "Megius: Hammam &amp; Dampfbad | New Living Design Zofingen",
+      "seconds": 5.83
+    },
+    {
+      "route": "/blog/badumbau-steuern-abziehen-bis-2028",
+      "status": 200,
+      "title": "Badumbau von den Steuern abziehen bis 2028 | New Living Design",
+      "seconds": 5.84
+    }
+  ]
+}

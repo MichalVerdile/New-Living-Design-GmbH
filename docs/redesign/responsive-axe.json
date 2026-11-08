@@ -1,0 +1,4522 @@
+{
+  "date": "2026-11-07T19:19:53.715Z",
+  "environment": "Chromium, CSS viewport simulation via same-origin iframe; no CPU/network throttling; finite animations advanced to their final state before contrast scanning",
+  "pages": [
+    {
+      "route": "/",
+      "title": "Bad, Küchen, Platten & Wellness in Zofingen | New Living Design",
+      "h1": 1,
+      "layouts": [
+        {
+          "width": 320,
+          "clientWidth": 305,
+          "scrollWidth": 305,
+          "overflow": false
+        },
+        {
+          "width": 375,
+          "clientWidth": 360,
+          "scrollWidth": 360,
+          "overflow": false
+        },
+        {
+          "width": 390,
+          "clientWidth": 375,
+          "scrollWidth": 375,
+          "overflow": false
+        },
+        {
+          "width": 430,
+          "clientWidth": 415,
+          "scrollWidth": 415,
+          "overflow": false
+        },
+        {
+          "width": 768,
+          "clientWidth": 753,
+          "scrollWidth": 753,
+          "overflow": false
+        },
+        {
+          "width": 1024,
+          "clientWidth": 1009,
+          "scrollWidth": 1009,
+          "overflow": false
+        },
+        {
+          "width": 1280,
+          "clientWidth": 1265,
+          "scrollWidth": 1265,
+          "overflow": false
+        },
+        {
+          "width": 1440,
+          "clientWidth": 1425,
+          "scrollWidth": 1425,
+          "overflow": false
+        },
+        {
+          "width": 1920,
+          "clientWidth": 1905,
+          "scrollWidth": 1905,
+          "overflow": false
+        },
+        {
+          "width": 844,
+          "height": 390,
+          "clientWidth": 829,
+          "scrollWidth": 829,
+          "overflow": false
+        },
+        {
+          "width": 640,
+          "height": 450,
+          "clientWidth": 625,
+          "scrollWidth": 625,
+          "overflow": false
+        }
+      ],
+      "axe": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "count": 5
+        }
+      ]
+    },
+    {
+      "route": "/badumbau-zofingen",
+      "title": "Badumbau in Zofingen & Umgebung | New Living Design",
+      "h1": 1,
+      "layouts": [
+        {
+          "width": 320,
+          "clientWidth": 305,
+          "scrollWidth": 305,
+          "overflow": false
+        },
+        {
+          "width": 375,
+          "clientWidth": 360,
+          "scrollWidth": 360,
+          "overflow": false
+        },
+        {
+          "width": 390,
+          "clientWidth": 375,
+          "scrollWidth": 375,
+          "overflow": false
+        },
+        {
+          "width": 430,
+          "clientWidth": 415,
+          "scrollWidth": 415,
+          "overflow": false
+        },
+        {
+          "width": 768,
+          "clientWidth": 753,
+          "scrollWidth": 753,
+          "overflow": false
+        },
+        {
+          "width": 1024,
+          "clientWidth": 1009,
+          "scrollWidth": 1009,
+          "overflow": false
+        },
+        {
+          "width": 1280,
+          "clientWidth": 1265,
+          "scrollWidth": 1265,
+          "overflow": false
+        },
+        {
+          "width": 1440,
+          "clientWidth": 1425,
+          "scrollWidth": 1425,
+          "overflow": false
+        },
+        {
+          "width": 1920,
+          "clientWidth": 1905,
+          "scrollWidth": 1905,
+          "overflow": false
+        },
+        {
+          "width": 844,
+          "height": 390,
+          "clientWidth": 829,
+          "scrollWidth": 829,
+          "overflow": false
+        },
+        {
+          "width": 640,
+          "height": 450,
+          "clientWidth": 625,
+          "scrollWidth": 625,
+          "overflow": false
+        }
+      ],
+      "axe": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "count": 22
+        }
+      ]
+    },
+    {
+      "route": "/referenzen",
+      "title": "Referenzen: Bäder, Küchen & Wohnräume | New Living Design",
+      "h1": 1,
+      "layouts": [
+        {
+          "width": 320,
+          "clientWidth": 305,
+          "scrollWidth": 305,
+          "overflow": false
+        },
+        {
+          "width": 375,
+          "clientWidth": 360,
+          "scrollWidth": 360,
+          "overflow": false
+        },
+        {
+          "width": 390,
+          "clientWidth": 375,
+          "scrollWidth": 375,
+          "overflow": false
+        },
+        {
+          "width": 430,
+          "clientWidth": 415,
+          "scrollWidth": 415,
+          "overflow": false
+        },
+        {
+          "width": 768,
+          "clientWidth": 753,
+          "scrollWidth": 753,
+          "overflow": false
+        },
+        {
+          "width": 1024,
+          "clientWidth": 1009,
+          "scrollWidth": 1009,
+          "overflow": false
+        },
+        {
+          "width": 1280,
+          "clientWidth": 1265,
+          "scrollWidth": 1265,
+          "overflow": false
+        },
+        {
+          "width": 1440,
+          "clientWidth": 1425,
+          "scrollWidth": 1425,
+          "overflow": false
+        },
+        {
+          "width": 1920,
+          "clientWidth": 1905,
+          "scrollWidth": 1905,
+          "overflow": false
+        },
+        {
+          "width": 844,
+          "height": 390,
+          "clientWidth": 829,
+          "scrollWidth": 829,
+          "overflow": false
+        },
+        {
+          "width": 640,
+          "height": 450,
+          "clientWidth": 625,
+          "scrollWidth": 625,
+          "overflow": false
+        }
+      ],
+      "axe": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "count": 5
+        }
+      ]
+    },
+    {
+      "route": "/badplaner",
+      "title": "Badplaner für Badezimmer und Gäste-WC | New Living Design",
+      "h1": 1,
+      "layouts": [
+        {
+          "width": 320,
+          "clientWidth": 305,
+          "scrollWidth": 305,
+          "overflow": false
+        },
+        {
+          "width": 375,
+          "clientWidth": 360,
+          "scrollWidth": 360,
+          "overflow": false
+        },
+        {
+          "width": 390,
+          "clientWidth": 375,
+          "scrollWidth": 375,
+          "overflow": false
+        },
+        {
+          "width": 430,
+          "clientWidth": 415,
+          "scrollWidth": 415,
+          "overflow": false
+        },
+        {
+          "width": 768,
+          "clientWidth": 753,
+          "scrollWidth": 753,
+          "overflow": false
+        },
+        {
+          "width": 1024,
+          "clientWidth": 1009,
+          "scrollWidth": 1009,
+          "overflow": false
+        },
+        {
+          "width": 1280,
+          "clientWidth": 1265,
+          "scrollWidth": 1265,
+          "overflow": false
+        },
+        {
+          "width": 1440,
+          "clientWidth": 1425,
+          "scrollWidth": 1425,
+          "overflow": false
+        },
+        {
+          "width": 1920,
+          "clientWidth": 1905,
+          "scrollWidth": 1905,
+          "overflow": false
+        },
+        {
+          "width": 844,
+          "height": 390,
+          "clientWidth": 829,
+          "scrollWidth": 829,
+          "overflow": false
+        },
+        {
+          "width": 640,
+          "height": 450,
+          "clientWidth": 625,
+          "scrollWidth": 625,
+          "overflow": false
+        }
+      ],
+      "axe": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "count": 5
+        }
+      ]
+    },
+    {
+      "route": "/blog",
+      "title": "Ratgeber zu Badumbau, Materialien & Kosten | New Living Design",
+      "h1": 1,
+      "layouts": [
+        {
+          "width": 320,
+          "clientWidth": 305,
+          "scrollWidth": 305,
+          "overflow": false
+        },
+        {
+          "width": 375,
+          "clientWidth": 360,
+          "scrollWidth": 360,
+          "overflow": false
+        },
+        {
+          "width": 390,
+          "clientWidth": 375,
+          "scrollWidth": 375,
+          "overflow": false
+        },
+        {
+          "width": 430,
+          "clientWidth": 415,
+          "scrollWidth": 415,
+          "overflow": false
+        },
+        {
+          "width": 768,
+          "clientWidth": 753,
+          "scrollWidth": 753,
+          "overflow": false
+        },
+        {
+          "width": 1024,
+          "clientWidth": 1009,
+          "scrollWidth": 1009,
+          "overflow": false
+        },
+        {
+          "width": 1280,
+          "clientWidth": 1265,
+          "scrollWidth": 1265,
+          "overflow": false
+        },
+        {
+          "width": 1440,
+          "clientWidth": 1425,
+          "scrollWidth": 1425,
+          "overflow": false
+        },
+        {
+          "width": 1920,
+          "clientWidth": 1905,
+          "scrollWidth": 1905,
+          "overflow": false
+        },
+        {
+          "width": 844,
+          "height": 390,
+          "clientWidth": 829,
+          "scrollWidth": 829,
+          "overflow": false
+        },
+        {
+          "width": 640,
+          "height": 450,
+          "clientWidth": 625,
+          "scrollWidth": 625,
+          "overflow": false
+        }
+      ],
+      "axe": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "count": 5
+        }
+      ]
+    },
+    {
+      "route": "/produkte",
+      "title": "Bad, Küchen, Platten & Wellness | New Living Design Zofingen",
+      "h1": 1,
+      "layouts": [
+        {
+          "width": 320,
+          "clientWidth": 305,
+          "scrollWidth": 305,
+          "overflow": false
+        },
+        {
+          "width": 375,
+          "clientWidth": 360,
+          "scrollWidth": 360,
+          "overflow": false
+        },
+        {
+          "width": 390,
+          "clientWidth": 375,
+          "scrollWidth": 375,
+          "overflow": false
+        },
+        {
+          "width": 430,
+          "clientWidth": 415,
+          "scrollWidth": 415,
+          "overflow": false
+        },
+        {
+          "width": 768,
+          "clientWidth": 753,
+          "scrollWidth": 753,
+          "overflow": false
+        },
+        {
+          "width": 1024,
+          "clientWidth": 1009,
+          "scrollWidth": 1009,
+          "overflow": false
+        },
+        {
+          "width": 1280,
+          "clientWidth": 1265,
+          "scrollWidth": 1265,
+          "overflow": false
+        },
+        {
+          "width": 1440,
+          "clientWidth": 1425,
+          "scrollWidth": 1425,
+          "overflow": false
+        },
+        {
+          "width": 1920,
+          "clientWidth": 1905,
+          "scrollWidth": 1905,
+          "overflow": false
+        },
+        {
+          "width": 844,
+          "height": 390,
+          "clientWidth": 829,
+          "scrollWidth": 829,
+          "overflow": false
+        },
+        {
+          "width": 640,
+          "height": 450,
+          "clientWidth": 625,
+          "scrollWidth": 625,
+          "overflow": false
+        }
+      ],
+      "axe": [],
+      "incomplete": [
+        {
+          "id": "aria-prohibited-attr",
+          "count": 36
+        },
+        {
+          "id": "color-contrast",
+          "count": 4
+        }
+      ]
+    },
+    {
+      "route": "/dienstleistungen",
+      "title": "Beratung, 3D-Planung & Montage | New Living Design",
+      "h1": 1,
+      "layouts": [
+        {
+          "width": 320,
+          "clientWidth": 305,
+          "scrollWidth": 305,
+          "overflow": false
+        },
+        {
+          "width": 375,
+          "clientWidth": 360,
+          "scrollWidth": 360,
+          "overflow": false
+        },
+        {
+          "width": 390,
+          "clientWidth": 375,
+          "scrollWidth": 375,
+          "overflow": false
+        },
+        {
+          "width": 430,
+          "clientWidth": 415,
+          "scrollWidth": 415,
+          "overflow": false
+        },
+        {
+          "width": 768,
+          "clientWidth": 753,
+          "scrollWidth": 753,
+          "overflow": false
+        },
+        {
+          "width": 1024,
+          "clientWidth": 1009,
+          "scrollWidth": 1009,
+          "overflow": false
+        },
+        {
+          "width": 1280,
+          "clientWidth": 1265,
+          "scrollWidth": 1265,
+          "overflow": false
+        },
+        {
+          "width": 1440,
+          "clientWidth": 1425,
+          "scrollWidth": 1425,
+          "overflow": false
+        },
+        {
+          "width": 1920,
+          "clientWidth": 1905,
+          "scrollWidth": 1905,
+          "overflow": false
+        },
+        {
+          "width": 844,
+          "height": 390,
+          "clientWidth": 829,
+          "scrollWidth": 829,
+          "overflow": false
+        },
+        {
+          "width": 640,
+          "height": 450,
+          "clientWidth": 625,
+          "scrollWidth": 625,
+          "overflow": false
+        }
+      ],
+      "axe": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "count": 14
+        }
+      ]
+    },
+    {
+      "route": "/partner",
+      "title": "Marken & Partner | New Living Design Zofingen",
+      "h1": 1,
+      "layouts": [
+        {
+          "width": 320,
+          "clientWidth": 305,
+          "scrollWidth": 305,
+          "overflow": false
+        },
+        {
+          "width": 375,
+          "clientWidth": 360,
+          "scrollWidth": 360,
+          "overflow": false
+        },
+        {
+          "width": 390,
+          "clientWidth": 375,
+          "scrollWidth": 375,
+          "overflow": false
+        },
+        {
+          "width": 430,
+          "clientWidth": 415,
+          "scrollWidth": 415,
+          "overflow": false
+        },
+        {
+          "width": 768,
+          "clientWidth": 753,
+          "scrollWidth": 753,
+          "overflow": false
+        },
+        {
+          "width": 1024,
+          "clientWidth": 1009,
+          "scrollWidth": 1009,
+          "overflow": false
+        },
+        {
+          "width": 1280,
+          "clientWidth": 1265,
+          "scrollWidth": 1265,
+          "overflow": false
+        },
+        {
+          "width": 1440,
+          "clientWidth": 1425,
+          "scrollWidth": 1425,
+          "overflow": false
+        },
+        {
+          "width": 1920,
+          "clientWidth": 1905,
+          "scrollWidth": 1905,
+          "overflow": false
+        },
+        {
+          "width": 844,
+          "height": 390,
+          "clientWidth": 829,
+          "scrollWidth": 829,
+          "overflow": false
+        },
+        {
+          "width": 640,
+          "height": 450,
+          "clientWidth": 625,
+          "scrollWidth": 625,
+          "overflow": false
+        }
+      ],
+      "axe": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "count": 4
+        }
+      ]
+    },
+    {
+      "route": "/booking",
+      "title": "Beratung & Ausstellung in Zofingen | New Living Design",
+      "h1": 1,
+      "layouts": [
+        {
+          "width": 320,
+          "clientWidth": 305,
+          "scrollWidth": 305,
+          "overflow": false
+        },
+        {
+          "width": 375,
+          "clientWidth": 360,
+          "scrollWidth": 360,
+          "overflow": false
+        },
+        {
+          "width": 390,
+          "clientWidth": 375,
+          "scrollWidth": 375,
+          "overflow": false
+        },
+        {
+          "width": 430,
+          "clientWidth": 415,
+          "scrollWidth": 415,
+          "overflow": false
+        },
+        {
+          "width": 768,
+          "clientWidth": 753,
+          "scrollWidth": 753,
+          "overflow": false
+        },
+        {
+          "width": 1024,
+          "clientWidth": 1009,
+          "scrollWidth": 1009,
+          "overflow": false
+        },
+        {
+          "width": 1280,
+          "clientWidth": 1265,
+          "scrollWidth": 1265,
+          "overflow": false
+        },
+        {
+          "width": 1440,
+          "clientWidth": 1425,
+          "scrollWidth": 1425,
+          "overflow": false
+        },
+        {
+          "width": 1920,
+          "clientWidth": 1905,
+          "scrollWidth": 1905,
+          "overflow": false
+        },
+        {
+          "width": 844,
+          "height": 390,
+          "clientWidth": 829,
+          "scrollWidth": 829,
+          "overflow": false
+        },
+        {
+          "width": 640,
+          "height": 450,
+          "clientWidth": 625,
+          "scrollWidth": 625,
+          "overflow": false
+        }
+      ],
+      "axe": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "count": 10
+        }
+      ]
+    },
+    {
+      "route": "/ueber-uns",
+      "title": "Über New Living Design | Ausstellung in Zofingen",
+      "h1": 1,
+      "layouts": [
+        {
+          "width": 320,
+          "clientWidth": 305,
+          "scrollWidth": 305,
+          "overflow": false
+        },
+        {
+          "width": 375,
+          "clientWidth": 360,
+          "scrollWidth": 360,
+          "overflow": false
+        },
+        {
+          "width": 390,
+          "clientWidth": 375,
+          "scrollWidth": 375,
+          "overflow": false
+        },
+        {
+          "width": 430,
+          "clientWidth": 415,
+          "scrollWidth": 415,
+          "overflow": false
+        },
+        {
+          "width": 768,
+          "clientWidth": 753,
+          "scrollWidth": 753,
+          "overflow": false
+        },
+        {
+          "width": 1024,
+          "clientWidth": 1009,
+          "scrollWidth": 1009,
+          "overflow": false
+        },
+        {
+          "width": 1280,
+          "clientWidth": 1265,
+          "scrollWidth": 1265,
+          "overflow": false
+        },
+        {
+          "width": 1440,
+          "clientWidth": 1425,
+          "scrollWidth": 1425,
+          "overflow": false
+        },
+        {
+          "width": 1920,
+          "clientWidth": 1905,
+          "scrollWidth": 1905,
+          "overflow": false
+        },
+        {
+          "width": 844,
+          "height": 390,
+          "clientWidth": 829,
+          "scrollWidth": 829,
+          "overflow": false
+        },
+        {
+          "width": 640,
+          "height": 450,
+          "clientWidth": 625,
+          "scrollWidth": 625,
+          "overflow": false
+        }
+      ],
+      "axe": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "count": 7
+        }
+      ]
+    },
+    {
+      "route": "/kontakt",
+      "title": "Kontakt & Ausstellung | New Living Design Zofingen",
+      "h1": 1,
+      "layouts": [
+        {
+          "width": 320,
+          "clientWidth": 305,
+          "scrollWidth": 305,
+          "overflow": false
+        },
+        {
+          "width": 375,
+          "clientWidth": 360,
+          "scrollWidth": 360,
+          "overflow": false
+        },
+        {
+          "width": 390,
+          "clientWidth": 375,
+          "scrollWidth": 375,
+          "overflow": false
+        },
+        {
+          "width": 430,
+          "clientWidth": 415,
+          "scrollWidth": 415,
+          "overflow": false
+        },
+        {
+          "width": 768,
+          "clientWidth": 753,
+          "scrollWidth": 753,
+          "overflow": false
+        },
+        {
+          "width": 1024,
+          "clientWidth": 1009,
+          "scrollWidth": 1009,
+          "overflow": false
+        },
+        {
+          "width": 1280,
+          "clientWidth": 1265,
+          "scrollWidth": 1265,
+          "overflow": false
+        },
+        {
+          "width": 1440,
+          "clientWidth": 1425,
+          "scrollWidth": 1425,
+          "overflow": false
+        },
+        {
+          "width": 1920,
+          "clientWidth": 1905,
+          "scrollWidth": 1905,
+          "overflow": false
+        },
+        {
+          "width": 844,
+          "height": 390,
+          "clientWidth": 829,
+          "scrollWidth": 829,
+          "overflow": false
+        },
+        {
+          "width": 640,
+          "height": 450,
+          "clientWidth": 625,
+          "scrollWidth": 625,
+          "overflow": false
+        }
+      ],
+      "axe": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "count": 7
+        }
+      ]
+    },
+    {
+      "route": "/datenschutz",
+      "title": "Datenschutzerklärung | New Living Design GmbH",
+      "h1": 1,
+      "layouts": [
+        {
+          "width": 320,
+          "clientWidth": 305,
+          "scrollWidth": 305,
+          "overflow": false
+        },
+        {
+          "width": 375,
+          "clientWidth": 360,
+          "scrollWidth": 360,
+          "overflow": false
+        },
+        {
+          "width": 390,
+          "clientWidth": 375,
+          "scrollWidth": 375,
+          "overflow": false
+        },
+        {
+          "width": 430,
+          "clientWidth": 415,
+          "scrollWidth": 415,
+          "overflow": false
+        },
+        {
+          "width": 768,
+          "clientWidth": 753,
+          "scrollWidth": 753,
+          "overflow": false
+        },
+        {
+          "width": 1024,
+          "clientWidth": 1009,
+          "scrollWidth": 1009,
+          "overflow": false
+        },
+        {
+          "width": 1280,
+          "clientWidth": 1265,
+          "scrollWidth": 1265,
+          "overflow": false
+        },
+        {
+          "width": 1440,
+          "clientWidth": 1425,
+          "scrollWidth": 1425,
+          "overflow": false
+        },
+        {
+          "width": 1920,
+          "clientWidth": 1905,
+          "scrollWidth": 1905,
+          "overflow": false
+        },
+        {
+          "width": 844,
+          "height": 390,
+          "clientWidth": 829,
+          "scrollWidth": 829,
+          "overflow": false
+        },
+        {
+          "width": 640,
+          "height": 450,
+          "clientWidth": 625,
+          "scrollWidth": 625,
+          "overflow": false
+        }
+      ],
+      "axe": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "count": 113
+        }
+      ]
+    },
+    {
+      "route": "/impressum",
+      "title": "Impressum | New Living Design GmbH",
+      "h1": 1,
+      "layouts": [
+        {
+          "width": 320,
+          "clientWidth": 305,
+          "scrollWidth": 305,
+          "overflow": false
+        },
+        {
+          "width": 375,
+          "clientWidth": 360,
+          "scrollWidth": 360,
+          "overflow": false
+        },
+        {
+          "width": 390,
+          "clientWidth": 375,
+          "scrollWidth": 375,
+          "overflow": false
+        },
+        {
+          "width": 430,
+          "clientWidth": 415,
+          "scrollWidth": 415,
+          "overflow": false
+        },
+        {
+          "width": 768,
+          "clientWidth": 753,
+          "scrollWidth": 753,
+          "overflow": false
+        },
+        {
+          "width": 1024,
+          "clientWidth": 1009,
+          "scrollWidth": 1009,
+          "overflow": false
+        },
+        {
+          "width": 1280,
+          "clientWidth": 1265,
+          "scrollWidth": 1265,
+          "overflow": false
+        },
+        {
+          "width": 1440,
+          "clientWidth": 1425,
+          "scrollWidth": 1425,
+          "overflow": false
+        },
+        {
+          "width": 1920,
+          "clientWidth": 1905,
+          "scrollWidth": 1905,
+          "overflow": false
+        },
+        {
+          "width": 844,
+          "height": 390,
+          "clientWidth": 829,
+          "scrollWidth": 829,
+          "overflow": false
+        },
+        {
+          "width": 640,
+          "height": 450,
+          "clientWidth": 625,
+          "scrollWidth": 625,
+          "overflow": false
+        }
+      ],
+      "axe": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "count": 39
+        }
+      ]
+    },
+    {
+      "route": "/agb",
+      "title": "AGB | New Living Design GmbH",
+      "h1": 1,
+      "layouts": [
+        {
+          "width": 320,
+          "clientWidth": 305,
+          "scrollWidth": 305,
+          "overflow": false
+        },
+        {
+          "width": 375,
+          "clientWidth": 360,
+          "scrollWidth": 360,
+          "overflow": false
+        },
+        {
+          "width": 390,
+          "clientWidth": 375,
+          "scrollWidth": 375,
+          "overflow": false
+        },
+        {
+          "width": 430,
+          "clientWidth": 415,
+          "scrollWidth": 415,
+          "overflow": false
+        },
+        {
+          "width": 768,
+          "clientWidth": 753,
+          "scrollWidth": 753,
+          "overflow": false
+        },
+        {
+          "width": 1024,
+          "clientWidth": 1009,
+          "scrollWidth": 1009,
+          "overflow": false
+        },
+        {
+          "width": 1280,
+          "clientWidth": 1265,
+          "scrollWidth": 1265,
+          "overflow": false
+        },
+        {
+          "width": 1440,
+          "clientWidth": 1425,
+          "scrollWidth": 1425,
+          "overflow": false
+        },
+        {
+          "width": 1920,
+          "clientWidth": 1905,
+          "scrollWidth": 1905,
+          "overflow": false
+        },
+        {
+          "width": 844,
+          "height": 390,
+          "clientWidth": 829,
+          "scrollWidth": 829,
+          "overflow": false
+        },
+        {
+          "width": 640,
+          "height": 450,
+          "clientWidth": 625,
+          "scrollWidth": 625,
+          "overflow": false
+        }
+      ],
+      "axe": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "count": 99
+        }
+      ]
+    },
+    {
+      "route": "/produkte/bad",
+      "title": "Bad: Marken und Serien | New Living Design Zofingen",
+      "h1": 1,
+      "layouts": [
+        {
+          "width": 320,
+          "clientWidth": 305,
+          "scrollWidth": 305,
+          "overflow": false
+        },
+        {
+          "width": 375,
+          "clientWidth": 360,
+          "scrollWidth": 360,
+          "overflow": false
+        },
+        {
+          "width": 390,
+          "clientWidth": 375,
+          "scrollWidth": 375,
+          "overflow": false
+        },
+        {
+          "width": 430,
+          "clientWidth": 415,
+          "scrollWidth": 415,
+          "overflow": false
+        },
+        {
+          "width": 768,
+          "clientWidth": 753,
+          "scrollWidth": 753,
+          "overflow": false
+        },
+        {
+          "width": 1024,
+          "clientWidth": 1009,
+          "scrollWidth": 1009,
+          "overflow": false
+        },
+        {
+          "width": 1280,
+          "clientWidth": 1265,
+          "scrollWidth": 1265,
+          "overflow": false
+        },
+        {
+          "width": 1440,
+          "clientWidth": 1425,
+          "scrollWidth": 1425,
+          "overflow": false
+        },
+        {
+          "width": 1920,
+          "clientWidth": 1905,
+          "scrollWidth": 1905,
+          "overflow": false
+        },
+        {
+          "width": 844,
+          "height": 390,
+          "clientWidth": 829,
+          "scrollWidth": 829,
+          "overflow": false
+        },
+        {
+          "width": 640,
+          "height": 450,
+          "clientWidth": 625,
+          "scrollWidth": 625,
+          "overflow": false
+        }
+      ],
+      "axe": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "count": 8
+        }
+      ]
+    },
+    {
+      "route": "/produkte/bad/rexa",
+      "title": "Rexa Design: Badmöbel | New Living Design Zofingen",
+      "h1": 1,
+      "layouts": [
+        {
+          "width": 320,
+          "clientWidth": 305,
+          "scrollWidth": 305,
+          "overflow": false
+        },
+        {
+          "width": 375,
+          "clientWidth": 360,
+          "scrollWidth": 360,
+          "overflow": false
+        },
+        {
+          "width": 390,
+          "clientWidth": 375,
+          "scrollWidth": 375,
+          "overflow": false
+        },
+        {
+          "width": 430,
+          "clientWidth": 415,
+          "scrollWidth": 415,
+          "overflow": false
+        },
+        {
+          "width": 768,
+          "clientWidth": 753,
+          "scrollWidth": 753,
+          "overflow": false
+        },
+        {
+          "width": 1024,
+          "clientWidth": 1009,
+          "scrollWidth": 1009,
+          "overflow": false
+        },
+        {
+          "width": 1280,
+          "clientWidth": 1265,
+          "scrollWidth": 1265,
+          "overflow": false
+        },
+        {
+          "width": 1440,
+          "clientWidth": 1425,
+          "scrollWidth": 1425,
+          "overflow": false
+        },
+        {
+          "width": 1920,
+          "clientWidth": 1905,
+          "scrollWidth": 1905,
+          "overflow": false
+        },
+        {
+          "width": 844,
+          "height": 390,
+          "clientWidth": 829,
+          "scrollWidth": 829,
+          "overflow": false
+        },
+        {
+          "width": 640,
+          "height": 450,
+          "clientWidth": 625,
+          "scrollWidth": 625,
+          "overflow": false
+        }
+      ],
+      "axe": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "count": 24
+        }
+      ]
+    },
+    {
+      "route": "/produkte/bad/edone",
+      "title": "Edoné: Badmöbel | New Living Design Zofingen",
+      "h1": 1,
+      "layouts": [
+        {
+          "width": 320,
+          "clientWidth": 305,
+          "scrollWidth": 305,
+          "overflow": false
+        },
+        {
+          "width": 375,
+          "clientWidth": 360,
+          "scrollWidth": 360,
+          "overflow": false
+        },
+        {
+          "width": 390,
+          "clientWidth": 375,
+          "scrollWidth": 375,
+          "overflow": false
+        },
+        {
+          "width": 430,
+          "clientWidth": 415,
+          "scrollWidth": 415,
+          "overflow": false
+        },
+        {
+          "width": 768,
+          "clientWidth": 753,
+          "scrollWidth": 753,
+          "overflow": false
+        },
+        {
+          "width": 1024,
+          "clientWidth": 1009,
+          "scrollWidth": 1009,
+          "overflow": false
+        },
+        {
+          "width": 1280,
+          "clientWidth": 1265,
+          "scrollWidth": 1265,
+          "overflow": false
+        },
+        {
+          "width": 1440,
+          "clientWidth": 1425,
+          "scrollWidth": 1425,
+          "overflow": false
+        },
+        {
+          "width": 1920,
+          "clientWidth": 1905,
+          "scrollWidth": 1905,
+          "overflow": false
+        },
+        {
+          "width": 844,
+          "height": 390,
+          "clientWidth": 829,
+          "scrollWidth": 829,
+          "overflow": false
+        },
+        {
+          "width": 640,
+          "height": 450,
+          "clientWidth": 625,
+          "scrollWidth": 625,
+          "overflow": false
+        }
+      ],
+      "axe": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "count": 24
+        }
+      ]
+    },
+    {
+      "route": "/produkte/bad/archeda",
+      "title": "Archeda: Badmöbel | New Living Design Zofingen",
+      "h1": 1,
+      "layouts": [
+        {
+          "width": 320,
+          "clientWidth": 305,
+          "scrollWidth": 305,
+          "overflow": false
+        },
+        {
+          "width": 375,
+          "clientWidth": 360,
+          "scrollWidth": 360,
+          "overflow": false
+        },
+        {
+          "width": 390,
+          "clientWidth": 375,
+          "scrollWidth": 375,
+          "overflow": false
+        },
+        {
+          "width": 430,
+          "clientWidth": 415,
+          "scrollWidth": 415,
+          "overflow": false
+        },
+        {
+          "width": 768,
+          "clientWidth": 753,
+          "scrollWidth": 753,
+          "overflow": false
+        },
+        {
+          "width": 1024,
+          "clientWidth": 1009,
+          "scrollWidth": 1009,
+          "overflow": false
+        },
+        {
+          "width": 1280,
+          "clientWidth": 1265,
+          "scrollWidth": 1265,
+          "overflow": false
+        },
+        {
+          "width": 1440,
+          "clientWidth": 1425,
+          "scrollWidth": 1425,
+          "overflow": false
+        },
+        {
+          "width": 1920,
+          "clientWidth": 1905,
+          "scrollWidth": 1905,
+          "overflow": false
+        },
+        {
+          "width": 844,
+          "height": 390,
+          "clientWidth": 829,
+          "scrollWidth": 829,
+          "overflow": false
+        },
+        {
+          "width": 640,
+          "height": 450,
+          "clientWidth": 625,
+          "scrollWidth": 625,
+          "overflow": false
+        }
+      ],
+      "axe": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "count": 14
+        }
+      ]
+    },
+    {
+      "route": "/produkte/bad/froidevaux",
+      "title": "Froidevaux AG: Badmöbel | New Living Design Zofingen",
+      "h1": 1,
+      "layouts": [
+        {
+          "width": 320,
+          "clientWidth": 305,
+          "scrollWidth": 305,
+          "overflow": false
+        },
+        {
+          "width": 375,
+          "clientWidth": 360,
+          "scrollWidth": 360,
+          "overflow": false
+        },
+        {
+          "width": 390,
+          "clientWidth": 375,
+          "scrollWidth": 375,
+          "overflow": false
+        },
+        {
+          "width": 430,
+          "clientWidth": 415,
+          "scrollWidth": 415,
+          "overflow": false
+        },
+        {
+          "width": 768,
+          "clientWidth": 753,
+          "scrollWidth": 753,
+          "overflow": false
+        },
+        {
+          "width": 1024,
+          "clientWidth": 1009,
+          "scrollWidth": 1009,
+          "overflow": false
+        },
+        {
+          "width": 1280,
+          "clientWidth": 1265,
+          "scrollWidth": 1265,
+          "overflow": false
+        },
+        {
+          "width": 1440,
+          "clientWidth": 1425,
+          "scrollWidth": 1425,
+          "overflow": false
+        },
+        {
+          "width": 1920,
+          "clientWidth": 1905,
+          "scrollWidth": 1905,
+          "overflow": false
+        },
+        {
+          "width": 844,
+          "height": 390,
+          "clientWidth": 829,
+          "scrollWidth": 829,
+          "overflow": false
+        },
+        {
+          "width": 640,
+          "height": 450,
+          "clientWidth": 625,
+          "scrollWidth": 625,
+          "overflow": false
+        }
+      ],
+      "axe": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "count": 17
+        }
+      ]
+    },
+    {
+      "route": "/produkte/bad/pirovano",
+      "title": "Pirovano Bagni: Badmöbel | New Living Design Zofingen",
+      "h1": 1,
+      "layouts": [
+        {
+          "width": 320,
+          "clientWidth": 305,
+          "scrollWidth": 305,
+          "overflow": false
+        },
+        {
+          "width": 375,
+          "clientWidth": 360,
+          "scrollWidth": 360,
+          "overflow": false
+        },
+        {
+          "width": 390,
+          "clientWidth": 375,
+          "scrollWidth": 375,
+          "overflow": false
+        },
+        {
+          "width": 430,
+          "clientWidth": 415,
+          "scrollWidth": 415,
+          "overflow": false
+        },
+        {
+          "width": 768,
+          "clientWidth": 753,
+          "scrollWidth": 753,
+          "overflow": false
+        },
+        {
+          "width": 1024,
+          "clientWidth": 1009,
+          "scrollWidth": 1009,
+          "overflow": false
+        },
+        {
+          "width": 1280,
+          "clientWidth": 1265,
+          "scrollWidth": 1265,
+          "overflow": false
+        },
+        {
+          "width": 1440,
+          "clientWidth": 1425,
+          "scrollWidth": 1425,
+          "overflow": false
+        },
+        {
+          "width": 1920,
+          "clientWidth": 1905,
+          "scrollWidth": 1905,
+          "overflow": false
+        },
+        {
+          "width": 844,
+          "height": 390,
+          "clientWidth": 829,
+          "scrollWidth": 829,
+          "overflow": false
+        },
+        {
+          "width": 640,
+          "height": 450,
+          "clientWidth": 625,
+          "scrollWidth": 625,
+          "overflow": false
+        }
+      ],
+      "axe": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "count": 33
+        }
+      ]
+    },
+    {
+      "route": "/produkte/bad/treemme",
+      "title": "Rubinetterie Treemme: Armaturen | New Living Design Zofingen",
+      "h1": 1,
+      "layouts": [
+        {
+          "width": 320,
+          "clientWidth": 305,
+          "scrollWidth": 305,
+          "overflow": false
+        },
+        {
+          "width": 375,
+          "clientWidth": 360,
+          "scrollWidth": 360,
+          "overflow": false
+        },
+        {
+          "width": 390,
+          "clientWidth": 375,
+          "scrollWidth": 375,
+          "overflow": false
+        },
+        {
+          "width": 430,
+          "clientWidth": 415,
+          "scrollWidth": 415,
+          "overflow": false
+        },
+        {
+          "width": 768,
+          "clientWidth": 753,
+          "scrollWidth": 753,
+          "overflow": false
+        },
+        {
+          "width": 1024,
+          "clientWidth": 1009,
+          "scrollWidth": 1009,
+          "overflow": false
+        },
+        {
+          "width": 1280,
+          "clientWidth": 1265,
+          "scrollWidth": 1265,
+          "overflow": false
+        },
+        {
+          "width": 1440,
+          "clientWidth": 1425,
+          "scrollWidth": 1425,
+          "overflow": false
+        },
+        {
+          "width": 1920,
+          "clientWidth": 1905,
+          "scrollWidth": 1905,
+          "overflow": false
+        },
+        {
+          "width": 844,
+          "height": 390,
+          "clientWidth": 829,
+          "scrollWidth": 829,
+          "overflow": false
+        },
+        {
+          "width": 640,
+          "height": 450,
+          "clientWidth": 625,
+          "scrollWidth": 625,
+          "overflow": false
+        }
+      ],
+      "axe": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "count": 21
+        }
+      ]
+    },
+    {
+      "route": "/produkte/bad/newform",
+      "title": "Newform: Armaturen | New Living Design Zofingen",
+      "h1": 1,
+      "layouts": [
+        {
+          "width": 320,
+          "clientWidth": 305,
+          "scrollWidth": 305,
+          "overflow": false
+        },
+        {
+          "width": 375,
+          "clientWidth": 360,
+          "scrollWidth": 360,
+          "overflow": false
+        },
+        {
+          "width": 390,
+          "clientWidth": 375,
+          "scrollWidth": 375,
+          "overflow": false
+        },
+        {
+          "width": 430,
+          "clientWidth": 415,
+          "scrollWidth": 415,
+          "overflow": false
+        },
+        {
+          "width": 768,
+          "clientWidth": 753,
+          "scrollWidth": 753,
+          "overflow": false
+        },
+        {
+          "width": 1024,
+          "clientWidth": 1009,
+          "scrollWidth": 1009,
+          "overflow": false
+        },
+        {
+          "width": 1280,
+          "clientWidth": 1265,
+          "scrollWidth": 1265,
+          "overflow": false
+        },
+        {
+          "width": 1440,
+          "clientWidth": 1425,
+          "scrollWidth": 1425,
+          "overflow": false
+        },
+        {
+          "width": 1920,
+          "clientWidth": 1905,
+          "scrollWidth": 1905,
+          "overflow": false
+        },
+        {
+          "width": 844,
+          "height": 390,
+          "clientWidth": 829,
+          "scrollWidth": 829,
+          "overflow": false
+        },
+        {
+          "width": 640,
+          "height": 450,
+          "clientWidth": 625,
+          "scrollWidth": 625,
+          "overflow": false
+        }
+      ],
+      "axe": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "count": 27
+        }
+      ]
+    },
+    {
+      "route": "/produkte/bad/gessi",
+      "title": "Gessi: Armaturen | New Living Design Zofingen",
+      "h1": 1,
+      "layouts": [
+        {
+          "width": 320,
+          "clientWidth": 305,
+          "scrollWidth": 305,
+          "overflow": false
+        },
+        {
+          "width": 375,
+          "clientWidth": 360,
+          "scrollWidth": 360,
+          "overflow": false
+        },
+        {
+          "width": 390,
+          "clientWidth": 375,
+          "scrollWidth": 375,
+          "overflow": false
+        },
+        {
+          "width": 430,
+          "clientWidth": 415,
+          "scrollWidth": 415,
+          "overflow": false
+        },
+        {
+          "width": 768,
+          "clientWidth": 753,
+          "scrollWidth": 753,
+          "overflow": false
+        },
+        {
+          "width": 1024,
+          "clientWidth": 1009,
+          "scrollWidth": 1009,
+          "overflow": false
+        },
+        {
+          "width": 1280,
+          "clientWidth": 1265,
+          "scrollWidth": 1265,
+          "overflow": false
+        },
+        {
+          "width": 1440,
+          "clientWidth": 1425,
+          "scrollWidth": 1425,
+          "overflow": false
+        },
+        {
+          "width": 1920,
+          "clientWidth": 1905,
+          "scrollWidth": 1905,
+          "overflow": false
+        },
+        {
+          "width": 844,
+          "height": 390,
+          "clientWidth": 829,
+          "scrollWidth": 829,
+          "overflow": false
+        },
+        {
+          "width": 640,
+          "height": 450,
+          "clientWidth": 625,
+          "scrollWidth": 625,
+          "overflow": false
+        }
+      ],
+      "axe": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "count": 22
+        }
+      ]
+    },
+    {
+      "route": "/produkte/bad/luce",
+      "title": "Luce Rubinetterie: Armaturen | New Living Design Zofingen",
+      "h1": 1,
+      "layouts": [
+        {
+          "width": 320,
+          "clientWidth": 305,
+          "scrollWidth": 305,
+          "overflow": false
+        },
+        {
+          "width": 375,
+          "clientWidth": 360,
+          "scrollWidth": 360,
+          "overflow": false
+        },
+        {
+          "width": 390,
+          "clientWidth": 375,
+          "scrollWidth": 375,
+          "overflow": false
+        },
+        {
+          "width": 430,
+          "clientWidth": 415,
+          "scrollWidth": 415,
+          "overflow": false
+        },
+        {
+          "width": 768,
+          "clientWidth": 753,
+          "scrollWidth": 753,
+          "overflow": false
+        },
+        {
+          "width": 1024,
+          "clientWidth": 1009,
+          "scrollWidth": 1009,
+          "overflow": false
+        },
+        {
+          "width": 1280,
+          "clientWidth": 1265,
+          "scrollWidth": 1265,
+          "overflow": false
+        },
+        {
+          "width": 1440,
+          "clientWidth": 1425,
+          "scrollWidth": 1425,
+          "overflow": false
+        },
+        {
+          "width": 1920,
+          "clientWidth": 1905,
+          "scrollWidth": 1905,
+          "overflow": false
+        },
+        {
+          "width": 844,
+          "height": 390,
+          "clientWidth": 829,
+          "scrollWidth": 829,
+          "overflow": false
+        },
+        {
+          "width": 640,
+          "height": 450,
+          "clientWidth": 625,
+          "scrollWidth": 625,
+          "overflow": false
+        }
+      ],
+      "axe": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "count": 15
+        }
+      ]
+    },
+    {
+      "route": "/produkte/bad/cielo",
+      "title": "Ceramica Cielo: Sanitärkeramik | New Living Design Zofingen",
+      "h1": 1,
+      "layouts": [
+        {
+          "width": 320,
+          "clientWidth": 305,
+          "scrollWidth": 305,
+          "overflow": false
+        },
+        {
+          "width": 375,
+          "clientWidth": 360,
+          "scrollWidth": 360,
+          "overflow": false
+        },
+        {
+          "width": 390,
+          "clientWidth": 375,
+          "scrollWidth": 375,
+          "overflow": false
+        },
+        {
+          "width": 430,
+          "clientWidth": 415,
+          "scrollWidth": 415,
+          "overflow": false
+        },
+        {
+          "width": 768,
+          "clientWidth": 753,
+          "scrollWidth": 753,
+          "overflow": false
+        },
+        {
+          "width": 1024,
+          "clientWidth": 1009,
+          "scrollWidth": 1009,
+          "overflow": false
+        },
+        {
+          "width": 1280,
+          "clientWidth": 1265,
+          "scrollWidth": 1265,
+          "overflow": false
+        },
+        {
+          "width": 1440,
+          "clientWidth": 1425,
+          "scrollWidth": 1425,
+          "overflow": false
+        },
+        {
+          "width": 1920,
+          "clientWidth": 1905,
+          "scrollWidth": 1905,
+          "overflow": false
+        },
+        {
+          "width": 844,
+          "height": 390,
+          "clientWidth": 829,
+          "scrollWidth": 829,
+          "overflow": false
+        },
+        {
+          "width": 640,
+          "height": 450,
+          "clientWidth": 625,
+          "scrollWidth": 625,
+          "overflow": false
+        }
+      ],
+      "axe": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "count": 28
+        }
+      ]
+    },
+    {
+      "route": "/produkte/bad/scarabeo",
+      "title": "Scarabeo Ceramiche: Sanitärkeramik | New Living Design Zofingen",
+      "h1": 1,
+      "layouts": [
+        {
+          "width": 320,
+          "clientWidth": 305,
+          "scrollWidth": 305,
+          "overflow": false
+        },
+        {
+          "width": 375,
+          "clientWidth": 360,
+          "scrollWidth": 360,
+          "overflow": false
+        },
+        {
+          "width": 390,
+          "clientWidth": 375,
+          "scrollWidth": 375,
+          "overflow": false
+        },
+        {
+          "width": 430,
+          "clientWidth": 415,
+          "scrollWidth": 415,
+          "overflow": false
+        },
+        {
+          "width": 768,
+          "clientWidth": 753,
+          "scrollWidth": 753,
+          "overflow": false
+        },
+        {
+          "width": 1024,
+          "clientWidth": 1009,
+          "scrollWidth": 1009,
+          "overflow": false
+        },
+        {
+          "width": 1280,
+          "clientWidth": 1265,
+          "scrollWidth": 1265,
+          "overflow": false
+        },
+        {
+          "width": 1440,
+          "clientWidth": 1425,
+          "scrollWidth": 1425,
+          "overflow": false
+        },
+        {
+          "width": 1920,
+          "clientWidth": 1905,
+          "scrollWidth": 1905,
+          "overflow": false
+        },
+        {
+          "width": 844,
+          "height": 390,
+          "clientWidth": 829,
+          "scrollWidth": 829,
+          "overflow": false
+        },
+        {
+          "width": 640,
+          "height": 450,
+          "clientWidth": 625,
+          "scrollWidth": 625,
+          "overflow": false
+        }
+      ],
+      "axe": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "count": 37
+        }
+      ]
+    },
+    {
+      "route": "/produkte/bad/galassia",
+      "title": "Ceramica Galassia: Sanitärkeramik | New Living Design Zofingen",
+      "h1": 1,
+      "layouts": [
+        {
+          "width": 320,
+          "clientWidth": 305,
+          "scrollWidth": 305,
+          "overflow": false
+        },
+        {
+          "width": 375,
+          "clientWidth": 360,
+          "scrollWidth": 360,
+          "overflow": false
+        },
+        {
+          "width": 390,
+          "clientWidth": 375,
+          "scrollWidth": 375,
+          "overflow": false
+        },
+        {
+          "width": 430,
+          "clientWidth": 415,
+          "scrollWidth": 415,
+          "overflow": false
+        },
+        {
+          "width": 768,
+          "clientWidth": 753,
+          "scrollWidth": 753,
+          "overflow": false
+        },
+        {
+          "width": 1024,
+          "clientWidth": 1009,
+          "scrollWidth": 1009,
+          "overflow": false
+        },
+        {
+          "width": 1280,
+          "clientWidth": 1265,
+          "scrollWidth": 1265,
+          "overflow": false
+        },
+        {
+          "width": 1440,
+          "clientWidth": 1425,
+          "scrollWidth": 1425,
+          "overflow": false
+        },
+        {
+          "width": 1920,
+          "clientWidth": 1905,
+          "scrollWidth": 1905,
+          "overflow": false
+        },
+        {
+          "width": 844,
+          "height": 390,
+          "clientWidth": 829,
+          "scrollWidth": 829,
+          "overflow": false
+        },
+        {
+          "width": 640,
+          "height": 450,
+          "clientWidth": 625,
+          "scrollWidth": 625,
+          "overflow": false
+        }
+      ],
+      "axe": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "count": 20
+        }
+      ]
+    },
+    {
+      "route": "/produkte/bad/azzurra",
+      "title": "Azzurra Ceramica: Sanitärkeramik | New Living Design Zofingen",
+      "h1": 1,
+      "layouts": [
+        {
+          "width": 320,
+          "clientWidth": 305,
+          "scrollWidth": 305,
+          "overflow": false
+        },
+        {
+          "width": 375,
+          "clientWidth": 360,
+          "scrollWidth": 360,
+          "overflow": false
+        },
+        {
+          "width": 390,
+          "clientWidth": 375,
+          "scrollWidth": 375,
+          "overflow": false
+        },
+        {
+          "width": 430,
+          "clientWidth": 415,
+          "scrollWidth": 415,
+          "overflow": false
+        },
+        {
+          "width": 768,
+          "clientWidth": 753,
+          "scrollWidth": 753,
+          "overflow": false
+        },
+        {
+          "width": 1024,
+          "clientWidth": 1009,
+          "scrollWidth": 1009,
+          "overflow": false
+        },
+        {
+          "width": 1280,
+          "clientWidth": 1265,
+          "scrollWidth": 1265,
+          "overflow": false
+        },
+        {
+          "width": 1440,
+          "clientWidth": 1425,
+          "scrollWidth": 1425,
+          "overflow": false
+        },
+        {
+          "width": 1920,
+          "clientWidth": 1905,
+          "scrollWidth": 1905,
+          "overflow": false
+        },
+        {
+          "width": 844,
+          "height": 390,
+          "clientWidth": 829,
+          "scrollWidth": 829,
+          "overflow": false
+        },
+        {
+          "width": 640,
+          "height": 450,
+          "clientWidth": 625,
+          "scrollWidth": 625,
+          "overflow": false
+        }
+      ],
+      "axe": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "count": 31
+        }
+      ]
+    },
+    {
+      "route": "/produkte/bad/megius",
+      "title": "Megius: Duschen & Duschabtrennungen | New Living Design Zofingen",
+      "h1": 1,
+      "layouts": [
+        {
+          "width": 320,
+          "clientWidth": 305,
+          "scrollWidth": 305,
+          "overflow": false
+        },
+        {
+          "width": 375,
+          "clientWidth": 360,
+          "scrollWidth": 360,
+          "overflow": false
+        },
+        {
+          "width": 390,
+          "clientWidth": 375,
+          "scrollWidth": 375,
+          "overflow": false
+        },
+        {
+          "width": 430,
+          "clientWidth": 415,
+          "scrollWidth": 415,
+          "overflow": false
+        },
+        {
+          "width": 768,
+          "clientWidth": 753,
+          "scrollWidth": 753,
+          "overflow": false
+        },
+        {
+          "width": 1024,
+          "clientWidth": 1009,
+          "scrollWidth": 1009,
+          "overflow": false
+        },
+        {
+          "width": 1280,
+          "clientWidth": 1265,
+          "scrollWidth": 1265,
+          "overflow": false
+        },
+        {
+          "width": 1440,
+          "clientWidth": 1425,
+          "scrollWidth": 1425,
+          "overflow": false
+        },
+        {
+          "width": 1920,
+          "clientWidth": 1905,
+          "scrollWidth": 1905,
+          "overflow": false
+        },
+        {
+          "width": 844,
+          "height": 390,
+          "clientWidth": 829,
+          "scrollWidth": 829,
+          "overflow": false
+        },
+        {
+          "width": 640,
+          "height": 450,
+          "clientWidth": 625,
+          "scrollWidth": 625,
+          "overflow": false
+        }
+      ],
+      "axe": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "count": 20
+        }
+      ]
+    },
+    {
+      "route": "/produkte/bad/novellini",
+      "title": "Novellini: Duschen & Duschabtrennungen | New Living Design",
+      "h1": 1,
+      "layouts": [
+        {
+          "width": 320,
+          "clientWidth": 305,
+          "scrollWidth": 305,
+          "overflow": false
+        },
+        {
+          "width": 375,
+          "clientWidth": 360,
+          "scrollWidth": 360,
+          "overflow": false
+        },
+        {
+          "width": 390,
+          "clientWidth": 375,
+          "scrollWidth": 375,
+          "overflow": false
+        },
+        {
+          "width": 430,
+          "clientWidth": 415,
+          "scrollWidth": 415,
+          "overflow": false
+        },
+        {
+          "width": 768,
+          "clientWidth": 753,
+          "scrollWidth": 753,
+          "overflow": false
+        },
+        {
+          "width": 1024,
+          "clientWidth": 1009,
+          "scrollWidth": 1009,
+          "overflow": false
+        },
+        {
+          "width": 1280,
+          "clientWidth": 1265,
+          "scrollWidth": 1265,
+          "overflow": false
+        },
+        {
+          "width": 1440,
+          "clientWidth": 1425,
+          "scrollWidth": 1425,
+          "overflow": false
+        },
+        {
+          "width": 1920,
+          "clientWidth": 1905,
+          "scrollWidth": 1905,
+          "overflow": false
+        },
+        {
+          "width": 844,
+          "height": 390,
+          "clientWidth": 829,
+          "scrollWidth": 829,
+          "overflow": false
+        },
+        {
+          "width": 640,
+          "height": 450,
+          "clientWidth": 625,
+          "scrollWidth": 625,
+          "overflow": false
+        }
+      ],
+      "axe": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "count": 19
+        }
+      ]
+    },
+    {
+      "route": "/produkte/bad/vismaravetro",
+      "title": "Vismaravetro: Duschen & Duschabtrennungen | New Living Design",
+      "h1": 1,
+      "layouts": [
+        {
+          "width": 320,
+          "clientWidth": 305,
+          "scrollWidth": 305,
+          "overflow": false
+        },
+        {
+          "width": 375,
+          "clientWidth": 360,
+          "scrollWidth": 360,
+          "overflow": false
+        },
+        {
+          "width": 390,
+          "clientWidth": 375,
+          "scrollWidth": 375,
+          "overflow": false
+        },
+        {
+          "width": 430,
+          "clientWidth": 415,
+          "scrollWidth": 415,
+          "overflow": false
+        },
+        {
+          "width": 768,
+          "clientWidth": 753,
+          "scrollWidth": 753,
+          "overflow": false
+        },
+        {
+          "width": 1024,
+          "clientWidth": 1009,
+          "scrollWidth": 1009,
+          "overflow": false
+        },
+        {
+          "width": 1280,
+          "clientWidth": 1265,
+          "scrollWidth": 1265,
+          "overflow": false
+        },
+        {
+          "width": 1440,
+          "clientWidth": 1425,
+          "scrollWidth": 1425,
+          "overflow": false
+        },
+        {
+          "width": 1920,
+          "clientWidth": 1905,
+          "scrollWidth": 1905,
+          "overflow": false
+        },
+        {
+          "width": 844,
+          "height": 390,
+          "clientWidth": 829,
+          "scrollWidth": 829,
+          "overflow": false
+        },
+        {
+          "width": 640,
+          "height": 450,
+          "clientWidth": 625,
+          "scrollWidth": 625,
+          "overflow": false
+        }
+      ],
+      "axe": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "count": 34
+        }
+      ]
+    },
+    {
+      "route": "/produkte/bad/capannoli",
+      "title": "Capannoli: Badaccessoires | New Living Design Zofingen",
+      "h1": 1,
+      "layouts": [
+        {
+          "width": 320,
+          "clientWidth": 305,
+          "scrollWidth": 305,
+          "overflow": false
+        },
+        {
+          "width": 375,
+          "clientWidth": 360,
+          "scrollWidth": 360,
+          "overflow": false
+        },
+        {
+          "width": 390,
+          "clientWidth": 375,
+          "scrollWidth": 375,
+          "overflow": false
+        },
+        {
+          "width": 430,
+          "clientWidth": 415,
+          "scrollWidth": 415,
+          "overflow": false
+        },
+        {
+          "width": 768,
+          "clientWidth": 753,
+          "scrollWidth": 753,
+          "overflow": false
+        },
+        {
+          "width": 1024,
+          "clientWidth": 1009,
+          "scrollWidth": 1009,
+          "overflow": false
+        },
+        {
+          "width": 1280,
+          "clientWidth": 1265,
+          "scrollWidth": 1265,
+          "overflow": false
+        },
+        {
+          "width": 1440,
+          "clientWidth": 1425,
+          "scrollWidth": 1425,
+          "overflow": false
+        },
+        {
+          "width": 1920,
+          "clientWidth": 1905,
+          "scrollWidth": 1905,
+          "overflow": false
+        },
+        {
+          "width": 844,
+          "height": 390,
+          "clientWidth": 829,
+          "scrollWidth": 829,
+          "overflow": false
+        },
+        {
+          "width": 640,
+          "height": 450,
+          "clientWidth": 625,
+          "scrollWidth": 625,
+          "overflow": false
+        }
+      ],
+      "axe": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "count": 27
+        }
+      ]
+    },
+    {
+      "route": "/produkte/bad/antrax",
+      "title": "Antrax IT: Designheizkörper | New Living Design Zofingen",
+      "h1": 1,
+      "layouts": [
+        {
+          "width": 320,
+          "clientWidth": 305,
+          "scrollWidth": 305,
+          "overflow": false
+        },
+        {
+          "width": 375,
+          "clientWidth": 360,
+          "scrollWidth": 360,
+          "overflow": false
+        },
+        {
+          "width": 390,
+          "clientWidth": 375,
+          "scrollWidth": 375,
+          "overflow": false
+        },
+        {
+          "width": 430,
+          "clientWidth": 415,
+          "scrollWidth": 415,
+          "overflow": false
+        },
+        {
+          "width": 768,
+          "clientWidth": 753,
+          "scrollWidth": 753,
+          "overflow": false
+        },
+        {
+          "width": 1024,
+          "clientWidth": 1009,
+          "scrollWidth": 1009,
+          "overflow": false
+        },
+        {
+          "width": 1280,
+          "clientWidth": 1265,
+          "scrollWidth": 1265,
+          "overflow": false
+        },
+        {
+          "width": 1440,
+          "clientWidth": 1425,
+          "scrollWidth": 1425,
+          "overflow": false
+        },
+        {
+          "width": 1920,
+          "clientWidth": 1905,
+          "scrollWidth": 1905,
+          "overflow": false
+        },
+        {
+          "width": 844,
+          "height": 390,
+          "clientWidth": 829,
+          "scrollWidth": 829,
+          "overflow": false
+        },
+        {
+          "width": 640,
+          "height": 450,
+          "clientWidth": 625,
+          "scrollWidth": 625,
+          "overflow": false
+        }
+      ],
+      "axe": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "count": 23
+        }
+      ]
+    },
+    {
+      "route": "/produkte/bad/cordivari",
+      "title": "Cordivari Design: Designheizkörper | New Living Design Zofingen",
+      "h1": 1,
+      "layouts": [
+        {
+          "width": 320,
+          "clientWidth": 305,
+          "scrollWidth": 305,
+          "overflow": false
+        },
+        {
+          "width": 375,
+          "clientWidth": 360,
+          "scrollWidth": 360,
+          "overflow": false
+        },
+        {
+          "width": 390,
+          "clientWidth": 375,
+          "scrollWidth": 375,
+          "overflow": false
+        },
+        {
+          "width": 430,
+          "clientWidth": 415,
+          "scrollWidth": 415,
+          "overflow": false
+        },
+        {
+          "width": 768,
+          "clientWidth": 753,
+          "scrollWidth": 753,
+          "overflow": false
+        },
+        {
+          "width": 1024,
+          "clientWidth": 1009,
+          "scrollWidth": 1009,
+          "overflow": false
+        },
+        {
+          "width": 1280,
+          "clientWidth": 1265,
+          "scrollWidth": 1265,
+          "overflow": false
+        },
+        {
+          "width": 1440,
+          "clientWidth": 1425,
+          "scrollWidth": 1425,
+          "overflow": false
+        },
+        {
+          "width": 1920,
+          "clientWidth": 1905,
+          "scrollWidth": 1905,
+          "overflow": false
+        },
+        {
+          "width": 844,
+          "height": 390,
+          "clientWidth": 829,
+          "scrollWidth": 829,
+          "overflow": false
+        },
+        {
+          "width": 640,
+          "height": 450,
+          "clientWidth": 625,
+          "scrollWidth": 625,
+          "overflow": false
+        }
+      ],
+      "axe": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "count": 38
+        }
+      ]
+    },
+    {
+      "route": "/produkte/bad/caleido",
+      "title": "Caleido: Designheizkörper | New Living Design Zofingen",
+      "h1": 1,
+      "layouts": [
+        {
+          "width": 320,
+          "clientWidth": 305,
+          "scrollWidth": 305,
+          "overflow": false
+        },
+        {
+          "width": 375,
+          "clientWidth": 360,
+          "scrollWidth": 360,
+          "overflow": false
+        },
+        {
+          "width": 390,
+          "clientWidth": 375,
+          "scrollWidth": 375,
+          "overflow": false
+        },
+        {
+          "width": 430,
+          "clientWidth": 415,
+          "scrollWidth": 415,
+          "overflow": false
+        },
+        {
+          "width": 768,
+          "clientWidth": 753,
+          "scrollWidth": 753,
+          "overflow": false
+        },
+        {
+          "width": 1024,
+          "clientWidth": 1009,
+          "scrollWidth": 1009,
+          "overflow": false
+        },
+        {
+          "width": 1280,
+          "clientWidth": 1265,
+          "scrollWidth": 1265,
+          "overflow": false
+        },
+        {
+          "width": 1440,
+          "clientWidth": 1425,
+          "scrollWidth": 1425,
+          "overflow": false
+        },
+        {
+          "width": 1920,
+          "clientWidth": 1905,
+          "scrollWidth": 1905,
+          "overflow": false
+        },
+        {
+          "width": 844,
+          "height": 390,
+          "clientWidth": 829,
+          "scrollWidth": 829,
+          "overflow": false
+        },
+        {
+          "width": 640,
+          "height": 450,
+          "clientWidth": 625,
+          "scrollWidth": 625,
+          "overflow": false
+        }
+      ],
+      "axe": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "count": 22
+        }
+      ]
+    },
+    {
+      "route": "/produkte/kuechen",
+      "title": "Küchen: Marken und Serien | New Living Design Zofingen",
+      "h1": 1,
+      "layouts": [
+        {
+          "width": 320,
+          "clientWidth": 305,
+          "scrollWidth": 305,
+          "overflow": false
+        },
+        {
+          "width": 375,
+          "clientWidth": 360,
+          "scrollWidth": 360,
+          "overflow": false
+        },
+        {
+          "width": 390,
+          "clientWidth": 375,
+          "scrollWidth": 375,
+          "overflow": false
+        },
+        {
+          "width": 430,
+          "clientWidth": 415,
+          "scrollWidth": 415,
+          "overflow": false
+        },
+        {
+          "width": 768,
+          "clientWidth": 753,
+          "scrollWidth": 753,
+          "overflow": false
+        },
+        {
+          "width": 1024,
+          "clientWidth": 1009,
+          "scrollWidth": 1009,
+          "overflow": false
+        },
+        {
+          "width": 1280,
+          "clientWidth": 1265,
+          "scrollWidth": 1265,
+          "overflow": false
+        },
+        {
+          "width": 1440,
+          "clientWidth": 1425,
+          "scrollWidth": 1425,
+          "overflow": false
+        },
+        {
+          "width": 1920,
+          "clientWidth": 1905,
+          "scrollWidth": 1905,
+          "overflow": false
+        },
+        {
+          "width": 844,
+          "height": 390,
+          "clientWidth": 829,
+          "scrollWidth": 829,
+          "overflow": false
+        },
+        {
+          "width": 640,
+          "height": 450,
+          "clientWidth": 625,
+          "scrollWidth": 625,
+          "overflow": false
+        }
+      ],
+      "axe": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "count": 4
+        }
+      ]
+    },
+    {
+      "route": "/produkte/kuechen/febal",
+      "title": "Febal Casa: Küchenwelten | New Living Design Zofingen",
+      "h1": 1,
+      "layouts": [
+        {
+          "width": 320,
+          "clientWidth": 305,
+          "scrollWidth": 305,
+          "overflow": false
+        },
+        {
+          "width": 375,
+          "clientWidth": 360,
+          "scrollWidth": 360,
+          "overflow": false
+        },
+        {
+          "width": 390,
+          "clientWidth": 375,
+          "scrollWidth": 375,
+          "overflow": false
+        },
+        {
+          "width": 430,
+          "clientWidth": 415,
+          "scrollWidth": 415,
+          "overflow": false
+        },
+        {
+          "width": 768,
+          "clientWidth": 753,
+          "scrollWidth": 753,
+          "overflow": false
+        },
+        {
+          "width": 1024,
+          "clientWidth": 1009,
+          "scrollWidth": 1009,
+          "overflow": false
+        },
+        {
+          "width": 1280,
+          "clientWidth": 1265,
+          "scrollWidth": 1265,
+          "overflow": false
+        },
+        {
+          "width": 1440,
+          "clientWidth": 1425,
+          "scrollWidth": 1425,
+          "overflow": false
+        },
+        {
+          "width": 1920,
+          "clientWidth": 1905,
+          "scrollWidth": 1905,
+          "overflow": false
+        },
+        {
+          "width": 844,
+          "height": 390,
+          "clientWidth": 829,
+          "scrollWidth": 829,
+          "overflow": false
+        },
+        {
+          "width": 640,
+          "height": 450,
+          "clientWidth": 625,
+          "scrollWidth": 625,
+          "overflow": false
+        }
+      ],
+      "axe": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "count": 24
+        }
+      ]
+    },
+    {
+      "route": "/produkte/platten",
+      "title": "Platten: Marken und Serien | New Living Design Zofingen",
+      "h1": 1,
+      "layouts": [
+        {
+          "width": 320,
+          "clientWidth": 305,
+          "scrollWidth": 305,
+          "overflow": false
+        },
+        {
+          "width": 375,
+          "clientWidth": 360,
+          "scrollWidth": 360,
+          "overflow": false
+        },
+        {
+          "width": 390,
+          "clientWidth": 375,
+          "scrollWidth": 375,
+          "overflow": false
+        },
+        {
+          "width": 430,
+          "clientWidth": 415,
+          "scrollWidth": 415,
+          "overflow": false
+        },
+        {
+          "width": 768,
+          "clientWidth": 753,
+          "scrollWidth": 753,
+          "overflow": false
+        },
+        {
+          "width": 1024,
+          "clientWidth": 1009,
+          "scrollWidth": 1009,
+          "overflow": false
+        },
+        {
+          "width": 1280,
+          "clientWidth": 1265,
+          "scrollWidth": 1265,
+          "overflow": false
+        },
+        {
+          "width": 1440,
+          "clientWidth": 1425,
+          "scrollWidth": 1425,
+          "overflow": false
+        },
+        {
+          "width": 1920,
+          "clientWidth": 1905,
+          "scrollWidth": 1905,
+          "overflow": false
+        },
+        {
+          "width": 844,
+          "height": 390,
+          "clientWidth": 829,
+          "scrollWidth": 829,
+          "overflow": false
+        },
+        {
+          "width": 640,
+          "height": 450,
+          "clientWidth": 625,
+          "scrollWidth": 625,
+          "overflow": false
+        }
+      ],
+      "axe": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "count": 6
+        }
+      ]
+    },
+    {
+      "route": "/produkte/platten/energieker",
+      "title": "Energieker: Keramik | New Living Design Zofingen",
+      "h1": 1,
+      "layouts": [
+        {
+          "width": 320,
+          "clientWidth": 305,
+          "scrollWidth": 305,
+          "overflow": false
+        },
+        {
+          "width": 375,
+          "clientWidth": 360,
+          "scrollWidth": 360,
+          "overflow": false
+        },
+        {
+          "width": 390,
+          "clientWidth": 375,
+          "scrollWidth": 375,
+          "overflow": false
+        },
+        {
+          "width": 430,
+          "clientWidth": 415,
+          "scrollWidth": 415,
+          "overflow": false
+        },
+        {
+          "width": 768,
+          "clientWidth": 753,
+          "scrollWidth": 753,
+          "overflow": false
+        },
+        {
+          "width": 1024,
+          "clientWidth": 1009,
+          "scrollWidth": 1009,
+          "overflow": false
+        },
+        {
+          "width": 1280,
+          "clientWidth": 1265,
+          "scrollWidth": 1265,
+          "overflow": false
+        },
+        {
+          "width": 1440,
+          "clientWidth": 1425,
+          "scrollWidth": 1425,
+          "overflow": false
+        },
+        {
+          "width": 1920,
+          "clientWidth": 1905,
+          "scrollWidth": 1905,
+          "overflow": false
+        },
+        {
+          "width": 844,
+          "height": 390,
+          "clientWidth": 829,
+          "scrollWidth": 829,
+          "overflow": false
+        },
+        {
+          "width": 640,
+          "height": 450,
+          "clientWidth": 625,
+          "scrollWidth": 625,
+          "overflow": false
+        }
+      ],
+      "axe": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "count": 26
+        }
+      ]
+    },
+    {
+      "route": "/produkte/platten/emilgroup",
+      "title": "Emilgroup: Keramik | New Living Design Zofingen",
+      "h1": 1,
+      "layouts": [
+        {
+          "width": 320,
+          "clientWidth": 305,
+          "scrollWidth": 305,
+          "overflow": false
+        },
+        {
+          "width": 375,
+          "clientWidth": 360,
+          "scrollWidth": 360,
+          "overflow": false
+        },
+        {
+          "width": 390,
+          "clientWidth": 375,
+          "scrollWidth": 375,
+          "overflow": false
+        },
+        {
+          "width": 430,
+          "clientWidth": 415,
+          "scrollWidth": 415,
+          "overflow": false
+        },
+        {
+          "width": 768,
+          "clientWidth": 753,
+          "scrollWidth": 753,
+          "overflow": false
+        },
+        {
+          "width": 1024,
+          "clientWidth": 1009,
+          "scrollWidth": 1009,
+          "overflow": false
+        },
+        {
+          "width": 1280,
+          "clientWidth": 1265,
+          "scrollWidth": 1265,
+          "overflow": false
+        },
+        {
+          "width": 1440,
+          "clientWidth": 1425,
+          "scrollWidth": 1425,
+          "overflow": false
+        },
+        {
+          "width": 1920,
+          "clientWidth": 1905,
+          "scrollWidth": 1905,
+          "overflow": false
+        },
+        {
+          "width": 844,
+          "height": 390,
+          "clientWidth": 829,
+          "scrollWidth": 829,
+          "overflow": false
+        },
+        {
+          "width": 640,
+          "height": 450,
+          "clientWidth": 625,
+          "scrollWidth": 625,
+          "overflow": false
+        }
+      ],
+      "axe": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "count": 15
+        }
+      ]
+    },
+    {
+      "route": "/produkte/platten/lafabbrica",
+      "title": "La Fabbrica AVA: Keramik | New Living Design Zofingen",
+      "h1": 1,
+      "layouts": [
+        {
+          "width": 320,
+          "clientWidth": 305,
+          "scrollWidth": 305,
+          "overflow": false
+        },
+        {
+          "width": 375,
+          "clientWidth": 360,
+          "scrollWidth": 360,
+          "overflow": false
+        },
+        {
+          "width": 390,
+          "clientWidth": 375,
+          "scrollWidth": 375,
+          "overflow": false
+        },
+        {
+          "width": 430,
+          "clientWidth": 415,
+          "scrollWidth": 415,
+          "overflow": false
+        },
+        {
+          "width": 768,
+          "clientWidth": 753,
+          "scrollWidth": 753,
+          "overflow": false
+        },
+        {
+          "width": 1024,
+          "clientWidth": 1009,
+          "scrollWidth": 1009,
+          "overflow": false
+        },
+        {
+          "width": 1280,
+          "clientWidth": 1265,
+          "scrollWidth": 1265,
+          "overflow": false
+        },
+        {
+          "width": 1440,
+          "clientWidth": 1425,
+          "scrollWidth": 1425,
+          "overflow": false
+        },
+        {
+          "width": 1920,
+          "clientWidth": 1905,
+          "scrollWidth": 1905,
+          "overflow": false
+        },
+        {
+          "width": 844,
+          "height": 390,
+          "clientWidth": 829,
+          "scrollWidth": 829,
+          "overflow": false
+        },
+        {
+          "width": 640,
+          "height": 450,
+          "clientWidth": 625,
+          "scrollWidth": 625,
+          "overflow": false
+        }
+      ],
+      "axe": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "count": 22
+        }
+      ]
+    },
+    {
+      "route": "/produkte/platten/supergres",
+      "title": "Supergres: Keramik | New Living Design Zofingen",
+      "h1": 1,
+      "layouts": [
+        {
+          "width": 320,
+          "clientWidth": 305,
+          "scrollWidth": 305,
+          "overflow": false
+        },
+        {
+          "width": 375,
+          "clientWidth": 360,
+          "scrollWidth": 360,
+          "overflow": false
+        },
+        {
+          "width": 390,
+          "clientWidth": 375,
+          "scrollWidth": 375,
+          "overflow": false
+        },
+        {
+          "width": 430,
+          "clientWidth": 415,
+          "scrollWidth": 415,
+          "overflow": false
+        },
+        {
+          "width": 768,
+          "clientWidth": 753,
+          "scrollWidth": 753,
+          "overflow": false
+        },
+        {
+          "width": 1024,
+          "clientWidth": 1009,
+          "scrollWidth": 1009,
+          "overflow": false
+        },
+        {
+          "width": 1280,
+          "clientWidth": 1265,
+          "scrollWidth": 1265,
+          "overflow": false
+        },
+        {
+          "width": 1440,
+          "clientWidth": 1425,
+          "scrollWidth": 1425,
+          "overflow": false
+        },
+        {
+          "width": 1920,
+          "clientWidth": 1905,
+          "scrollWidth": 1905,
+          "overflow": false
+        },
+        {
+          "width": 844,
+          "height": 390,
+          "clientWidth": 829,
+          "scrollWidth": 829,
+          "overflow": false
+        },
+        {
+          "width": 640,
+          "height": 450,
+          "clientWidth": 625,
+          "scrollWidth": 625,
+          "overflow": false
+        }
+      ],
+      "axe": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "count": 26
+        }
+      ]
+    },
+    {
+      "route": "/produkte/platten/ariana",
+      "title": "Ariana Ceramiche / Gardenia&Ariana: Keramik | New Living Design",
+      "h1": 1,
+      "layouts": [
+        {
+          "width": 320,
+          "clientWidth": 305,
+          "scrollWidth": 305,
+          "overflow": false
+        },
+        {
+          "width": 375,
+          "clientWidth": 360,
+          "scrollWidth": 360,
+          "overflow": false
+        },
+        {
+          "width": 390,
+          "clientWidth": 375,
+          "scrollWidth": 375,
+          "overflow": false
+        },
+        {
+          "width": 430,
+          "clientWidth": 415,
+          "scrollWidth": 415,
+          "overflow": false
+        },
+        {
+          "width": 768,
+          "clientWidth": 753,
+          "scrollWidth": 753,
+          "overflow": false
+        },
+        {
+          "width": 1024,
+          "clientWidth": 1009,
+          "scrollWidth": 1009,
+          "overflow": false
+        },
+        {
+          "width": 1280,
+          "clientWidth": 1265,
+          "scrollWidth": 1265,
+          "overflow": false
+        },
+        {
+          "width": 1440,
+          "clientWidth": 1425,
+          "scrollWidth": 1425,
+          "overflow": false
+        },
+        {
+          "width": 1920,
+          "clientWidth": 1905,
+          "scrollWidth": 1905,
+          "overflow": false
+        },
+        {
+          "width": 844,
+          "height": 390,
+          "clientWidth": 829,
+          "scrollWidth": 829,
+          "overflow": false
+        },
+        {
+          "width": 640,
+          "height": 450,
+          "clientWidth": 625,
+          "scrollWidth": 625,
+          "overflow": false
+        }
+      ],
+      "axe": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "count": 22
+        }
+      ]
+    },
+    {
+      "route": "/produkte/platten/acquario",
+      "title": "Acquario Due: Keramik | New Living Design Zofingen",
+      "h1": 1,
+      "layouts": [
+        {
+          "width": 320,
+          "clientWidth": 305,
+          "scrollWidth": 305,
+          "overflow": false
+        },
+        {
+          "width": 375,
+          "clientWidth": 360,
+          "scrollWidth": 360,
+          "overflow": false
+        },
+        {
+          "width": 390,
+          "clientWidth": 375,
+          "scrollWidth": 375,
+          "overflow": false
+        },
+        {
+          "width": 430,
+          "clientWidth": 415,
+          "scrollWidth": 415,
+          "overflow": false
+        },
+        {
+          "width": 768,
+          "clientWidth": 753,
+          "scrollWidth": 753,
+          "overflow": false
+        },
+        {
+          "width": 1024,
+          "clientWidth": 1009,
+          "scrollWidth": 1009,
+          "overflow": false
+        },
+        {
+          "width": 1280,
+          "clientWidth": 1265,
+          "scrollWidth": 1265,
+          "overflow": false
+        },
+        {
+          "width": 1440,
+          "clientWidth": 1425,
+          "scrollWidth": 1425,
+          "overflow": false
+        },
+        {
+          "width": 1920,
+          "clientWidth": 1905,
+          "scrollWidth": 1905,
+          "overflow": false
+        },
+        {
+          "width": 844,
+          "height": 390,
+          "clientWidth": 829,
+          "scrollWidth": 829,
+          "overflow": false
+        },
+        {
+          "width": 640,
+          "height": 450,
+          "clientWidth": 625,
+          "scrollWidth": 625,
+          "overflow": false
+        }
+      ],
+      "axe": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "count": 20
+        }
+      ]
+    },
+    {
+      "route": "/produkte/platten/sicis",
+      "title": "SICIS: Mosaik | New Living Design Zofingen",
+      "h1": 1,
+      "layouts": [
+        {
+          "width": 320,
+          "clientWidth": 305,
+          "scrollWidth": 305,
+          "overflow": false
+        },
+        {
+          "width": 375,
+          "clientWidth": 360,
+          "scrollWidth": 360,
+          "overflow": false
+        },
+        {
+          "width": 390,
+          "clientWidth": 375,
+          "scrollWidth": 375,
+          "overflow": false
+        },
+        {
+          "width": 430,
+          "clientWidth": 415,
+          "scrollWidth": 415,
+          "overflow": false
+        },
+        {
+          "width": 768,
+          "clientWidth": 753,
+          "scrollWidth": 753,
+          "overflow": false
+        },
+        {
+          "width": 1024,
+          "clientWidth": 1009,
+          "scrollWidth": 1009,
+          "overflow": false
+        },
+        {
+          "width": 1280,
+          "clientWidth": 1265,
+          "scrollWidth": 1265,
+          "overflow": false
+        },
+        {
+          "width": 1440,
+          "clientWidth": 1425,
+          "scrollWidth": 1425,
+          "overflow": false
+        },
+        {
+          "width": 1920,
+          "clientWidth": 1905,
+          "scrollWidth": 1905,
+          "overflow": false
+        },
+        {
+          "width": 844,
+          "height": 390,
+          "clientWidth": 829,
+          "scrollWidth": 829,
+          "overflow": false
+        },
+        {
+          "width": 640,
+          "height": 450,
+          "clientWidth": 625,
+          "scrollWidth": 625,
+          "overflow": false
+        }
+      ],
+      "axe": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "count": 23
+        }
+      ]
+    },
+    {
+      "route": "/produkte/platten/mosavit",
+      "title": "Mosavit / Trip by Mosavit: Mosaik | New Living Design Zofingen",
+      "h1": 1,
+      "layouts": [
+        {
+          "width": 320,
+          "clientWidth": 305,
+          "scrollWidth": 305,
+          "overflow": false
+        },
+        {
+          "width": 375,
+          "clientWidth": 360,
+          "scrollWidth": 360,
+          "overflow": false
+        },
+        {
+          "width": 390,
+          "clientWidth": 375,
+          "scrollWidth": 375,
+          "overflow": false
+        },
+        {
+          "width": 430,
+          "clientWidth": 415,
+          "scrollWidth": 415,
+          "overflow": false
+        },
+        {
+          "width": 768,
+          "clientWidth": 753,
+          "scrollWidth": 753,
+          "overflow": false
+        },
+        {
+          "width": 1024,
+          "clientWidth": 1009,
+          "scrollWidth": 1009,
+          "overflow": false
+        },
+        {
+          "width": 1280,
+          "clientWidth": 1265,
+          "scrollWidth": 1265,
+          "overflow": false
+        },
+        {
+          "width": 1440,
+          "clientWidth": 1425,
+          "scrollWidth": 1425,
+          "overflow": false
+        },
+        {
+          "width": 1920,
+          "clientWidth": 1905,
+          "scrollWidth": 1905,
+          "overflow": false
+        },
+        {
+          "width": 844,
+          "height": 390,
+          "clientWidth": 829,
+          "scrollWidth": 829,
+          "overflow": false
+        },
+        {
+          "width": 640,
+          "height": 450,
+          "clientWidth": 625,
+          "scrollWidth": 625,
+          "overflow": false
+        }
+      ],
+      "axe": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "count": 15
+        }
+      ]
+    },
+    {
+      "route": "/produkte/platten/skema",
+      "title": "Skema: Parkett & Holz | New Living Design Zofingen",
+      "h1": 1,
+      "layouts": [
+        {
+          "width": 320,
+          "clientWidth": 305,
+          "scrollWidth": 305,
+          "overflow": false
+        },
+        {
+          "width": 375,
+          "clientWidth": 360,
+          "scrollWidth": 360,
+          "overflow": false
+        },
+        {
+          "width": 390,
+          "clientWidth": 375,
+          "scrollWidth": 375,
+          "overflow": false
+        },
+        {
+          "width": 430,
+          "clientWidth": 415,
+          "scrollWidth": 415,
+          "overflow": false
+        },
+        {
+          "width": 768,
+          "clientWidth": 753,
+          "scrollWidth": 753,
+          "overflow": false
+        },
+        {
+          "width": 1024,
+          "clientWidth": 1009,
+          "scrollWidth": 1009,
+          "overflow": false
+        },
+        {
+          "width": 1280,
+          "clientWidth": 1265,
+          "scrollWidth": 1265,
+          "overflow": false
+        },
+        {
+          "width": 1440,
+          "clientWidth": 1425,
+          "scrollWidth": 1425,
+          "overflow": false
+        },
+        {
+          "width": 1920,
+          "clientWidth": 1905,
+          "scrollWidth": 1905,
+          "overflow": false
+        },
+        {
+          "width": 844,
+          "height": 390,
+          "clientWidth": 829,
+          "scrollWidth": 829,
+          "overflow": false
+        },
+        {
+          "width": 640,
+          "height": 450,
+          "clientWidth": 625,
+          "scrollWidth": 625,
+          "overflow": false
+        }
+      ],
+      "axe": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "count": 19
+        }
+      ]
+    },
+    {
+      "route": "/produkte/platten/deco",
+      "title": "Déco: SPC & Designböden | New Living Design Zofingen",
+      "h1": 1,
+      "layouts": [
+        {
+          "width": 320,
+          "clientWidth": 305,
+          "scrollWidth": 305,
+          "overflow": false
+        },
+        {
+          "width": 375,
+          "clientWidth": 360,
+          "scrollWidth": 360,
+          "overflow": false
+        },
+        {
+          "width": 390,
+          "clientWidth": 375,
+          "scrollWidth": 375,
+          "overflow": false
+        },
+        {
+          "width": 430,
+          "clientWidth": 415,
+          "scrollWidth": 415,
+          "overflow": false
+        },
+        {
+          "width": 768,
+          "clientWidth": 753,
+          "scrollWidth": 753,
+          "overflow": false
+        },
+        {
+          "width": 1024,
+          "clientWidth": 1009,
+          "scrollWidth": 1009,
+          "overflow": false
+        },
+        {
+          "width": 1280,
+          "clientWidth": 1265,
+          "scrollWidth": 1265,
+          "overflow": false
+        },
+        {
+          "width": 1440,
+          "clientWidth": 1425,
+          "scrollWidth": 1425,
+          "overflow": false
+        },
+        {
+          "width": 1920,
+          "clientWidth": 1905,
+          "scrollWidth": 1905,
+          "overflow": false
+        },
+        {
+          "width": 844,
+          "height": 390,
+          "clientWidth": 829,
+          "scrollWidth": 829,
+          "overflow": false
+        },
+        {
+          "width": 640,
+          "height": 450,
+          "clientWidth": 625,
+          "scrollWidth": 625,
+          "overflow": false
+        }
+      ],
+      "axe": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "count": 19
+        }
+      ]
+    },
+    {
+      "route": "/produkte/platten/zenon",
+      "title": "Zenon Bath & SPC Surfaces: SPC & Designböden | New Living Design",
+      "h1": 1,
+      "layouts": [
+        {
+          "width": 320,
+          "clientWidth": 305,
+          "scrollWidth": 305,
+          "overflow": false
+        },
+        {
+          "width": 375,
+          "clientWidth": 360,
+          "scrollWidth": 360,
+          "overflow": false
+        },
+        {
+          "width": 390,
+          "clientWidth": 375,
+          "scrollWidth": 375,
+          "overflow": false
+        },
+        {
+          "width": 430,
+          "clientWidth": 415,
+          "scrollWidth": 415,
+          "overflow": false
+        },
+        {
+          "width": 768,
+          "clientWidth": 753,
+          "scrollWidth": 753,
+          "overflow": false
+        },
+        {
+          "width": 1024,
+          "clientWidth": 1009,
+          "scrollWidth": 1009,
+          "overflow": false
+        },
+        {
+          "width": 1280,
+          "clientWidth": 1265,
+          "scrollWidth": 1265,
+          "overflow": false
+        },
+        {
+          "width": 1440,
+          "clientWidth": 1425,
+          "scrollWidth": 1425,
+          "overflow": false
+        },
+        {
+          "width": 1920,
+          "clientWidth": 1905,
+          "scrollWidth": 1905,
+          "overflow": false
+        },
+        {
+          "width": 844,
+          "height": 390,
+          "clientWidth": 829,
+          "scrollWidth": 829,
+          "overflow": false
+        },
+        {
+          "width": 640,
+          "height": 450,
+          "clientWidth": 625,
+          "scrollWidth": 625,
+          "overflow": false
+        }
+      ],
+      "axe": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "count": 19
+        }
+      ]
+    },
+    {
+      "route": "/produkte/platten/inkiostro",
+      "title": "Inkiostro Bianco | New Living Design",
+      "h1": 1,
+      "layouts": [
+        {
+          "width": 320,
+          "clientWidth": 305,
+          "scrollWidth": 305,
+          "overflow": false
+        },
+        {
+          "width": 375,
+          "clientWidth": 360,
+          "scrollWidth": 360,
+          "overflow": false
+        },
+        {
+          "width": 390,
+          "clientWidth": 375,
+          "scrollWidth": 375,
+          "overflow": false
+        },
+        {
+          "width": 430,
+          "clientWidth": 415,
+          "scrollWidth": 415,
+          "overflow": false
+        },
+        {
+          "width": 768,
+          "clientWidth": 753,
+          "scrollWidth": 753,
+          "overflow": false
+        },
+        {
+          "width": 1024,
+          "clientWidth": 1009,
+          "scrollWidth": 1009,
+          "overflow": false
+        },
+        {
+          "width": 1280,
+          "clientWidth": 1265,
+          "scrollWidth": 1265,
+          "overflow": false
+        },
+        {
+          "width": 1440,
+          "clientWidth": 1425,
+          "scrollWidth": 1425,
+          "overflow": false
+        },
+        {
+          "width": 1920,
+          "clientWidth": 1905,
+          "scrollWidth": 1905,
+          "overflow": false
+        },
+        {
+          "width": 844,
+          "height": 390,
+          "clientWidth": 829,
+          "scrollWidth": 829,
+          "overflow": false
+        },
+        {
+          "width": 640,
+          "height": 450,
+          "clientWidth": 625,
+          "scrollWidth": 625,
+          "overflow": false
+        }
+      ],
+      "axe": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "count": 15
+        }
+      ]
+    },
+    {
+      "route": "/produkte/wellness",
+      "title": "Wellness: Marken und Serien | New Living Design Zofingen",
+      "h1": 1,
+      "layouts": [
+        {
+          "width": 320,
+          "clientWidth": 305,
+          "scrollWidth": 305,
+          "overflow": false
+        },
+        {
+          "width": 375,
+          "clientWidth": 360,
+          "scrollWidth": 360,
+          "overflow": false
+        },
+        {
+          "width": 390,
+          "clientWidth": 375,
+          "scrollWidth": 375,
+          "overflow": false
+        },
+        {
+          "width": 430,
+          "clientWidth": 415,
+          "scrollWidth": 415,
+          "overflow": false
+        },
+        {
+          "width": 768,
+          "clientWidth": 753,
+          "scrollWidth": 753,
+          "overflow": false
+        },
+        {
+          "width": 1024,
+          "clientWidth": 1009,
+          "scrollWidth": 1009,
+          "overflow": false
+        },
+        {
+          "width": 1280,
+          "clientWidth": 1265,
+          "scrollWidth": 1265,
+          "overflow": false
+        },
+        {
+          "width": 1440,
+          "clientWidth": 1425,
+          "scrollWidth": 1425,
+          "overflow": false
+        },
+        {
+          "width": 1920,
+          "clientWidth": 1905,
+          "scrollWidth": 1905,
+          "overflow": false
+        },
+        {
+          "width": 844,
+          "height": 390,
+          "clientWidth": 829,
+          "scrollWidth": 829,
+          "overflow": false
+        },
+        {
+          "width": 640,
+          "height": 450,
+          "clientWidth": 625,
+          "scrollWidth": 625,
+          "overflow": false
+        }
+      ],
+      "axe": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "count": 4
+        }
+      ]
+    },
+    {
+      "route": "/produkte/wellness/novellini",
+      "title": "Novellini: Whirlpool & Minipool | New Living Design Zofingen",
+      "h1": 1,
+      "layouts": [
+        {
+          "width": 320,
+          "clientWidth": 305,
+          "scrollWidth": 305,
+          "overflow": false
+        },
+        {
+          "width": 375,
+          "clientWidth": 360,
+          "scrollWidth": 360,
+          "overflow": false
+        },
+        {
+          "width": 390,
+          "clientWidth": 375,
+          "scrollWidth": 375,
+          "overflow": false
+        },
+        {
+          "width": 430,
+          "clientWidth": 415,
+          "scrollWidth": 415,
+          "overflow": false
+        },
+        {
+          "width": 768,
+          "clientWidth": 753,
+          "scrollWidth": 753,
+          "overflow": false
+        },
+        {
+          "width": 1024,
+          "clientWidth": 1009,
+          "scrollWidth": 1009,
+          "overflow": false
+        },
+        {
+          "width": 1280,
+          "clientWidth": 1265,
+          "scrollWidth": 1265,
+          "overflow": false
+        },
+        {
+          "width": 1440,
+          "clientWidth": 1425,
+          "scrollWidth": 1425,
+          "overflow": false
+        },
+        {
+          "width": 1920,
+          "clientWidth": 1905,
+          "scrollWidth": 1905,
+          "overflow": false
+        },
+        {
+          "width": 844,
+          "height": 390,
+          "clientWidth": 829,
+          "scrollWidth": 829,
+          "overflow": false
+        },
+        {
+          "width": 640,
+          "height": 450,
+          "clientWidth": 625,
+          "scrollWidth": 625,
+          "overflow": false
+        }
+      ],
+      "axe": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "count": 31
+        }
+      ]
+    },
+    {
+      "route": "/produkte/wellness/albatros",
+      "title": "Albatros Wellness: Whirlpool & Minipool | New Living Design",
+      "h1": 1,
+      "layouts": [
+        {
+          "width": 320,
+          "clientWidth": 305,
+          "scrollWidth": 305,
+          "overflow": false
+        },
+        {
+          "width": 375,
+          "clientWidth": 360,
+          "scrollWidth": 360,
+          "overflow": false
+        },
+        {
+          "width": 390,
+          "clientWidth": 375,
+          "scrollWidth": 375,
+          "overflow": false
+        },
+        {
+          "width": 430,
+          "clientWidth": 415,
+          "scrollWidth": 415,
+          "overflow": false
+        },
+        {
+          "width": 768,
+          "clientWidth": 753,
+          "scrollWidth": 753,
+          "overflow": false
+        },
+        {
+          "width": 1024,
+          "clientWidth": 1009,
+          "scrollWidth": 1009,
+          "overflow": false
+        },
+        {
+          "width": 1280,
+          "clientWidth": 1265,
+          "scrollWidth": 1265,
+          "overflow": false
+        },
+        {
+          "width": 1440,
+          "clientWidth": 1425,
+          "scrollWidth": 1425,
+          "overflow": false
+        },
+        {
+          "width": 1920,
+          "clientWidth": 1905,
+          "scrollWidth": 1905,
+          "overflow": false
+        },
+        {
+          "width": 844,
+          "height": 390,
+          "clientWidth": 829,
+          "scrollWidth": 829,
+          "overflow": false
+        },
+        {
+          "width": 640,
+          "height": 450,
+          "clientWidth": 625,
+          "scrollWidth": 625,
+          "overflow": false
+        }
+      ],
+      "axe": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "count": 26
+        }
+      ]
+    },
+    {
+      "route": "/produkte/wellness/megius",
+      "title": "Megius: Hammam & Dampfbad | New Living Design Zofingen",
+      "h1": 1,
+      "layouts": [
+        {
+          "width": 320,
+          "clientWidth": 305,
+          "scrollWidth": 305,
+          "overflow": false
+        },
+        {
+          "width": 375,
+          "clientWidth": 360,
+          "scrollWidth": 360,
+          "overflow": false
+        },
+        {
+          "width": 390,
+          "clientWidth": 375,
+          "scrollWidth": 375,
+          "overflow": false
+        },
+        {
+          "width": 430,
+          "clientWidth": 415,
+          "scrollWidth": 415,
+          "overflow": false
+        },
+        {
+          "width": 768,
+          "clientWidth": 753,
+          "scrollWidth": 753,
+          "overflow": false
+        },
+        {
+          "width": 1024,
+          "clientWidth": 1009,
+          "scrollWidth": 1009,
+          "overflow": false
+        },
+        {
+          "width": 1280,
+          "clientWidth": 1265,
+          "scrollWidth": 1265,
+          "overflow": false
+        },
+        {
+          "width": 1440,
+          "clientWidth": 1425,
+          "scrollWidth": 1425,
+          "overflow": false
+        },
+        {
+          "width": 1920,
+          "clientWidth": 1905,
+          "scrollWidth": 1905,
+          "overflow": false
+        },
+        {
+          "width": 844,
+          "height": 390,
+          "clientWidth": 829,
+          "scrollWidth": 829,
+          "overflow": false
+        },
+        {
+          "width": 640,
+          "height": 450,
+          "clientWidth": 625,
+          "scrollWidth": 625,
+          "overflow": false
+        }
+      ],
+      "axe": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "count": 30
+        }
+      ]
+    },
+    {
+      "route": "/blog/badumbau-steuern-abziehen-bis-2028",
+      "title": "Badumbau von den Steuern abziehen bis 2028 | New Living Design",
+      "h1": 1,
+      "layouts": [
+        {
+          "width": 320,
+          "clientWidth": 305,
+          "scrollWidth": 305,
+          "overflow": false
+        },
+        {
+          "width": 375,
+          "clientWidth": 360,
+          "scrollWidth": 360,
+          "overflow": false
+        },
+        {
+          "width": 390,
+          "clientWidth": 375,
+          "scrollWidth": 375,
+          "overflow": false
+        },
+        {
+          "width": 430,
+          "clientWidth": 415,
+          "scrollWidth": 415,
+          "overflow": false
+        },
+        {
+          "width": 768,
+          "clientWidth": 753,
+          "scrollWidth": 753,
+          "overflow": false
+        },
+        {
+          "width": 1024,
+          "clientWidth": 1009,
+          "scrollWidth": 1009,
+          "overflow": false
+        },
+        {
+          "width": 1280,
+          "clientWidth": 1265,
+          "scrollWidth": 1265,
+          "overflow": false
+        },
+        {
+          "width": 1440,
+          "clientWidth": 1425,
+          "scrollWidth": 1425,
+          "overflow": false
+        },
+        {
+          "width": 1920,
+          "clientWidth": 1905,
+          "scrollWidth": 1905,
+          "overflow": false
+        },
+        {
+          "width": 844,
+          "height": 390,
+          "clientWidth": 829,
+          "scrollWidth": 829,
+          "overflow": false
+        },
+        {
+          "width": 640,
+          "height": 450,
+          "clientWidth": 625,
+          "scrollWidth": 625,
+          "overflow": false
+        }
+      ],
+      "axe": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "count": 5
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "recheckDate": "2026-11-07T19:23:43.082Z"
+}

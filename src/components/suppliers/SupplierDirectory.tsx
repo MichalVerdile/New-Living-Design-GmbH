@@ -24,7 +24,7 @@ const countLabel = (series: Series[]) => {
 };
 
 const Visual: React.FC<{ supplier: Supplier; series: Series[] }> = ({ supplier, series }) => {
-  const [first, ...rest] = series.flatMap((x) => x.images);
+  const first = series.flatMap((x) => x.images)[0];
   if (!first) {
     return (
       <span className={styles.typeVisual}>
@@ -35,9 +35,6 @@ const Visual: React.FC<{ supplier: Supplier; series: Series[] }> = ({ supplier, 
   }
   return (
     <span className={styles.visual}>
-      {rest.slice(0, 2).reverse().map((img) => (
-        <img key={img.src} src={img.src} srcSet={img.srcSet} sizes="300px" width={img.width} height={img.height} alt="" className={styles.behind} loading="lazy" decoding="async" />
-      ))}
       <img src={first.src} srcSet={first.srcSet} sizes="(max-width: 767px) 100vw, 600px" width={first.width} height={first.height} alt="" className={styles.front} loading="lazy" decoding="async" />
     </span>
   );
@@ -47,10 +44,8 @@ const Visual: React.FC<{ supplier: Supplier; series: Series[] }> = ({ supplier, 
 export const SupplierCard: React.FC<{ supplier: Supplier; area?: AreaId; hidden?: boolean }> = ({ supplier, area, hidden }) => {
   // Auf Bereichsseiten nur die Serien dieses Bereichs (Megius/Novellini: Bad und Wellness getrennt).
   const series = area ? seriesInArea(supplier, area) : supplier.series;
-  const n = series.reduce((sum, x) => sum + x.images.length, 0);
-  const variant = n > 1 ? styles.stack : n === 1 ? styles.single : styles.text;
   return (
-    <li className={`${styles.card} ${variant}`} hidden={hidden}>
+    <li className={styles.card} hidden={hidden}>
       <Link to={supplierHref(supplier.key, area)} className={styles.summary}>
         <Visual supplier={supplier} series={series} />
         <span className={styles.caption}>

@@ -14,7 +14,7 @@
 .slide { flex: 0 0 100%; margin: 0; scroll-snap-align: start; }
 
 /* Herstellerbild vollständig im 16:9-Rahmen: nichts beschnitten, nie über die Originalgrösse vergrössert */
-.slide img { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: scale-down; background: #1f2925; }
+.slide img { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: scale-down; background: var(--nld-stone); }
 
 .slide figcaption { margin-top: .7rem; color: #59645d; font-size: .8rem; line-height: 1.55; }
 
@@ -25,7 +25,7 @@
   height: 44px;
   padding: 0;
   border: 1px solid #23302b55;
-  border-radius: 0;
+  border-radius: var(--nld-radius);
   background: none;
   color: #23302b;
   font-size: 1.1rem;
@@ -37,3 +37,8 @@
 @media (prefers-reduced-motion: reduce) {
   .track { scroll-behavior: auto; }
 }
+
+.open { display: block; position: relative; padding: 0; border: 0; width: 100%; background: #1b2420; cursor: zoom-in; }
+.expandHint { position: absolute; right: 1rem; bottom: 1rem; padding: .55rem .8rem; color: #fff; background: #1b2420e6; font-size: .75rem; }
+.controls { justify-content: center; }
+.slide { min-width: 0; }

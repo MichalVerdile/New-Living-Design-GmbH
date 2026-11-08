@@ -1,7 +1,8 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import styles from './Blog.module.css';
-import { SEOHead } from '../../components';
+import SEOHead from '../../components/seo/SEOHead';
+import PageIntro from '../../components/layout/PageIntro';
 import { business, localBusinessJsonLd } from '../../config/business';
 import { posts, formatDate, BLOG_NAME, BLOG_URL } from '../../lib/blog';
 import { generateBreadcrumbStructuredData } from '../../utils/structuredData';
@@ -52,17 +53,7 @@ const Blog: React.FC = () => {
         image={latest ? `${business.siteUrl}${latest.image}` : undefined}
       />
 
-      <section className={styles.intro}>
-        <div className={styles.container}>
-          <span className={styles.sectionLabel}>Aus der Praxis</span>
-          <h1 className={styles.title}>Wissen, das Entscheidungen vor dem Umbau erleichtert.</h1>
-          <p className={styles.lede}>
-            Was kostet eine Lösung wirklich? Welche Oberfläche passt zur Nutzung? Und was muss vor der Bestellung
-            geklärt sein? Hier teilen wir Erfahrungen aus Beratung, Planung und Ausführung – konkret und mit klarer
-            Datumsangabe, wenn Preise oder Regeln eine Rolle spielen.
-          </p>
-        </div>
-      </section>
+      <PageIntro eyebrow="Wissen aus der Praxis" title="Gut informiert. Klar entschieden." description="Erfahrungen aus Beratung, Planung und Ausführung: verständliche Antworten zu Badumbau, Materialien und Kosten. Als erste Orientierung für Ihr Vorhaben." />
 
       <section className={styles.list}>
         <div className={styles.container}>

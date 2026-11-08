@@ -1,7 +1,7 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import styles from './Badplaner.module.css';
-import { SEOHead } from '../../components';
+import SEOHead from '../../components/seo/SEOHead';
 import { business, bathPackages, individualPackage } from '../../config/business';
 import {
   accentsForPlacement,
@@ -28,6 +28,8 @@ import { MAX_PLAN_BASE64, MAX_SOURCE_IMAGE_BYTES } from './imageValidation';
  * und die optionalen Details sind einklappbar; alle Werte bleiben vorbelegt und
  * jede bisherige Option bleibt erreichbar.
  */
+
+const useBrowserLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
 
 const PAGE_URL = `${business.siteUrl}/badplaner`;
 const WINDOW_OPTIONS = [
@@ -260,7 +262,7 @@ const PositionPanel: React.FC<{
   children: React.ReactNode;
 }> = ({ id, title, summary, image, open, onToggle, children }) => (
   <section className={`${styles.positionPanel} ${open ? styles.positionPanelOpen : ''}`}>
-    <button type="button" className={styles.positionHead} onClick={(event) => onToggle(event.currentTarget)} aria-expanded={open} aria-controls={`position-${id}`}>
+    <button type="button" className={styles.positionHead} onClick={(event) => onToggle(event.currentTarget)} aria-expanded={open} aria-controls={open ? `position-${id}` : undefined}>
       {image && <Swatch image={image} label={summary} />}
       <span className={styles.positionText}><strong>{title}</strong><span>{summary}</span></span>
       <span className={styles.positionToggle} aria-hidden="true">{open ? '−' : '+'}</span>
@@ -269,8 +271,19 @@ const PositionPanel: React.FC<{
   </section>
 );
 
+// Button radios use the same arrow-key interaction as native radio inputs.
+function navigateRadioGroup(event: React.KeyboardEvent<HTMLDivElement>) {
+  if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(event.key)) return;
+  const choices = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('button[role="radio"]'));
+  const index = choices.indexOf(event.target as HTMLButtonElement);
+  if (index < 0) return;
+  event.preventDefault();
+  const next = event.key === 'Home' ? 0 : event.key === 'End' ? choices.length - 1 : (index + (['ArrowLeft', 'ArrowUp'].includes(event.key) ? -1 : 1) + choices.length) % choices.length;
+  choices[next]?.focus();
+  choices[next]?.click();
+}
+
 const Badplaner: React.FC = () => {
-  const [isVisible, setIsVisible] = useState(false);
   const [step, setStep] = useState<Step>(1);
   const [room, setRoom] = useState<RoomType | null>(null);
   const [pkg, setPkg] = useState<PackageId | null>(null);
@@ -315,20 +328,25 @@ const Badplaner: React.FC = () => {
 
   const resultRef = useRef<HTMLDivElement>(null);
   const stepRefs = useRef<Record<number, HTMLElement | null>>({});
+  const previousStep = useRef(step);
+  useEffect(() => {
+    if (previousStep.current !== step) stepRefs.current[step]?.querySelector<HTMLButtonElement>('button')?.focus({ preventScroll: true });
+    previousStep.current = step;
+  }, [step]);
   const renderSubmittingRef = useRef(false);
   const beratungSubmittingRef = useRef(false);
   const planSubmittingRef = useRef(false);
   const scrollRestoreRef = useRef<number | null>(null);
   const panelAnchorRef = useRef<{ trigger: HTMLButtonElement; top: number } | null>(null);
 
-  useLayoutEffect(() => {
+  useBrowserLayoutEffect(() => {
     if (scrollRestoreRef.current === null) return;
     const scrollY = scrollRestoreRef.current;
     scrollRestoreRef.current = null;
     window.scrollTo({ top: scrollY, left: window.scrollX, behavior: 'auto' });
   });
 
-  useLayoutEffect(() => {
+  useBrowserLayoutEffect(() => {
     const anchor = panelAnchorRef.current;
     if (!anchor) return;
     panelAnchorRef.current = null;
@@ -336,13 +354,11 @@ const Badplaner: React.FC = () => {
     window.scrollBy({ top: nextTop - anchor.top, left: 0, behavior: 'auto' });
   }, [openPanel]);
 
-  useEffect(() => {
-    setIsVisible(true);
-  }, []);
 
   // Zum Ergebnis scrollen, sobald es da ist
   useEffect(() => {
-    if (result) resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (result) resultRef.current?.focus({ preventScroll: true });
+    if (result) resultRef.current?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth', block: 'start' });
   }, [result]);
 
   const options = pkg ? optionsForPackage(pkg) : null;
@@ -373,7 +389,7 @@ const Badplaner: React.FC = () => {
     setStep(next);
     if (scroll) {
       // Nur ausdrückliche Navigation scrollt. Eine Auswahl darf die Seite nicht versetzen.
-      setTimeout(() => stepRefs.current[next]?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+      setTimeout(() => stepRefs.current[next]?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth', block: 'start' }), 50);
     }
   };
 
@@ -933,7 +949,7 @@ const Badplaner: React.FC = () => {
       onClick={() => goTo(n)}
       disabled={!stepEnabled(n)}
       aria-expanded={step === n}
-      aria-controls={`schritt-${n}-inhalt`}
+      aria-controls={step === n ? `schritt-${n}-inhalt` : undefined}
     >
       <span className={styles.stepNumber}>{stepDone(n) && step !== n ? '✓' : n}</span>
       <span>
@@ -947,7 +963,7 @@ const Badplaner: React.FC = () => {
   const stepClass = (n: Step) => `${styles.step} ${step === n ? styles.stepOpen : ''} ${stepDone(n) ? styles.stepDone : ''}`;
 
   const renderPackageCards = () => (
-    <div className={styles.packages} role="radiogroup" aria-label={room === 'gaeste-wc' ? 'Stilrichtung' : 'Badpaket'}>
+    <div className={styles.packages} role="radiogroup" onKeyDown={navigateRadioGroup} aria-label={room === 'gaeste-wc' ? 'Stilrichtung' : 'Badpaket'}>
       {bathPackages.map((p) => (
         <button
           type="button"
@@ -980,9 +996,9 @@ const Badplaner: React.FC = () => {
 
       {/* Hero: zuerst das Ergebnis, dann der Weg dahin */}
       <section className={`${styles.hero} ${styles.heroCompact}`}>
-        <div className={`${styles.heroContent} ${isVisible ? styles.visible : ''}`}>
-          <p className={styles.eyebrow}>Neu · Badplaner</p>
-          <h1 className={styles.heroTitle}>Ihr Bad als Ideenbild, aus Ihrem eigenen Foto</h1>
+        <div className={`${styles.heroContent} ${styles.visible}`} data-reveal="stagger">
+          <p className={styles.eyebrow}>Inspiration · Badplaner</p>
+          <h1 className={styles.heroTitle}>Eine erste Idee für Ihr Bad.</h1>
           <div className={styles.heroActions}>
             <a href="#planer" className={styles.ctaPrimary} onClick={() => trackBadplaner('badplaner_start')}>Jetzt starten</a>
             <a href="#ablauf" className={styles.ctaSecondary}>So funktioniert's</a>
@@ -1002,6 +1018,10 @@ const Badplaner: React.FC = () => {
             <h2 className={styles.sectionTitle}>Drei Schritte bis zum Ideenbild</h2>
           </div>
 
+          <nav className={styles.stepNavigation} aria-label="Planungsschritte">
+            {([1, 2, 3] as Step[]).map((n, i) => <button key={n} type="button" onClick={() => goTo(n)} disabled={!stepEnabled(n) || status === 'sending'} aria-current={step === n ? 'step' : undefined}><span aria-hidden="true">0{n}</span>{['Raum & Paket', 'Ausstattung', 'Foto & Ideenbild'][i]}</button>)}
+          </nav>
+          <p className={styles.stepStatus} role="status">Schritt {Math.min(step, 3)} von 3{result ? ' · Ihr Ideenbild ist bereit' : ''}. Ihre Auswahl bleibt beim Wechsel zwischen den Schritten erhalten.</p>
           <div className={styles.steps}>
             {/* Schritt 1: Raum und Weg */}
             <article id="schritt-1" className={stepClass(1)} ref={(el) => { stepRefs.current[1] = el; }}>
@@ -1009,7 +1029,7 @@ const Badplaner: React.FC = () => {
               {step === 1 && (
                 <div id="schritt-1-inhalt" className={styles.stepBody}>
                   <h3 className={styles.choiceTitle}>Welchen Raum möchten Sie gestalten?</h3>
-                  <div className={styles.roomChoices} role="radiogroup" aria-label="Raum wählen">
+                  <div className={styles.roomChoices} role="radiogroup" onKeyDown={navigateRadioGroup} aria-label="Raum wählen">
                     <button type="button" role="radio" aria-checked={room === 'badezimmer'} className={`${styles.roomChoice} ${room === 'badezimmer' ? styles.roomChoiceSelected : ''}`} onClick={() => chooseRoom('badezimmer')}>
                       <strong>Badezimmer</strong><span>Mit unabhängiger Wahl von Dusche und Badewanne</span>
                     </button>
@@ -1178,7 +1198,7 @@ const Badplaner: React.FC = () => {
                       >×</button>
                     </div>
                   ) : (
-                    <div className={styles.upload}>
+                    <div className={styles.upload} aria-busy={photoBusy}>
                       <p className={styles.uploadTitle}>
                         {photoBusy ? 'Foto wird vorbereitet…' : 'Foto aufnehmen oder aus der Galerie wählen'}
                       </p>
@@ -1191,7 +1211,7 @@ const Badplaner: React.FC = () => {
                             accept="image/*"
                             capture="environment"
                             onChange={onPhoto}
-                            disabled={photoBusy}
+                            disabled={photoBusy || status === 'sending'}
                           />
                           <label className={styles.ctaDark} htmlFor="bp-foto-kamera">Foto aufnehmen</label>
                         </span>
@@ -1202,7 +1222,7 @@ const Badplaner: React.FC = () => {
                             className={styles.fileInput}
                             accept="image/*"
                             onChange={onPhoto}
-                            disabled={photoBusy}
+                            disabled={photoBusy || status === 'sending'}
                           />
                           <label className={styles.ctaLight} htmlFor="bp-foto-galerie">Aus der Galerie wählen</label>
                         </span>
@@ -1212,8 +1232,9 @@ const Badplaner: React.FC = () => {
                       </span>
                     </div>
                   )}
+                  <p className={styles.privacyNote}>Die Fotoauswahl und Verkleinerung erfolgen auf Ihrem Gerät. Erst mit «Ideenbild erstellen» wird das Foto mit Ihrer Auswahl an unseren Server und zur Bilderzeugung an Google (Gemini API) übermittelt. Das Foto und das erstellte Ideenbild werden New Living Design per E-Mail zugestellt – auch wenn Sie danach keine Kontaktdaten angeben. <Link to="/datenschutz#badplaner">Details zum Datenschutz</Link></p>
                   {photoError && <p className={styles.error} role="alert">{photoError}</p>}
-                  {photoError && <DateiWaehlen id="bp-foto-datei" onChange={onPhoto} disabled={photoBusy} onRetry={retryPhoto ? () => loadPhoto(retryPhoto) : undefined} />}
+                  {photoError && <DateiWaehlen id="bp-foto-datei" onChange={onPhoto} disabled={photoBusy || status === 'sending'} onRetry={retryPhoto ? () => loadPhoto(retryPhoto) : undefined} />}
                   {photo && (
                     <>
                       <p className={styles.hint}>Am besten von der Tür aus, das ganze Bad im Bild, Licht an. Das Foto wurde auf {photo.width}×{photo.height} Pixel verkleinert.</p>
@@ -1235,7 +1256,7 @@ const Badplaner: React.FC = () => {
                         </span>
                       </label>
                       <div className={styles.stepActions}>
-                        <button type="button" className={styles.ctaDark} onClick={submitRender} disabled={!windows || !cistern || !contact.consent || status === 'sending'}>
+                        <button type="button" className={styles.ctaDark} onClick={submitRender} disabled={!windows || !cistern || !contact.consent || status === 'sending'} aria-busy={status === 'sending'}>
                           {status === 'sending' ? 'Wird erstellt…' : 'Ideenbild erstellen'}
                         </button>
                         {(!windows || !cistern) && <span className={styles.hint}>Bitte Fenster und Spülkasten angeben.</span>}
@@ -1287,7 +1308,7 @@ const Badplaner: React.FC = () => {
                             accept="image/*"
                             capture="environment"
                             onChange={onPhoto}
-                            disabled={photoBusy}
+                            disabled={photoBusy || status === 'sending'}
                           />
                           <label className={styles.ctaLight} htmlFor="bp-foto-kamera-neu">Neues Foto aufnehmen</label>
                         </span>
@@ -1298,7 +1319,7 @@ const Badplaner: React.FC = () => {
                             className={styles.fileInput}
                             accept="image/*"
                             onChange={onPhoto}
-                            disabled={photoBusy}
+                            disabled={photoBusy || status === 'sending'}
                           />
                           <label className={styles.ctaLight} htmlFor="bp-foto-galerie-neu">Anderes Foto aus der Galerie</label>
                         </span>
@@ -1318,7 +1339,7 @@ const Badplaner: React.FC = () => {
       {result && pkgInfo && (
         <section id="ergebnis" className={`${styles.section} ${styles.dark}`}>
           <div className={styles.container}>
-            <div className={styles.result} ref={resultRef}>
+            <div className={styles.result} ref={resultRef} tabIndex={-1} aria-label="Ihr erstelltes Ideenbild">
               <div className={styles.sectionHeader}>
                 <span className={styles.sectionLabel}>Ihr Ideenbild</span>
                 <h2 className={styles.sectionTitle}>{result.preview ? 'Ihr Ideenbild ist fertig' : 'So könnte Ihr Bad aussehen'}</h2>

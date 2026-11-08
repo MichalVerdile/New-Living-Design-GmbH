@@ -1,0 +1,72 @@
+{
+  "checks": [
+    {
+      "name": "Leeres Formular sendet nicht",
+      "passed": true
+    },
+    {
+      "name": "Fehler fokussiert Vorname",
+      "passed": true
+    },
+    {
+      "name": "Pflichtfelder werden markiert",
+      "passed": true
+    },
+    {
+      "name": "Ungültige E-Mail sendet nicht",
+      "passed": true
+    },
+    {
+      "name": "E-Mail-Fehler ist verknüpft",
+      "passed": true
+    },
+    {
+      "name": "HTTP-Fehler ist sichtbar",
+      "passed": true
+    },
+    {
+      "name": "Eingaben bleiben nach Fehler erhalten",
+      "passed": true
+    },
+    {
+      "name": "Doppelklick wird abgefangen",
+      "passed": true
+    },
+    {
+      "name": "Erfolg wird angezeigt",
+      "passed": true
+    },
+    {
+      "name": "Formular wird nach Erfolg geleert",
+      "passed": true
+    },
+    {
+      "name": "Referenzgalerie kann geöffnet werden",
+      "passed": true
+    },
+    {
+      "name": "Lightbox ist modal geöffnet",
+      "passed": true
+    },
+    {
+      "name": "Bildnavigation aktualisiert Zähler",
+      "passed": true
+    },
+    {
+      "name": "Zoom kann aktiviert werden",
+      "passed": true
+    },
+    {
+      "name": "Schliessen stellt Fokus wieder her",
+      "passed": true
+    },
+    {
+      "name": "Badplaner zeigt drei Schritte",
+      "passed": true
+    },
+    {
+      "name": "Spätere Schritte sind ohne Auswahl gesperrt",
+      "passed": true
+    }
+  ]
+}

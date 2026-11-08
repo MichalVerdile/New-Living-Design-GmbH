@@ -1,247 +1,28 @@
-import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import styles from './Services.module.css';
+import SEOHead from '../../components/seo/SEOHead';
+import PageIntro, { ProjectInvitation } from '../../components/layout/PageIntro';
+import SceneStory, { type Scene } from '../../components/scroll-helper/SceneStory';
 import heroImage from '../../assets/shutterstock_2583534585.webp';
 import beratungImage from '../../assets/shutterstock_2479065515.webp';
 import visualisierungImage from '../../assets/shutterstock_2600181185.webp';
 import lieferungImage from '../../assets/shutterstock_236748076.webp';
-import { Helmet } from 'react-helmet-async';
+import styles from './Services.module.css';
 
-const Services: React.FC = () => {
-  const [isVisible, setIsVisible] = useState(false);
-
-  useEffect(() => {
-    setIsVisible(true);
-
-    // CSS-Module-kompatible Reveal-Animation
-    const timer = setTimeout(() => {
-      const allElements = document.querySelectorAll('.' + styles['scroll-reveal']);
-      allElements.forEach((el, index) => {
-        setTimeout(() => {
-          el.classList.add(styles.visible);
-        }, index * 200);
-      });
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, []);
-
-  return (
-    <main id="main-content" className={styles['services-page']}>
-      <Helmet>
-        <title>Beratung, 3D-Planung & Montage | New Living Design</title>
-        <link rel="canonical" href="https://newlivingdesign.ch/dienstleistungen" />
-        <meta
-          name="description"
-          content="Persönliche Auswahlberatung in Zofingen, 3D-Visualisierung für Bad und Küche sowie koordinierte Lieferung, Montage und Renovation."
-        />
-        <meta property="og:title" content="Dienstleistungen – New Living Design GmbH" />
-        <meta property="og:description" content="Auswahlberatung, 3D-Visualisierung sowie koordinierte Lieferung und Montage für Ihr Projekt." />
-        <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://newlivingdesign.ch/dienstleistungen" />
-        <meta property="og:image" content={`https://newlivingdesign.ch${heroImage}`} />
-      </Helmet>
-
-      {/* Hero Section */}
-      <section className={styles.hero}>
-        <div className={styles['hero-background']}>
-          <div className={styles['hero-overlay']}></div>
-          <img
-            src={heroImage}
-            alt="Dienstleistungen"
-            className={styles['hero-bg-image']}
-          />
-        </div>
-        <div className={styles['hero-container']}>
-          <div className={`${styles['hero-content']} ${isVisible ? styles.visible : ''}`}>
-            <h1 className={styles['hero-title']}>
-              <span className={styles['title-line']}>Von der Auswahl</span>
-              <span>bis zur Umsetzung.</span>
-            </h1>
-            <div className={styles['hero-description']}>
-              <p>
-                Wir beginnen mit Ihrem Raum, nicht mit einem Katalog. Wir klären, was zu Ihren Massen, Ihrem Alltag
-                und Ihrem Budget passt. Danach stellen wir Produkte und Materialien zusammen und begleiten die
-                vereinbarten Schritte bis zur Lieferung und Montage.
-              </p>
-            </div>
-          </div>
-          <div className={styles['hero-scroll-indicator']}>
-            <div className={styles['scroll-dot']}></div>
-            <span>Scrollen Sie nach unten</span>
-          </div>
-        </div>
-      </section>
-
-      {/* Introduction Section */}
-      <section className={`${styles.introduction} ${styles['scroll-reveal']}`}>
-        <div className={styles['introduction-container']}>
-          <div className={styles['section-header']}>
-            <span className={styles['section-label']}>Was wir für Sie übernehmen</span>
-            <h2 className={styles['section-title']}>So viel Begleitung, wie Ihr Projekt braucht</h2>
-          </div>
-          <div className={styles['introduction-content']}>
-            <p>
-              Manche Kundinnen und Kunden suchen eine einzelne Platte oder Armatur. Andere möchten Bad oder Küche
-              vollständig planen und umsetzen. Wir beginnen dort, wo Ihr Projekt steht, und legen gemeinsam fest,
-              welche Unterstützung sinnvoll ist.
-            </p>
-            <p>
-              Sie erhalten klare nächste Schritte statt eines pauschalen Leistungspakets: Auswahlberatung, Offerte,
-              3D-Visualisierung sowie Lieferung, Montage oder Renovation nach vereinbartem Umfang.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* Services Sections */}
-      <section className={styles['services-categories']}>
-        <div className={styles['categories-container']}>
-
-          {/* Beratung */}
-          <div className={`${styles['service-section']} ${styles.light} ${styles['scroll-reveal']}`}>
-            <div className={styles['service-content']}>
-              <div className={styles['service-text']}>
-                <h3 className={styles['service-title']}>Auswahlberatung in der Ausstellung</h3>
-                <div className={styles['service-description']}>
-                  <p>
-                    Bringen Sie Fotos, Grundriss, Masse oder vorhandene Muster mit. In unserer Ausstellung vergleichen
-                    wir Platten, Möbel, Armaturen und Farben direkt miteinander und stellen eine Kombination zusammen,
-                    die im Raum funktioniert.
-                  </p>
-                  <p>
-                    Wenn technische Fragen oder ein Umbau im Vordergrund stehen, vereinbaren wir anschliessend eine
-                    Besichtigung vor Ort.
-                  </p>
-                  <div className={styles['service-highlight']}>
-                    <strong>Das erste Gespräch in der Ausstellung</strong> ist kostenlos und unverbindlich.
-                  </div>
-                </div>
-              </div>
-              <div className={styles['service-image']}>
-                <img src={beratungImage} alt="Beratungsgespräch mit Unterlagen am Tisch" />
-              </div>
-            </div>
-          </div>
-
-          {/* Offerte und 3D-Visualisierung */}
-          <div className={`${styles['service-section']} ${styles.dark} ${styles.reverse} ${styles['scroll-reveal']}`}>
-            <div className={styles['service-content']}>
-              <div className={styles['service-text']}>
-                <h3 className={styles['service-title']}>Entscheiden, bevor bestellt wird</h3>
-                <div className={styles['service-description']}>
-                  <p>
-                    Sobald Produkte, Masse und Leistungsumfang geklärt sind, erhalten Sie eine nachvollziehbare Offerte.
-                    Für Bad und Küche zeigen wir Ihnen auf Wunsch in einer 3D-Visualisierung, wie Proportionen, Farben
-                    und Materialwechsel zusammenwirken.
-                  </p>
-                  <p>
-                    Die Visualisierung ist eine Entscheidungshilfe. Verbindlich bleiben die bestätigten Produkte,
-                    Masse und Positionen der Offerte.
-                  </p>
-                  <div className={styles['service-highlight']}>
-                    <strong>3D</strong> dort, wo es eine Entscheidung wirklich erleichtert.
-                  </div>
-                </div>
-              </div>
-              <div className={styles['service-image']}>
-                <img src={visualisierungImage} alt="3D-Visualisierung" />
-              </div>
-            </div>
-          </div>
-
-          {/* Lieferung und Montage */}
-          <div className={`${styles['service-section']} ${styles.light} ${styles['scroll-reveal']}`}>
-            <div className={styles['service-content']}>
-              <div className={styles['service-text']}>
-                <h3 className={styles['service-title']}>Abgestimmt statt einzeln organisiert</h3>
-                <div className={styles['service-description']}>
-                  <p>
-                    Wir stimmen Liefertermine, Zugang und Montage auf Ihr Projekt ab. Benötigt die Umsetzung weitere
-                    Facharbeiten, koordinieren wir die vereinbarten Beteiligten und halten die Zuständigkeiten in der
-                    Offerte fest.
-                  </p>
-                  <p>
-                    So wissen Sie vor dem Start, welche Leistungen New Living Design übernimmt, welche Partner beteiligt
-                    sind und welche Vorarbeiten erforderlich sind.
-                  </p>
-                  <div className={styles['service-highlight']}>
-                    <strong>Ein klarer Ablauf</strong> und ein Ansprechpartner für die vereinbarten Leistungen.
-                  </div>
-                </div>
-              </div>
-              <div className={styles['service-image']}>
-                <img src={lieferungImage} alt="Montage von Wandplatten auf der Baustelle" />
-              </div>
-            </div>
-          </div>
-
-        </div>
-      </section>
-
-      {/* Process Section */}
-      <section className={`${styles['process-section']} ${styles['scroll-reveal']}`}>
-        <div className={styles['process-container']}>
-          <div className={styles['section-header']}>
-            <span className={styles['section-label']}>Der Ablauf</span>
-            <h2 className={styles['section-title']}>Drei Schritte bis zur Umsetzung</h2>
-          </div>
-          <div className={styles['process-steps']}>
-            <div className={styles['process-step']}>
-              <div className={styles['step-number']}>01</div>
-              <h4 className={styles['step-title']}>Projekt klären</h4>
-              <p className={styles['step-description']}>
-                Wir besprechen Raum, Nutzung, Wünsche und Budget in der Ausstellung oder – wenn erforderlich –
-                bei Ihnen vor Ort.
-              </p>
-            </div>
-            <div className={styles['process-step']}>
-              <div className={styles['step-number']}>02</div>
-              <h4 className={styles['step-title']}>Auswahl und Offerte</h4>
-              <p className={styles['step-description']}>
-                Wir kombinieren Produkte und Materialien, prüfen Masse und Anschlüsse und erstellen die Offerte.
-                Bei Bad und Küche ergänzt eine 3D-Visualisierung die Planung, wenn sie für die Entscheidung sinnvoll ist.
-              </p>
-            </div>
-            <div className={styles['process-step']}>
-              <div className={styles['step-number']}>03</div>
-              <h4 className={styles['step-title']}>Lieferung und Umsetzung</h4>
-              <p className={styles['step-description']}>
-                Nach Ihrer Freigabe bestellen wir die Produkte, stimmen die Termine ab und koordinieren Lieferung,
-                Montage und die vereinbarten Arbeiten.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className={`${styles['cta-section']} ${styles['scroll-reveal']}`}>
-        <div className={styles['cta-container']}>
-          <div className={styles['cta-content']}>
-            <h2 className={styles['cta-title']}>Womit sollen wir beginnen?</h2>
-            <p className={styles['cta-description']}>
-              Ein Foto, ein Grundriss oder eine erste Idee genügt. Sagen Sie uns, was Sie verändern möchten,
-              und wir schlagen den passenden ersten Termin vor.
-            </p>
-            <div className={styles['cta-buttons']}>
-              <Link to="/kontakt" className={`${styles['cta-button']} ${styles.primary}`}>
-                <span>Beratung anfragen</span>
-                <svg className={styles['cta-arrow']} viewBox="0 0 24 24" fill="none">
-                  <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </Link>
-              <Link to="/produkte" className={`${styles['cta-button']} ${styles.secondary}`}>
-                <span>Produkte ansehen</span>
-                <svg className={styles['cta-arrow']} viewBox="0 0 24 24" fill="none">
-                  <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
-
+const steps: Scene[] = [
+  { id: 'beratung', label: 'Beratung', title: 'Zuerst verstehen wir Ihr Vorhaben.', text: 'Wir besprechen Wünsche, Raum und Budget. Bringen Sie Fotos, einen Grundriss, Masse oder Muster mit. In unserer Ausstellung vergleichen wir Oberflächen und Möglichkeiten. Wenn technische Fragen oder ein Umbau im Vordergrund stehen, vereinbaren wir eine Besichtigung vor Ort.', image: { src: beratungImage, alt: 'Beratung mit Unterlagen am Tisch', width: 1400, height: 933 }, href: '/booking', link: 'Den passenden Termin finden' },
+  { id: 'planung', label: 'Planung & Offerte', title: 'Entscheidungen werden sichtbar.', text: 'Wir stimmen Produkte, Masse, Anschlüsse und Materialien aufeinander ab. Für Bad und Küche zeigen wir auf Wunsch in 3D, wie alles zusammenwirkt. Die Offerte hält die bestätigten Produkte, Masse und Leistungen nachvollziehbar fest.', image: { src: visualisierungImage, alt: '3D-Visualisierung einer Raumplanung', width: 1400, height: 787 }, href: '/referenzen', link: 'Realisierte Projekte ansehen' },
+  { id: 'umsetzung', label: 'Lieferung & Umsetzung', title: 'Damit aus dem Plan ein Raum wird.', text: 'Nach Ihrer Freigabe bestellen wir die Produkte und stimmen Liefertermine, Zugang und Montage ab. Benötigt Ihr Projekt weitere Facharbeiten, koordinieren wir die vereinbarten Beteiligten. Zuständigkeiten und erforderliche Vorarbeiten halten wir vor dem Start fest.', image: { src: lieferungImage, alt: 'Montage von Wandplatten auf der Baustelle', width: 1400, height: 998 }, href: '/badumbau-zofingen', link: 'Kompletter Badumbau mit uns' },
+];
+export default function Services() {
+  return <main id="main-content" className="nld-page">
+    <SEOHead title="Beratung, Planung & Umsetzung | New Living Design" description="Von der ersten Idee bis zur Umsetzung: persönliche Beratung in Zofingen, 3D-Planung für Bad und Küche sowie koordinierte Lieferung, Montage und Renovation." url="/dienstleistungen" image={`https://newlivingdesign.ch${heroImage}`} type="website" />
+    <PageIntro eyebrow="Unsere Leistungen" title="Wir begleiten Ihr Vorhaben." description="Von der ersten Frage bis zur vereinbarten Umsetzung. Gemeinsam legen wir fest, welche Unterstützung Ihr Projekt braucht." image={{ src: heroImage, alt: 'Raumgestaltung und Materialien als Inspiration', width: 1920, height: 728 }}><Link to="/kontakt" className="nld-button">Projekt besprechen</Link></PageIntro>
+    <div className="nld-container"><nav className="nld-local-nav" aria-label="Unsere Leistungen"><a href="#beratung">Beratung</a><a href="#planung">Planung & Offerte</a><a href="#umsetzung">Lieferung & Umsetzung</a><Link to="/badumbau-zofingen">Badumbau & Pakete</Link></nav></div>
+    <section className="nld-section"><div className="nld-container"><div className="nld-section-head" data-reveal="stagger"><div><p className="nld-eyebrow">Ein abgestimmter Ablauf</p><h2>Vom ersten Gespräch<br />bis zum letzten Detail.</h2></div></div><SceneStory scenes={steps} label="Beratung, Planung und Umsetzung" /></div></section>
+    <section className={`${styles.scope} nld-section`}><div className={`nld-container ${styles.scopeInner}`}>
+      <h2 data-reveal="text">So viel Begleitung,<br />wie Sie brauchen.</h2><div data-reveal="stagger"><p>Ob einzelne Armatur, neue Küche oder vollständiger Badumbau: Wir beginnen dort, wo Ihr Vorhaben steht. Umfang, Zuständigkeiten und nächste Schritte vereinbaren wir persönlich.</p><p>Das erste Gespräch in der Ausstellung ist kostenlos und unverbindlich. Eine 3D-Visualisierung hilft bei Entscheidungen; verbindlich bleiben die bestätigten Angaben der Offerte.</p><Link to="/booking" className="nld-link">Beratung und Ausstellung kennenlernen →</Link></div>
+    </div></section>
+    <ProjectInvitation><Link className="nld-button nld-button--light" to="/kontakt">Beratung anfragen</Link></ProjectInvitation>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
           "@context": "https://schema.org",
           "@type": "Service",
@@ -282,8 +63,5 @@ const Services: React.FC = () => {
             ]
           }
         }) }} />
-    </main>
-  );
-};
-
-export default Services;
+  </main>;
+}

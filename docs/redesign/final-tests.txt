@@ -1,0 +1,3460 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> new-living-design@0.0.0 test
+> node scripts/test-badplaner.mjs
+
+✔ Base64: shared limits and canonical padded/unpadded groups (1.64593ms)
+✔ Base64: rejects bad alphabet, misplaced padding, nonzero unused bits and whitespace (0.922262ms)
+✔ real small fixture: image/jpeg (1.370335ms)
+✔ real small fixture: image/png (0.378084ms)
+✔ real small fixture: image/webp (0.51055ms)
+✔ MIME must be supported and match the signature; empty MIME only sniffed explicitly (0.582616ms)
+✔ byte views honor their own offset and length (0.353411ms)
+✔ PNG header validation allows valid dimensions, without claiming complete image decoding (0.292496ms)
+✔ dimensions and byte caps are enforced, including raw predecode caps (3.879503ms)
+✔ PNG: truncated/malformed IHDR, invalid color/depth/methods (0.667122ms)
+✔ JPEG: baseline/progressive frames and bounded APP skipping (0.426981ms)
+✔ JPEG: truncated/zero-length segments, missing SOF, invalid components and zero dimensions (8.154318ms)
+✔ WebP VP8 : header dimensions and limits (0.583701ms)
+✔ WebP VP8L: header dimensions and limits (0.311329ms)
+✔ WebP VP8X: header dimensions and limits (4.344023ms)
+✔ WebP: RIFF/chunk bounds, frame signatures, version and reserved bits (0.776954ms)
+✔ hostile short inputs fail with Error, without out-of-bounds reads (1.330168ms)
+✔ client rejects file type/size and hostile dimensions before decoding (2.062973ms)
+✔ a file the browser cannot read byte by byte is still decoded (15.038068ms)
+✔ an unreadable file that no decoder opens reports it in German (408.930906ms)
+✔ bytes are read before file.size is touched (Android snapshot bug) (4.978389ms)
+✔ the failure code is complete and names type, size and extension (420.590016ms)
+✔ a photo that fails twice is read on the third attempt, before any error (10.330901ms)
+✔ client sniffs missing MIME, returns oriented dimensions and always closes bitmap (2.614286ms)
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: ok
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: ok
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: ok
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-calacatta-viola-calacatta-viola.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/edone-diamante.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/CALACATTA-VIOLA.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: ok
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: ok
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Walk-in: Rinne -, Armaturen -, breiter als tief -
+[badplaner] Fensterprüfung: ok
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Foto zeigt kein Bad toilet and washbasin visible
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Foto zeigt kein Bad toilet and washbasin visible
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: ok
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Fotopruefung nicht moeglich
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: ok
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Fotopruefung fehlgeschlagen 429
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: ok
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: ok
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung abgelehnt {
+  attempt: 1,
+  reason: 'the bidet is still there, on the right wall',
+  flags: {
+    extra_openings: false,
+    view_changed: false,
+    before: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'right'
+    },
+    after: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'right'
+    },
+    orderBefore: [ 'washbasin', 'toilet', 'bidet' ],
+    orderAfter: [ 'washbasin', 'toilet', 'bidet' ],
+    nearestBefore: 'toilet',
+    nearestAfter: 'toilet',
+    wallAnswers: {
+      toilet_on_low_wall_before: false,
+      toilet_on_low_wall_after: false,
+      new_wall_element: false,
+      wall_element_lost: false,
+      foreground_object_before: false,
+      foreground_object_after: false,
+      window_much_bigger: false
+    }
+  }
+}
+[badplaner] Fensterprüfung abgelehnt {
+  attempt: 2,
+  reason: 'the bidet is still there, on the right wall',
+  flags: {
+    extra_openings: false,
+    view_changed: false,
+    before: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'right'
+    },
+    after: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'right'
+    },
+    orderBefore: [ 'washbasin', 'toilet', 'bidet' ],
+    orderAfter: [ 'washbasin', 'toilet', 'bidet' ],
+    nearestBefore: 'toilet',
+    nearestAfter: 'toilet',
+    wallAnswers: {
+      toilet_on_low_wall_before: false,
+      toilet_on_low_wall_after: false,
+      new_wall_element: false,
+      wall_element_lost: false,
+      foreground_object_before: false,
+      foreground_object_after: false,
+      window_much_bigger: false
+    }
+  }
+}
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung abgelehnt {
+  attempt: 1,
+  reason: 'an opening was added or lost (inventory)',
+  flags: {
+    extra_openings: true,
+    view_changed: false,
+    before: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    after: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    orderBefore: [ 'washbasin', 'toilet' ],
+    orderAfter: [ 'washbasin', 'toilet' ],
+    nearestBefore: 'toilet',
+    nearestAfter: 'toilet',
+    wallAnswers: {
+      toilet_on_low_wall_before: false,
+      toilet_on_low_wall_after: false,
+      new_wall_element: false,
+      wall_element_lost: false,
+      foreground_object_before: false,
+      foreground_object_after: false,
+      window_much_bigger: false
+    }
+  }
+}
+[badplaner] Fensterprüfung: 1. Versuch verworfen (an opening was added or lost (inventory)), 2. Versuch ok
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: ok
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: ok
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto {"walls":{"toilet":"back","washbasin":"back","shower":"right","bathtub":"none","bidet":"none"},"order":["washbasin","toilet","shower"],"nearest":"washbasin"}
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: ok
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: ok
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung abgelehnt {
+  attempt: 1,
+  reason: 'an opening was added or lost (inventory)',
+  flags: {
+    extra_openings: true,
+    view_changed: false,
+    before: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    after: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    orderBefore: [ 'washbasin', 'toilet' ],
+    orderAfter: [ 'washbasin', 'toilet' ],
+    nearestBefore: 'toilet',
+    nearestAfter: 'toilet',
+    wallAnswers: {
+      toilet_on_low_wall_before: false,
+      toilet_on_low_wall_after: false,
+      new_wall_element: false,
+      wall_element_lost: false,
+      foreground_object_before: false,
+      foreground_object_after: false,
+      window_much_bigger: false
+    }
+  }
+}
+[badplaner] Fensterprüfung: 1. Versuch verworfen (an opening was added or lost (inventory)), 2. Versuch ok
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: ok
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung abgelehnt {
+  attempt: 1,
+  reason: 'the new shower stands on the left wall, the bathtub it replaces stood on the right wall',
+  flags: {
+    extra_openings: false,
+    view_changed: false,
+    before: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'right',
+      bidet: 'none'
+    },
+    after: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'left',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    orderBefore: [ 'washbasin', 'toilet', 'bathtub' ],
+    orderAfter: [ 'washbasin', 'toilet', 'shower' ],
+    nearestBefore: 'toilet',
+    nearestAfter: 'toilet',
+    wallAnswers: {
+      toilet_on_low_wall_before: false,
+      toilet_on_low_wall_after: false,
+      new_wall_element: false,
+      wall_element_lost: false,
+      foreground_object_before: false,
+      foreground_object_after: false,
+      window_much_bigger: false
+    }
+  }
+}
+[badplaner] Fensterprüfung abgelehnt {
+  attempt: 2,
+  reason: 'the new shower stands on the left wall, the bathtub it replaces stood on the right wall',
+  flags: {
+    extra_openings: false,
+    view_changed: false,
+    before: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'right',
+      bidet: 'none'
+    },
+    after: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'left',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    orderBefore: [ 'washbasin', 'toilet', 'bathtub' ],
+    orderAfter: [ 'washbasin', 'toilet', 'shower' ],
+    nearestBefore: 'toilet',
+    nearestAfter: 'toilet',
+    wallAnswers: {
+      toilet_on_low_wall_before: false,
+      toilet_on_low_wall_after: false,
+      new_wall_element: false,
+      wall_element_lost: false,
+      foreground_object_before: false,
+      foreground_object_after: false,
+      window_much_bigger: false
+    }
+  }
+}
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Fensterprüfung abgelehnt {
+  attempt: 1,
+  reason: 'the requested shower is missing',
+  flags: {
+    extra_openings: false,
+    view_changed: false,
+    before: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    after: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    orderBefore: [ 'washbasin', 'toilet' ],
+    orderAfter: [ 'washbasin', 'toilet' ],
+    nearestBefore: 'toilet',
+    nearestAfter: 'toilet',
+    wallAnswers: {
+      toilet_on_low_wall_before: false,
+      toilet_on_low_wall_after: false,
+      new_wall_element: false,
+      wall_element_lost: false,
+      foreground_object_before: false,
+      foreground_object_after: false,
+      window_much_bigger: false
+    }
+  }
+}
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung abgelehnt {
+  attempt: 2,
+  reason: 'the requested shower is missing',
+  flags: {
+    extra_openings: false,
+    view_changed: false,
+    before: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    after: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    orderBefore: [ 'washbasin', 'toilet' ],
+    orderAfter: [ 'washbasin', 'toilet' ],
+    nearestBefore: 'toilet',
+    nearestAfter: 'toilet',
+    wallAnswers: {
+      toilet_on_low_wall_before: false,
+      toilet_on_low_wall_after: false,
+      new_wall_element: false,
+      wall_element_lost: false,
+      foreground_object_before: false,
+      foreground_object_after: false,
+      window_much_bigger: false
+    }
+  }
+}
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung abgelehnt {
+  attempt: 1,
+  reason: 'the washbasin moved from the left wall to the back wall',
+  flags: {
+    extra_openings: false,
+    view_changed: false,
+    before: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    after: {
+      toilet: 'left',
+      washbasin: 'back',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    orderBefore: [ 'washbasin', 'toilet' ],
+    orderAfter: [ 'washbasin', 'toilet' ],
+    nearestBefore: 'toilet',
+    nearestAfter: 'toilet',
+    wallAnswers: {
+      toilet_on_low_wall_before: false,
+      toilet_on_low_wall_after: false,
+      new_wall_element: false,
+      wall_element_lost: false,
+      foreground_object_before: false,
+      foreground_object_after: false,
+      window_much_bigger: false
+    }
+  }
+}
+[badplaner] Fensterprüfung abgelehnt {
+  attempt: 2,
+  reason: 'the washbasin moved from the left wall to the back wall',
+  flags: {
+    extra_openings: false,
+    view_changed: false,
+    before: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    after: {
+      toilet: 'left',
+      washbasin: 'back',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    orderBefore: [ 'washbasin', 'toilet' ],
+    orderAfter: [ 'washbasin', 'toilet' ],
+    nearestBefore: 'toilet',
+    nearestAfter: 'toilet',
+    wallAnswers: {
+      toilet_on_low_wall_before: false,
+      toilet_on_low_wall_after: false,
+      new_wall_element: false,
+      wall_element_lost: false,
+      foreground_object_before: false,
+      foreground_object_after: false,
+      window_much_bigger: false
+    }
+  }
+}
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung nicht möglich Unexpected token 'k', "kein JSON" is not valid JSON
+[badplaner] Fensterprüfung nicht möglich Unexpected token 'k', "kein JSON" is not valid JSON
+[badplaner] Fensterprüfung: nicht möglich (Unexpected token 'k', "kein JSON" is not valid JSON)
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: nicht möglich (Antwort unlesbar)
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: nicht möglich (Antwort unlesbar)
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: ok
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: ok
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: ok
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Gemini-Fehler 400 image size 2K is not supported
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung abgelehnt {
+  attempt: 1,
+  reason: 'the fixtures changed places: in the photo washbasin, shower, toilet, in the result washbasin, toilet, shower',
+  flags: {
+    extra_openings: false,
+    view_changed: false,
+    before: {
+      toilet: 'right',
+      washbasin: 'left',
+      shower: 'right',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    after: {
+      toilet: 'right',
+      washbasin: 'left',
+      shower: 'right',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    orderBefore: [ 'washbasin', 'shower', 'toilet' ],
+    orderAfter: [ 'washbasin', 'toilet', 'shower' ],
+    nearestBefore: 'toilet',
+    nearestAfter: 'toilet',
+    wallAnswers: {
+      toilet_on_low_wall_before: false,
+      toilet_on_low_wall_after: false,
+      new_wall_element: false,
+      wall_element_lost: false,
+      foreground_object_before: false,
+      foreground_object_after: false,
+      window_much_bigger: false
+    }
+  }
+}
+[badplaner] Fensterprüfung abgelehnt {
+  attempt: 2,
+  reason: 'the fixtures changed places: in the photo washbasin, shower, toilet, in the result washbasin, toilet, shower',
+  flags: {
+    extra_openings: false,
+    view_changed: false,
+    before: {
+      toilet: 'right',
+      washbasin: 'left',
+      shower: 'right',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    after: {
+      toilet: 'right',
+      washbasin: 'left',
+      shower: 'right',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    orderBefore: [ 'washbasin', 'shower', 'toilet' ],
+    orderAfter: [ 'washbasin', 'toilet', 'shower' ],
+    nearestBefore: 'toilet',
+    nearestAfter: 'toilet',
+    wallAnswers: {
+      toilet_on_low_wall_before: false,
+      toilet_on_low_wall_after: false,
+      new_wall_element: false,
+      wall_element_lost: false,
+      foreground_object_before: false,
+      foreground_object_after: false,
+      window_much_bigger: false
+    }
+  }
+}
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: ok
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung abgelehnt {
+  attempt: 1,
+  reason: 'in the photo the toilet is closest to the camera, in the result the washbasin',
+  flags: {
+    extra_openings: false,
+    view_changed: false,
+    before: {
+      toilet: 'right',
+      washbasin: 'left',
+      shower: 'back',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    after: {
+      toilet: 'right',
+      washbasin: 'left',
+      shower: 'back',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    orderBefore: [ 'washbasin', 'shower', 'toilet' ],
+    orderAfter: [ 'washbasin', 'shower', 'toilet' ],
+    nearestBefore: 'toilet',
+    nearestAfter: 'washbasin',
+    wallAnswers: {
+      toilet_on_low_wall_before: false,
+      toilet_on_low_wall_after: false,
+      new_wall_element: false,
+      wall_element_lost: false,
+      foreground_object_before: false,
+      foreground_object_after: false,
+      window_much_bigger: false
+    }
+  }
+}
+[badplaner] Fensterprüfung abgelehnt {
+  attempt: 2,
+  reason: 'in the photo the toilet is closest to the camera, in the result the washbasin',
+  flags: {
+    extra_openings: false,
+    view_changed: false,
+    before: {
+      toilet: 'right',
+      washbasin: 'left',
+      shower: 'back',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    after: {
+      toilet: 'right',
+      washbasin: 'left',
+      shower: 'back',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    orderBefore: [ 'washbasin', 'shower', 'toilet' ],
+    orderAfter: [ 'washbasin', 'shower', 'toilet' ],
+    nearestBefore: 'toilet',
+    nearestAfter: 'washbasin',
+    wallAnswers: {
+      toilet_on_low_wall_before: false,
+      toilet_on_low_wall_after: false,
+      new_wall_element: false,
+      wall_element_lost: false,
+      foreground_object_before: false,
+      foreground_object_after: false,
+      window_much_bigger: false
+    }
+  }
+}
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung abgelehnt {
+  attempt: 1,
+  reason: 'the low wall the toilet stood against is gone, so the toilet no longer sits where it did',
+  flags: {
+    extra_openings: false,
+    view_changed: false,
+    before: {
+      toilet: 'right',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    after: {
+      toilet: 'right',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    orderBefore: [ 'washbasin', 'toilet' ],
+    orderAfter: [ 'washbasin', 'toilet' ],
+    nearestBefore: 'toilet',
+    nearestAfter: 'toilet',
+    wallAnswers: {
+      toilet_on_low_wall_before: true,
+      toilet_on_low_wall_after: false,
+      new_wall_element: false,
+      wall_element_lost: false,
+      foreground_object_before: false,
+      foreground_object_after: false,
+      window_much_bigger: false
+    }
+  }
+}
+[badplaner] Fensterprüfung abgelehnt {
+  attempt: 2,
+  reason: 'the low wall the toilet stood against is gone, so the toilet no longer sits where it did',
+  flags: {
+    extra_openings: false,
+    view_changed: false,
+    before: {
+      toilet: 'right',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    after: {
+      toilet: 'right',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    orderBefore: [ 'washbasin', 'toilet' ],
+    orderAfter: [ 'washbasin', 'toilet' ],
+    nearestBefore: 'toilet',
+    nearestAfter: 'toilet',
+    wallAnswers: {
+      toilet_on_low_wall_before: true,
+      toilet_on_low_wall_after: false,
+      new_wall_element: false,
+      wall_element_lost: false,
+      foreground_object_before: false,
+      foreground_object_after: false,
+      window_much_bigger: false
+    }
+  }
+}
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung abgelehnt {
+  attempt: 1,
+  reason: 'the toilet moved from the left wall to the right wall',
+  flags: {
+    extra_openings: false,
+    view_changed: false,
+    before: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    after: {
+      toilet: 'right',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    orderBefore: [ 'washbasin', 'toilet' ],
+    orderAfter: [ 'washbasin', 'toilet' ],
+    nearestBefore: 'toilet',
+    nearestAfter: 'toilet',
+    wallAnswers: {
+      toilet_on_low_wall_before: false,
+      toilet_on_low_wall_after: false,
+      new_wall_element: false,
+      wall_element_lost: false,
+      foreground_object_before: false,
+      foreground_object_after: false,
+      window_much_bigger: false
+    }
+  }
+}
+[badplaner] Fensterprüfung: 1. Versuch verworfen (the toilet moved from the left wall to the right wall), 2. Versuch ok
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung abgelehnt {
+  attempt: 1,
+  reason: 'what stood in the foreground of the photo, at the edge of the picture, is gone, so the view is no longer the same',
+  flags: {
+    extra_openings: false,
+    view_changed: false,
+    before: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    after: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    orderBefore: [ 'washbasin', 'toilet' ],
+    orderAfter: [ 'washbasin', 'toilet' ],
+    nearestBefore: 'toilet',
+    nearestAfter: 'toilet',
+    wallAnswers: {
+      toilet_on_low_wall_before: false,
+      toilet_on_low_wall_after: false,
+      new_wall_element: false,
+      wall_element_lost: false,
+      foreground_object_before: true,
+      foreground_object_after: false,
+      window_much_bigger: false
+    }
+  }
+}
+[badplaner] Fensterprüfung abgelehnt {
+  attempt: 2,
+  reason: 'what stood in the foreground of the photo, at the edge of the picture, is gone, so the view is no longer the same',
+  flags: {
+    extra_openings: false,
+    view_changed: false,
+    before: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    after: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    orderBefore: [ 'washbasin', 'toilet' ],
+    orderAfter: [ 'washbasin', 'toilet' ],
+    nearestBefore: 'toilet',
+    nearestAfter: 'toilet',
+    wallAnswers: {
+      toilet_on_low_wall_before: false,
+      toilet_on_low_wall_after: false,
+      new_wall_element: false,
+      wall_element_lost: false,
+      foreground_object_before: true,
+      foreground_object_after: false,
+      window_much_bigger: false
+    }
+  }
+}
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung abgelehnt {
+  attempt: 1,
+  reason: 'the window takes up much more of the result than of the photo, so the camera moved closer',
+  flags: {
+    extra_openings: false,
+    view_changed: false,
+    before: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    after: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    orderBefore: [ 'washbasin', 'toilet' ],
+    orderAfter: [ 'washbasin', 'toilet' ],
+    nearestBefore: 'toilet',
+    nearestAfter: 'toilet',
+    wallAnswers: {
+      toilet_on_low_wall_before: false,
+      toilet_on_low_wall_after: false,
+      new_wall_element: false,
+      wall_element_lost: false,
+      foreground_object_before: false,
+      foreground_object_after: false,
+      window_much_bigger: true
+    }
+  }
+}
+[badplaner] Fensterprüfung abgelehnt {
+  attempt: 2,
+  reason: 'the window takes up much more of the result than of the photo, so the camera moved closer',
+  flags: {
+    extra_openings: false,
+    view_changed: false,
+    before: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    after: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    orderBefore: [ 'washbasin', 'toilet' ],
+    orderAfter: [ 'washbasin', 'toilet' ],
+    nearestBefore: 'toilet',
+    nearestAfter: 'toilet',
+    wallAnswers: {
+      toilet_on_low_wall_before: false,
+      toilet_on_low_wall_after: false,
+      new_wall_element: false,
+      wall_element_lost: false,
+      foreground_object_before: false,
+      foreground_object_after: false,
+      window_much_bigger: true
+    }
+  }
+}
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: ok
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: ok
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: ok
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: ok
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung abgelehnt {
+  attempt: 1,
+  reason: 'a low wall, ledge, shelf or niche that is not in the photo was added; where the photo shows a flat wall, the result must show the same flat wall',
+  flags: {
+    extra_openings: false,
+    view_changed: false,
+    before: {
+      toilet: 'right',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    after: {
+      toilet: 'right',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    orderBefore: [ 'washbasin', 'toilet' ],
+    orderAfter: [ 'washbasin', 'toilet' ],
+    nearestBefore: 'toilet',
+    nearestAfter: 'toilet',
+    wallAnswers: {
+      toilet_on_low_wall_before: false,
+      toilet_on_low_wall_after: false,
+      new_wall_element: true,
+      wall_element_lost: false,
+      foreground_object_before: false,
+      foreground_object_after: false,
+      window_much_bigger: false
+    }
+  }
+}
+[badplaner] Fensterprüfung abgelehnt {
+  attempt: 2,
+  reason: 'a low wall, ledge, shelf or niche that is not in the photo was added; where the photo shows a flat wall, the result must show the same flat wall',
+  flags: {
+    extra_openings: false,
+    view_changed: false,
+    before: {
+      toilet: 'right',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    after: {
+      toilet: 'right',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    orderBefore: [ 'washbasin', 'toilet' ],
+    orderAfter: [ 'washbasin', 'toilet' ],
+    nearestBefore: 'toilet',
+    nearestAfter: 'toilet',
+    wallAnswers: {
+      toilet_on_low_wall_before: false,
+      toilet_on_low_wall_after: false,
+      new_wall_element: true,
+      wall_element_lost: false,
+      foreground_object_before: false,
+      foreground_object_after: false,
+      window_much_bigger: false
+    }
+  }
+}
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung abgelehnt {
+  attempt: 1,
+  reason: 'a low wall, ledge, shelf or niche that is not in the photo was added; where the photo shows a flat wall, the result must show the same flat wall',
+  flags: {
+    extra_openings: false,
+    view_changed: false,
+    before: {
+      toilet: 'right',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    after: {
+      toilet: 'right',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    orderBefore: [ 'washbasin', 'toilet' ],
+    orderAfter: [ 'washbasin', 'toilet' ],
+    nearestBefore: 'toilet',
+    nearestAfter: 'toilet',
+    wallAnswers: {
+      toilet_on_low_wall_before: false,
+      toilet_on_low_wall_after: true,
+      new_wall_element: false,
+      wall_element_lost: false,
+      foreground_object_before: false,
+      foreground_object_after: false,
+      window_much_bigger: false
+    }
+  }
+}
+[badplaner] Fensterprüfung abgelehnt {
+  attempt: 2,
+  reason: 'a low wall, ledge, shelf or niche that is not in the photo was added; where the photo shows a flat wall, the result must show the same flat wall',
+  flags: {
+    extra_openings: false,
+    view_changed: false,
+    before: {
+      toilet: 'right',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    after: {
+      toilet: 'right',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    orderBefore: [ 'washbasin', 'toilet' ],
+    orderAfter: [ 'washbasin', 'toilet' ],
+    nearestBefore: 'toilet',
+    nearestAfter: 'toilet',
+    wallAnswers: {
+      toilet_on_low_wall_before: false,
+      toilet_on_low_wall_after: true,
+      new_wall_element: false,
+      wall_element_lost: false,
+      foreground_object_before: false,
+      foreground_object_after: false,
+      window_much_bigger: false
+    }
+  }
+}
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: ok
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: ok
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Fensterprüfung abgelehnt {
+  attempt: 1,
+  reason: 'there is a shower on the right wall although none was ordered',
+  flags: {
+    extra_openings: false,
+    view_changed: false,
+    before: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    after: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'right',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    orderBefore: [ 'washbasin', 'toilet' ],
+    orderAfter: [ 'washbasin', 'toilet', 'shower' ],
+    nearestBefore: 'toilet',
+    nearestAfter: 'toilet',
+    wallAnswers: {
+      toilet_on_low_wall_before: false,
+      toilet_on_low_wall_after: false,
+      new_wall_element: false,
+      wall_element_lost: false,
+      foreground_object_before: false,
+      foreground_object_after: false,
+      window_much_bigger: false
+    }
+  }
+}
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung abgelehnt {
+  attempt: 2,
+  reason: 'there is a shower on the right wall although none was ordered',
+  flags: {
+    extra_openings: false,
+    view_changed: false,
+    before: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    after: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'right',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    orderBefore: [ 'washbasin', 'toilet' ],
+    orderAfter: [ 'washbasin', 'toilet', 'shower' ],
+    nearestBefore: 'toilet',
+    nearestAfter: 'toilet',
+    wallAnswers: {
+      toilet_on_low_wall_before: false,
+      toilet_on_low_wall_after: false,
+      new_wall_element: false,
+      wall_element_lost: false,
+      foreground_object_before: false,
+      foreground_object_after: false,
+      window_much_bigger: false
+    }
+  }
+}
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung abgelehnt {
+  attempt: 1,
+  reason: 'an opening was added or lost (inventory)',
+  flags: {
+    extra_openings: true,
+    view_changed: false,
+    before: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    after: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    orderBefore: [ 'washbasin', 'toilet' ],
+    orderAfter: [ 'washbasin', 'toilet' ],
+    nearestBefore: 'toilet',
+    nearestAfter: 'toilet',
+    wallAnswers: {
+      toilet_on_low_wall_before: false,
+      toilet_on_low_wall_after: false,
+      new_wall_element: false,
+      wall_element_lost: false,
+      foreground_object_before: false,
+      foreground_object_after: false,
+      window_much_bigger: false
+    }
+  }
+}
+[badplaner] Fensterprüfung abgelehnt {
+  attempt: 2,
+  reason: 'an opening was added or lost (inventory)',
+  flags: {
+    extra_openings: true,
+    view_changed: false,
+    before: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    after: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    orderBefore: [ 'washbasin', 'toilet' ],
+    orderAfter: [ 'washbasin', 'toilet' ],
+    nearestBefore: 'toilet',
+    nearestAfter: 'toilet',
+    wallAnswers: {
+      toilet_on_low_wall_before: false,
+      toilet_on_low_wall_after: false,
+      new_wall_element: false,
+      wall_element_lost: false,
+      foreground_object_before: false,
+      foreground_object_after: false,
+      window_much_bigger: false
+    }
+  }
+}
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung abgelehnt {
+  attempt: 1,
+  reason: 'an opening was added or lost (inventory)',
+  flags: {
+    extra_openings: true,
+    view_changed: false,
+    before: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    after: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    orderBefore: [ 'washbasin', 'toilet' ],
+    orderAfter: [ 'washbasin', 'toilet' ],
+    nearestBefore: 'toilet',
+    nearestAfter: 'toilet',
+    wallAnswers: {
+      toilet_on_low_wall_before: false,
+      toilet_on_low_wall_after: false,
+      new_wall_element: false,
+      wall_element_lost: false,
+      foreground_object_before: false,
+      foreground_object_after: false,
+      window_much_bigger: false
+    }
+  }
+}
+[badplaner] Fensterprüfung abgelehnt {
+  attempt: 2,
+  reason: 'an opening was added or lost (inventory)',
+  flags: {
+    extra_openings: true,
+    view_changed: false,
+    before: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    after: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    orderBefore: [ 'washbasin', 'toilet' ],
+    orderAfter: [ 'washbasin', 'toilet' ],
+    nearestBefore: 'toilet',
+    nearestAfter: 'toilet',
+    wallAnswers: {
+      toilet_on_low_wall_before: false,
+      toilet_on_low_wall_after: false,
+      new_wall_element: false,
+      wall_element_lost: false,
+      foreground_object_before: false,
+      foreground_object_after: false,
+      window_much_bigger: false
+    }
+  }
+}
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung abgelehnt {
+  attempt: 1,
+  reason: 'an opening was added or lost (inventory)',
+  flags: {
+    extra_openings: true,
+    view_changed: false,
+    before: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    after: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    orderBefore: [ 'washbasin', 'toilet' ],
+    orderAfter: [ 'washbasin', 'toilet' ],
+    nearestBefore: 'toilet',
+    nearestAfter: 'toilet',
+    wallAnswers: {
+      toilet_on_low_wall_before: false,
+      toilet_on_low_wall_after: false,
+      new_wall_element: false,
+      wall_element_lost: false,
+      foreground_object_before: false,
+      foreground_object_after: false,
+      window_much_bigger: false
+    }
+  }
+}
+[badplaner] Fensterprüfung abgelehnt {
+  attempt: 2,
+  reason: 'an opening was added or lost (inventory)',
+  flags: {
+    extra_openings: true,
+    view_changed: false,
+    before: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    after: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    orderBefore: [ 'washbasin', 'toilet' ],
+    orderAfter: [ 'washbasin', 'toilet' ],
+    nearestBefore: 'toilet',
+    nearestAfter: 'toilet',
+    wallAnswers: {
+      toilet_on_low_wall_before: false,
+      toilet_on_low_wall_after: false,
+      new_wall_element: false,
+      wall_element_lost: false,
+      foreground_object_before: false,
+      foreground_object_after: false,
+      window_much_bigger: false
+    }
+  }
+}
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung abgelehnt {
+  attempt: 1,
+  reason: 'an opening was added or lost (inventory)',
+  flags: {
+    extra_openings: true,
+    view_changed: false,
+    before: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    after: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    orderBefore: [ 'washbasin', 'toilet' ],
+    orderAfter: [ 'washbasin', 'toilet' ],
+    nearestBefore: 'toilet',
+    nearestAfter: 'toilet',
+    wallAnswers: {
+      toilet_on_low_wall_before: false,
+      toilet_on_low_wall_after: false,
+      new_wall_element: false,
+      wall_element_lost: false,
+      foreground_object_before: false,
+      foreground_object_after: false,
+      window_much_bigger: false
+    }
+  }
+}
+[badplaner] Fensterprüfung abgelehnt {
+  attempt: 2,
+  reason: 'an opening was added or lost (inventory)',
+  flags: {
+    extra_openings: true,
+    view_changed: false,
+    before: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    after: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    orderBefore: [ 'washbasin', 'toilet' ],
+    orderAfter: [ 'washbasin', 'toilet' ],
+    nearestBefore: 'toilet',
+    nearestAfter: 'toilet',
+    wallAnswers: {
+      toilet_on_low_wall_before: false,
+      toilet_on_low_wall_after: false,
+      new_wall_element: false,
+      wall_element_lost: false,
+      foreground_object_before: false,
+      foreground_object_after: false,
+      window_much_bigger: false
+    }
+  }
+}
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung abgelehnt {
+  attempt: 1,
+  reason: 'an opening was added or lost (inventory)',
+  flags: {
+    extra_openings: true,
+    view_changed: false,
+    before: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    after: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    orderBefore: [ 'washbasin', 'toilet' ],
+    orderAfter: [ 'washbasin', 'toilet' ],
+    nearestBefore: 'toilet',
+    nearestAfter: 'toilet',
+    wallAnswers: {
+      toilet_on_low_wall_before: false,
+      toilet_on_low_wall_after: false,
+      new_wall_element: false,
+      wall_element_lost: false,
+      foreground_object_before: false,
+      foreground_object_after: false,
+      window_much_bigger: false
+    }
+  }
+}
+[badplaner] Fensterprüfung abgelehnt {
+  attempt: 2,
+  reason: 'an opening was added or lost (inventory)',
+  flags: {
+    extra_openings: true,
+    view_changed: false,
+    before: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    after: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    orderBefore: [ 'washbasin', 'toilet' ],
+    orderAfter: [ 'washbasin', 'toilet' ],
+    nearestBefore: 'toilet',
+    nearestAfter: 'toilet',
+    wallAnswers: {
+      toilet_on_low_wall_before: false,
+      toilet_on_low_wall_after: false,
+      new_wall_element: false,
+      wall_element_lost: false,
+      foreground_object_before: false,
+      foreground_object_after: false,
+      window_much_bigger: false
+    }
+  }
+}
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung abgelehnt {
+  attempt: 1,
+  reason: 'an opening was added or lost (inventory)',
+  flags: {
+    extra_openings: true,
+    view_changed: false,
+    before: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    after: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    orderBefore: [ 'washbasin', 'toilet' ],
+    orderAfter: [ 'washbasin', 'toilet' ],
+    nearestBefore: 'toilet',
+    nearestAfter: 'toilet',
+    wallAnswers: {
+      toilet_on_low_wall_before: false,
+      toilet_on_low_wall_after: false,
+      new_wall_element: false,
+      wall_element_lost: false,
+      foreground_object_before: false,
+      foreground_object_after: false,
+      window_much_bigger: false
+    }
+  }
+}
+[badplaner] Fensterprüfung abgelehnt {
+  attempt: 2,
+  reason: 'an opening was added or lost (inventory)',
+  flags: {
+    extra_openings: true,
+    view_changed: false,
+    before: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    after: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    orderBefore: [ 'washbasin', 'toilet' ],
+    orderAfter: [ 'washbasin', 'toilet' ],
+    nearestBefore: 'toilet',
+    nearestAfter: 'toilet',
+    wallAnswers: {
+      toilet_on_low_wall_before: false,
+      toilet_on_low_wall_after: false,
+      new_wall_element: false,
+      wall_element_lost: false,
+      foreground_object_before: false,
+      foreground_object_after: false,
+      window_much_bigger: false
+    }
+  }
+}
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung abgelehnt {
+  attempt: 1,
+  reason: 'an opening was added or lost (inventory)',
+  flags: {
+    extra_openings: true,
+    view_changed: false,
+    before: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    after: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    orderBefore: [ 'washbasin', 'toilet' ],
+    orderAfter: [ 'washbasin', 'toilet' ],
+    nearestBefore: 'toilet',
+    nearestAfter: 'toilet',
+    wallAnswers: {
+      toilet_on_low_wall_before: false,
+      toilet_on_low_wall_after: false,
+      new_wall_element: false,
+      wall_element_lost: false,
+      foreground_object_before: false,
+      foreground_object_after: false,
+      window_much_bigger: false
+    }
+  }
+}
+[badplaner] Fensterprüfung abgelehnt {
+  attempt: 2,
+  reason: 'an opening was added or lost (inventory)',
+  flags: {
+    extra_openings: true,
+    view_changed: false,
+    before: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    after: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    orderBefore: [ 'washbasin', 'toilet' ],
+    orderAfter: [ 'washbasin', 'toilet' ],
+    nearestBefore: 'toilet',
+    nearestAfter: 'toilet',
+    wallAnswers: {
+      toilet_on_low_wall_before: false,
+      toilet_on_low_wall_after: false,
+      new_wall_element: false,
+      wall_element_lost: false,
+      foreground_object_before: false,
+      foreground_object_after: false,
+      window_much_bigger: false
+    }
+  }
+}
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung abgelehnt {
+  attempt: 1,
+  reason: 'an opening was added or lost (inventory)',
+  flags: {
+    extra_openings: true,
+    view_changed: false,
+    before: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    after: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    orderBefore: [ 'washbasin', 'toilet' ],
+    orderAfter: [ 'washbasin', 'toilet' ],
+    nearestBefore: 'toilet',
+    nearestAfter: 'toilet',
+    wallAnswers: {
+      toilet_on_low_wall_before: false,
+      toilet_on_low_wall_after: false,
+      new_wall_element: false,
+      wall_element_lost: false,
+      foreground_object_before: false,
+      foreground_object_after: false,
+      window_much_bigger: false
+    }
+  }
+}
+[badplaner] Fensterprüfung abgelehnt {
+  attempt: 2,
+  reason: 'an opening was added or lost (inventory)',
+  flags: {
+    extra_openings: true,
+    view_changed: false,
+    before: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    after: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    orderBefore: [ 'washbasin', 'toilet' ],
+    orderAfter: [ 'washbasin', 'toilet' ],
+    nearestBefore: 'toilet',
+    nearestAfter: 'toilet',
+    wallAnswers: {
+      toilet_on_low_wall_before: false,
+      toilet_on_low_wall_after: false,
+      new_wall_element: false,
+      wall_element_lost: false,
+      foreground_object_before: false,
+      foreground_object_after: false,
+      window_much_bigger: false
+    }
+  }
+}
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung abgelehnt {
+  attempt: 1,
+  reason: 'an opening was added or lost (inventory)',
+  flags: {
+    extra_openings: true,
+    view_changed: false,
+    before: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    after: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    orderBefore: [ 'washbasin', 'toilet' ],
+    orderAfter: [ 'washbasin', 'toilet' ],
+    nearestBefore: 'toilet',
+    nearestAfter: 'toilet',
+    wallAnswers: {
+      toilet_on_low_wall_before: false,
+      toilet_on_low_wall_after: false,
+      new_wall_element: false,
+      wall_element_lost: false,
+      foreground_object_before: false,
+      foreground_object_after: false,
+      window_much_bigger: false
+    }
+  }
+}
+[badplaner] Fensterprüfung abgelehnt {
+  attempt: 2,
+  reason: 'an opening was added or lost (inventory)',
+  flags: {
+    extra_openings: true,
+    view_changed: false,
+    before: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    after: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    orderBefore: [ 'washbasin', 'toilet' ],
+    orderAfter: [ 'washbasin', 'toilet' ],
+    nearestBefore: 'toilet',
+    nearestAfter: 'toilet',
+    wallAnswers: {
+      toilet_on_low_wall_before: false,
+      toilet_on_low_wall_after: false,
+      new_wall_element: false,
+      wall_element_lost: false,
+      foreground_object_before: false,
+      foreground_object_after: false,
+      window_much_bigger: false
+    }
+  }
+}
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Fensterprüfung abgelehnt {
+  attempt: 1,
+  reason: 'an opening was added or lost (inventory)',
+  flags: {
+    extra_openings: true,
+    view_changed: false,
+    before: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    after: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    orderBefore: [ 'washbasin', 'toilet' ],
+    orderAfter: [ 'washbasin', 'toilet' ],
+    nearestBefore: 'toilet',
+    nearestAfter: 'toilet',
+    wallAnswers: {
+      toilet_on_low_wall_before: false,
+      toilet_on_low_wall_after: false,
+      new_wall_element: false,
+      wall_element_lost: false,
+      foreground_object_before: false,
+      foreground_object_after: false,
+      window_much_bigger: false
+    }
+  }
+}
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung abgelehnt {
+  attempt: 2,
+  reason: 'an opening was added or lost (inventory)',
+  flags: {
+    extra_openings: true,
+    view_changed: false,
+    before: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    after: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    orderBefore: [ 'washbasin', 'toilet' ],
+    orderAfter: [ 'washbasin', 'toilet' ],
+    nearestBefore: 'toilet',
+    nearestAfter: 'toilet',
+    wallAnswers: {
+      toilet_on_low_wall_before: false,
+      toilet_on_low_wall_after: false,
+      new_wall_element: false,
+      wall_element_lost: false,
+      foreground_object_before: false,
+      foreground_object_after: false,
+      window_much_bigger: false
+    }
+  }
+}
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Fensterprüfung abgelehnt {
+  attempt: 1,
+  reason: 'an opening was added or lost (inventory)',
+  flags: {
+    extra_openings: true,
+    view_changed: false,
+    before: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    after: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    orderBefore: [ 'washbasin', 'toilet' ],
+    orderAfter: [ 'washbasin', 'toilet' ],
+    nearestBefore: 'toilet',
+    nearestAfter: 'toilet',
+    wallAnswers: {
+      toilet_on_low_wall_before: false,
+      toilet_on_low_wall_after: false,
+      new_wall_element: false,
+      wall_element_lost: false,
+      foreground_object_before: false,
+      foreground_object_after: false,
+      window_much_bigger: false
+    }
+  }
+}
+[badplaner] Fensterprüfung abgelehnt {
+  attempt: 2,
+  reason: 'an opening was added or lost (inventory)',
+  flags: {
+    extra_openings: true,
+    view_changed: false,
+    before: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    after: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    orderBefore: [ 'washbasin', 'toilet' ],
+    orderAfter: [ 'washbasin', 'toilet' ],
+    nearestBefore: 'toilet',
+    nearestAfter: 'toilet',
+    wallAnswers: {
+      toilet_on_low_wall_before: false,
+      toilet_on_low_wall_after: false,
+      new_wall_element: false,
+      wall_element_lost: false,
+      foreground_object_before: false,
+      foreground_object_after: false,
+      window_much_bigger: false
+    }
+  }
+}
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: ok
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Bildausschnitt verändert, Ideenbild trotzdem geliefert: camera and visible room bounds changed
+[badplaner] Fensterprüfung: ok, Bildausschnitt verändert: camera and visible room bounds changed
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung abgelehnt {
+  attempt: 1,
+  reason: 'the toilet moved from the back wall to the right wall',
+  flags: {
+    extra_openings: false,
+    view_changed: false,
+    before: {
+      toilet: 'back',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    after: {
+      toilet: 'right',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    orderBefore: [ 'washbasin', 'toilet' ],
+    orderAfter: [ 'washbasin', 'toilet' ],
+    nearestBefore: 'toilet',
+    nearestAfter: 'toilet',
+    wallAnswers: {
+      toilet_on_low_wall_before: false,
+      toilet_on_low_wall_after: false,
+      new_wall_element: false,
+      wall_element_lost: false,
+      foreground_object_before: false,
+      foreground_object_after: false,
+      window_much_bigger: false
+    }
+  }
+}
+[badplaner] Fensterprüfung abgelehnt {
+  attempt: 2,
+  reason: 'the toilet moved from the back wall to the right wall',
+  flags: {
+    extra_openings: false,
+    view_changed: false,
+    before: {
+      toilet: 'back',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    after: {
+      toilet: 'right',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    orderBefore: [ 'washbasin', 'toilet' ],
+    orderAfter: [ 'washbasin', 'toilet' ],
+    nearestBefore: 'toilet',
+    nearestAfter: 'toilet',
+    wallAnswers: {
+      toilet_on_low_wall_before: false,
+      toilet_on_low_wall_after: false,
+      new_wall_element: false,
+      wall_element_lost: false,
+      foreground_object_before: false,
+      foreground_object_after: false,
+      window_much_bigger: false
+    }
+  }
+}
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: ok
+[badplaner] Swatch geladen energieker-loft-white.jpg 1 kB
+[badplaner] Swatch geladen gbgroup-400-antracite.jpg 1 kB
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: ok
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: ok
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: ok
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-calacatta-viola-calacatta-viola.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/edone-diamante.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/CALACATTA-VIOLA.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: ok
+[badplaner] Swatch geladen energieker-calacatta-viola-calacatta-viola.jpg 1 kB
+[badplaner] Swatch geladen edone-diamante.jpg 1 kB
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: ok
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: ok
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/emilceramica-dual-travertine-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/rexa-corian-glacier-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/rexa-legno-smooth-rovere-light.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.emilgroup.it/emil/prodotti/immaginiarticoli_emil/Dual%20Travertine_PORO%20CHIUSO%20WHITE_MOSAICO%205X5_30x30%203.jpg status=keine Antwort type=– bytes=0 Error: Unexpected mock URL: https://www.emilgroup.it/emil/prodotti/immaginiarticoli_emil/Dual%20Travertine_PORO%20CHIUSO%20WHITE_MOSAICO%205X5_30x30%203.jpg
+[badplaner] Swatch nicht geladen https://rexadesign.it/wp-content/uploads/2022/10/corian_glacier_white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://rexadesign.it/wp-content/uploads/2025/11/legno_rovere_light.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: ok
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: ok
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: ok
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung abgelehnt {
+  attempt: 1,
+  reason: 'an opening was added or lost (inventory)',
+  flags: {
+    extra_openings: true,
+    view_changed: false,
+    before: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    after: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    orderBefore: [ 'washbasin', 'toilet' ],
+    orderAfter: [ 'washbasin', 'toilet' ],
+    nearestBefore: 'toilet',
+    nearestAfter: 'toilet',
+    wallAnswers: {
+      toilet_on_low_wall_before: false,
+      toilet_on_low_wall_after: false,
+      new_wall_element: false,
+      wall_element_lost: false,
+      foreground_object_before: false,
+      foreground_object_after: false,
+      window_much_bigger: false
+    }
+  }
+}
+[badplaner] Fensterprüfung abgelehnt {
+  attempt: 2,
+  reason: 'an opening was added or lost (inventory)',
+  flags: {
+    extra_openings: true,
+    view_changed: false,
+    before: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    after: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    orderBefore: [ 'washbasin', 'toilet' ],
+    orderAfter: [ 'washbasin', 'toilet' ],
+    nearestBefore: 'toilet',
+    nearestAfter: 'toilet',
+    wallAnswers: {
+      toilet_on_low_wall_before: false,
+      toilet_on_low_wall_after: false,
+      new_wall_element: false,
+      wall_element_lost: false,
+      foreground_object_before: false,
+      foreground_object_after: false,
+      window_much_bigger: false
+    }
+  }
+}
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung abgelehnt {
+  attempt: 1,
+  reason: 'an opening was added or lost (inventory)',
+  flags: {
+    extra_openings: true,
+    view_changed: false,
+    before: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    after: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    orderBefore: [ 'washbasin', 'toilet' ],
+    orderAfter: [ 'washbasin', 'toilet' ],
+    nearestBefore: 'toilet',
+    nearestAfter: 'toilet',
+    wallAnswers: {
+      toilet_on_low_wall_before: false,
+      toilet_on_low_wall_after: false,
+      new_wall_element: false,
+      wall_element_lost: false,
+      foreground_object_before: false,
+      foreground_object_after: false,
+      window_much_bigger: false
+    }
+  }
+}
+[badplaner] Fensterprüfung: 1. Versuch verworfen (an opening was added or lost (inventory)), 2. Versuch ok
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung abgelehnt {
+  attempt: 1,
+  reason: 'an opening was added or lost (inventory)',
+  flags: {
+    extra_openings: true,
+    view_changed: false,
+    before: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    after: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    orderBefore: [ 'washbasin', 'toilet' ],
+    orderAfter: [ 'washbasin', 'toilet' ],
+    nearestBefore: 'toilet',
+    nearestAfter: 'toilet',
+    wallAnswers: {
+      toilet_on_low_wall_before: false,
+      toilet_on_low_wall_after: false,
+      new_wall_element: false,
+      wall_element_lost: false,
+      foreground_object_before: false,
+      foreground_object_after: false,
+      window_much_bigger: false
+    }
+  }
+}
+[badplaner] Gemini-Fehler 500
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung nicht möglich Unexpected token 'o', "not json" is not valid JSON
+[badplaner] Fensterprüfung nicht möglich Unexpected token 'o', "not json" is not valid JSON
+[badplaner] Fensterprüfung: nicht möglich (Unexpected token 'o', "not json" is not valid JSON)
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung nicht möglich Unexpected token '`', "```json
+{""... is not valid JSON
+[badplaner] Fensterprüfung nicht möglich Unexpected token '`', "```json
+{""... is not valid JSON
+[badplaner] Fensterprüfung: nicht möglich (Unexpected token '`', "```json
+{""... is not valid JSON)
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: nicht möglich (Antwort unlesbar)
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: nicht möglich (Antwort unlesbar)
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: nicht möglich (Antwort unlesbar)
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: nicht möglich (Antwort unlesbar)
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: nicht möglich (Antwort unlesbar)
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: nicht möglich (Antwort unlesbar)
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: nicht möglich (Abbruch: unbekannt)
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: nicht möglich (Abbruch: MAX_TOKENS)
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: nicht möglich (Abbruch: SAFETY)
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: deaktiviert
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: deaktiviert
+[badplaner] Bilddienst nicht konfiguriert
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung fehlgeschlagen 503
+[badplaner] Fensterprüfung fehlgeschlagen 503
+[badplaner] Fensterprüfung: nicht möglich (HTTP 503)
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Gemini nicht erreichbar Timeout
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Gemini nicht erreichbar Dateityp und Bildinhalt stimmen nicht überein.
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Gemini nicht erreichbar Unsupported generated image
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung abgelehnt {
+  attempt: 1,
+  reason: 'an opening was added or lost (inventory)',
+  flags: {
+    extra_openings: true,
+    view_changed: false,
+    before: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    after: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    orderBefore: [ 'washbasin', 'toilet' ],
+    orderAfter: [ 'washbasin', 'toilet' ],
+    nearestBefore: 'toilet',
+    nearestAfter: 'toilet',
+    wallAnswers: {
+      toilet_on_low_wall_before: false,
+      toilet_on_low_wall_after: false,
+      new_wall_element: false,
+      wall_element_lost: false,
+      foreground_object_before: false,
+      foreground_object_after: false,
+      window_much_bigger: false
+    }
+  }
+}
+[badplaner] Gemini-Fehler 500
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Gemini-Fehler 500
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Gemini-Fehler 500
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Gemini-Fehler 500
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Gemini-Fehler 500
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Gemini-Fehler 500
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Gemini-Fehler 500
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Gemini-Fehler 500
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: ok
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung fehlgeschlagen 503
+[badplaner] Fensterprüfung abgelehnt {
+  attempt: 1,
+  reason: 'an opening was added or lost (inventory)',
+  flags: {
+    extra_openings: true,
+    view_changed: false,
+    before: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    after: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    orderBefore: [ 'washbasin', 'toilet' ],
+    orderAfter: [ 'washbasin', 'toilet' ],
+    nearestBefore: 'toilet',
+    nearestAfter: 'toilet',
+    wallAnswers: {
+      toilet_on_low_wall_before: false,
+      toilet_on_low_wall_after: false,
+      new_wall_element: false,
+      wall_element_lost: false,
+      foreground_object_before: false,
+      foreground_object_after: false,
+      window_much_bigger: false
+    }
+  }
+}
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung abgelehnt {
+  attempt: 1,
+  reason: 'an opening was added or lost (inventory)',
+  flags: {
+    extra_openings: true,
+    view_changed: false,
+    before: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    after: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    orderBefore: [ 'washbasin', 'toilet' ],
+    orderAfter: [ 'washbasin', 'toilet' ],
+    nearestBefore: 'toilet',
+    nearestAfter: 'toilet',
+    wallAnswers: {
+      toilet_on_low_wall_before: false,
+      toilet_on_low_wall_after: false,
+      new_wall_element: false,
+      wall_element_lost: false,
+      foreground_object_before: false,
+      foreground_object_after: false,
+      window_much_bigger: false
+    }
+  }
+}
+[badplaner] Fensterprüfung: 1. Versuch verworfen (an opening was added or lost (inventory)), 2. Versuch ok
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: 1. Versuch verworfen (an opening was added or lost (inventory)), 2. Versuch ok
+[badplaner] Fensterprüfung abgelehnt {
+  attempt: 1,
+  reason: 'an opening was added or lost (inventory)',
+  flags: {
+    extra_openings: true,
+    view_changed: false,
+    before: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    after: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    orderBefore: [ 'washbasin', 'toilet' ],
+    orderAfter: [ 'washbasin', 'toilet' ],
+    nearestBefore: 'toilet',
+    nearestAfter: 'toilet',
+    wallAnswers: {
+      toilet_on_low_wall_before: false,
+      toilet_on_low_wall_after: false,
+      new_wall_element: false,
+      wall_element_lost: false,
+      foreground_object_before: false,
+      foreground_object_after: false,
+      window_much_bigger: false
+    }
+  }
+}
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: ok
+[badplaner] Resend-Fehler 500
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: ok
+[badplaner] Resend-Fehler 500
+[badplaner] Formspree-Fehler 500
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Resend-Zustellung unklar
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Kundenmail nicht versendet 500
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: ok
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: ok
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: ok
+[badplaner] Kundenmail-Zustellung unklar
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: ok
+[badplaner] RESEND_API_KEY fehlt, Lead geht an Formspree (ohne Bilder)
+[badplaner] RESEND_API_KEY fehlt, Kundenmail wird übersprungen
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: ok
+[badplaner] Newsletter-Eintrag nicht möglich 500
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: ok
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: ok
+[badplaner] Resend-Fehler 500
+[badplaner] Formspree-Fehler 500
+[badplaner] RESEND_API_KEY fehlt, Lead geht an Formspree (ohne Bilder)
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: ok
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: ok
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: ok
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: ok
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: ok
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: ok
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: ok
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: ok
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: ok
+[badplaner] Swatch geladen energieker-loft-white.jpg 4577 kB
+[badplaner] Swatch geladen gbgroup-400-antracite.jpg 4577 kB
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: ok
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Gemini ohne Bild: kein Bild
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Gemini ohne Bild: kein Bild
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=keine Antwort type=– bytes=0 TimeoutError: Request deadline exceeded
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=keine Antwort type=– bytes=0 TimeoutError: Request deadline exceeded
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: ok
+[badplaner] Resend-Fehler 500
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: ok
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: ok
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Gemini nicht erreichbar Timeout
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: ok
+✔ approved rendering reaches company and customer, reporting provider acceptance (45.907949ms)
+✔ cistern is required and only accepts the two supported values (0.97859ms)
+✔ Aufputz and Unterputz produce explicit, exclusive toilet branches (13.585942ms)
+✔ Colore uses the selected tap series and finish in prompt and lead mail (8.562752ms)
+✔ Gäste-WC prompt and checker require no shower or bathtub (5.321641ms)
+✔ shower prompt tiles the full tray or sloped-floor perimeter to the ceiling (3.816474ms)
+✔ ein Foto ohne Bad wird gar nicht erst gerendert (3.469544ms)
+✔ ein falsches Foto kostet den Kunden keinen Tagesversuch (1.837411ms)
+✔ die Fotopruefung bekommt nur das Kundenfoto, nicht Muster oder Modul (4.871076ms)
+✔ eine unlesbare Fotopruefung haelt den Badplaner nicht auf (4.705682ms)
+✔ faellt die Fotopruefung aus, wird trotzdem gerendert (2.79076ms)
+✔ das Bidet wird weggeraeumt, und ein stehengebliebenes Bidet wird verworfen (9.035421ms)
+✔ nach einem schnellen ersten Durchgang bleibt Zeit fuer den zweiten (3.562247ms)
+✔ der Prompt ist eine Bearbeitung, keine Neuzeichnung (2.640289ms)
+✔ das Glas der alten Duschkabine ist im Prompt kein Fenster (2.958358ms)
+✔ der Grundriss aus der Vorpruefung steht im Prompt, was wo steht (3.226547ms)
+✔ ohne lesbaren Grundriss wird ohne ihn gerendert, nicht abgewiesen (2.876932ms)
+✔ der zweite Versuch bekommt die Zeit, die der erste wirklich brauchte (4.571084ms)
+✔ Muster und Fotopruefung warten nebeneinander, nicht nacheinander (3.703251ms)
+✔ die Dusche muss an die Wand, an der die Wanne stand (3.828525ms)
+✔ eine fehlende Dusche und ein verschobenes Waschbecken werden verworfen (9.265335ms)
+✔ eine unbrauchbare Antwort der Pruefung gilt als nicht verfuegbar, nicht als bestanden (12.341951ms)
+✔ das Ideenbild entsteht mit dem genauesten Modell, nicht dem billigsten (5.737967ms)
+✔ ein 2K-Ideenbild passt durch alle Groessengrenzen (10.759145ms)
+✔ scheitert der Bilddienst, steht der technische Grund in der Lead-Mail (1.642096ms)
+✔ WC und Dusche duerfen an derselben Wand nicht die Plaetze tauschen (2.613292ms)
+✔ ein weggeraeumtes Stueck aendert die Reihenfolge nicht (1.835164ms)
+✔ das WC darf an seiner Wand nicht nach hinten rutschen (3.258766ms)
+✔ ein verschwundenes Muretto unter dem WC wird verworfen (2.447107ms)
+✔ der zweite Versuch bekommt die ganze Liste noch einmal mit (2.543745ms)
+✔ eine verschwundene Tuer im Vordergrund wird verworfen (3.71253ms)
+✔ ein Fenster, das viel groesser wird, wird verworfen (3.235988ms)
+✔ die Pruefung fragt nach dem Vordergrund, der ganz verschwindet, nicht nach dem, der kleiner wird (2.350534ms)
+✔ ein Vordergrund, der im Foto gar nicht da war, ist kein Fehler (2.311146ms)
+✔ der Prompt haelt den Vordergrund und den Waschtischunterbau fest (3.530591ms)
+✔ ein erhaltenes Muretto ist kein Fehler (1.973647ms)
+✔ ein neues Muretto, eine Ablage oder eine Nische wird verworfen (11.563168ms)
+✔ das Glasmodul beim Aufputz-Spuelkasten ist kein neues Muretto (2.276363ms)
+✔ fixture checker rejects a shower in a Gäste-WC (2.871073ms)
+✔ a rejected render leaves the customer his daily attempts (35.462761ms)
+✔ after a rejection the next attempt still counts as the first (5.093013ms)
+✔ a changed field of view is noted for us but the customer still gets the image (2.533598ms)
+✔ a moved toilet is still rejected even when the field of view held (2.625132ms)
+✔ the generation request carries the aspect ratio of the customer photo (2.791275ms)
+✔ nearestAspectRatio picks a format Gemini supports (0.200966ms)
+✔ the sanitary module travels as its own reference image (2.465799ms)
+✔ the module image needs no network call and none is made for it (2.07946ms)
+✔ Unterputz carries no module image and forbids a module in front of the wall (1.942417ms)
+✔ the washbasin gets the same ceramic colour as the toilet (2.361809ms)
+✔ Waschtischplatte und Unterbau gehen als Muster mit, die Platte nimmt nie den Wandmarmor (2.599068ms)
+✔ ohne ladbares Muster bleibt es bei der Beschreibung, ohne Bildnummer (2.166936ms)
+✔ an integrated washbasin keeps the countertop material, not the ceramic colour (3.222975ms)
+✔ the toilet keeps its wall, also under a sloping ceiling (3.722278ms)
+✔ an Unterputz toilet also keeps seat and lid in the ceramic colour (1.937779ms)
+✔ kein Auswahlname traegt italienischen Katalogtext oder ein doppeltes Wort (2.462916ms)
+✔ every tap finish carries a German name, not only the Italian one (1.018494ms)
+✔ individual consultation sends one lead and never calls Gemini (1.12213ms)
+✔ consultation image request requires a room photo before provider calls (0.208802ms)
+✔ missing option returns 400 before any provider call (0.318201ms)
+✔ unknown option returns 400 before any provider call (0.24609ms)
+✔ missing windows returns 400 before any provider call (0.08679ms)
+✔ missing consent returns 400 before any provider call (0.172379ms)
+✔ missing name returns 400 before any provider call (0.08223ms)
+✔ missing place returns 400 before any provider call (0.067745ms)
+✔ invalid email returns 400 before any provider call (0.065183ms)
+✔ invalid base64 returns 400 before any provider call (0.095415ms)
+✔ false MIME returns 400 before any provider call (0.100603ms)
+✔ HTTP and JSON envelope reject malformed requests without network (0.263908ms)
+✔ oversize JSON is rejected before provider calls (15.944998ms)
+✔ second rejected result is never returned, while the lead and original photo are preserved (4.499778ms)
+✔ second approved result replaces first rejected result (4.147725ms)
+✔ second generation failure after rejection still fails closed (11.795141ms)
+✔ checker retries and delivers malformed result for not json (6.008534ms)
+✔ checker retries and delivers malformed result for ```json
+{"extra_openings":fa (3.194355ms)
+✔ checker retries and delivers malformed result for {"extra_openings":"false","r (3.258072ms)
+✔ checker retries and delivers malformed result for {"extra_openings":false} (2.512923ms)
+✔ checker retries and delivers malformed result for {"extra_openings":false,"rea (3.494931ms)
+✔ checker retries and delivers malformed result for {"extra_openings":false,"rea (2.645419ms)
+✔ checker retries and delivers malformed result for null (6.582652ms)
+✔ checker retries and delivers malformed result for [] (3.446715ms)
+✔ checker result without a completed STOP response is retried and delivered with warning (6.227344ms)
+✔ disabled checker delivers and reports it in the lead mail (2.786981ms)
+✔ missing generation key still fails before rendering (0.358765ms)
+✔ unavailable checker retries once, delivers the lead and marks the mail (2.543515ms)
+✔ ein Ausfall des Bilddienstes wird gemeldet, der Lead aber nicht weggeworfen (8.84517ms)
+✔ auch ein gescheiterter zweiter Versuch behaelt den Lead und das verworfene Bild (4.8858ms)
+✔ ein Ausfall des Bilddienstes kostet den Kunden keinen Tagesversuch (1.204612ms)
+✔ failed render attempts do not consume the IP counter (9.989363ms)
+✔ retry is skipped when a second pass of the measured length cannot fit (2.676998ms)
+✔ der zweite Versuch laeuft auch nach dem langsamsten ersten Durchgang (3.066077ms)
+✔ retry runs when the first pass was fast enough to repeat (4.060465ms)
+✔ company mail fallback success is explicit and reports missing attachments (2.730885ms)
+✔ both company channels reject: no success or customer email (2.080102ms)
+✔ ambiguous company timeout is unknown and is not automatically duplicated (1.377034ms)
+✔ customer email failed preserves approved image and honest status (1.569501ms)
+✔ customer email unknown preserves approved image and honest status (2.355302ms)
+✔ customer email skipped preserves approved image and honest status (2.206373ms)
+✔ newsletter failures are surfaced separately and never silently marked subscribed (2.492227ms)
+✔ host header injection cannot select a swatch origin (1.662464ms)
+✔ malformed cookie remains recoverable and device limit performs zero requests (5.698963ms)
+✔ floorplan failure does not falsely confirm receipt (1.198535ms)
+✔ floorplan PDF signature and base64 are validated before sending (0.382796ms)
+✔ floorplan attachment lost in fallback is not confirmed as delivered (0.770302ms)
+✔ malformed 2xx lead/customer/newsletter responses are unknown, not accepted (15.378374ms)
+✔ current large catalog originals below 5 MiB retain their visual reference (118.009244ms)
+✔ generated response headers and streaming bytes respect the provider cap (10.465501ms)
+✔ full slow pipeline including fallback stays within the overall deadline (3.49482ms)
+✔ exhausted deadline starts no further external call (0.807278ms)
+✔ identical API requests are explicitly not claimed durably idempotent (4.225279ms)
+✔ deadline also bounds an adapter ignoring abort and clears all timers (0.364019ms)
+✔ slow response body is timed out, not only response headers (2.561ms)
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Foto zeigt kein Bad toilet and washbasin visible
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Gemini-Fehler 503
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung abgelehnt {
+  attempt: 1,
+  reason: 'an opening was added or lost (inventory)',
+  flags: {
+    extra_openings: true,
+    view_changed: false,
+    before: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    after: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    orderBefore: [ 'washbasin', 'toilet' ],
+    orderAfter: [ 'washbasin', 'toilet' ],
+    nearestBefore: 'toilet',
+    nearestAfter: 'toilet',
+    wallAnswers: {
+      toilet_on_low_wall_before: false,
+      toilet_on_low_wall_after: false,
+      new_wall_element: false,
+      wall_element_lost: false,
+      foreground_object_before: false,
+      foreground_object_after: false,
+      window_much_bigger: false
+    }
+  }
+}
+[badplaner] Fensterprüfung abgelehnt {
+  attempt: 2,
+  reason: 'an opening was added or lost (inventory)',
+  flags: {
+    extra_openings: true,
+    view_changed: false,
+    before: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    after: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'none',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    orderBefore: [ 'washbasin', 'toilet' ],
+    orderAfter: [ 'washbasin', 'toilet' ],
+    nearestBefore: 'toilet',
+    nearestAfter: 'toilet',
+    wallAnswers: {
+      toilet_on_low_wall_before: false,
+      toilet_on_low_wall_after: false,
+      new_wall_element: false,
+      wall_element_lost: false,
+      foreground_object_before: false,
+      foreground_object_after: false,
+      window_much_bigger: false
+    }
+  }
+}
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: ok
+✔ Vorschau: Bild ohne Kontaktangaben, Entwurf-Mail mit Foto und Bild an NLD, keine Kundenmail (40.649288ms)
+✔ Vorschau braucht die Einwilligung, aber keinen Namen (0.474966ms)
+✔ Vorschau: falsches Foto verspricht keinen Rueckruf und meldet den Grund intern (2.116474ms)
+✔ Vorschau: Bildfehler nutzt den verbindlichen Text und verspricht keinen Rueckruf (2.064171ms)
+✔ Vorschau: verworfenes Bild verspricht keinen Rueckruf und bleibt intern sichtbar (2.321134ms)
+✔ Beratung nach Bildfehler uebermittelt Foto und Auswahl ohne Gemini (0.852748ms)
+✔ Beratung lehnt manipulierten Fehlerkontext vor jedem Provideraufruf ab (0.161134ms)
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: ok
+✔ Anfrage nach der Vorschau: Lead und Kundenmail mit genau dem Bild der Vorschau (7.192981ms)
+[badplaner] Anfrage mit ungueltigem Ticket bp-fixture-1
+[badplaner] Anfrage mit ungueltigem Ticket bp-fixture-1
+[badplaner] Anfrage mit ungueltigem Ticket bp-fixture-1
+[badplaner] Anfrage mit ungueltigem Ticket bp-fixture-1
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: ok
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: ok
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: ok
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=keine Antwort type=– bytes=0 TimeoutError: Request deadline exceeded
+[badplaner] Fotopruefung nicht moeglich
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: ok
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=keine Antwort type=– bytes=0 TimeoutError: Request deadline exceeded
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto {"walls":{"toilet":"left","washbasin":"left","shower":"none","bathtub":"none","bidet":"none"},"order":["washbasin","toilet"],"nearest":"toilet"}
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: ok
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung nicht möglich Timeout
+[badplaner] Fensterprüfung: ok
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung nicht möglich Timeout
+[badplaner] Fensterprüfung nicht möglich Timeout
+[badplaner] Fensterprüfung: nicht möglich (Timeout)
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung abgelehnt {
+  attempt: 1,
+  reason: 'a recess, alcove, niche or step of the wall that is in the photo was filled in or straightened; every recess and wall step of the photo must stay',
+  flags: {
+    extra_openings: false,
+    view_changed: false,
+    before: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'back',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    after: {
+      toilet: 'left',
+      washbasin: 'left',
+      shower: 'back',
+      bathtub: 'none',
+      bidet: 'none'
+    },
+    orderBefore: [ 'washbasin', 'toilet', 'shower' ],
+    orderAfter: [ 'washbasin', 'toilet', 'shower' ],
+    nearestBefore: 'toilet',
+    nearestAfter: 'toilet',
+    wallAnswers: {
+      toilet_on_low_wall_before: false,
+      toilet_on_low_wall_after: false,
+      new_wall_element: false,
+      wall_element_lost: true,
+      foreground_object_before: false,
+      foreground_object_after: false,
+      window_much_bigger: false
+    }
+  }
+}
+[badplaner] Walk-in: Rinne -, Armaturen -, breiter als tief -
+[badplaner] Fensterprüfung: 1. Versuch verworfen (a recess, alcove, niche or step of the wall that is in the photo was filled in or straightened; every recess and wall step of the photo must stay), 2. Versuch ok
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Walk-in: Rinne -, Armaturen -, breiter als tief -
+[badplaner] Punktablauf statt Duschrinne gezeichnet
+[badplaner] Fensterprüfung: ok, Hinweis: Punktablauf statt Duschrinne gezeichnet
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Walk-in: Rinne -, Armaturen -, breiter als tief -
+[badplaner] Duschrinne an der Längsseite statt an der Schmalseite
+[badplaner] Duscharmaturen an zwei Wänden statt alle an der Schmalseite
+[badplaner] Fensterprüfung: ok, Hinweis: Duschrinne an der Längsseite statt an der Schmalseite, Hinweis: Duscharmaturen an zwei Wänden statt alle an der Schmalseite
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Walk-in: Rinne back, Armaturen left, breiter als tief -
+[badplaner] Duschrinne an der Längsseite statt an der Schmalseite
+[badplaner] Fensterprüfung: ok, Hinweis: Duschrinne an der Längsseite statt an der Schmalseite
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Walk-in: Rinne back, Armaturen back, breiter als tief true
+[badplaner] Duschrinne an der Längsseite statt an der Schmalseite
+[badplaner] Fensterprüfung: ok, Hinweis: Duschrinne an der Längsseite statt an der Schmalseite
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Walk-in: Rinne left, Armaturen left, breiter als tief true
+[badplaner] Fensterprüfung: ok
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: ok
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/emilceramica-dual-travertine-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/rexa-corian-glacier-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/rexa-legno-smooth-rovere-light.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.emilgroup.it/emil/prodotti/immaginiarticoli_emil/Dual%20Travertine_PORO%20CHIUSO%20WHITE_MOSAICO%205X5_30x30%203.jpg status=keine Antwort type=– bytes=0 Error: Unexpected mock URL: https://www.emilgroup.it/emil/prodotti/immaginiarticoli_emil/Dual%20Travertine_PORO%20CHIUSO%20WHITE_MOSAICO%205X5_30x30%203.jpg
+[badplaner] Swatch nicht geladen https://rexadesign.it/wp-content/uploads/2022/10/corian_glacier_white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://rexadesign.it/wp-content/uploads/2025/11/legno_rovere_light.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: ok
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/energieker-loft-white.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://newlivingdesign.ch/badplaner/swatches/gbgroup-400-antracite.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://www.energieker.it/wp-content/uploads/2025/04/LOFT-White.jpg status=404 type=application/json bytes=2
+[badplaner] Swatch nicht geladen https://gbgroupe.com/wp-content/uploads/2024/04/400.jpg status=404 type=application/json bytes=2
+[badplaner] Grundriss laut Foto nicht lesbar
+[badplaner] Seitenverhältnis 1:1
+[badplaner] Fensterprüfung: ok
+✔ Anfrage mit fremdem Bild, geaenderter Auswahl oder abgelaufenem Ticket wird abgelehnt (5.369111ms)
+✔ the image prompt carries no leftover source code (quote, plus, indentation) (1.806433ms)
+✔ beide Pruefungen denken wenig, das Bildmodell bleibt unveraendert (3.926973ms)
+✔ eine langsame Fotopruefung haelt das Bild hoechstens 12 s auf (4.087807ms)
+✔ nach einem Timeout der Pruefung folgt ein kurzer zweiter Anlauf von hoechstens 10 s (4.523011ms)
+✔ ein zugemauerter Ruecksprung in der Wand wird verworfen (3.547272ms)
+✔ Walk-in: Duschrinne im Prompt, ein Punktablauf wird nur vermerkt (11.563576ms)
+✔ Armaturen: Atelier zeigt die Form von Treemme Aurelia in der gewaehlten Oberflaeche (2.879213ms)
+✔ Armaturen: Essenza zeigt die Form von Treemme Up+, nicht irgendeine Armatur (1.733888ms)
+✔ ohne gespeicherte Wahl: Statistik laeuft (Opt-out), Marketing bleibt gesperrt (6.488808ms)
+✔ nach "Nur notwendige": beim naechsten Aufruf ist alles gesperrt und nichts wird geladen (2.4317ms)
+✔ nur Statistik: Messung an, alle Werbesignale bleiben gesperrt (2.159874ms)
+✔ nur Marketing: Werbesignale an, keine Messung (3.572785ms)
+✔ beides: alle vier Signale erteilt, beide Dienste geladen (2.421126ms)
+✔ Widerruf ohne Neuladen: alle Signale zurueck auf denied, nichts wird mehr gemeldet (2.513688ms)
+✔ Widerruf nur des Marketings laesst die Statistik laufen (2.116851ms)
+✔ spaeteres Ja zum Marketing wirkt sofort, ohne Neuladen und ohne zweites init (2.508946ms)
+✔ essenza: current UI payload normalizes without changing selected IDs (2.671647ms)
+✔ essenza: platte requires a known explicit ID, including single-option lists (0.895741ms)
+✔ essenza: unterbau requires a known explicit ID, including single-option lists (0.378619ms)
+✔ essenza: top requires a known explicit ID, including single-option lists (0.681282ms)
+✔ essenza: becken requires a known explicit ID, including single-option lists (0.347459ms)
+✔ essenza: keramik requires a known explicit ID, including single-option lists (0.367064ms)
+✔ essenza: wall requires a known explicit ID, including single-option lists (0.25701ms)
+✔ essenza: dusche requires a known explicit ID, including single-option lists (0.366056ms)
+✔ essenza: badewanne requires a known explicit ID, including single-option lists (0.298019ms)
+✔ essenza: waschtisch requires a known explicit ID, including single-option lists (1.91681ms)
+✔ essenza: spiegel requires a known explicit ID, including single-option lists (0.245942ms)
+✔ essenza: non-default equipment remains exactly selected (0.323766ms)
+✔ essenza: package-ineligible IDs fail for every restricted equipment list (1.127061ms)
+✔ essenza: legacy aliases work alone, agree when duplicated, and reject conflicts (5.025699ms)
+✔ essenza: optional floor preserves valid ID; missing is none; invalid is never ignored (0.427569ms)
+✔ colore: current UI payload normalizes without changing selected IDs (0.214178ms)
+✔ colore: platte requires a known explicit ID, including single-option lists (0.180743ms)
+✔ colore: unterbau requires a known explicit ID, including single-option lists (0.204029ms)
+✔ colore: top requires a known explicit ID, including single-option lists (0.194431ms)
+✔ colore: becken requires a known explicit ID, including single-option lists (0.241433ms)
+✔ colore: keramik requires a known explicit ID, including single-option lists (0.173312ms)
+✔ colore: wall requires a known explicit ID, including single-option lists (0.167526ms)
+✔ colore: dusche requires a known explicit ID, including single-option lists (0.160719ms)
+✔ colore: badewanne requires a known explicit ID, including single-option lists (0.160714ms)
+✔ colore: waschtisch requires a known explicit ID, including single-option lists (0.249273ms)
+✔ colore: spiegel requires a known explicit ID, including single-option lists (0.236613ms)
+✔ colore: non-default equipment remains exactly selected (0.149011ms)
+✔ colore: package-ineligible IDs fail for every restricted equipment list (0.991401ms)
+✔ colore: legacy aliases work alone, agree when duplicated, and reject conflicts (0.822674ms)
+✔ colore: optional floor preserves valid ID; missing is none; invalid is never ignored (0.353748ms)
+✔ atelier: current UI payload normalizes without changing selected IDs (0.114301ms)
+✔ atelier: platte requires a known explicit ID, including single-option lists (0.239116ms)
+✔ atelier: unterbau requires a known explicit ID, including single-option lists (0.191919ms)
+✔ atelier: top requires a known explicit ID, including single-option lists (0.187849ms)
+✔ atelier: becken requires a known explicit ID, including single-option lists (0.186967ms)
+✔ atelier: keramik requires a known explicit ID, including single-option lists (0.226989ms)
+✔ atelier: wall requires a known explicit ID, including single-option lists (0.219159ms)
+✔ atelier: dusche requires a known explicit ID, including single-option lists (2.842095ms)
+✔ atelier: badewanne requires a known explicit ID, including single-option lists (0.295485ms)
+✔ atelier: waschtisch requires a known explicit ID, including single-option lists (0.204155ms)
+✔ atelier: spiegel requires a known explicit ID, including single-option lists (0.796377ms)
+✔ atelier: non-default equipment remains exactly selected (0.188603ms)
+✔ atelier: package-ineligible IDs fail for every restricted equipment list (0.715218ms)
+✔ atelier: legacy aliases work alone, agree when duplicated, and reject conflicts (0.696942ms)
+✔ atelier: optional floor preserves valid ID; missing is none; invalid is never ignored (0.275038ms)
+✔ package is required and cannot fall back or accept a truncated ID (0.536374ms)
+✔ individual request remains a boolean without bypassing package validation (0.316374ms)
+✔ essenza: format is required and must be package-allowed (0.385172ms)
+✔ essenza: Atelier-only fields may be empty but never silently ignored (1.775723ms)
+✔ colore: format is required and must be package-allowed (0.408379ms)
+✔ colore: Atelier-only fields may be empty but never silently ignored (1.112484ms)
+✔ cistern is required and accepts only Aufputz or Unterputz (0.6361ms)
+✔ Essenza keeps its fixed chrome finish (0.605054ms)
+✔ Colore requires and accepts every available finish (0.905943ms)
+✔ tap series is required only for Colore; other packages reject even a known series (0.884916ms)
+✔ Atelier format derives from its tile, explicit formats must fit that tile (0.438337ms)
+✔ Atelier requires look, finish and accent mode and rejects look/tile disagreement (1.075371ms)
+✔ Atelier uniform surfaces reject inactive placement and accent selections (0.446599ms)
+✔ Atelier combination accepts placement waschtisch and only compatible accents (0.739216ms)
+✔ Atelier combination accepts placement waschtischwand and only compatible accents (0.937322ms)
+✔ Atelier combination accepts placement dusche and only compatible accents (0.262166ms)
+✔ Atelier combination accepts placement duschnische and only compatible accents (0.281256ms)
+✔ Atelier combination requires a valid placement, including prototype-key rejection (0.566313ms)
+✔ non-string selections fail on their own field instead of becoming defaults (6.316464ms)
+✔ empty canonical fields can use legacy IDs, but invalid IDs are not truncated into valid ones (0.196839ms)
+✔ Gäste-WC rejects shower, bathtub and double basin remnants (0.840234ms)
+✔ Gäste-WC rejects a shower-niche accent in an Atelier request (0.300099ms)
+✔ Badezimmer supports shower only, bathtub only, both and neither (0.382724ms)
+✔ Gefälledusche is available in every bathroom package (0.485417ms)
+ℹ tests 229
+ℹ suites 0
+ℹ pass 229
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2017.370567

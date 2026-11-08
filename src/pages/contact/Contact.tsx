@@ -1,20 +1,31 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import styles from "./Contact.module.css";
 import heroImg from "../../assets/shutterstock_2626257257.webp";
 import { Helmet } from "react-helmet-async";
+import PageIntro from "../../components/layout/PageIntro";
 import { trackLead } from "../../utils/tracking";
 
 const FORMSPREE_ENDPOINT = "https://formspree.io/f/xdklvgpb";
 
 const Contact: React.FC = () => {
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const submitting = useRef(false);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const onSubmit: React.FormEventHandler<HTMLFormElement> = async (e) => {
     e.preventDefault();
+    if (submitting.current) return;
     setErrorMsg(null);
 
     const form = e.currentTarget;
+    const errors: Record<string, string> = {};
+    for (const input of form.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('input[required], textarea[required]')) {
+      if (!input.value.trim()) errors[input.name] = 'Bitte füllen Sie dieses Feld aus.';
+      else if (!input.validity.valid) errors[input.name] = 'Bitte geben Sie eine gültige E-Mail-Adresse ein.';
+    }
+    setFieldErrors(errors);
+    if (Object.keys(errors).length) { form.querySelector<HTMLElement>(`[name="${Object.keys(errors)[0]}"]`)?.focus(); return; }
     const formData = new FormData(form);
 
     // Honeypot: wenn Bots das ausfüllen, brechen wir "still" ab
@@ -24,6 +35,7 @@ const Contact: React.FC = () => {
       return;
     }
 
+    submitting.current = true;
     setStatus("loading");
 
     try {
@@ -35,6 +47,7 @@ const Contact: React.FC = () => {
         method: "POST",
         headers: { Accept: "application/json" },
         body: formData,
+        signal: AbortSignal.timeout(20000),
       });
 
       if (res.ok) {
@@ -51,8 +64,8 @@ const Contact: React.FC = () => {
       }
     } catch {
       setStatus("error");
-      setErrorMsg("Die Nachricht konnte nicht gesendet werden. Prüfen Sie Ihre Verbindung oder schreiben Sie an emanuel.verdile@newlivingdesign.ch.");
-    }
+      setErrorMsg("Die Zustellung konnte nicht bestätigt werden. Ihre Eingaben bleiben erhalten. Prüfen Sie Ihre Verbindung oder rufen Sie uns an, bevor Sie erneut senden.");
+    } finally { submitting.current = false; }
   };
 
   return (
@@ -121,45 +134,27 @@ const Contact: React.FC = () => {
         </script>
       </Helmet>
       
-      {/* Hero */}
-      <section className={styles.hero}>
-        <div className={styles["hero-background"]}>
-          <div className={styles["hero-overlay"]}></div>
-          <img
-            src={heroImg}
-            alt="Showroom / Innenausstattung"
-            className={styles["hero-bg-image"]}
-          />
-        </div>
-
-        <div className={styles["hero-container"]}>
-          <div className={styles["hero-content"]}>
-            <h1 className={styles["hero-title"]}>
-              <span>Erzählen Sie uns, was Sie verändern möchten.</span>
-            </h1>
-            <p className={styles["hero-subtitle"]}>
-              Fotos, Grundriss oder ungefähre Masse helfen uns beim Einstieg. Wenn Sie noch nichts davon haben,
-              genügt auch eine erste Idee. Wir melden uns persönlich und klären den passenden nächsten Schritt.
-            </p>
-          </div>
-
-          <div className={styles["hero-scroll-indicator"]}>
-            <div className={styles["scroll-dot"]}></div>
-            <span>Scrollen Sie nach unten</span>
-          </div>
-        </div>
-      </section>
+      <PageIntro eyebrow="Kontakt & Beratung" title="Sprechen wir über Ihren Raum." description="Fotos, Grundriss oder ungefähre Masse helfen beim Einstieg. Eine erste Idee genügt ebenso. Wir melden uns persönlich und klären den passenden nächsten Schritt." image={{ src: heroImg, alt: 'Innenraum als Inspiration für Ihre persönliche Beratung', width: 1920, height: 1130 }}><a href="#kontaktformular" className="nld-button">Anfrage schreiben</a><a href="tel:+41625445854" className="nld-link">062 544 58 54</a></PageIntro>
 
       {/* Kontaktformular (dunkel) */}
       <section className={`${styles.section} ${styles.dark}`}>
         <div className={styles.container}>
-          <div className={`${styles["section-header"]} ${styles.centered}`}>
+          <div className={`${styles["section-header"]}`}>
             <span className={styles["section-label"]}>Ihre Anfrage</span>
             <h2 className={styles["section-title"]}>Womit können wir Ihnen helfen?</h2>
           </div>
 
           <div className={styles["form-grid"]}>
-            <form className={styles.form} onSubmit={onSubmit} noValidate>
+            <form id="kontaktformular" className={styles.form} onSubmit={onSubmit} noValidate aria-busy={status === 'loading'}
+              onBlur={e => {
+                const input = e.target;
+                if (!(input instanceof HTMLInputElement || input instanceof HTMLTextAreaElement) || !input.required) return;
+                setFieldErrors(errors => ({ ...errors, [input.name]: !input.value.trim() ? 'Bitte füllen Sie dieses Feld aus.' : !input.validity.valid ? 'Bitte geben Sie eine gültige E-Mail-Adresse ein.' : '' }));
+              }} onChange={e => {
+                const input = e.target;
+                if (input instanceof HTMLInputElement || input instanceof HTMLTextAreaElement) setFieldErrors(errors => ({ ...errors, [input.name]: '' }));
+              }}>
+              <p className={styles.formIntro}>Alle Felder ausser Telefon sind erforderlich. Ihre Anfrage wird über Formspree an uns übermittelt. <a href="/datenschutz">Datenschutz</a></p>
               {/* Honeypot (unsichtbar, aber ohne CSS-Änderung) */}
               <input
                 type="text"
@@ -172,29 +167,34 @@ const Contact: React.FC = () => {
 
               <div className={styles["form-row"]}>
                 <div className={styles["form-field"]}>
-                  <label>Vorname</label>
-                  <input type="text" name="firstName" placeholder="Ihr Vorname" required />
+                  <label htmlFor="contact-firstName">Vorname</label>
+                  <input type="text" name="firstName" id="contact-firstName" autoComplete="given-name" aria-invalid={!!fieldErrors.firstName} aria-describedby={fieldErrors.firstName ? 'error-firstName' : undefined} placeholder="Ihr Vorname" required />
+                  {fieldErrors.firstName && <span id="error-firstName" className="nld-field-error">{fieldErrors.firstName}</span>}
                 </div>
                 <div className={styles["form-field"]}>
-                  <label>Nachname</label>
-                  <input type="text" name="lastName" placeholder="Ihr Nachname" required />
+                  <label htmlFor="contact-lastName">Nachname</label>
+                  <input type="text" name="lastName" id="contact-lastName" autoComplete="family-name" aria-invalid={!!fieldErrors.lastName} aria-describedby={fieldErrors.lastName ? 'error-lastName' : undefined} placeholder="Ihr Nachname" required />
+                  {fieldErrors.lastName && <span id="error-lastName" className="nld-field-error">{fieldErrors.lastName}</span>}
                 </div>
               </div>
 
               <div className={styles["form-row"]}>
                 <div className={styles["form-field"]}>
-                  <label>E-Mail</label>
-                  <input type="email" name="email" placeholder="name@beispiel.ch" required />
+                  <label htmlFor="contact-email">E-Mail</label>
+                  <input type="email" name="email" id="contact-email" autoComplete="email" aria-invalid={!!fieldErrors.email} aria-describedby={fieldErrors.email ? 'error-email' : undefined} placeholder="name@beispiel.ch" required />
+                  {fieldErrors.email && <span id="error-email" className="nld-field-error">{fieldErrors.email}</span>}
                 </div>
                 <div className={styles["form-field"]}>
-                  <label>Telefon (optional)</label>
-                  <input type="tel" name="phone" placeholder="+41 ..." />
+                  <label htmlFor="contact-phone">Telefon (optional)</label>
+                  <input type="tel" name="phone" id="contact-phone" autoComplete="tel" aria-invalid={!!fieldErrors.phone} aria-describedby={fieldErrors.phone ? 'error-phone' : undefined} placeholder="+41 ..." />
+                  {fieldErrors.phone && <span id="error-phone" className="nld-field-error">{fieldErrors.phone}</span>}
                 </div>
               </div>
 
               <div className={styles["form-field"]}>
-                <label>Nachricht</label>
-                <textarea name="message" placeholder="Zum Beispiel: Badberatung, neue Küche, Plattenauswahl oder Wellnesslösung" rows={6} required />
+                <label htmlFor="contact-message">Nachricht</label>
+                <textarea name="message" id="contact-message" aria-invalid={!!fieldErrors.message} aria-describedby={fieldErrors.message ? 'error-message' : undefined} placeholder="Zum Beispiel: Badberatung, neue Küche, Plattenauswahl oder Wellnesslösung" rows={6} required />
+                  {fieldErrors.message && <span id="error-message" className="nld-field-error">{fieldErrors.message}</span>}
               </div>
 
               <div className={styles["form-actions"]}>
@@ -217,12 +217,12 @@ const Contact: React.FC = () => {
                 </button>
 
                 {status === "success" && (
-                  <span className={styles.success}>
+                  <span className={styles.success} role="status">
                     Danke. Ihre Nachricht ist bei uns angekommen. Wir melden uns persönlich bei Ihnen.
                   </span>
                 )}
                 {status === "error" && (
-                  <span className={styles.error}>
+                  <span className={styles.error} role="alert">
                     {errorMsg}
                   </span>
                 )}
@@ -250,7 +250,7 @@ const Contact: React.FC = () => {
       {/* Kontaktblöcke (hell) */}
       <section className={`${styles.section} ${styles.light}`}>
         <div className={styles.container}>
-          <div className={`${styles["section-header"]} ${styles.centered}`}>
+          <div className={`${styles["section-header"]}`}>
             <span className={styles["section-label"]}>So erreichen Sie uns</span>
             <h2 className={styles["section-title"]}>Ausstellung, Kontakt und Öffnungszeiten</h2>
           </div>

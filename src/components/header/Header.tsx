@@ -5,13 +5,11 @@ import './Header.css';
 import logo from '../../assets/S__2_-removebg-preview_edited.avif';
 
 const defaultNavigationItems: NavigationItem[] = [
-  { name: 'Bad', href: '/produkte#bad' },
-  { name: 'Küchen', href: '/produkte#kuechen' },
-  { name: 'Platten', href: '/produkte#platten' },
-  { name: 'Wellness', href: '/produkte#wellness' },
-  { name: 'Badplaner', href: '/badplaner' },
-  { name: 'Referenzen', href: '/referenzen' },
-  { name: 'Über uns', href: '/ueber-uns' },
+  { name: 'Unternehmen', href: '/ueber-uns' },
+  { name: 'Leistungen', href: '/dienstleistungen' },
+  { name: 'Projekte', href: '/referenzen' },
+  { name: 'Inspiration', href: '/produkte' },
+  { name: 'Ausstellung', href: '/booking' },
 ];
 
 const Header: React.FC<HeaderProps> = ({ className = '', navigationItems }) => {
@@ -47,6 +45,8 @@ const Header: React.FC<HeaderProps> = ({ className = '', navigationItems }) => {
 
   const navItems = navigationItems ?? defaultNavigationItems;
   const isActive = (href: string) => {
+    if (href === '/dienstleistungen' && location.pathname === '/badumbau-zofingen') return true;
+    if (href === '/produkte' && ['/partner', '/badplaner', '/blog'].some(path => location.pathname === path || location.pathname.startsWith(`${path}/`))) return true;
     const [pathAndQuery, hash] = href.split('#');
     const pathname = pathAndQuery.split('?')[0];
     if (hash !== undefined) {
@@ -57,10 +57,14 @@ const Header: React.FC<HeaderProps> = ({ className = '', navigationItems }) => {
       : location.pathname === pathname || location.pathname.startsWith(`${pathname}/`);
   };
   const currentLocation = (href: string) =>
-    isActive(href) ? (href.includes('#') ? 'location' as const : 'page' as const) : undefined;
+    isActive(href) ? (location.pathname === href ? 'page' as const : 'true' as const) : undefined;
 
   return (
-    <header className={`header ${className}`}>
+    <header className={`header ${className}`} onBlur={e => {
+      if (e.relatedTarget && !e.currentTarget.contains(e.relatedTarget as Node)) {
+        setIsMobileMenuOpen(false);
+      }
+    }}>
       <div className="header-container">
         <div className="header-content">
           {/* Logo */}
@@ -86,6 +90,7 @@ const Header: React.FC<HeaderProps> = ({ className = '', navigationItems }) => {
                 {item.name}
               </Link>
             ))}
+
           </nav>
 
           <div className="contact-button-desktop">
