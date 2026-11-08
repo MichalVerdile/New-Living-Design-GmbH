@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import styles from './Badumbau.module.css';
 import SEOHead from '../../components/seo/SEOHead';
+import PageIntro from '../../components/layout/PageIntro';
 import { business, bathPackages, packageNote, localBusinessJsonLd } from '../../config/business';
 import { badumbauFaq } from '../../data/faq';
 import { references, photoUrl } from '../../data/references';
@@ -110,41 +111,27 @@ const Badumbau: React.FC = () => {
         image={`${business.siteUrl}${photoUrl('bad-marmor-grau-01.webp')}`}
       />
 
-      {/* Hero */}
-      <section className={styles.hero}>
-        <div className={styles.heroBackground}>
-          <div className={styles.heroOverlay} />
-          <img
-            src={photoUrl('bad-marmor-grau-02.webp')}
-            alt="Badumbau von New Living Design: Bad in grauer Marmoroptik mit schwarzen Armaturen"
-            className={styles.heroImage}
-            {...{ fetchpriority: 'high' }}
-          />
-        </div>
-        <div className={`${styles.heroContent} ${styles.visible}`}>
-          <p className={styles.eyebrow}>Badumbau in Zofingen und Umgebung</p>
-          <h1 className={styles.heroTitle}>
-            Ein neues Bad.
-            <span> Klar geplant und koordiniert.</span>
-          </h1>
-          <p className={styles.heroText}>
-            Sie wählen Materialien und Produkte in unserer Ausstellung. Wir prüfen Ihr Bad vor Ort, planen die
-            vereinbarte Lösung und koordinieren die nötigen Facharbeiten bis zur Übergabe. Unsere drei Badpakete
-            geben Ihnen eine erste Preisorientierung ab CHF {bathPackages[0].priceLabel}; den verbindlichen Fixpreis
-            erhalten Sie nach der Besichtigung.
-          </p>
-          <div className={styles.heroActions}>
-            <a href="#anfrage" className={styles.ctaPrimary}>
-              Besichtigung anfragen
-            </a>
-            <a href="#pakete" className={styles.ctaSecondary}>
-              Badpakete vergleichen
-            </a>
+      <PageIntro eyebrow="Badumbau in Zofingen und Umgebung" title="Ihr neues Bad. Klar geplant und umgesetzt." description={`Wir prüfen Ihr Bad vor Ort, planen die vereinbarte Lösung und koordinieren die Facharbeiten bis zur Übergabe. Unsere drei Badpakete geben eine Preisorientierung ab CHF ${bathPackages[0].priceLabel}. Den verbindlichen Fixpreis erhalten Sie nach der Besichtigung.`} image={{ src: photoUrl('bad-marmor-grau-02.webp'), srcSet: `${photoUrl('bad-marmor-grau-02.webp', true)} 480w, ${photoUrl('bad-marmor-grau-02.webp')} 1600w`, width: 1600, height: 1102, alt: 'Von New Living Design realisiertes Bad in grauer Marmoroptik mit schwarzen Armaturen' }}><a href="#anfrage" className="nld-button">Besichtigung anfragen</a><a href="#pakete" className="nld-link">Pakete vergleichen ↓</a></PageIntro>
+      <div className="nld-container"><nav className="nld-local-nav" aria-label="Badumbau im Überblick"><a href="#ablauf">Unser Ablauf</a><a href="#pakete">Pakete & Preise</a><a href="#referenzen">Realisierte Bäder</a><a href="#faq">Häufige Fragen</a><a href="#anfrage">Ihre Anfrage</a></nav></div>
+
+      {/* Ablauf */}
+      <section id="ablauf" className={`${styles.section} ${styles.dark}`}>
+        <div className={styles.container}>
+          <div className={styles.sectionHeader}>
+            <span className={styles.sectionLabel}>Der Ablauf</span>
+            <h2 className={styles.sectionTitle}>Vom ersten Termin bis zur Übergabe</h2>
           </div>
-          <p className={styles.heroMeta}>
-            Ausstellung: {business.address.street}, {business.address.zip} {business.address.city} ·{' '}
-            Termin nach Vereinbarung
-          </p>
+          <ol className={styles.steps}>
+            {steps.map((s) => (
+              <li key={s.n} className={styles.step}>
+                <span className={styles.stepNumber}>{s.n}</span>
+                <div>
+                  <h3>{s.title}</h3>
+                  <p>{s.text}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
         </div>
       </section>
 
@@ -214,27 +201,6 @@ const Badumbau: React.FC = () => {
             </div>
             <Link to="/badplaner" className={styles.ctaDark}>Badplaner starten</Link>
           </aside>
-        </div>
-      </section>
-
-      {/* Ablauf */}
-      <section id="ablauf" className={`${styles.section} ${styles.dark}`}>
-        <div className={styles.container}>
-          <div className={styles.sectionHeader}>
-            <span className={styles.sectionLabel}>Der Ablauf</span>
-            <h2 className={styles.sectionTitle}>Vom ersten Termin bis zur Übergabe</h2>
-          </div>
-          <ol className={styles.steps}>
-            {steps.map((s) => (
-              <li key={s.n} className={styles.step}>
-                <span className={styles.stepNumber}>{s.n}</span>
-                <div>
-                  <h3>{s.title}</h3>
-                  <p>{s.text}</p>
-                </div>
-              </li>
-            ))}
-          </ol>
         </div>
       </section>
 

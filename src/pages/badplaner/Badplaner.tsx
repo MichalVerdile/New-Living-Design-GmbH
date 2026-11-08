@@ -996,9 +996,9 @@ const Badplaner: React.FC = () => {
 
       {/* Hero: zuerst das Ergebnis, dann der Weg dahin */}
       <section className={`${styles.hero} ${styles.heroCompact}`}>
-        <div className={`${styles.heroContent} ${styles.visible}`}>
-          <p className={styles.eyebrow}>Neu · Badplaner</p>
-          <h1 className={styles.heroTitle}>Ihr Bad als Ideenbild, aus Ihrem eigenen Foto</h1>
+        <div className={`${styles.heroContent} ${styles.visible}`} data-reveal="stagger">
+          <p className={styles.eyebrow}>Inspiration · Badplaner</p>
+          <h1 className={styles.heroTitle}>Eine erste Idee für Ihr Bad.</h1>
           <div className={styles.heroActions}>
             <a href="#planer" className={styles.ctaPrimary} onClick={() => trackBadplaner('badplaner_start')}>Jetzt starten</a>
             <a href="#ablauf" className={styles.ctaSecondary}>So funktioniert's</a>

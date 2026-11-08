@@ -1,7 +1,7 @@
 .dialog { position: fixed; inset: 0; width: calc(100% - 2rem); max-width: 1500px; height: calc(100dvh - 2rem); max-height: none; padding: 1.25rem; border: 1px solid #ffffff30; background: #1b2420; color: #f5f3ed; overflow: hidden; }
 .dialog[open] { display: grid; grid-template-rows: auto minmax(0,1fr) auto; gap: 1rem; }
 .dialog::backdrop { background: #0c1510ed; backdrop-filter: blur(8px); }
-.dialog button { color: #fff; background: transparent; border: 1px solid #aab4a6; border-radius: 2px; padding: .5rem .8rem; min-width: 44px; }
+.dialog button { color: #fff; background: transparent; border: 1px solid #aab4a6; border-radius: var(--nld-radius); padding: .5rem .8rem; min-width: 44px; }
 .dialog button:hover { background: #435449; }
 .dialog :focus-visible { outline: 3px solid #d7cdb6; outline-offset: 3px; }
 .toolbar { display: flex; align-items: center; gap: .75rem; font-size: .85rem; }

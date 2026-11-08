@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import ImageLightbox from '../../components/gallery/ImageLightbox';
 import styles from './Referenzen.module.css';
 import SEOHead from '../../components/seo/SEOHead';
+import PageIntro from '../../components/layout/PageIntro';
 import { business, localBusinessJsonLd } from '../../config/business';
 import { references, categoryLabels, photoUrl } from '../../data/references';
 import type { ReferenceCategory } from '../../data/references';
@@ -32,6 +33,7 @@ const Referenzen: React.FC = () => {
   // Anker wie /referenzen#bad-marmoroptik-grau-schwarz anspringen (SPA)
   useEffect(() => {
     if (location.hash) {
+      setFilter('alle');
       const id = location.hash.slice(1);
       const t = setTimeout(() => {
         document.getElementById(id)?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth', block: 'start' });
@@ -83,14 +85,8 @@ const Referenzen: React.FC = () => {
         image={`${business.siteUrl}${photoUrl('bad-marmor-grau-01.webp')}`}
       />
 
-      <section className={styles.intro}>
-        <div className={styles.container}>
-          <span className={styles.sectionLabel}>Realisierte Projekte</span>
-          <h1 className={styles.title}>Räume, die aus guten Entscheidungen entstanden sind.</h1>
-          <p className={styles.lede}>
-            Diese Bilder zeigen keine Musterwohnungen, sondern ausgeführte Projekte aus unserer Arbeit. Zu jedem Raum
-            sehen Sie, welche Platten, Farben, Produkte und Details zusammengebracht wurden.
-          </p>
+      <PageIntro eyebrow="Realisierte Projekte" title="Räume aus unserer Arbeit." description="Bäder, Küchen und Wohnräume, die wir für unsere Kundinnen und Kunden realisiert haben. Entdecken Sie Materialien, Details und das Zusammenspiel im fertigen Raum." />
+      <section aria-label="Projekte filtern"><div className={styles.container}>
           <div className={styles.filters} role="group" aria-label="Kategorie">
             {filters.map((f) => (
               <button
@@ -111,8 +107,8 @@ const Referenzen: React.FC = () => {
         <p className={styles.resultCount} role="status">{visible.length} Projekte in dieser Auswahl</p>
         <div className={styles.container}>
           {visible.map(({ r, index }) => (
-            <article data-reveal="text" key={r.id} id={r.id} className={styles.project}>
-              <div className={styles.projectText}>
+            <article key={r.id} id={r.id} className={styles.project}>
+              <div className={styles.projectText} data-reveal="stagger">
                 <span className={styles.category}>{categoryLabels[r.category]}</span>
                 <h2>{r.title}</h2>
                 {(r.location || r.year) && (
@@ -124,6 +120,7 @@ const Referenzen: React.FC = () => {
                     <li key={d}>{d}</li>
                   ))}
                 </ul>
+                <Link to="/kontakt" className="nld-link">Ein ähnliches Vorhaben besprechen →</Link>
               </div>
               <div className={`${styles.gallery} ${r.photos.length === 1 ? styles.gallerySingle : ''}`}>
                 {r.photos.map((p, photoIndex) => (

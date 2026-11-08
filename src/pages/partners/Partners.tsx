@@ -1,11 +1,12 @@
 import React from "react";
 import styles from "./Partners.module.css";
 import heroImg from "../../assets/shutterstock_2580645597.webp";
+import { Link } from "react-router-dom";
+import PageIntro from "../../components/layout/PageIntro";
 import { Helmet } from "react-helmet-async";
 import SupplierDirectory from "../../components/suppliers/SupplierDirectory";
 import { suppliers } from "../../data/suppliers";
 
-const withImages = suppliers.filter((s) => s.images.length > 0).length;
 
 const Partners: React.FC = () => {
   return (
@@ -24,24 +25,7 @@ const Partners: React.FC = () => {
         <meta property="og:image" content={`https://newlivingdesign.ch${heroImg}`} />
       </Helmet>
 
-      <section className={styles["partners-hero"]} aria-labelledby="partners-title">
-        <h1 id="partners-title" className={styles["partners-title"]}>
-          <span className={styles["title-line"]}>Marken, aus denen</span>
-          <span>eine stimmige Auswahl wird.</span>
-        </h1>
-        <div className={styles["hero-aside"]}>
-          <p className={styles["partners-subtitle"]}>
-            Nicht jedes Produkt passt zu jedem Raum. Wir nutzen die Sortimente unserer Partner, um Materialien,
-            Funktionen und Oberflächen passend zu Ihrem Projekt zusammenzustellen. Welche Serien verfügbar oder in
-            Zofingen zu sehen sind, klären wir persönlich mit Ihnen.
-          </p>
-          <p className={styles["hero-facts"]}>
-            <span><strong>{suppliers.length}</strong> Marken</span>
-            <span><strong>{withImages}</strong> mit Bildern</span>
-          </p>
-          <p className={styles["hero-scroll-indicator"]}>Scrollen Sie nach unten</p>
-        </div>
-      </section>
+      <PageIntro eyebrow="Unsere Marken & Partner" title="Gute Materialien. Passend ausgewählt." description="Wir arbeiten mit ausgewählten Marken für Bad, Küchen, Platten und Wellness. Welche Produkte verfügbar sind und sich für Ihren Raum eignen, klären wir persönlich mit Ihnen."><Link to="/produkte" className="nld-link">Zur Inspiration nach Fachbereich →</Link><Link to="/kontakt" className="nld-button">Beratung anfragen</Link></PageIntro>
 
       <section className={styles["partners-section"]} aria-label="Marken nach Bereich">
         <SupplierDirectory />

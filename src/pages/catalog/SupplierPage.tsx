@@ -38,27 +38,27 @@ const SupplierPage: React.FC = () => {
         description={`${supplier.name} bei New Living Design in Zofingen: ${inArea.specialties.join(', ')}. Auswahl, Beratung und Planung persönlich mit Ihnen.`}
         url={supplierHref(supplier.key, area.id)}
         type="website"
-        structuredData={generateBreadcrumbStructuredData([{ name: 'Home', url: '/' }, { name: 'Produkte', url: '/produkte' }, { name: area.title, url: areaHref(area.id) }, { name: supplier.name, url: supplierHref(supplier.key, area.id) }])}
+        structuredData={generateBreadcrumbStructuredData([{ name: 'Home', url: '/' }, { name: 'Inspiration', url: '/produkte' }, { name: area.title, url: areaHref(area.id) }, { name: supplier.name, url: supplierHref(supplier.key, area.id) }])}
         image={all[0] ? `https://newlivingdesign.ch${all[0].images[0].src}` : undefined}
       />
       <div className={styles.container}>
         <nav aria-label="Brotkrumen" className={styles.crumbs}>
           <ol>
-            <li><Link to="/produkte">Produkte</Link></li>
+            <li><Link to="/produkte">Inspiration</Link></li>
             <li><Link to={areaHref(area.id)}>{area.title}</Link></li>
             <li><Link to={`${areaHref(area.id)}#${groupSlug(group.title)}`}>{group.title}</Link></li>
             <li aria-current="page">{supplier.name}</li>
           </ol>
         </nav>
         <header className={styles.supplierHead}>
-          <div>
+          <div data-reveal="stagger">
             <p className={styles.eyebrow}>{inArea.specialties.join(' · ')}</p>
-            <h1>{supplier.name}</h1>
+            <h1>{supplier.name}</h1><p className={styles.lead}>Eine Möglichkeit für Ihr Projekt. Wir beraten Sie zur passenden Auswahl und stimmen Planung und Umsetzung mit Ihnen ab.</p>
             <p className={styles.facts}>{all.length ? `${series.length} ${series.length === 1 ? 'Serie' : 'Serien'} · ${all.reduce((n, s) => n + s.images.length, 0)} Bilder` : 'Bilder folgen'}</p>
           </div>
           <div className={styles.supplierActions}>
             <a href={supplier.url} target="_blank" rel="noopener noreferrer">Offizielle Website<span className={styles.srOnly}> von {supplier.name} (öffnet in neuem Fenster)</span></a>
-            <Link to="/kontakt">Beratung anfragen</Link>
+            <Link className="nld-button" to="/kontakt">Beratung anfragen</Link>
             {otherAreas.map((a) => <Link key={a.id} to={supplierHref(supplier.key, a.id)}>{supplier.name} im Bereich {a.title}</Link>)}
           </div>
         </header>

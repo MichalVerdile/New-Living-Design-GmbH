@@ -1,260 +1,28 @@
-import React from "react";
-import styles from "./About.module.css";
-import heroImg from "../../assets/shutterstock_2600582595.webp";
-import { Helmet } from "react-helmet-async";
+import { Link } from 'react-router-dom';
+import SEOHead from '../../components/seo/SEOHead';
+import PageIntro, { ProjectInvitation } from '../../components/layout/PageIntro';
+import { business, localBusinessJsonLd } from '../../config/business';
+import { photoUrl } from '../../data/references';
+import heroImg from '../../assets/shutterstock_2600582595.webp';
+import styles from './About.module.css';
 
-const cx = (...classes: Array<string | false | undefined>) =>
-  classes.filter(Boolean).join(" ");
-
-const About: React.FC = () => {
-  return (
-    <main id="main-content" className={styles.about}>
-      <Helmet>
-        <title>Über New Living Design | Ausstellung in Zofingen</title>
-        <link rel="canonical" href="https://newlivingdesign.ch/ueber-uns" />
-        <meta
-          name="description"
-          content="New Living Design ist ein familiengeführtes Unternehmen in Zofingen für Bad, Küchen, Platten und Wellness – mit persönlicher Beratung und Ausstellung."
-        />
-        <meta property="og:title" content="Über uns | New Living Design GmbH" />
-        <meta
-          property="og:description"
-          content="Aus der praktischen Arbeit mit Materialien und Umbauten entstanden: New Living Design und die Ausstellung in Zofingen."
-        />
-        <meta property="og:image" content={`https://newlivingdesign.ch${heroImg}`} />
-        <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://newlivingdesign.ch/ueber-uns" />
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="Über uns | New Living Design GmbH" />
-        <meta
-          name="twitter:description"
-          content="Wir denken vom Material bis zum fertigen Raum. Lernen Sie New Living Design in Zofingen kennen."
-        />
-        <meta name="twitter:image" content={heroImg} />
-
-        {/* Local Business Schema.org */}
-        <script type="application/ld+json">
-          {JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "LocalBusiness",
-            "name": "New Living Design GmbH",
-            "image": "https://newlivingdesign.ch" + heroImg,
-            "url": "https://newlivingdesign.ch/ueber-uns",
-            "telephone": "+41625445854",
-            "email": "emanuel.verdile@newlivingdesign.ch",
-            "address": {
-              "@type": "PostalAddress",
-              "streetAddress": "Im Römerquartier 4A",
-              "postalCode": "4800",
-              "addressLocality": "Zofingen",
-              "addressCountry": "CH"
-            },
-            "openingHoursSpecification": [
-              {
-                "@type": "OpeningHoursSpecification",
-                "dayOfWeek": [
-                  "Monday",
-                  "Tuesday",
-                  "Wednesday",
-                  "Thursday",
-                  "Friday"
-                ],
-                "opens": "07:00",
-                "closes": "19:00"
-              },
-              {
-                "@type": "OpeningHoursSpecification",
-                "dayOfWeek": "Saturday",
-                "opens": "09:00",
-                "closes": "13:00"
-              }
-            ]
-          })}
-        </script>
-      </Helmet>
-      
-      {/* Hero */}
-      <section className={styles.hero}>
-        <div className={styles["hero-background"]}>
-          <div className={styles["hero-overlay"]}></div>
-          <img
-            src={heroImg}
-            alt="Materialien und Innenausstattung als Inspiration" {...{ fetchpriority: 'high' }}
-            className={styles["hero-bg-image"]}
-          />
-        </div>
-
-        <div className={styles["hero-container"]}>
-          <div className={styles["hero-content"]}>
-            <h1 className={styles["hero-title"]}>
-              <span>Wir denken vom Material bis zum fertigen Raum.</span>
-            </h1>
-            <p className={styles["hero-subtitle"]}>
-              New Living Design ist ein familiengeführtes Unternehmen mit Ausstellung in Zofingen. Wir verbinden
-              praktische Erfahrung aus Umbau und Plattenarbeiten mit der Auswahl von Badprodukten, Küchen,
-              Oberflächen und Wellnesslösungen.
-            </p>
-          </div>
-          <div className={styles["hero-scroll-indicator"]}>
-            <div className={styles["scroll-dot"]}></div>
-            <span>Scrollen Sie nach unten</span>
-          </div>
-        </div>
-      </section>
-
-      {/* Story */}
-      <section className={cx(styles.section, styles.dark)}>
-        <div className={styles.container}>
-          <div className={cx(styles["section-header"], styles.centered)}>
-            <span className={styles["section-label"]}>Wie New Living Design arbeitet</span>
-            <h2 className={styles["section-title"]}>Aus der Praxis entstanden</h2>
-          </div>
-
-          <div className={styles.grid}>
-            <article data-reveal="text" className={styles.card}>
-              <h3>Der Blick fürs Material</h3>
-              <p>
-                Unsere Arbeit begann bei Oberflächen, Formaten und ihrer sauberen Verarbeitung.
-                Diese Nähe zum Material prägt bis heute, wie wir Produkte beurteilen und miteinander kombinieren.
-              </p>
-            </article>
-
-            <article data-reveal="text" className={styles.card}>
-              <h3>Die Ausstellung in Zofingen</h3>
-              <p>
-                Ein Muster auf dem Bildschirm ersetzt nicht den Eindruck vor Ort. Deshalb können Kundinnen und Kunden
-                in Zofingen Platten, Möbel, Armaturen und Farben nebeneinander sehen, anfassen und vergleichen.
-              </p>
-            </article>
-
-            <article data-reveal="text" className={styles.card}>
-              <h3>Der ganze Raum</h3>
-              <p>
-                Heute beraten wir zu Bad, Küchen, Platten und Wellness. Je nach Projekt kommen 3D-Visualisierung,
-                Lieferung, Montage oder die Koordination einer Renovation hinzu.
-              </p>
-            </article>
-          </div>
-        </div>
-      </section>
-
-      {/* Fakten */}
-      <section className={cx(styles.section, styles.light)}>
-        <div className={styles.container}>
-          <div className={cx(styles["section-header"], styles.centered)}>
-            <span className={styles["section-label"]}>New Living Design in Kürze</span>
-            <h2 className={styles["section-title"]}>Was Sie über uns wissen sollten</h2>
-          </div>
-
-          <div className={styles.facts}>
-            <div className={styles.fact}>
-              <div className={styles["fact-badge"]}>2023</div>
-              <div className={styles["fact-content"]}>
-                <h3>New Living Design GmbH</h3>
-                <p>Seit 2023 als GmbH im Kanton Aargau eingetragen.</p>
-              </div>
-            </div>
-
-            <div className={styles.fact}>
-              <div className={styles["fact-badge"]}>Ansprechpartner</div>
-              <div className={styles["fact-content"]}>
-                <h3>Emanuel Verdile</h3>
-                <p>Ihr Ansprechpartner für Beratung, Termine und Projektanfragen.</p>
-              </div>
-            </div>
-
-            <div className={styles.fact}>
-              <div className={styles["fact-badge"]}>Ausstellung</div>
-              <div className={styles["fact-content"]}>
-                <h3>Zofingen</h3>
-                <p>Materialien und Produkte in unserer Ausstellung im Römerquartier vergleichen.</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Werte */}
-      <section className={cx(styles.section, styles.dark)}>
-        <div className={styles.container}>
-          <div className={cx(styles["section-header"], styles.centered)}>
-            <span className={styles["section-label"]}>Woran Sie unsere Arbeit erkennen</span>
-            <h2 className={styles["section-title"]}>Drei Grundsätze</h2>
-          </div>
-
-          <div className={styles.values}>
-            <div className={styles["value-item"]}>
-              <div className={styles["value-icon"]}>
-                <svg viewBox="0 0 24 24" fill="none">
-                  <path d="M9 12l2 2 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2"/>
-                </svg>
-              </div>
-              <h3>Am Material entscheiden</h3>
-              <p>Wir zeigen reale Muster und erklären Unterschiede bei Wirkung, Nutzung und Pflege.</p>
-            </div>
-
-            <div className={styles["value-item"]}>
-              <div className={styles["value-icon"]}>
-                <svg viewBox="0 0 24 24" fill="none">
-                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="currentColor" strokeWidth="2"/>
-                  <circle cx="9" cy="7" r="4" stroke="currentColor" strokeWidth="2"/>
-                </svg>
-              </div>
-              <h3>Als Ganzes prüfen</h3>
-              <p>
-                Wir betrachten nicht nur das einzelne Produkt, sondern auch Proportionen, Anschlüsse, Farben und die
-                Produkte daneben.
-              </p>
-            </div>
-
-            <div className={styles["value-item"]}>
-              <div className={styles["value-icon"]}>
-                <svg viewBox="0 0 24 24" fill="none">
-                  <path d="M3 12h6l3 7 3-14 3 7h3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </div>
-              <h3>Vereinbarungen klar festhalten</h3>
-              <p>
-                Produkte, Leistungen und Zuständigkeiten werden vor Bestellung oder Ausführung nachvollziehbar
-                beschrieben.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Kontakt & Öffnungszeiten */}
-      <section className={cx(styles.section, styles.light)}>
-        <div className={styles.container}>
-          <div className={styles["contact-wrap"]}>
-            <div className={styles["contact-block"]}>
-              <h3>Ausstellung und Kontakt</h3>
-              <p className={styles["contact-lines"]}>
-                New Living Design GmbH<br />
-                Im Römerquartier 4A<br />
-                4800 Zofingen<br />
-                <a href="tel:+41625445854">062 544 58 54</a><br />
-                <a href="mailto:emanuel.verdile@newlivingdesign.ch">emanuel.verdile@newlivingdesign.ch</a>
-              </p>
-            </div>
-
-            <div className={styles["hours-block"]}>
-              <h3>Öffnungszeiten</h3>
-              <ul>
-                <li><span>Mo–Fr</span><span>07:00–19:00</span></li>
-                <li><span>Samstag</span><span>09:00–13:00</span></li>
-                <li><span>Sonntag</span><span>Geschlossen</span></li>
-              </ul>
-              <p className={styles["contact-note"]}>
-                Termin nach Vereinbarung, auch ausserhalb der Öffnungszeiten.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-    </main>
-  );
-};
-
-export default About;
+export default function About() {
+  return <main id="main-content" className="nld-page">
+    <SEOHead title="Über New Living Design | Unternehmen in Zofingen" description="Ein familiengeführtes Unternehmen für Bad, Küchen, Platten und Wellness. Lernen Sie New Living Design, unsere Arbeitsweise und die Ausstellung in Zofingen kennen." url="/ueber-uns" type="website" image={`https://newlivingdesign.ch${heroImg}`} structuredData={localBusinessJsonLd} />
+    <PageIntro eyebrow="New Living Design" title="Aus der Praxis. Für Ihren Raum." description="Wir sind ein familiengeführtes Unternehmen in Zofingen. Unsere Erfahrung aus Umbau und Plattenarbeiten verbindet die Gestaltung mit dem, was sich im Alltag bewährt." image={{ src: heroImg, alt: 'Materialien und Innenausstattung als Inspiration', width: 1920, height: 1080 }}><Link className="nld-button" to="/kontakt">Lernen wir uns kennen</Link><Link className="nld-link" to="/dienstleistungen">Unsere Leistungen →</Link></PageIntro>
+    <section className={`${styles.story} nld-section`}><div className={`nld-container ${styles.split}`}>
+      <div data-reveal="stagger"><p className="nld-eyebrow">Unsere Arbeitsweise</p><h2>Wir sehen das Material.<br />Und den ganzen Raum.</h2></div>
+      <div data-reveal="stagger"><p>Unsere Arbeit begann bei Oberflächen, Formaten und ihrer sauberen Verarbeitung. Diese Nähe zum Material prägt bis heute, wie wir beraten, Produkte beurteilen und miteinander kombinieren.</p><p>Heute begleiten wir Vorhaben in den Bereichen Bad, Küchen, Platten und Wellness. Je nach Projekt gehören 3D-Visualisierung, Lieferung, Montage oder die Koordination einer Renovation dazu.</p><p>Seit 2023 ist New Living Design als GmbH im Kanton Aargau eingetragen.</p></div>
+    </div></section>
+    <section className="nld-section"><div className="nld-container"><div className="nld-section-head"><h2 data-reveal="text">Worauf Sie sich<br />im Gespräch verlassen können.</h2></div><div className={styles.principles}>
+      <article data-reveal="stagger"><h3>Am Material entscheiden.</h3><p>Wir zeigen reale Muster und erklären Unterschiede bei Wirkung, Nutzung und Pflege.</p></article>
+      <article data-reveal="stagger"><h3>Zusammenhänge sehen.</h3><p>Wir betrachten Proportionen, Anschlüsse, Farben und die Ausstattung als Ganzes.</p></article>
+      <article data-reveal="stagger"><h3>Klar vereinbaren.</h3><p>Produkte, Leistungen und Zuständigkeiten halten wir vor Bestellung oder Ausführung nachvollziehbar fest.</p></article>
+    </div></div></section>
+    <section className={`${styles.visit} nld-section`}><div className={`nld-container ${styles.split}`}>
+      <figure data-reveal="image" data-parallax><img src={photoUrl('ausstellung-zofingen-01.webp')} srcSet={`${photoUrl('ausstellung-zofingen-01.webp', true)} 480w, ${photoUrl('ausstellung-zofingen-01.webp')} 1200w`} sizes="(max-width:900px) 100vw, 50vw" alt="Materialien, Möbel und Spiegel in unserer Ausstellung in Zofingen" width="1200" height="1600" loading="lazy" /></figure>
+      <div data-reveal="stagger"><p className="nld-eyebrow">Persönlich für Sie da</p><h2>Ihr Ansprechpartner:<br />Emanuel Verdile.</h2><p>Für Ihre Fragen, den passenden Termin und Ihr Vorhaben. In unserer Ausstellung können Sie Materialien sehen, anfassen und direkt miteinander vergleichen.</p><address>{business.name}<br />{business.address.street}<br />{business.address.zip} {business.address.city}</address><div className="nld-actions"><Link to="/booking" className="nld-link">Unsere Ausstellung →</Link><a className="nld-link" href={`tel:${business.phone.e164}`}>{business.phone.display}</a></div></div>
+    </div></section>
+    <ProjectInvitation title="Was haben Sie vor?"><Link className="nld-button nld-button--light" to="/kontakt">Kontakt aufnehmen</Link><Link className="nld-link" to="/referenzen">Unsere Projekte ansehen →</Link></ProjectInvitation>
+  </main>;
+}

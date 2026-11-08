@@ -1,4 +1,29 @@
-# New Living Design – Redesign 2026
+# New Living Design – Überarbeitung vom 08.11.2026
+
+Aktueller Stand auf `feat/premium-redesign-2026`, zur persönlichen Abnahme durch den Auftraggeber. Die Website stellt nun das Unternehmen und seine Beratung, Planung und Umsetzung vor. Marken und Produktserien sind vertiefende Inspiration.
+
+**Für diese Revision wurden auf ausdrücklichen Wunsch keine Tests, Builds, Lint-Läufe, Browserprüfungen oder Performance-Messungen ausgeführt.** Der folgende historische Bericht und sämtliche bisherigen Screenshots/Messdaten dokumentieren ausschliesslich die Revision vom 07.11.2026. Sie sind kein Nachweis für den aktuellen Stand.
+
+## Änderungen dieser Revision
+
+- Fünf eindeutige Hauptbereiche: Unternehmen, Leistungen, Projekte, Inspiration und Ausstellung. Beratung bleibt als sichtbare Aktion erreichbar. Unterthemen sind kontextuell und im gegliederten Footer verlinkt.
+- Startseite neu aufgebaut: Unternehmensvorstellung → Arbeitsweise → realisierte Projekte → vier Fachbereiche → persönlicher Besuch. Die vielen gleich gewichteten Katalog-, Marken- und Paketblöcke entfallen dort.
+- Gemeinsame `PageIntro`- und `ProjectInvitation`-Komponenten, gemeinsame Typografie, Abstände, Farben, Buttons, Formular- und Dokumentgestaltung. Überflüssige Schatten, Schrifteffekte, Kartenstapel und dekorative Symbolflächen entfernt.
+- Durchgängiger Apple-Systemfont-Stack statt Serifentiteln. Auf Apple-Geräten kommt die installierte Systemschrift zum Einsatz; auf anderen Plattformen Helvetica Neue/Arial als verfügbarer Ersatz. Keine Apple-Fontdateien werden kopiert, eingebettet oder verteilt. Die Schrift ist daher auf Windows nicht exakt SF Pro.
+- `SceneStory`: native Scrollsequenzen mit haftendem Bild, kontinuierlichem Zoom und Überblendungen für die vier Fachbereiche und den Leistungsablauf. Auf kleinen Bildschirmen und bei reduzierter Bewegung normale Bild-Text-Folge. Kein Scroll-Hijacking, kein zusätzliches Animationspaket.
+- `PageExperience`: gemeinsame Bildmasken, Textstaffelung und dezente Parallaxe auf sichtbaren Medien. Initialer Hero-Zoom auf der Startseite. Offene Formulare und Filter bleiben bedienbar; Animationen ändern keinen fachlichen Zustand. Dynamische Inhalte werden berücksichtigt, Listener und Animationen beim Wechsel aufgeräumt.
+- Inspiration mit vier klaren Fachbereichen; Material-/Markendetails öffnen sich gezielt. Alte Sprungmarken öffnen das zugehörige Detailfeld. Kategorien beginnen mit Begleitung und Projektbedarf, Markenseiten ordnen Serien in eine persönliche Beratung ein.
+- Referenzen als grosszügiges Portfolio mit Beratung pro Projekt, weiterhin vorhandene Filter und Lightbox. Ausstellung, Über uns und Leistungen inhaltlich verdichtet und an die Unternehmensdarstellung angepasst.
+- Badumbau erklärt den Ablauf vor den Paketpreisen. Badplaner erhält dieselbe Typografie und Gestaltung, behält seine bestehende Logik. Kontakt, Ratgeber, Artikel und rechtliche Dokumente verwenden dieselbe visuelle Sprache.
+- Bilder, Logos, Referenzdaten, Herstellerdaten, Paketpreise, APIs, Kosten-/Modellkonfiguration und Rechtstexte wurden nicht geändert. Es wurden keine neuen Bilder generiert und keine neuen Aussagen über Mitarbeitende, Auszeichnungen oder Zertifizierungen ergänzt.
+
+Der vollständige Anforderungsabgleich steht in [REQUIREMENTS.md](REQUIREMENTS.md). Funktions-, Geräte-, Accessibility- und Performance-Abnahme der neuen Revision erfolgt durch den Auftraggeber. Es wurde weder zusammengeführt noch eine Produktionseinführung angestossen.
+
+---
+
+# Historischer Bericht – Revision vom 07.11.2026
+
+> Alle nachfolgenden Prüfergebnisse, Screenshots, Bundlewerte und Formulierungen „geprüft“/„bestanden“ betreffen ausschliesslich den früheren Stand. Insbesondere Serifentitel, Katalognavigation und die alte Startseite wurden am 08.11.2026 ersetzt.
 
 Umsetzung vom 07.11.2026 auf `feat/premium-redesign-2026`, ausgehend von `5798dc701aea85c5e9cc3e95687f78406e82e441`. Die Änderungen sind zur Prüfung bestimmt. Es wurde weder nach `main` zusammengeführt noch produktiv veröffentlicht.
 

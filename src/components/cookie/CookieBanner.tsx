@@ -51,11 +51,11 @@ const CookieBanner: React.FC = () => {
             onDecline={handleDecline}
             cookieName={BANNER_COOKIE}
             style={{
-                background: "linear-gradient(135deg, rgba(10, 10, 10, 0.95) 0%, rgba(17, 17, 17, 0.98) 100%)",
+                background: "var(--nld-deep)",
                 color: "#e5e7eb",
                 fontSize: "14px",
-                fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-                boxShadow: "0 -8px 32px rgba(0, 0, 0, 0.4), 0 -2px 8px rgba(0, 0, 0, 0.3)",
+                fontFamily: "var(--nld-body)",
+                boxShadow: "none",
                 backdropFilter: "blur(15px)",
                 borderTop: "2px solid rgba(255, 255, 255, 0.15)",
                 padding: "10px 16px",
@@ -63,25 +63,25 @@ const CookieBanner: React.FC = () => {
                 zIndex: 999999
             }}
             buttonStyle={{
-                background: "linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%)",
+                background: "var(--nld-paper)",
                 color: "#111",
                 fontSize: "14px",
                 fontWeight: "600",
                 border: "none",
-                borderRadius: "8px",
+                borderRadius: "var(--nld-radius)",
                 padding: "12px 24px",
                 cursor: "pointer",
                 transition: "all 0.3s ease",
-                boxShadow: "0 4px 15px rgba(255, 255, 255, 0.2)",
+                boxShadow: "none",
                 marginLeft: "15px"
             }}
             declineButtonStyle={{
                 background: "transparent",
-                color: "#9ca3af",
+                color: "#d9ddd4",
                 fontSize: "14px",
                 fontWeight: "500",
                 border: "2px solid rgba(255, 255, 255, 0.15)",
-                borderRadius: "8px",
+                borderRadius: "var(--nld-radius)",
                 padding: "10px 20px",
                 cursor: "pointer",
                 transition: "all 0.3s ease",

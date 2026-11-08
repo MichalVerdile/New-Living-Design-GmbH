@@ -8,6 +8,7 @@ import heizkoerperImage from '../../assets/image.avif';
 import beleuchtungenImage from '../../assets/BEAM_STICK_family_color_edited.avif';
 import accessoiresImage from '../../assets/viv-au2420bmset5_5.avif';
 import SEOHead from '../../components/seo/SEOHead';
+import PageIntro from '../../components/layout/PageIntro';
 import { photoUrl, referenceById } from '../../data/references';
 import { areaHref, groupSlug, imageOf, supplierByKey, supplierHref, suppliersInArea, type AreaId, type SupplierImage, type SupplierKey } from '../../data/suppliers';
 
@@ -71,7 +72,8 @@ const HERO_SIZES = '(max-width: 1024px) calc(100vw - 3rem), 680px';
 const SubcategoryGrid: React.FC<{ items: SubcategoryCard[]; label: string; area: AreaId }> = ({ items, label, area }) => {
   const brands = suppliersInArea(area);
   return (
-    <>
+    <details className={styles.materialDetails}>
+      <summary>{label.replace('-Kategorien', '')}: Materialien und Marken entdecken</summary>
       <ul className={styles['subcategory-grid']} aria-label={label}>
         {items.map((card) => {
           const categoryHref = `${areaHref(area)}#${groupSlug(card.group ?? card.title)}`;
@@ -97,7 +99,7 @@ const SubcategoryGrid: React.FC<{ items: SubcategoryCard[]; label: string; area:
           ))}
         </ul>
       </div>
-    </>
+    </details>
   );
 };
 
@@ -110,70 +112,27 @@ const Products: React.FC = () => {
     <main id="main-content" className={styles['products-page']}>
       <SEOHead
         title="Bad, Küchen, Platten & Wellness | New Living Design Zofingen"
-        description="Badmöbel, Küchen, Platten und Wellness in Zofingen vergleichen. Persönliche Auswahlberatung, 3D-Planung sowie Lieferung und Montage."
+        description="Inspiration für Bad, Küchen, Platten und Wellness – mit Beratung, Planung und Umsetzung durch New Living Design in Zofingen."
         keywords="Badmöbel Zofingen, Küchenplanung Zofingen, Küchenmontage, Keramikplatten kaufen, Wellnesskabine, Ausstellung Zofingen, Schweiz"
         url="/produkte"
         type="website"
         image="https://newlivingdesign.ch/assets/14264-rchi-mirabilia-villas-01.webp"
       />
 
-      {/* Hero: echte Ausstellung in Zofingen statt Symbolbild */}
-      <section className={styles.hero}>
-        <div className={styles['hero-content']}>
-          <h1 className={styles['hero-title']}>
-            <span className={styles['title-line']}>Bad, Küchen, Platten</span>
-            <span>&amp; Wellness.</span>
-          </h1>
-          <div className={styles['hero-description']}>
-            <p>
-              Eine Auswahl, die zusammenpasst.
-            </p>
-          </div>
-          <p className={styles['hero-scroll-indicator']}>Scrollen Sie nach unten</p>
-        </div>
-        <figure className={styles['hero-figure']}>
-          <img
-            src={photoUrl(heroFile)}
-            srcSet={`${photoUrl(heroFile, true)} 480w, ${photoUrl(heroFile)} 1200w`}
-            sizes="(max-width: 767px) 100vw, 45vw"
-            alt={heroAlt}
-            width="1200"
-            height="1600"
-            {...{ fetchpriority: 'high' }}
-          />
-        </figure>
-      </section>
+      <PageIntro eyebrow="Inspiration für Ihr Vorhaben" title="Möglichkeiten für Ihren Raum." description="Bad, Küche, Platten oder Wellness: Wir verbinden Ihre Wünsche mit einer durchdachten Planung und der passenden Umsetzung. Hier bekommen Sie einen ersten Eindruck." image={{ src: photoUrl(heroFile), srcSet: `${photoUrl(heroFile, true)} 480w, ${photoUrl(heroFile)} 1200w`, width: 1200, height: 1600, alt: heroAlt }}><Link to="/dienstleistungen" className="nld-link">Wie wir Sie begleiten →</Link></PageIntro>
 
       {/* Introduction Section */}
-      <nav className={styles.areaIndex} aria-label="Produktbereiche">
+      <nav className={styles.areaIndex} aria-label="Unsere Fachbereiche">
         {(['bad', 'kuechen', 'platten', 'wellness'] as AreaId[]).map((id, i) => <a key={id} href={`#${id}`}><span>0{i + 1}</span>{['Bad', 'Küchen', 'Platten', 'Wellness'][i]}<span aria-hidden="true">↓</span></a>)}
       </nav>
-      <section className={`${styles.introduction}`}>
-        <div className={styles['introduction-container']}>
-          <div className={styles['section-header']}>
-            <span className={styles['section-label']}>Ausstellung in Zofingen</span>
-            <h2 className={styles['section-title']}>Nicht möglichst viel. Sondern das, was zusammenpasst.</h2>
-          </div>
-          <div className={styles['introduction-content']}>
-            <p>
-              Ein stimmiger Raum entsteht nicht durch möglichst viele Produkte. Entscheidend ist, dass Proportionen,
-              Farben, Oberflächen und Nutzung zusammenpassen.
-            </p>
-            <p>
-              In unserer Ausstellung vergleichen Sie Farben, Oberflächen und Formate direkt am Material.
-            </p>
-          </div>
-        </div>
-      </section>
-
       {/* Product Categories */}
       <section className={styles['product-categories']}>
         <div className={styles['categories-container']}>
           {/* Badmöbel */}
-          <div id="bad" className={`${styles['category-section']} ${styles.light}`}>
+          <div id="bad" className={styles['category-section']}>
             <div className={styles['category-content']}>
               <div className={styles['category-text']} data-reveal="text">
-                <h2 className={styles['category-title']}>Badprodukte gemeinsam auswählen</h2>
+                <h2 className={styles['category-title']}>Ihr Bad. Gemeinsam geplant.</h2>
                 <div className={styles['category-description']}>
                   <p>
                     Wir wählen mit Ihnen Badmöbel, Waschtisch, WC, Armaturen, Dusche, Badewanne und Zubehör als
@@ -196,7 +155,7 @@ const Products: React.FC = () => {
           </div>
 
           {/* Küchen */}
-          <div id="kuechen" className={`${styles['category-section']} ${styles.dark} ${styles.reverse}`}>
+          <div id="kuechen" className={`${styles['category-section']} ${styles.reverse}`}>
             <div className={styles['category-content']}>
               <div className={styles['category-text']} data-reveal="text">
                 <h2 className={styles['category-title']}>Eine Küche, die im Alltag funktioniert</h2>
@@ -221,10 +180,10 @@ const Products: React.FC = () => {
           </div>
 
           {/* Wellness */}
-          <div id="wellness" className={`${styles['category-section']} ${styles.light}`}>
+          <div id="wellness" className={styles['category-section']}>
             <div className={styles['category-content']}>
               <div className={styles['category-text']} data-reveal="text">
-                <h2 className={styles['category-title']}>Wellness beginnt mit den Möglichkeiten des Raums</h2>
+                <h2 className={styles['category-title']}>Wellness für Ihr Zuhause.</h2>
                 <div className={styles['category-description']}>
                   <p>
                     Sauna, Dampfbad, Wellnesskabine oder Whirlwanne benötigen die passende Fläche und die richtigen
@@ -248,10 +207,10 @@ const Products: React.FC = () => {
           </div>
 
           {/* Platten */}
-          <div id="platten" className={`${styles['category-section']} ${styles.dark} ${styles.reverse}`}>
+          <div id="platten" className={`${styles['category-section']} ${styles.reverse}`}>
             <div className={styles['category-content']}>
               <div className={styles['category-text']} data-reveal="text">
-                <h2 className={styles['category-title']}>Platten für Wand, Boden und Aussenbereich</h2>
+                <h2 className={styles['category-title']}>Passende Oberflächen. Sauber umgesetzt.</h2>
                 <div className={styles['category-description']}>
                   <p>
                     Platten bestimmen nicht nur die Farbe eines Raums, sondern auch Fugenbild, Pflege und Trittsicherheit.
@@ -274,7 +233,7 @@ const Products: React.FC = () => {
 
           {/* Weitere Themen: ruhiges Raster statt sechs gleich gewichteter Vollbreiten-Abschnitte.
               Die drei 380x347-Bilder werden nie breiter als ihre Originalgrösse gezeigt (siehe .detail-small). */}
-          <div className={styles.details}>
+          <details className={styles.materialDetails}><summary>Weitere Materialien und Ausstattungsdetails</summary><div className={styles.details}>
             {/* Wandverkleidungen */}
             <article className={styles.detail}>
               <img src={wandverkleidungenImage} alt="Wohnraum mit gemusterter Wandverkleidung" width="1400" height="787" loading="lazy" decoding="async" />
@@ -311,7 +270,7 @@ const Products: React.FC = () => {
               <h2 className={styles['category-title']}>Die letzte Auswahl soll nicht zufällig sein</h2>
               <p>Handtuchhalter, Papierrollenhalter, Haken, Seifenhalter und weitere Accessoires führen Form und Oberfläche der Armaturen weiter. So wirkt der Raum bis ins Detail abgestimmt.</p>
             </article>
-          </div>
+          </div></details>
         </div>
       </section>
 
@@ -348,7 +307,7 @@ const Products: React.FC = () => {
           "itemListElement": [
             { name: "Badmöbel, Armaturen und Keramik", anchor: "bad" },
             { name: "Küchenplanung, Lieferung, Montage und Renovation", anchor: "kuechen" },
-            { name: "Platten für Wand, Boden und Aussenbereich", anchor: "platten" },
+            { name: "Passende Oberflächen. Sauber umgesetzt.", anchor: "platten" },
             { name: "Wellness für Ihr Zuhause", anchor: "wellness" }
           ].map((cat, i) => ({
             "@type": "ListItem",

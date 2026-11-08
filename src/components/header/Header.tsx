@@ -5,31 +5,21 @@ import './Header.css';
 import logo from '../../assets/S__2_-removebg-preview_edited.avif';
 
 const defaultNavigationItems: NavigationItem[] = [
-  { name: 'Bad', href: '/produkte/bad' },
-  { name: 'Küchen', href: '/produkte/kuechen' },
-  { name: 'Platten', href: '/produkte/platten' },
-  { name: 'Wellness', href: '/produkte/wellness' },
-  { name: 'Badplaner', href: '/badplaner' },
-  { name: 'Referenzen', href: '/referenzen' },
-  { name: 'Über uns', href: '/ueber-uns' },
-];
-
-const moreItems = [
-  { name: 'Alle Produkte', href: '/produkte' }, { name: 'Dienstleistungen', href: '/dienstleistungen' },
-  { name: 'Badumbau & Pakete', href: '/badumbau-zofingen' }, { name: 'Marken & Partner', href: '/partner' },
-  { name: 'Showroom & Beratung', href: '/booking' }, { name: 'Blog & Inspiration', href: '/blog' },
+  { name: 'Unternehmen', href: '/ueber-uns' },
+  { name: 'Leistungen', href: '/dienstleistungen' },
+  { name: 'Projekte', href: '/referenzen' },
+  { name: 'Inspiration', href: '/produkte' },
+  { name: 'Ausstellung', href: '/booking' },
 ];
 
 const Header: React.FC<HeaderProps> = ({ className = '', navigationItems }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const moreRef = useRef<HTMLDetailsElement>(null);
   const menuToggleRef = useRef<HTMLButtonElement>(null);
   const mobileNavigationId = useId();
   const location = useLocation();
 
   useEffect(() => {
     setIsMobileMenuOpen(false);
-    if (moreRef.current) moreRef.current.open = false;
   }, [location]);
 
   useEffect(() => {
@@ -55,6 +45,8 @@ const Header: React.FC<HeaderProps> = ({ className = '', navigationItems }) => {
 
   const navItems = navigationItems ?? defaultNavigationItems;
   const isActive = (href: string) => {
+    if (href === '/dienstleistungen' && location.pathname === '/badumbau-zofingen') return true;
+    if (href === '/produkte' && ['/partner', '/badplaner', '/blog'].some(path => location.pathname === path || location.pathname.startsWith(`${path}/`))) return true;
     const [pathAndQuery, hash] = href.split('#');
     const pathname = pathAndQuery.split('?')[0];
     if (hash !== undefined) {
@@ -65,16 +57,13 @@ const Header: React.FC<HeaderProps> = ({ className = '', navigationItems }) => {
       : location.pathname === pathname || location.pathname.startsWith(`${pathname}/`);
   };
   const currentLocation = (href: string) =>
-    isActive(href) ? (href.includes('#') ? 'location' as const : 'page' as const) : undefined;
+    isActive(href) ? (location.pathname === href ? 'page' as const : 'true' as const) : undefined;
 
   return (
     <header className={`header ${className}`} onBlur={e => {
       if (e.relatedTarget && !e.currentTarget.contains(e.relatedTarget as Node)) {
         setIsMobileMenuOpen(false);
-        if (moreRef.current) moreRef.current.open = false;
       }
-    }} onKeyDown={e => {
-      if (e.key === 'Escape' && moreRef.current?.open) { moreRef.current.open = false; moreRef.current.querySelector('summary')?.focus(); }
     }}>
       <div className="header-container">
         <div className="header-content">
@@ -101,10 +90,7 @@ const Header: React.FC<HeaderProps> = ({ className = '', navigationItems }) => {
                 {item.name}
               </Link>
             ))}
-            <details className="nav-more" ref={moreRef}>
-              <summary>Mehr <span aria-hidden="true">⌄</span></summary>
-              <div className="nav-more-panel">{moreItems.map(item => <Link key={item.href} to={item.href} aria-current={currentLocation(item.href)}>{item.name}<span aria-hidden="true">↗</span></Link>)}</div>
-            </details>
+
           </nav>
 
           <div className="contact-button-desktop">
@@ -151,7 +137,6 @@ const Header: React.FC<HeaderProps> = ({ className = '', navigationItems }) => {
               {item.name}
             </Link>
           ))}
-          <div className="nav-mobile-more">{moreItems.map(item => <Link key={item.href} to={item.href} className="nav-mobile-link" aria-current={currentLocation(item.href)}>{item.name}</Link>)}</div>
           <Link
             to="/kontakt"
             className="contact-button contact-button-full"
