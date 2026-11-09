@@ -33,7 +33,7 @@ fs.mkdirSync(outDir, { recursive: true })
 /**
  * Muster zeigen Farbe und Maserung, mehr nicht. Die Originale der Lieferanten sind
  * teils über 2 MB: der Browser lädt sie im Schritt 2 alle, und dasselbe Bild geht
- * bei jeder Anfrage nochmals an Gemini. Darum wird jede Datei über SWATCH_MAX_SIDE
+ * bei jeder Anfrage nochmals an das Bildmodell. Darum wird jede Datei über SWATCH_MAX_SIDE
  * einmal verkleinert. Der Schritt ist idempotent (eine bereits kleine Datei bleibt
  * unberührt) und bricht nie ab: ohne sharp oder bei einem Fehler bleibt das Original.
  */

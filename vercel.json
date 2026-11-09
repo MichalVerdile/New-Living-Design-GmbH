@@ -1,11 +1,11 @@
 {
-  "buildCommand": "npm run build",
+  "buildCommand": "npm run lint && npm run typecheck:api && npm test && npm run build",
   "outputDirectory": "dist",
   "installCommand": "npm install",
   "framework": "vite",
   "functions": {
     "api/badplaner.ts": {
-      "maxDuration": 230,
+      "maxDuration": 300,
       "memory": 1024
     }
   },
