@@ -64,7 +64,7 @@ export interface BathPackage {
   id: 'essenza' | 'colore' | 'atelier';
   name: string;
   price: number;        // CHF inkl. MwSt., Richtpreis
-  priceLabel: string;   // formatiert, z. B. "23'000"
+  priceLabel: string;   // formatiert, z. B. "25'900"
   claim: string;
   description: string;
   includes: string[];
@@ -81,8 +81,8 @@ export const bathPackages: BathPackage[] = [
   {
     id: 'essenza',
     name: 'Essenza',
-    price: 23000,
-    priceLabel: "23'000",
+    price: 25900,
+    priceLabel: "25'900",
     claim: 'Das saubere, solide Bad mit dem ersten Farbtupfer',
     description:
       'Alles, was ein neues Bad braucht, mit Markenprodukten aus unserer Ausstellung. Farbe der Platten, des Möbels und der Armaturen wählen Sie frei innerhalb der Serie.',
@@ -102,8 +102,8 @@ export const bathPackages: BathPackage[] = [
   {
     id: 'colore',
     name: 'Colore',
-    price: 27500,
-    priceLabel: "27'500",
+    price: 28900,
+    priceLabel: "28'900",
     claim: 'Grossformat, farbige Keramik und Armaturen in Ihrer Wunschoberfläche',
     description:
       'Unser meistgewähltes Bad: Platten 60×120 oder 120×120, WC und Duschwanne in Farbe, verchromte Armaturen in zwei Serien, Möbel matt lackiert. Farbe kostet bei uns nichts extra.',
@@ -182,7 +182,7 @@ export const localBusinessJsonLd = {
   email: business.email,
   image: `${business.siteUrl}/og-image.jpg`,
   logo: `${business.siteUrl}/logo.png`,
-  priceRange: "CHF 23'000 – 45'000",
+  priceRange: "CHF 25'900 – 45'000",
   address: {
     '@type': 'PostalAddress',
     streetAddress: business.address.street,
